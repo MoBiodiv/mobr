@@ -1,3 +1,7 @@
+near_neigh = function(coords, type=c('indiv', 'quad')) {
+    
+}
+
 
 mat2psp = function(sp_mat, xy_coord, N=NULL, M=NULL)
 {
