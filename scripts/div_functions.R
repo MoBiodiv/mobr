@@ -1,7 +1,41 @@
-near_neigh = function(coords, type=c('indiv', 'quad')) {
-    
+near_neigh_ind = function(data){
+  # The input data has three columns: x, y, and species ID for each individual.
+  data = data[sample(1:dim(data)[1]), ]
+  focal_row = sample(dim(data)[1], 1)
+  # Compute Euclidean distances
+  x_diff = data[, 1] - as.numeric(data[focal_row, 1])
+  y_diff = data[, 2] - as.numeric(data[focal_row, 2])
+  dist_row = sqrt(x_diff^2 + y_diff^2)
+
+  data_order = data[order(dist_row), ]
+  S = c()
+  #vec_list = lapply(1:dim(data_order)[1], seq)
+  #lapply(vec_list, length(unique(data_order[vec_list, 3])))
+  for (i in 1:dim(data_order)[1]){
+    sp_id_list = data_order[1:i, 3]
+    i_rich = length(unique(sp_id_list))
+    S = c(S, i_rich)
+  }
+  N = 1:dim(data_order)[1]
+  return(list(S = S, N = N))
 }
 
+near_neigh_quadrat = function(data){
+  # The input data is a data frame, with the first three columns being 
+  # quadrat ID, x, and y. Column 4 and beyong are the abundances for 
+  # species in each quadrat. 
+  data = data[sample(1:dim(data)[1]), ]
+  data_spec = data[, -(1:3)]
+  pair_dist = as.matrix(dist(data[, 2:3]))
+  focal_row = sample(dim(data)[1], 1)
+  dist_row = pair_dist[focal_row, ]
+  data_order = data_spec[order(dist_row), ]
+  data_bool = as.data.frame(ifelse(data_order[, 1:dim(data_order)[2]] == 0, 1, 0))
+  data_rich = cumprod(data_bool)
+  S = as.numeric(dim(data_spec)[2] - rowSums(data_rich))
+  N = as.numeric(cumsum(rowSums(data_order)))
+  return(list(S = S, N = N))
+}
 
 mat2psp = function(sp_mat, xy_coord, N=NULL, M=NULL)
 {
