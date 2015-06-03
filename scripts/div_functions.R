@@ -1,9 +1,12 @@
 near_neigh_ind = function(data){
   # The input data has three columns: x, y, and species ID for each individual.
   data = data[sample(1:dim(data)[1]), ]
-  pair_dist = as.matrix(dist(data[, 1:2]))
   focal_row = sample(dim(data)[1], 1)
-  dist_row = pair_dist[focal_row, ]
+  # Compute Euclidean distances
+  x_diff = data[, 1] - as.numeric(data[focal_row, 1])
+  y_diff = data[, 2] - as.numeric(data[focal_row, 2])
+  dist_row = sqrt(x_diff^2 + y_diff^2)
+
   data_order = data[order(dist_row), ]
   S = c()
   #vec_list = lapply(1:dim(data_order)[1], seq)
