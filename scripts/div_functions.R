@@ -1,3 +1,19 @@
+expS_negbin = function(rsad, n_indiv, k){
+  ## Expected number of species from negative binomial, 
+  ## assuming that there is a common aggregation parameter k
+  ## that does not change with scale.
+  ## Arguments: 
+  ## rsad: relative species abundance distribution (p_i's)
+  ## n_indiv: how many individuals are sampled
+  ## k: aggregation parameter (e.g., see Green & Plotkin 2007)
+  ## k cannot be between [-max(sad) * n_indiv, 0].
+  ## Returns: 
+  ## the average expected number of species under the negative binomial
+  ## distribution for a sample size of n_indiv
+  S_0 = length(rsad)
+  S_n = sapply(n_indiv, function(n) S_0 - sum((k / (rsad * n + k)) ^ k))
+  return (S_n)
+}
 
 expS_binom = function(sad, n_indiv) {
     ## Expected number of species from Coleman (1981), Eq. 3.11
@@ -17,6 +33,33 @@ dexpS_binom = function(sad, n_indiv) {
     dS = sapply(n_indiv, function(x) 
         (x * sum((1 - pi)^x * log(1 - pi))) / (S - sum(1 - pi)^x))
     return(dS)
+}
+
+get_sad = function(list_sp){
+  ## Return the list of abundances, ranked from the most abundant to the least abundant,
+  ## given a list of individuals with species names.
+  abd_list = as.numeric(table(list_sp))
+  return(sort(abd_list, decreasing = T))
+}
+
+force_S = function(sad, newS){
+  ## Force the richness to a new value newS, without changing the shape of the SAD.
+  ## Here it is assumed that the SAD is a Poisson lognormal and the parameters are MLEs.
+  ## Arguments:
+  ## sad: a list of species abundances
+  ## newS: desirable new level of richness
+  ## Returns:
+  ## a list of relative abundances of length newS coming from the same Poisson lognormal distribution.
+  library(poilog)
+  pars = as.numeric(poilogMLE(sad, startVals = c(mu = mean(log(sad)), sig = sd(log(sad))))$par)
+  newsad = rpoilog(newS, pars[1], pars[2])
+  while(length(newsad) < newS){
+    newsp = rpoilog(1, pars[1], pars[2], keep0 = T)
+    if (newsp != 0){
+      newsad = c(newsad, newsp)
+    }
+  }
+  return(newsad)
 }
 
 near_neigh_ind = function(data, nperm=20){
