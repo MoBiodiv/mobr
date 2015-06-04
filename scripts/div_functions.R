@@ -42,6 +42,26 @@ get_sad = function(list_sp){
   return(sort(abd_list, decreasing = T))
 }
 
+force_S = function(sad, newS){
+  ## Force the richness to a new value newS, without changing the shape of the SAD.
+  ## Here it is assumed that the SAD is a Poisson lognormal and the parameters are MLEs.
+  ## Arguments:
+  ## sad: a list of species abundances
+  ## newS: desirable new level of richness
+  ## Returns:
+  ## a list of relative abundances of length newS coming from the same Poisson lognormal distribution.
+  library(poilog)
+  pars = as.numeric(poilogMLE(sad, startVals = c(mu = mean(log(sad)), sig = sd(log(sad))))$par)
+  newsad = rpoilog(newS, pars[1], pars[2])
+  while(length(newsad) < newS){
+    newsp = rpoilog(1, pars[1], pars[2], keep0 = T)
+    if (newsp != 0){
+      newsad = c(newsad, newsp)
+    }
+  }
+  return(newsad)
+}
+
 near_neigh_ind = function(data, nperm=20){
     # The input data has three columns: x, y, and species ID for each individual.
     N = nrow(data)
