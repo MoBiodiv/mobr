@@ -35,6 +35,13 @@ dexpS_binom = function(sad, n_indiv) {
     return(dS)
 }
 
+get_sad = function(list_sp){
+  ## Return the list of abundances, ranked from the most abundant to the least abundant,
+  ## given a list of individuals with species names.
+  abd_list = as.numeric(table(list_sp))
+  return(sort(abd_list, decreasing = T))
+}
+
 near_neigh_ind = function(data, nperm=20){
     # The input data has three columns: x, y, and species ID for each individual.
     N = nrow(data)
