@@ -1,23 +1,46 @@
-near_neigh_ind = function(data){
-  # The input data has three columns: x, y, and species ID for each individual.
-  data = data[sample(1:dim(data)[1]), ]
-  focal_row = sample(dim(data)[1], 1)
-  # Compute Euclidean distances
-  x_diff = data[, 1] - as.numeric(data[focal_row, 1])
-  y_diff = data[, 2] - as.numeric(data[focal_row, 2])
-  dist_row = sqrt(x_diff^2 + y_diff^2)
 
-  data_order = data[order(dist_row), ]
-  S = c()
-  #vec_list = lapply(1:dim(data_order)[1], seq)
-  #lapply(vec_list, length(unique(data_order[vec_list, 3])))
-  for (i in 1:dim(data_order)[1]){
-    sp_id_list = data_order[1:i, 3]
-    i_rich = length(unique(sp_id_list))
-    S = c(S, i_rich)
-  }
-  N = 1:dim(data_order)[1]
-  return(list(S = S, N = N))
+expS_binom = function(sad, n_indiv) {
+    ## Expected number of species from Coleman (1981), Eq. 3.11
+    ## Arguments:
+    ## sad: species abundance distribution
+    ## n_indiv: how many individuals 
+    ## Returns:
+    ## the average expected number of species under the binomial distr for
+    ## a sample of area A out of A0 and species abundances n
+    S = sapply(n_indiv, function(x) sum(1 - (1 - (sad/sum(sad))) ^ x))
+    return(S)
+}
+
+dexpS_binom = function(sad, n_indiv) {
+    pi = sad / sum(sad)
+    S = length(sad)
+    dS = sapply(n_indiv, function(x) 
+        (x * sum((1 - pi)^x * log(1 - pi))) / (S - sum(1 - pi)^x))
+    return(dS)
+}
+
+near_neigh_ind = function(data, nperm=20){
+    # The input data has three columns: x, y, and species ID for each individual.
+    N = nrow(data)
+    S = matrix(0, nrow=nperm, ncol=N)
+    for (i in 1:nperm) {
+        data = data[sample(1:dim(data)[1]), ]
+        focal_row = sample(dim(data)[1], 1)
+        # Compute Euclidean distances
+        x_diff = data[, 1] - as.numeric(data[focal_row, 1])
+        y_diff = data[, 2] - as.numeric(data[focal_row, 2])
+        dist_row = sqrt(x_diff^2 + y_diff^2)
+        data_order = data[order(dist_row), ]
+        #vec_list = lapply(1:dim(data_order)[1], seq)
+        #lapply(vec_list, length(unique(data_order[vec_list, 3])))
+        for (n in 1:N) {
+            sp_id_list = data_order[1:n, 3]
+            n_rich = length(unique(sp_id_list))
+            S[i, n] = n_rich
+        }
+    }
+    S = apply(S, 2, mean)
+    return(S)
 }
 
 near_neigh_quadrat = function(data){
