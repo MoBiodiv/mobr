@@ -1,3 +1,19 @@
+expS_negbin = function(rsad, n_indiv, k){
+  ## Expected number of species from negative binomial, 
+  ## assuming that there is a common aggregation parameter k
+  ## that does not change with scale.
+  ## Arguments: 
+  ## rsad: relative species abundance distribution (p_i's)
+  ## n_indiv: how many individuals are sampled
+  ## k: aggregation parameter (e.g., see Green & Plotkin 2007)
+  ## k cannot be between [-max(sad) * n_indiv, 0].
+  ## Returns: 
+  ## the average expected number of species under the negative binomial
+  ## distribution for a sample size of n_indiv
+  S_0 = length(rsad)
+  S_n = sapply(n_indiv, function(n) S_0 - sum((k / (rsad * n + k)) ^ k))
+  return (S_n)
+}
 
 expS_binom = function(sad, n_indiv) {
     ## Expected number of species from Coleman (1981), Eq. 3.11
