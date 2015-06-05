@@ -114,7 +114,6 @@ diff_rarefy = function(sad_extend, label_extend){
   for (trtmt in trtmt_list){
     sad_trtmt = sad_extend[label_extend == trtmt]
     sad_numeric = as.numeric(table(sad_trtmt))
-    sad_numeric = sad_numeric[sad_numeric != 0]
     sad_rarefy = as.numeric(rarefy(sad_numeric, 1:min_n))
     list_of_rarefied_sads = c(list_of_rarefied_sads, list(sad_rarefy))
   }
