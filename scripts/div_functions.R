@@ -103,6 +103,54 @@ near_neigh_quadrat = function(data){
   return(list(S = S, N = N))
 }
 
+diff_rarefy = function(sad_extend, label_extend){
+  ## Sub-function for rare_ind() to create the rarefaction curves for the 
+  ## two treatments, and return the difference.
+  trtmt_list = sort(unique(label_extend))
+  n1 = length(label_extend[label_extend == trtmt_list[1]])
+  min_n = min(n1, length(label_extend) - n1)
+  
+  list_of_rarefied_sads = c()
+  for (trtmt in trtmt_list){
+    sad_trtmt = sad_extend[label_extend == trtmt]
+    sad_numeric = as.numeric(table(sad_trtmt))
+    sad_numeric = sad_numeric[sad_numeric != 0]
+    sad_rarefy = as.numeric(rarefy(sad_numeric, 1:min_n))
+    list_of_rarefied_sads = c(list_of_rarefied_sads, list(sad_rarefy))
+  }
+  delta_s = unlist(list_of_rarefied_sads[1]) - unlist(list_of_rarefied_sads[2])
+  return(delta_s)
+}
+
+rare_ind = function(table_of_sads, nperm = 100){
+  ## Rarefy on the individual basis for SADs from two treatment groups.
+  ## Arguments:
+  ## table_of_sads: a data frame, with each row being the SAD for one sample from a 
+  ## treatment. The first column is treatment label, and the subsequent columns are 
+  ## the abundances in the sample. Zeros are allowed
+  ## nperm: number of permutations
+  library(vegan)
+  list_of_labels = as.vector(table_of_sads[, 1])
+  sad_extend = c()
+  label_extend = c()
+  for (label in unique(list_of_labels)){
+    dat_label = table_of_sads[which(list_of_labels == label), 2:dim(table_of_sads)[2]]
+    sad_label = as.numeric(apply(dat_label, 2, sum))
+    sad_extend = c(sad_extend, rep(1:length(sad_label), sad_label))
+    label_extend = c(label_extend, rep(label, sum(sad_label)))
+  }
+  # Do the rarefaction
+  delta_s_orig = diff_rarefy(sad_extend, label_extend)
+  delta_s_perm = as.data.frame(matrix(nrow = nperm, ncol = length(delta_s_orig)))
+  for (i in 1:nperm){
+    label_new = sample(label_extend, length(label_extend))
+    delta_s_perm[i, ] = diff_rarefy(sad_extend, label_new)
+  }
+  
+  quant95 = apply(delta_s_perm, 2, quantile, c(.025, .975))
+  return(list(delta_s_orig, quant95))
+}
+
 mat2psp = function(sp_mat, xy_coord, N=NULL, M=NULL)
 {
     ##place site by species matrix (x) into an S x N x M array where N >= M
