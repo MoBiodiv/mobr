@@ -35,6 +35,7 @@ dexpS_binom = function(sad, n_indiv) {
     return(dS)
 }
 
+## xiao's functions
 get_sad = function(list_sp){
   ## Return the list of abundances, ranked from the most abundant to the least abundant,
   ## given a list of individuals with species names.
@@ -155,6 +156,49 @@ rare_ind = function(table_of_sads, nperm = 100){
   delta_s_comb[, 4] = as.numeric(quant95[2, ])
   names(delta_s_comb) = c('N', 'delta_S', 'null_lo', 'null_hi')
   return(delta_s_comb)
+}
+
+## dans function
+get_acc_avg = function(pooled_sads) {
+    # pooled_sads = matrix of sads each row is a site, each column a sp
+    acc = apply(pooled_sads, 1, function(x) rarefy(x, 1:sum(x)))
+    # average rarefaction curves within a treatment
+    min_N = min(sapply(acc, length))
+    acc_std = t(sapply(acc, function(x) x[1:min_N]))
+    acc_avg = aggregate(acc_std, list(rownames(acc_std)), mean)
+    return(acc_avg)
+}
+
+get_acc_delta = function(pooled_sads) {
+    acc = get_acc_avg(pooled_sads)
+    delta = acc[1, -1] - acc[2, -1] 
+    return(as.numeric(delta))
+}
+
+
+perm_labels = function(pooled_sads, nperm=2, quantiles=c(.025, .975)) {
+    # pooled_sads = list of sads each element of the list is a
+    # different treatment
+    obs_delta = get_acc_delta(pooled_sads)
+    swap = function(x){ rownames(x) = sample(rownames(x)) ; return(x)}
+    perms = replicate(nperm, get_acc_delta(swap(pooled_sads)))
+    null_qt = apply(perms, 1, quantile, quantiles)
+    out = data.frame(N = 1:length(obs_delta), delta_S = obs_delta,
+                     null_lo = null_qt[1, ], null_hi = null_qt[2, ])
+    return(out)
+}
+
+addCI = function(x, y_lo, y_hi, col, data=NULL) {
+    ## if data is not null then all of the arguments
+    ## including data itself must be text strings
+    if (!is.null(data)) {
+        x = eval(parse(text=paste(data, '$', x, sep='')))
+        y_lo = eval(parse(text=paste(data, '$', y_lo, sep='')))
+        y_hi = eval(parse(text=paste(data, '$', y_hi, sep='')))
+    }  
+    xvals = c(x, rev(x))
+    yvals = c(y_lo, rev(y_hi))
+    polygon(xvals, yvals, border=NA, col=col)
 }
 
 mat2psp = function(sp_mat, xy_coord, N=NULL, M=NULL)
