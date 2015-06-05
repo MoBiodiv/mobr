@@ -14,8 +14,50 @@ assign_id = function(x, nsites) {
     return(ids)
 }
 
+get_sads = function(data) {
+    sads = tapply(data$site, INDEX = list(data$site, data$sp), 
+                  length)
+    sads = ifelse(is.na(sads), 0, sads)
+    return(sads)
+}
+
+pool_sads = function(sad1, sad2) {
+    n_reps = nrow(sad1) + nrow(sad2)
+    # count how many total unique species names
+    sp_names = unique(c(colnames(sad1), colnames(sad2)))
+    S = length(sp_names)
+    pooled_sads = matrix(0, ncol= S, nrow=n_reps)
+    for(i in 1:n_reps) {
+        for(j in 1:S) {
+            #            pooled_sads[i, j] = 
+        }
+    }
+}
+
+
+
 sherman$id = assign_id(sherman$x, 4)
-bigoak$id = assign_id(bigoak$x, 4)
+bigoak$id = assign_id(bigoak$X, 4)
+bigoak$x = bigoak$X
+bigoak$y = bigoak$Y
+bigoak$spcode = bigoak$SPEC
+
+data = rbind(data.frame(site='sherman', sherman[ , c('id', 'x', 'y', 'spcode')]), 
+             data.frame(site='bigoak', bigoak[ , c('id', 'x', 'y', 'spcode')]))
+
+# not sure if this works correctly
+sads = tapply(data$id, list(data$site, data$id, data$spcode), length)
+sads = ifelse(is.na(sads), 0, sads)
+# convert from multidimensional array to flat matrix
+pooled_sads = rbind(sads[1, , ], sads[2, , ])
+rownames(pooled_sads) = rep(c('sherman', 'bigoak'), each=4)
+
+###
+test = perm_labels(pooled_sads, 20)
+
+plot(test$N, test$delta_S, ylim=range(test[ , -1]), type='n')
+addCI('N', 'null_lo', 'null_hi', col='pink', 'test') 
+lines(test$N, test$delta_S, col='red', lwd=2)
 
 sherman_sads = tapply(sherman$id, INDEX = list(sherman$id, sherman$spcode), 
               length)
