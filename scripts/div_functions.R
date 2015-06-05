@@ -126,7 +126,7 @@ rare_ind = function(table_of_sads, nperm = 100){
   ## Arguments:
   ## table_of_sads: a data frame, with each row being the SAD for one sample from a 
   ## treatment. The first column is treatment label, and the subsequent columns are 
-  ## the abundances in the sample. Zeros are allowed
+  ## the abundances of specific species in the sample. Zeros are allowed.
   ## nperm: number of permutations
   library(vegan)
   list_of_labels = as.vector(table_of_sads[, 1])
@@ -142,12 +142,19 @@ rare_ind = function(table_of_sads, nperm = 100){
   delta_s_orig = diff_rarefy(sad_extend, label_extend)
   delta_s_perm = as.data.frame(matrix(nrow = nperm, ncol = length(delta_s_orig)))
   for (i in 1:nperm){
+    print(i)
     label_new = sample(label_extend, length(label_extend))
     delta_s_perm[i, ] = diff_rarefy(sad_extend, label_new)
   }
   
   quant95 = apply(delta_s_perm, 2, quantile, c(.025, .975))
-  return(list(delta_s_orig, quant95))
+  delta_s_comb = as.data.frame(matrix(nrow = length(delta_s_orig), ncol = 4))
+  delta_s_comb[, 1] = 1:length(delta_s_orig)
+  delta_s_comb[, 2] = delta_s_orig
+  delta_s_comb[, 3] = as.numeric(quant95[1, ])
+  delta_s_comb[, 4] = as.numeric(quant95[2, ])
+  names(delta_s_comb) = c('N', 'delta_S', 'null_lo', 'null_hi')
+  return(delta_s_comb)
 }
 
 mat2psp = function(sp_mat, xy_coord, N=NULL, M=NULL)
