@@ -1,46 +1,44 @@
+#' @title Expected number of species from negative binomial
+#' 
+#' @description
+#' assuming that there is a common aggregation parameter k
+#' that does not change with scale.
+#' 
+#' @param rsad relative species abundance distribution (p_i's)
+#' @param n_indiv how many individuals are sampled
+#' @param k aggregation parameter (e.g., see Green & Plotkin 2007)
+#' k cannot be between [-max(sad) * n_indiv, 0].
+#' 
+#' @return the average expected number of species under the
+#' negative binomial distribution for a sample size of n_indiv
+#' 
+#' @example
+#' sad = rpois(100, 5)
+#' rsad = sad / sum(sad)
+#' expS_negbin(rsad, 1:10, 0.5)
+#' @export
 expS_negbin = function(rsad, n_indiv, k){
-  ## Expected number of species from negative binomial, 
-  ## assuming that there is a common aggregation parameter k
-  ## that does not change with scale.
-  ## Arguments: 
-  ## rsad: relative species abundance distribution (p_i's)
-  ## n_indiv: how many individuals are sampled
-  ## k: aggregation parameter (e.g., see Green & Plotkin 2007)
-  ## k cannot be between [-max(sad) * n_indiv, 0].
-  ## Returns: 
-  ## the average expected number of species under the negative binomial
-  ## distribution for a sample size of n_indiv
-  S_0 = length(rsad)
-  S_n = sapply(n_indiv, function(n) S_0 - sum((k / (rsad * n + k)) ^ k))
-  return (S_n)
+    S_0 = length(rsad)
+    S_n = sapply(n_indiv, function(n) S_0 - sum((k / (rsad * n + k)) ^ k))
+    return (S_n)
 }
 
-expS_binom = function(sad, n_indiv) {
-    ## Expected number of species from Coleman (1981), Eq. 3.11
-    ## Arguments:
-    ## sad: species abundance distribution
-    ## n_indiv: how many individuals 
-    ## Returns:
-    ## the average expected number of species under the binomial distr for
-    ## a sample of area A out of A0 and species abundances n
-    S = sapply(n_indiv, function(x) sum(1 - (1 - (sad/sum(sad))) ^ x))
-    return(S)
-}
 
-dexpS_binom = function(sad, n_indiv) {
-    pi = sad / sum(sad)
-    S = length(sad)
-    dS = sapply(n_indiv, function(x) 
-        (x * sum((1 - pi)^x * log(1 - pi))) / (S - sum(1 - pi)^x))
-    return(dS)
-}
-
-## xiao's functions
-get_sad = function(list_sp){
-  ## Return the list of abundances, ranked from the most abundant to the least abundant,
-  ## given a list of individuals with species names.
-  abd_list = as.numeric(table(list_sp))
-  return(sort(abd_list, decreasing = T))
+#' @title rank abundance distribution
+#' 
+#' @param indiv_ids a vector of species names were each element of the vector
+#'        represents a different individual
+#' @example
+#' indivs = c('A', 'A', 'B', 'C', 'C', 'C')
+#' get_sad(indivs)
+#' @export
+get_sad = function(indiv_ids){
+    # is there a good reason to return a ranked vector of abunances. my pref
+    # is for non-ranked sad b/c its less likely to confuse a user 
+    # I think we should rename this one b/c sad is short for species-abundance distribution
+    # which I don't think many people assume is a rank abundance-distribution
+    abu_list = as.numeric(table(list_sp))
+    return(sort(abu_list, decreasing = T))
 }
 
 force_S = function(sad, newS){
@@ -51,7 +49,7 @@ force_S = function(sad, newS){
   ## newS: desirable new level of richness
   ## Returns:
   ## a list of relative abundances of length newS coming from the same Poisson lognormal distribution.
-  library(poilog)
+  require(poilog)
   pars = as.numeric(poilogMLE(sad, startVals = c(mu = mean(log(sad)), sig = sd(log(sad))))$par)
   newsad = rpoilog(newS, pars[1], pars[2])
   while(length(newsad) < newS){
@@ -158,7 +156,6 @@ rare_ind = function(table_of_sads, nperm = 100){
   return(delta_s_comb)
 }
 
-## dans function
 get_acc_avg = function(pooled_sads) {
     # pooled_sads = matrix of sads each row is a site, each column a sp
     acc = apply(pooled_sads, 1, function(x) rarefy(x, 1:sum(x)))
@@ -578,4 +575,25 @@ make_comm_matrix = function(spnum, S, coords, n_quadrats, domain, abu = NULL,
             comms = comms[ , -cols_to_rm]
     }
     return(comms)
+}
+
+
+expS_binom = function(sad, n_indiv) {
+    ## Expected number of species from Coleman (1981), Eq. 3.11
+    ## Arguments:
+    ## sad: species abundance distribution
+    ## n_indiv: how many individuals 
+    ## Returns:
+    ## the average expected number of species under the binomial distr for
+    ## a sample of area A out of A0 and species abundances n
+    S = sapply(n_indiv, function(x) sum(1 - (1 - (sad/sum(sad))) ^ x))
+    return(S)
+}
+
+dexpS_binom = function(sad, n_indiv) {
+    pi = sad / sum(sad)
+    S = length(sad)
+    dS = sapply(n_indiv, function(x) 
+        (x * sum((1 - pi)^x * log(1 - pi))) / (S - sum(1 - pi)^x))
+    return(dS)
 }
