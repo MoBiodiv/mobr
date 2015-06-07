@@ -61,7 +61,7 @@ site_summary = function(x) {
 #' @return the average expected number of species under the
 #' negative binomial distribution for a sample size of n_indiv
 #' 
-#' @example
+#' @examples
 #' sad = rpois(100, 5)
 #' rsad = sad / sum(sad)
 #' expS_negbin(rsad, 1:10, 0.5)
@@ -77,7 +77,7 @@ expS_negbin = function(rsad, n_indiv, k){
 #' 
 #' @param indiv_ids a vector of species names were each element of the vector
 #'        represents a different individual
-#' @example
+#' @examples
 #' indivs = c('A', 'A', 'B', 'C', 'C', 'C')
 #' get_sad(indivs)
 #' @export
