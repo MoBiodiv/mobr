@@ -1,3 +1,52 @@
+#' @title Calcualte site richness and abundance
+#' 
+#' @description 
+#' This function calculates total abundance (N), richness (S), 
+#' and rarified richness (S_rare to the smallest number of individuals 
+#' across all sites
+#' @param x a data.frame, a matrix, or a community matrix that has 
+#' the class 'indiv_occ', 'site_occ', 'site_by_sp' associated with it
+#' @return 
+#' A data.frame with each sites summary values
+#' @details 
+#' rarefied richness is computed under an assumption of random sampling
+#' without replacement (i.e., the hypergeometric distribution)
+#' @examples 
+#' nindiv= 100
+#' nsites = 10
+#' stems = data.frame(site = rep(1:nsites, length.out=nindiv),
+#'                    sp = sample(nrow, replace = T))
+#' class(stem_occ) = c('data.frame', 'indiv_occ')
+#' site_summary(stem_occ)
+#' @export
+site_summary = function(x) {
+    require(vegan)
+    if (!any(class(x) %in% c('indiv_occ', 'site_occ', 'site_by_sp'))) {
+        stop('x must be either of class indiv_occ, stem_occ, or site_by_sp')
+    }
+    if (any(class(x) == 'indiv_occ')) {
+        sites = sort(unique(x$site))
+        N = tapply(quad_abu$abu, list(quad_abu$site),sum)
+        S = tapply(x$sp, list(x$site), function(y) length(unique(y)))
+        sads = tapply(stem_occ$sp, list(stem_occ$site), get_sad)
+        S_rare = sapply(sads, rarefy, min(N))
+    }
+    else if (any(class(x) == 'site_occ')) {
+        sites = sort(unique(x$site))
+        N = tapply(x$abu, list(x$site), sum)
+        S = tapply(x$sp, list(x$site), function(y) length(y))
+        S_rare = tapply(x$abu, list(x$site), rarefy, min(N))
+    }
+    else if (any(class(x) == 'site_by_sp')) {
+        sites = row.names(x)
+        N = apply(x, 1, sum)
+        S = apply(x > 0, 1, sum)
+        S_rare = rarefy(x, min(N))
+    }
+    out = data.frame(site=sites, N, S, S_rare)
+    return(out)
+}
+
 #' @title Expected number of species from negative binomial
 #' 
 #' @description
@@ -37,7 +86,7 @@ get_sad = function(indiv_ids){
     # is for non-ranked sad b/c its less likely to confuse a user 
     # I think we should rename this one b/c sad is short for species-abundance distribution
     # which I don't think many people assume is a rank abundance-distribution
-    abu_list = as.numeric(table(list_sp))
+    abu_list = as.numeric(table(indiv_ids))
     return(sort(abu_list, decreasing = T))
 }
 
