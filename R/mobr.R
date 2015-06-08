@@ -169,6 +169,23 @@ diff_rarefy = function(sad_extend, label_extend){
   return(delta_s)
 }
 
+avg_rarefy = function(sad_extend, sample_extend, min_n){
+  ## Sub-function for rare_ind_avg() to create average rarefaction curves among
+  ## samples with the same treatment.
+  sample_list = sort(unique(sample_extend))
+  list_of_rarefied_sads = as.data.frame(matrix(nrow = length(sample_list), 
+                                               ncol = min_n))
+  for (i in 1:length(sample_list)){
+    sample = sample_list[i]
+    sad_sample = sad_extend[sample_extend == sample]
+    sad_numeric = as.numeric(table(sad_sample))
+    sad_rarefy = as.numeric(rarefy(sad_numeric, 1:min_n))
+    list_of_rarefied_sads[i, ] = sad_rarefy
+  }
+  avg_s = apply(list_of_rarefied_sads, 2, mean)
+  return(avg_s)
+}
+
 rare_ind = function(table_of_sads, nperm = 100){
   ## Rarefy on the individual basis for SADs from two treatment groups.
   ## Arguments:
@@ -193,6 +210,59 @@ rare_ind = function(table_of_sads, nperm = 100){
     print(i)
     label_new = sample(label_extend, length(label_extend))
     delta_s_perm[i, ] = diff_rarefy(sad_extend, label_new)
+  }
+  
+  quant95 = apply(delta_s_perm, 2, quantile, c(.025, .975))
+  delta_s_comb = as.data.frame(matrix(nrow = length(delta_s_orig), ncol = 4))
+  delta_s_comb[, 1] = 1:length(delta_s_orig)
+  delta_s_comb[, 2] = delta_s_orig
+  delta_s_comb[, 3] = as.numeric(quant95[1, ])
+  delta_s_comb[, 4] = as.numeric(quant95[2, ])
+  names(delta_s_comb) = c('N', 'delta_S', 'null_lo', 'null_hi')
+  return(delta_s_comb)
+}
+
+rare_ind_avg = function(table_of_sads, nperm = 100){
+  ## Rarefy on the individual basis for SADs from two treatment groups. 
+  ## Unlike rare_ind(), here the rarefaction curves are averaged among samples 
+  ## within treatment groups, thus delta-S only goes to Nmin, where Nmin is the 
+  ## lowest totally abundance among samples across treatments.
+  library(vegan)
+  list_of_labels = as.vector(table_of_sads[, 1])
+  trtmt_rows = list(which(list_of_labels==unique(list_of_labels)[1]), 
+                    which(list_of_labels==unique(list_of_labels)[2]))
+  sample_n = apply(table_of_sads[, 2:dim(table_of_sads)[2]], 1, sum)
+  min_n = min(sample_n)
+  
+  avg_S = as.data.frame(matrix(0, nrow = 2, ncol = min_n))
+  sample_extend_full = c()
+  sad_extend_full = c()
+  for (i in 1:2){
+    sad_rows = table_of_sads[unlist(trtmt_rows[i]), 2:dim(table_of_sads)[2]]
+    sad_extend = c()
+    sample_extend = c()
+    for (j in 1:dim(sad_rows)[1]){
+      sad_row = sad_rows[j, ]
+      sad_extend = c(sad_extend, rep(1:length(sad_row), sad_row))
+      sample_extend = c(sample_extend, rep(unlist(trtmt_rows[i])[j], sum(sad_row)))
+    }
+    avg_S[i, ] = avg_rarefy(sad_extend, sample_extend, min_n)
+    sample_extend_full = c(sample_extend_full, sample_extend)
+    sad_extend_full = c(sad_extend_full, sad_extend)
+  }
+  delta_s_orig = avg_S[1, ] - avg_S[2, ]
+  
+  delta_s_perm = as.data.frame(matrix(nrow = nperm, ncol = length(delta_s_orig)))
+  for (i in 1:nperm){
+    print(i)
+    avg_S = as.data.frame(matrix(0, nrow = 2, ncol = min_n))
+    sample_full_new = sample(sample_extend_full, length(sample_extend_full))
+    for (j in 1:2){
+      sample_new = sample_full_new[which(sample_full_new %in% unlist(trtmt_rows[j]))]
+      sad_new = sad_extend_full[which(sample_full_new %in% unlist(trtmt_rows[j]))]
+      avg_S[j, ] = avg_rarefy(sad_new, sample_new, min_n)
+    }
+    delta_s_perm[i, ] = avg_S[1, ] - avg_S[2, ]
   }
   
   quant95 = apply(delta_s_perm, 2, quantile, c(.025, .975))
