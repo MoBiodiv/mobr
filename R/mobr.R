@@ -169,6 +169,23 @@ diff_rarefy = function(sad_extend, label_extend){
   return(delta_s)
 }
 
+avg_rarefy = function(sad_extend, sample_extend, min_n){
+  ## Sub-function for rare_ind_avg() to create average rarefaction curves among
+  ## samples with the same treatment.
+  sample_list = sort(unique(sample_extend))
+  list_of_rarefied_sads = as.data.frame(matrix(nrow = length(sample_list), 
+                                               ncol = min_n))
+  for (i in 1:length(sample_list)){
+    sample = sample_list[i]
+    sad_sample = sad_extend[sample_extend == sample]
+    sad_numeric = as.numeric(table(sad_sample))
+    sad_rarefy = as.numeric(rarefy(sad_numeric, 1:min_n))
+    list_of_rarefied_sads[i, ] = sad_rarefy
+  }
+  avg_s = apply(list_of_rarefied_sads, 2, mean)
+  return(avg_s)
+}
+
 rare_ind = function(table_of_sads, nperm = 100){
   ## Rarefy on the individual basis for SADs from two treatment groups.
   ## Arguments:
@@ -199,6 +216,59 @@ rare_ind = function(table_of_sads, nperm = 100){
   delta_s_comb = as.data.frame(matrix(nrow = length(delta_s_orig), ncol = 4))
   delta_s_comb[, 1] = 1:length(delta_s_orig)
   delta_s_comb[, 2] = delta_s_orig
+  delta_s_comb[, 3] = as.numeric(quant95[1, ])
+  delta_s_comb[, 4] = as.numeric(quant95[2, ])
+  names(delta_s_comb) = c('N', 'delta_S', 'null_lo', 'null_hi')
+  return(delta_s_comb)
+}
+
+rare_ind_avg = function(table_of_sads, nperm = 100){
+  ## Rarefy on the individual basis for SADs from two treatment groups. 
+  ## Unlike rare_ind(), here the rarefaction curves are averaged among samples 
+  ## within treatment groups, thus delta-S only goes to Nmin, where Nmin is the 
+  ## lowest totally abundance among samples across treatments.
+  library(vegan)
+  list_of_labels = as.vector(table_of_sads[, 1])
+  trtmt_rows = list(which(list_of_labels==unique(list_of_labels)[1]), 
+                    which(list_of_labels==unique(list_of_labels)[2]))
+  sample_n = apply(table_of_sads[, 2:dim(table_of_sads)[2]], 1, sum)
+  min_n = min(sample_n)
+  
+  avg_S = as.data.frame(matrix(0, nrow = 2, ncol = min_n))
+  sample_extend_full = c()
+  sad_extend_full = c()
+  for (i in 1:2){
+    sad_rows = table_of_sads[unlist(trtmt_rows[i]), 2:dim(table_of_sads)[2]]
+    sad_extend = c()
+    sample_extend = c()
+    for (j in 1:dim(sad_rows)[1]){
+      sad_row = sad_rows[j, ]
+      sad_extend = c(sad_extend, rep(1:length(sad_row), sad_row))
+      sample_extend = c(sample_extend, rep(unlist(trtmt_rows[i])[j], sum(sad_row)))
+    }
+    avg_S[i, ] = avg_rarefy(sad_extend, sample_extend, min_n)
+    sample_extend_full = c(sample_extend_full, sample_extend)
+    sad_extend_full = c(sad_extend_full, sad_extend)
+  }
+  delta_s_orig = avg_S[1, ] - avg_S[2, ]
+  
+  delta_s_perm = as.data.frame(matrix(nrow = nperm, ncol = length(delta_s_orig)))
+  for (i in 1:nperm){
+    print(i)
+    avg_S = as.data.frame(matrix(0, nrow = 2, ncol = min_n))
+    sample_full_new = sample(sample_extend_full, length(sample_extend_full))
+    for (j in 1:2){
+      sample_new = sample_full_new[which(sample_full_new %in% unlist(trtmt_rows[j]))]
+      sad_new = sad_extend_full[which(sample_full_new %in% unlist(trtmt_rows[j]))]
+      avg_S[j, ] = avg_rarefy(sad_new, sample_new, min_n)
+    }
+    delta_s_perm[i, ] = avg_S[1, ] - avg_S[2, ]
+  }
+  
+  quant95 = apply(delta_s_perm, 2, quantile, c(.025, .975))
+  delta_s_comb = as.data.frame(matrix(nrow = length(delta_s_orig), ncol = 4))
+  delta_s_comb[, 1] = 1:length(delta_s_orig)
+  delta_s_comb[, 2] = as.numeric(delta_s_orig)
   delta_s_comb[, 3] = as.numeric(quant95[1, ])
   delta_s_comb[, 4] = as.numeric(quant95[2, ])
   names(delta_s_comb) = c('N', 'delta_S', 'null_lo', 'null_hi')
@@ -645,4 +715,89 @@ dexpS_binom = function(sad, n_indiv) {
     dS = sapply(n_indiv, function(x) 
         (x * sum((1 - pi)^x * log(1 - pi))) / (S - sum(1 - pi)^x))
     return(dS)
+}
+
+get_sample_stats = function(dat_in){
+  ## This function calculates the characteristics of each sample.
+  ## Input data have to take a specific format, where each row is the record of one individual,
+  ##     and it must have the following columns (additional columns are allowed): 
+  ##     sample - identifies in which sample the individual occurs
+  ##     treatment - treatment associated with the sample
+  ##     spcode - species code for the individual
+  ## It returns a data frame where each row is a sample, with the following columns:
+  ## sample: sample ID
+  ## treatment: treatment associated with the sample
+  ## N: total number of individuals
+  ## obsS: total number of observed species
+  ## PIE: 1 - sum(p_i^2) 
+  ## rareS: rarefied S at min(N). This value depends on other samples.
+  ## MIHS: difference between obsS and rareS. Thus the min value among the rows will always be zero. 
+  library(vegan)
+  samples = unique(dat_in$sample)
+  dat_out = as.data.frame(matrix(nrow = length(samples), ncol = 7))
+  names(dat_out) = c('sample', 'treatment', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
+  dat_out$sample = samples
+  dat_out$N = as.numeric(table(dat_in$sample))
+  minN = min(dat_out$N)
+  for (i in 1:dim(dat_out)[1]){
+    dat_in_sample = dat_in[dat_in$sample == samples[i], ]
+    dat_out$treatment[i] = dat_in_sample$treatment[1]
+    dat_out$N[i] = dim(dat_in_sample)[1]
+    dat_out$obsS[i] = length(unique(dat_in_sample$spcode))
+    sp_counts = as.numeric(table(dat_in_sample$spcode))
+    dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((sp_counts / sum(sp_counts))^2))
+    dat_out$rareS[i] = rarefy(sp_counts, minN)
+  }
+  dat_out$MIHS = dat_out$obsS - dat_out$rareS
+  return(dat_out)
+}
+
+initial_tests_S_N = function(dat_sample, parametric, plot){
+  ## This function takes the output from get_sample_stats() and perform tests on whether samples differ 
+  ## by treatments. The test will be ANoVA if treatment is categorical, linear regression if it is 
+  ## continuous.
+  ## Inputs: 
+  ## dat_sample: output from get_sample_stats(), with 6 columns and one sample in each row.
+  ## parametric: If TRUE, p-value is read directly from the output of lm(). If FALSE, p-value is 
+  ##     computed by shuffling the treatment labels 1,000 times. Note that when the sample size is
+  ##     low there may not be 1,000 unique permutations of the treatment labels.
+  ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.\
+  ## Output:
+  ## A list of the five p-values: p_N, p_obsS, p_PIE, p_rareS, p_MIHS
+  p_vec = c()
+  f_vec = c()
+  for (i in 3:7){
+    model = summary(lm(dat_sample[, i]~dat_sample[, 2]))
+    f = model$fstat
+    f_vec = c(f_vec, f[1])
+    p_vec = c(p_vec, pf(f[1], f[2], f[3], lower = F))
+  }
+  if (parametric == F) { # Non-parametric test
+    f_frame = as.data.frame(matrix(nrow = 1000, ncol = 5))
+    for (j in 1:1000){
+      dat_rand = dat_sample
+      dat_rand$treatment = sample(dat_rand$treatment, length(dat_rand$treatment))
+      for (i in 3:7){
+        model = summary(lm(dat_rand[, i]~dat_rand[, 2]))
+        f = model$fstat
+        f_frame[j, i-2] = f[1]
+      }
+    }
+    p_vec = c()
+    for (i in 1:5){
+      p_vec = c(p_vec, length(f_frame[f_frame[, i]>f_vec[i], i]) / 1000)
+    }
+  }
+  if (plot == T){
+    # Currently it is assumed that treatment has distinct levels.
+    par(mfrow = c(2, 3))
+    col_names = c('N', 'Observed S', 'PIE', 'Rarefied S', 'MIH delta-S')
+    for (i in 1:5){
+      boxplot(dat_sample[, i + 2] ~ dat_sample[, 2], main = col_names[i],
+              las = 2)
+      mtext(paste('p=', p_vec[i], sep = ''), cex = 0.8)
+    }
+  }
+  return(list(p_N = p_vec[1], p_obs = p_vec[2], p_PIE = p_vec[3], p_rareS = p_vec[4], 
+              p_MIHS = p_vec[5]))
 }
