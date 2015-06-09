@@ -268,7 +268,7 @@ rare_ind_avg = function(table_of_sads, nperm = 100){
   quant95 = apply(delta_s_perm, 2, quantile, c(.025, .975))
   delta_s_comb = as.data.frame(matrix(nrow = length(delta_s_orig), ncol = 4))
   delta_s_comb[, 1] = 1:length(delta_s_orig)
-  delta_s_comb[, 2] = delta_s_orig
+  delta_s_comb[, 2] = as.numeric(delta_s_orig)
   delta_s_comb[, 3] = as.numeric(quant95[1, ])
   delta_s_comb[, 4] = as.numeric(quant95[2, ])
   names(delta_s_comb) = c('N', 'delta_S', 'null_lo', 'null_hi')
@@ -783,6 +783,7 @@ initial_tests_S_N = function(dat_sample, parametric, plot){
         f_frame[j, i-2] = f[1]
       }
     }
+    p_vec = c()
     for (i in 1:5){
       p_vec = c(p_vec, length(f_frame[f_frame[, i]>f_vec[i], i]) / 1000)
     }
