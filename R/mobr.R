@@ -733,57 +733,6 @@ dexpS_binom = function(sad, n_indiv) {
     return(dS)
 }
 
-# get_sample_stats = function(dat_in){
-#   ## This function computes the characteristics of each plot in an input data frame, 
-#   ## where each row is one sample in a given plot with given treatment.
-#   ## Input data: a data frame with the following columns (in this order):
-#   ## treatment, plot label, sample (within plots), species ID, species abundance. 
-#   ## Output: a data frame with the following columns:
-#   ## treatment, pair label, N (abundance within plot), obsS (observed richness within plot), 
-#   ##     PIE (probability of interspecific encounter), rareS (rarefied S at the lowest level of N), 
-#   ##     MIHS (obsS - rareS)  
-#   library(vegan)
-#   # Remove factors in dat_in
-#   i = sapply(dat_in, is.factor)
-#   dat_in[i] = lapply(dat_in[i], as.character)
-#   
-#   unique_plots = unique(dat_in[, 1:2])
-#   dat_out = as.data.frame(matrix(nrow = dim(unique_plots)[1], ncol = 7))
-#   names(dat_out) = c('treatment', 'plot_label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
-#   Ns = aggregate(dat_in[, 5] ~ dat_in[, 1] + dat_in[, 2], FUN = sum)[, 3]
-#   Nmin = min(Ns)
-#   for (i in 1:dim(unique_plots)[1]){
-#     plot = unique_plots[i, ]
-#     dat_plot = merge(dat_in, plot)
-#     dat_out[i, 1:2] = plot
-#     dat_out$obsS[i] = length(unique(dat_plot[, 4]))
-#     dat_out$N[i] = sum(dat_plot[, 5])
-#     plot_sp_counts = aggregate(x = dat_plot[, 5], FUN = sum, by = list(sp = dat_plot[, 4]))[, 2]
-#     dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((plot_sp_counts / sum(plot_sp_counts))^2))
-#     dat_out$rareS[i] = rarefy(plot_sp_counts, Nmin)
-#   }
-#   dat_out$MIHS = dat_out$obsS - dat_out$rareS
-#   return (dat_out)
-#   
-#   samples = unique(dat_in$sample)
-#   dat_out = as.data.frame(matrix(nrow = length(samples), ncol = 7))
-#   names(dat_out) = c('sample', 'treatment', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
-#   dat_out$sample = samples
-#   dat_out$N = as.numeric(table(dat_in$sample))
-#   minN = min(dat_out$N)
-#   for (i in 1:dim(dat_out)[1]){
-#     dat_in_sample = dat_in[dat_in$sample == samples[i], ]
-#     dat_out$treatment[i] = dat_in_sample$treatment[1]
-#     dat_out$N[i] = dim(dat_in_sample)[1]
-#     dat_out$obsS[i] = length(unique(dat_in_sample$spcode))
-#     sp_counts = as.numeric(table(dat_in_sample$spcode))
-#     dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((sp_counts / sum(sp_counts))^2))
-#     dat_out$rareS[i] = rarefy(sp_counts, minN)
-#   }
-#   dat_out$MIHS = dat_out$obsS - dat_out$rareS
-#   return(dat_out)
-# }
-
 get_sample_stats = function(dat_in){
   ## This function computes the characteristics of an input data frame, 
   ## where the plots are paired or unpaired.
@@ -931,3 +880,15 @@ reform_quad_data_to_sitesp = function(dat_in){
   }
   return(dat_out)
 }
+
+reform_ind_data_to_abd = function(dat_in){
+  ## This function reshape the input data frame with individual-level data into the proper
+  ## format for get_sample_stats().
+  ## Input data frame has 6 columns: treatment, plot, sample, species, x, and y.
+  ## The output data frame has 5 columns: treatment, plot, sample, species, and abundance.
+  dat_out = aggregate(dat_in[, 5]~dat_in[, 1]+dat_in[, 2]+dat_in[, 3]+dat_in[, 4], 
+                      FUN = length)
+  names(dat_out) = c('treatment', 'plot', 'sample', 'species', 'abundance')
+  return (dat_out)
+}
+
