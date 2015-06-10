@@ -875,3 +875,26 @@ initial_test_S_N_pair = function(dat_in, plot){
   return(list(p_N = p_vec[1], p_obs = p_vec[2], p_PIE = p_vec[3], p_rareS = p_vec[4], 
               p_MIHS = p_vec[5]))
 }
+
+reform_quad_data_to_sitesp = function(dat_in){
+  ## This function reshape the input data frame with quadrat data into the proper data structure
+  ## for individual-based delta S - N analysis. The input data has the following 5 columns (in this order):
+  ## treatment, plot ID or pair ID, sample, species ID, abundance.
+  ## THe output data frame has each plot in one row. The first column specifies the treatment for the plot, 
+  ## and the subsequent columns are the abundances of species 1, species 2, ...
+  i = sapply(dat_in, is.factor)
+  dat_in[i] = lapply(dat_in[i], as.character)
+  
+  uniq_plot = unique(dat_in[, 1:2])
+  sp_list = unique(dat_in[, 4])
+  S = length(sp_list)
+  dat_out = as.data.frame(matrix(nrow = dim(uniq_plot)[1], ncol = S + 1))
+  for (i in 1:dim(uniq_plot)[1]){
+    plot = uniq_plot[i, ]
+    dat_plot = merge(dat_in, plot)
+    dat_out[i, 1] = dat_plot[1, 1]
+    sp_count = as.numeric(sapply(sp_list, function(x) sum(dat_plot[which(dat_plot[, 4] == x), 5])))
+    dat_out[i, 2:dim(dat_out)[2]] = sp_count
+  }
+  return(dat_out)
+}
