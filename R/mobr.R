@@ -752,6 +752,39 @@ get_sample_stats = function(dat_in){
   return(dat_out)
 }
 
+get_sample_stats_pair = function(dat_in){
+  ## This function computes the characteristics of an input data frame with paired plots.
+  ## Input data: a data frame with the following columns (in this order):
+  ## treatment, plot, pair label (plots in the same pair have the same label), sample (within plots), 
+  ##     species ID, abundance
+  ## Output: a data frame with the following columns:
+  ## treatment, plot, pair label, N (abundance within plot), obsS (observed richness within plot), 
+  ##     PIE (probability of interspecific encounter), rareS (rarefied S at the lowest level of N), 
+  ##     MIHS (obsS - rareS)
+  library(vegan)
+  # Remove factors in dat_in
+  i = sapply(dat_in, is.factor)
+  dat_in[i] = lapply(dat_in[i], as.character)
+  
+  unique_plots = unique(dat_in[, 1:3])
+  dat_out = as.data.frame(matrix(nrow = dim(unique_plots)[1], ncol = 8))
+  names(dat_out) = c('treatment', 'plot', 'pair_label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
+  Ns = aggregate(dat_in[, 6] ~ dat_in[, 1] + dat_in[, 2] + dat_in[, 3], FUN = sum)[, 4]
+  Nmin = min(Ns)
+  for (i in dim(unique_plots)[1]){
+    plot = unique_plots[i, ]
+    dat_plot = merge(dat_in, plot)
+    dat_out[i, 1:3] = plot
+    dat_out$obsS[i] = length(unique(dat_plot[, 5]))
+    dat_out$N[i] = sum(dat_plot[, 6])
+    plot_sp_counts = aggregate(x = dat_plot[, 6], FUN = sum, by = list(sp = dat_plot[, 5]))[, 2]
+    dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((plot_sp_counts / sum(plot_sp_counts))^2))
+    dat_out$rareS[i] = rarefy(plot_sp_counts, Nmin)
+  }
+  dat_out$MIHS = dat_out$obsS - dat_out$rareS
+  return (dat_out)
+}
+
 initial_tests_S_N = function(dat_sample, parametric, plot){
   ## This function takes the output from get_sample_stats() and perform tests on whether samples differ 
   ## by treatments. The test will be ANoVA if treatment is categorical, linear regression if it is 
