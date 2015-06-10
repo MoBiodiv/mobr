@@ -275,6 +275,22 @@ rare_ind_avg = function(table_of_sads, nperm = 100){
   return(delta_s_comb)
 }
 
+plot_deltaS_N = function(table_of_sads, nperm = 100){
+  ## Wrapper function to obtain delta S vs N between two treatments and plot the results,
+  ## both as the average among plots within treatments, and as all plots pooled within treatments.
+  rarefy_pooled = rare_ind(table_of_sads, nperm = nperm)
+  rarefy_avg = rare_ind_avg(table_of_sads, nperm = nperm)
+  par(mfrow = c(1, 2))
+  plot(rarefy_pooled[, 1], rarefy_pooled[, 2], ylim = c(min(rarefy_pooled[, 2:4]), max(rarefy_pooled[, 2:4])), lwd = 2, 
+       type = 'l', xlab = 'N', ylab = 'delta S', main = 'Pooled')
+  lines(rarefy_pooled[, 1], rarefy_pooled[, 3], lwd = 2, lty = 'dashed')
+  lines(rarefy_pooled[, 1], rarefy_pooled[, 4], lwd = 2, lty = 'dashed')
+  plot(rarefy_avg[, 1], rarefy_avg[, 2], ylim = c(min(rarefy_avg[, 2:4]), max(rarefy_avg[, 2:4])), lwd = 2, 
+       type = 'l', xlab = 'N', ylab = 'delta S', main = 'Average')
+  lines(rarefy_avg[, 1], rarefy_avg[, 3], lwd = 2, lty = 'dashed')
+  lines(rarefy_avg[, 1], rarefy_avg[, 4], lwd = 2, lty = 'dashed')
+}
+
 get_acc_avg = function(pooled_sads) {
     # pooled_sads = matrix of sads each row is a site, each column a sp
     acc = apply(pooled_sads, 1, function(x) rarefy(x, 1:sum(x)))
@@ -718,38 +734,37 @@ dexpS_binom = function(sad, n_indiv) {
 }
 
 get_sample_stats = function(dat_in){
-  ## This function calculates the characteristics of each sample.
-  ## Input data have to take a specific format, where each row is the record of one individual,
-  ##     and it must have the following columns (additional columns are allowed): 
-  ##     sample - identifies in which sample the individual occurs
-  ##     treatment - treatment associated with the sample
-  ##     spcode - species code for the individual
-  ## It returns a data frame where each row is a sample, with the following columns:
-  ## sample: sample ID
-  ## treatment: treatment associated with the sample
-  ## N: total number of individuals
-  ## obsS: total number of observed species
-  ## PIE: 1 - sum(p_i^2) 
-  ## rareS: rarefied S at min(N). This value depends on other samples.
-  ## MIHS: difference between obsS and rareS. Thus the min value among the rows will always be zero. 
+  ## This function computes the characteristics of an input data frame, 
+  ## where the plots are paired or unpaired.
+  ## Input data: a data frame with the following columns (in this order):
+  ## treatment, pair label (plots in the same pair have the same label) or plot label, sample (within plots), 
+  ##     species ID, abundance
+  ## Output: a data frame with the following columns:
+  ## treatment, label (of pairs of plots), N (abundance within plot), obsS (observed richness within plot), 
+  ##     PIE (probability of interspecific encounter), rareS (rarefied S at the lowest level of N), 
+  ##     MIHS (obsS - rareS)
   library(vegan)
-  samples = unique(dat_in$sample)
-  dat_out = as.data.frame(matrix(nrow = length(samples), ncol = 7))
-  names(dat_out) = c('sample', 'treatment', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
-  dat_out$sample = samples
-  dat_out$N = as.numeric(table(dat_in$sample))
-  minN = min(dat_out$N)
-  for (i in 1:dim(dat_out)[1]){
-    dat_in_sample = dat_in[dat_in$sample == samples[i], ]
-    dat_out$treatment[i] = dat_in_sample$treatment[1]
-    dat_out$N[i] = dim(dat_in_sample)[1]
-    dat_out$obsS[i] = length(unique(dat_in_sample$spcode))
-    sp_counts = as.numeric(table(dat_in_sample$spcode))
-    dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((sp_counts / sum(sp_counts))^2))
-    dat_out$rareS[i] = rarefy(sp_counts, minN)
+  # Remove factors in dat_in
+  i = sapply(dat_in, is.factor)
+  dat_in[i] = lapply(dat_in[i], as.character)
+  
+  unique_plots = unique(dat_in[, 1:2])
+  dat_out = as.data.frame(matrix(nrow = dim(unique_plots)[1], ncol = 7))
+  names(dat_out) = c('treatment', 'label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
+  Ns = aggregate(dat_in[, 5] ~ dat_in[, 1] + dat_in[, 2], FUN = sum)[, 3]
+  Nmin = min(Ns)
+  for (i in 1:dim(unique_plots)[1]){
+    plot = unique_plots[i, ]
+    dat_plot = merge(dat_in, plot)
+    dat_out[i, 1:2] = plot
+    dat_out$obsS[i] = length(unique(dat_plot[, 4]))
+    dat_out$N[i] = sum(dat_plot[, 5])
+    plot_sp_counts = aggregate(x = dat_plot[, 5], FUN = sum, by = list(sp = dat_plot[, 4]))[, 2]
+    dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((plot_sp_counts / sum(plot_sp_counts))^2))
+    dat_out$rareS[i] = rarefy(plot_sp_counts, Nmin)
   }
   dat_out$MIHS = dat_out$obsS - dat_out$rareS
-  return(dat_out)
+  return (dat_out)
 }
 
 initial_tests_S_N = function(dat_sample, parametric, plot){
@@ -761,7 +776,7 @@ initial_tests_S_N = function(dat_sample, parametric, plot){
   ## parametric: If TRUE, p-value is read directly from the output of lm(). If FALSE, p-value is 
   ##     computed by shuffling the treatment labels 1,000 times. Note that when the sample size is
   ##     low there may not be 1,000 unique permutations of the treatment labels.
-  ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.\
+  ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.
   ## Output:
   ## A list of the five p-values: p_N, p_obsS, p_PIE, p_rareS, p_MIHS
   p_vec = c()
@@ -801,3 +816,79 @@ initial_tests_S_N = function(dat_sample, parametric, plot){
   return(list(p_N = p_vec[1], p_obs = p_vec[2], p_PIE = p_vec[3], p_rareS = p_vec[4], 
               p_MIHS = p_vec[5]))
 }
+
+initial_test_S_N_pair = function(dat_in, plot){
+  ## This function takes the output from get_sample_stats_pair() and perform pairwise t tests on 
+  ## whether plots differ by treatments. (I think) the treatment can only be categorical here.
+  ## This function does not allow non-parametric test by shuffling the treatment labels, because the 
+  ## number of possible combinations is likely to be extremely limited.
+  ## Inputs: 
+  ## dat_in: output from get_sample_stats_pair(), with 7 columns and one plot in each row.
+  ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.
+  ## Output:
+  ## A list of the five p-values: p_N, p_obsS, p_PIE, p_rareS, p_MIHS
+  dat_in = dat_in[with(dat_in, order(label, treatment)), ]
+  rows_trtmt1 = c()
+  rows_trtmt2 = c()
+  for (pair in unique(dat_in$label)){
+   rows_trtmt1 = c(rows_trtmt1, which(dat_in$label == pair)[1])
+   rows_trtmt2 = c(rows_trtmt2, which(dat_in$label == pair)[2])
+  }
+  
+  p_vec = c()
+  t_vec = c()
+  trtmt = unique(dat_in$treatment)
+  for (i in 3:7){
+    vals_1 = dat_in[rows_trtmt1, i]
+    vals_2 = dat_in[rows_trtmt2, i]
+    model = t.test(vals_1, vals_2, paired = T)
+    t_vec = c(t_vec, as.numeric(model$stat))
+    p_vec = c(p_vec, as.numeric(model$p.val))
+  }
+  if (plot == T){
+    par(mfrow = c(2, 3))
+    col_names = c('N', 'Observed S', 'PIE', 'Rarefied S', 'MIH delta-S')
+    for (i in 1:5){
+      boxplot(dat_in[, i + 2] ~ dat_in[, 1], main = col_names[i],
+              las = 2)
+      mtext(paste('p=',round(p_vec[i], digits = 6), sep = ''), cex = 0.8)
+    }
+  }
+  return(list(p_N = p_vec[1], p_obs = p_vec[2], p_PIE = p_vec[3], p_rareS = p_vec[4], 
+              p_MIHS = p_vec[5]))
+}
+
+reform_quad_data_to_sitesp = function(dat_in){
+  ## This function reshape the input data frame with quadrat data into the proper data structure
+  ## for individual-based delta S - N analysis. The input data has the following 5 columns (in this order):
+  ## treatment, plot ID or pair ID, sample, species ID, abundance.
+  ## THe output data frame has each plot in one row. The first column specifies the treatment for the plot, 
+  ## and the subsequent columns are the abundances of species 1, species 2, ...
+  i = sapply(dat_in, is.factor)
+  dat_in[i] = lapply(dat_in[i], as.character)
+  
+  uniq_plot = unique(dat_in[, 1:2])
+  sp_list = unique(dat_in[, 4])
+  S = length(sp_list)
+  dat_out = as.data.frame(matrix(nrow = dim(uniq_plot)[1], ncol = S + 1))
+  for (i in 1:dim(uniq_plot)[1]){
+    plot = uniq_plot[i, ]
+    dat_plot = merge(dat_in, plot)
+    dat_out[i, 1] = dat_plot[1, 1]
+    sp_count = as.numeric(sapply(sp_list, function(x) sum(dat_plot[which(dat_plot[, 4] == x), 5])))
+    dat_out[i, 2:dim(dat_out)[2]] = sp_count
+  }
+  return(dat_out)
+}
+
+reform_ind_data_to_abd = function(dat_in){
+  ## This function reshape the input data frame with individual-level data into the proper
+  ## format for get_sample_stats().
+  ## Input data frame has 6 columns: treatment, plot, sample, species, x, and y.
+  ## The output data frame has 5 columns: treatment, plot, sample, species, and abundance.
+  dat_out = aggregate(dat_in[, 5]~dat_in[, 1]+dat_in[, 2]+dat_in[, 3]+dat_in[, 4], 
+                      FUN = length)
+  names(dat_out) = c('treatment', 'plot', 'sample', 'species', 'abundance')
+  return (dat_out)
+}
+
