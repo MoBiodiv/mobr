@@ -275,6 +275,22 @@ rare_ind_avg = function(table_of_sads, nperm = 100){
   return(delta_s_comb)
 }
 
+plot_deltaS_N = function(table_of_sads, nperm = 100){
+  ## Wrapper function to obtain delta S vs N between two treatments and plot the results,
+  ## both as the average among plots within treatments, and as all plots pooled within treatments.
+  rarefy_pooled = rare_ind(table_of_sads, nperm = nperm)
+  rarefy_avg = rare_ind_avg(table_of_sads, nperm = nperm)
+  par(mfrow = c(1, 2))
+  plot(rarefy_pooled[, 1], rarefy_pooled[, 2], ylim = c(min(rarefy_pooled[, 2:4]), max(rarefy_pooled[, 2:4])), lwd = 2, 
+       type = 'l', xlab = 'N', ylab = 'delta S', main = 'Pooled')
+  lines(rarefy_pooled[, 1], rarefy_pooled[, 3], lwd = 2, lty = 'dashed')
+  lines(rarefy_pooled[, 1], rarefy_pooled[, 4], lwd = 2, lty = 'dashed')
+  plot(rarefy_avg[, 1], rarefy_avg[, 2], ylim = c(min(rarefy_avg[, 2:4]), max(rarefy_avg[, 2:4])), lwd = 2, 
+       type = 'l', xlab = 'N', ylab = 'delta S', main = 'Average')
+  lines(rarefy_avg[, 1], rarefy_avg[, 3], lwd = 2, lty = 'dashed')
+  lines(rarefy_avg[, 1], rarefy_avg[, 4], lwd = 2, lty = 'dashed')
+}
+
 get_acc_avg = function(pooled_sads) {
     # pooled_sads = matrix of sads each row is a site, each column a sp
     acc = apply(pooled_sads, 1, function(x) rarefy(x, 1:sum(x)))
