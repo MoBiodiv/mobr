@@ -733,48 +733,65 @@ dexpS_binom = function(sad, n_indiv) {
     return(dS)
 }
 
-get_sample_stats = function(dat_in){
-  ## This function calculates the characteristics of each sample.
-  ## Input data have to take a specific format, where each row is the record of one individual,
-  ##     and it must have the following columns (additional columns are allowed): 
-  ##     sample - identifies in which sample the individual occurs
-  ##     treatment - treatment associated with the sample
-  ##     spcode - species code for the individual
-  ## It returns a data frame where each row is a sample, with the following columns:
-  ## sample: sample ID
-  ## treatment: treatment associated with the sample
-  ## N: total number of individuals
-  ## obsS: total number of observed species
-  ## PIE: 1 - sum(p_i^2) 
-  ## rareS: rarefied S at min(N). This value depends on other samples.
-  ## MIHS: difference between obsS and rareS. Thus the min value among the rows will always be zero. 
-  library(vegan)
-  samples = unique(dat_in$sample)
-  dat_out = as.data.frame(matrix(nrow = length(samples), ncol = 7))
-  names(dat_out) = c('sample', 'treatment', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
-  dat_out$sample = samples
-  dat_out$N = as.numeric(table(dat_in$sample))
-  minN = min(dat_out$N)
-  for (i in 1:dim(dat_out)[1]){
-    dat_in_sample = dat_in[dat_in$sample == samples[i], ]
-    dat_out$treatment[i] = dat_in_sample$treatment[1]
-    dat_out$N[i] = dim(dat_in_sample)[1]
-    dat_out$obsS[i] = length(unique(dat_in_sample$spcode))
-    sp_counts = as.numeric(table(dat_in_sample$spcode))
-    dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((sp_counts / sum(sp_counts))^2))
-    dat_out$rareS[i] = rarefy(sp_counts, minN)
-  }
-  dat_out$MIHS = dat_out$obsS - dat_out$rareS
-  return(dat_out)
-}
+# get_sample_stats = function(dat_in){
+#   ## This function computes the characteristics of each plot in an input data frame, 
+#   ## where each row is one sample in a given plot with given treatment.
+#   ## Input data: a data frame with the following columns (in this order):
+#   ## treatment, plot label, sample (within plots), species ID, species abundance. 
+#   ## Output: a data frame with the following columns:
+#   ## treatment, pair label, N (abundance within plot), obsS (observed richness within plot), 
+#   ##     PIE (probability of interspecific encounter), rareS (rarefied S at the lowest level of N), 
+#   ##     MIHS (obsS - rareS)  
+#   library(vegan)
+#   # Remove factors in dat_in
+#   i = sapply(dat_in, is.factor)
+#   dat_in[i] = lapply(dat_in[i], as.character)
+#   
+#   unique_plots = unique(dat_in[, 1:2])
+#   dat_out = as.data.frame(matrix(nrow = dim(unique_plots)[1], ncol = 7))
+#   names(dat_out) = c('treatment', 'plot_label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
+#   Ns = aggregate(dat_in[, 5] ~ dat_in[, 1] + dat_in[, 2], FUN = sum)[, 3]
+#   Nmin = min(Ns)
+#   for (i in 1:dim(unique_plots)[1]){
+#     plot = unique_plots[i, ]
+#     dat_plot = merge(dat_in, plot)
+#     dat_out[i, 1:2] = plot
+#     dat_out$obsS[i] = length(unique(dat_plot[, 4]))
+#     dat_out$N[i] = sum(dat_plot[, 5])
+#     plot_sp_counts = aggregate(x = dat_plot[, 5], FUN = sum, by = list(sp = dat_plot[, 4]))[, 2]
+#     dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((plot_sp_counts / sum(plot_sp_counts))^2))
+#     dat_out$rareS[i] = rarefy(plot_sp_counts, Nmin)
+#   }
+#   dat_out$MIHS = dat_out$obsS - dat_out$rareS
+#   return (dat_out)
+#   
+#   samples = unique(dat_in$sample)
+#   dat_out = as.data.frame(matrix(nrow = length(samples), ncol = 7))
+#   names(dat_out) = c('sample', 'treatment', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
+#   dat_out$sample = samples
+#   dat_out$N = as.numeric(table(dat_in$sample))
+#   minN = min(dat_out$N)
+#   for (i in 1:dim(dat_out)[1]){
+#     dat_in_sample = dat_in[dat_in$sample == samples[i], ]
+#     dat_out$treatment[i] = dat_in_sample$treatment[1]
+#     dat_out$N[i] = dim(dat_in_sample)[1]
+#     dat_out$obsS[i] = length(unique(dat_in_sample$spcode))
+#     sp_counts = as.numeric(table(dat_in_sample$spcode))
+#     dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((sp_counts / sum(sp_counts))^2))
+#     dat_out$rareS[i] = rarefy(sp_counts, minN)
+#   }
+#   dat_out$MIHS = dat_out$obsS - dat_out$rareS
+#   return(dat_out)
+# }
 
-get_sample_stats_pair = function(dat_in){
-  ## This function computes the characteristics of an input data frame with paired plots.
+get_sample_stats = function(dat_in){
+  ## This function computes the characteristics of an input data frame, 
+  ## where the plots are paired or unpaired.
   ## Input data: a data frame with the following columns (in this order):
-  ## treatment, pair label (plots in the same pair have the same label), sample (within plots), 
+  ## treatment, pair label (plots in the same pair have the same label) or plot label, sample (within plots), 
   ##     species ID, abundance
   ## Output: a data frame with the following columns:
-  ## treatment, pair label, N (abundance within plot), obsS (observed richness within plot), 
+  ## treatment, label (of pairs of plots), N (abundance within plot), obsS (observed richness within plot), 
   ##     PIE (probability of interspecific encounter), rareS (rarefied S at the lowest level of N), 
   ##     MIHS (obsS - rareS)
   library(vegan)
@@ -784,7 +801,7 @@ get_sample_stats_pair = function(dat_in){
   
   unique_plots = unique(dat_in[, 1:2])
   dat_out = as.data.frame(matrix(nrow = dim(unique_plots)[1], ncol = 7))
-  names(dat_out) = c('treatment', 'pair_label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
+  names(dat_out) = c('treatment', 'label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
   Ns = aggregate(dat_in[, 5] ~ dat_in[, 1] + dat_in[, 2], FUN = sum)[, 3]
   Nmin = min(Ns)
   for (i in 1:dim(unique_plots)[1]){
@@ -861,12 +878,12 @@ initial_test_S_N_pair = function(dat_in, plot){
   ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.
   ## Output:
   ## A list of the five p-values: p_N, p_obsS, p_PIE, p_rareS, p_MIHS
-  dat_in = dat_in[with(dat_in, order(pair_label, treatment)), ]
+  dat_in = dat_in[with(dat_in, order(label, treatment)), ]
   rows_trtmt1 = c()
   rows_trtmt2 = c()
-  for (pair in unique(dat_in$pair_label)){
-   rows_trtmt1 = c(rows_trtmt1, which(dat_in$pair_label == pair)[1])
-   rows_trtmt2 = c(rows_trtmt2, which(dat_in$pair_label == pair)[2])
+  for (pair in unique(dat_in$label)){
+   rows_trtmt1 = c(rows_trtmt1, which(dat_in$label == pair)[1])
+   rows_trtmt2 = c(rows_trtmt2, which(dat_in$label == pair)[2])
   }
   
   p_vec = c()
