@@ -755,10 +755,10 @@ get_sample_stats = function(dat_in){
 get_sample_stats_pair = function(dat_in){
   ## This function computes the characteristics of an input data frame with paired plots.
   ## Input data: a data frame with the following columns (in this order):
-  ## treatment, plot, pair label (plots in the same pair have the same label), sample (within plots), 
+  ## treatment, pair label (plots in the same pair have the same label), sample (within plots), 
   ##     species ID, abundance
   ## Output: a data frame with the following columns:
-  ## treatment, plot, pair label, N (abundance within plot), obsS (observed richness within plot), 
+  ## treatment, pair label, N (abundance within plot), obsS (observed richness within plot), 
   ##     PIE (probability of interspecific encounter), rareS (rarefied S at the lowest level of N), 
   ##     MIHS (obsS - rareS)
   library(vegan)
@@ -766,18 +766,18 @@ get_sample_stats_pair = function(dat_in){
   i = sapply(dat_in, is.factor)
   dat_in[i] = lapply(dat_in[i], as.character)
   
-  unique_plots = unique(dat_in[, 1:3])
-  dat_out = as.data.frame(matrix(nrow = dim(unique_plots)[1], ncol = 8))
-  names(dat_out) = c('treatment', 'plot', 'pair_label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
-  Ns = aggregate(dat_in[, 6] ~ dat_in[, 1] + dat_in[, 2] + dat_in[, 3], FUN = sum)[, 4]
+  unique_plots = unique(dat_in[, 1:2])
+  dat_out = as.data.frame(matrix(nrow = dim(unique_plots)[1], ncol = 7))
+  names(dat_out) = c('treatment', 'pair_label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
+  Ns = aggregate(dat_in[, 5] ~ dat_in[, 1] + dat_in[, 2], FUN = sum)[, 3]
   Nmin = min(Ns)
   for (i in 1:dim(unique_plots)[1]){
     plot = unique_plots[i, ]
     dat_plot = merge(dat_in, plot)
-    dat_out[i, 1:3] = plot
-    dat_out$obsS[i] = length(unique(dat_plot[, 5]))
-    dat_out$N[i] = sum(dat_plot[, 6])
-    plot_sp_counts = aggregate(x = dat_plot[, 6], FUN = sum, by = list(sp = dat_plot[, 5]))[, 2]
+    dat_out[i, 1:2] = plot
+    dat_out$obsS[i] = length(unique(dat_plot[, 4]))
+    dat_out$N[i] = sum(dat_plot[, 5])
+    plot_sp_counts = aggregate(x = dat_plot[, 5], FUN = sum, by = list(sp = dat_plot[, 4]))[, 2]
     dat_out$PIE[i] = dat_out$N[i] / (dat_out$N[i] - 1) * (1 - sum((plot_sp_counts / sum(plot_sp_counts))^2))
     dat_out$rareS[i] = rarefy(plot_sp_counts, Nmin)
   }
@@ -841,7 +841,7 @@ initial_test_S_N_pair = function(dat_in, plot){
   ## This function does not allow non-parametric test by shuffling the treatment labels, because the 
   ## number of possible combinations is likely to be extremely limited.
   ## Inputs: 
-  ## dat_in: output from get_sample_stats_pair(), with 8 columns and one plot in each row.
+  ## dat_in: output from get_sample_stats_pair(), with 7 columns and one plot in each row.
   ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.
   ## Output:
   ## A list of the five p-values: p_N, p_obsS, p_PIE, p_rareS, p_MIHS
@@ -856,7 +856,7 @@ initial_test_S_N_pair = function(dat_in, plot){
   p_vec = c()
   t_vec = c()
   trtmt = unique(dat_in$treatment)
-  for (i in 4:8){
+  for (i in 3:7){
     vals_1 = dat_in[rows_trtmt1, i]
     vals_2 = dat_in[rows_trtmt2, i]
     model = t.test(vals_1, vals_2, paired = T)
@@ -867,7 +867,7 @@ initial_test_S_N_pair = function(dat_in, plot){
     par(mfrow = c(2, 3))
     col_names = c('N', 'Observed S', 'PIE', 'Rarefied S', 'MIH delta-S')
     for (i in 1:5){
-      boxplot(dat_in[, i + 3] ~ dat_in[, 1], main = col_names[i],
+      boxplot(dat_in[, i + 2] ~ dat_in[, 1], main = col_names[i],
               las = 2)
       mtext(paste('p=',round(p_vec[i], digits = 6), sep = ''), cex = 0.8)
     }
