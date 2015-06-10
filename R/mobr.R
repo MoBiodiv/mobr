@@ -771,7 +771,7 @@ get_sample_stats_pair = function(dat_in){
   names(dat_out) = c('treatment', 'plot', 'pair_label', 'N', 'obsS', 'PIE', 'rareS', 'MIHS')
   Ns = aggregate(dat_in[, 6] ~ dat_in[, 1] + dat_in[, 2] + dat_in[, 3], FUN = sum)[, 4]
   Nmin = min(Ns)
-  for (i in dim(unique_plots)[1]){
+  for (i in 1:dim(unique_plots)[1]){
     plot = unique_plots[i, ]
     dat_plot = merge(dat_in, plot)
     dat_out[i, 1:3] = plot
@@ -794,7 +794,7 @@ initial_tests_S_N = function(dat_sample, parametric, plot){
   ## parametric: If TRUE, p-value is read directly from the output of lm(). If FALSE, p-value is 
   ##     computed by shuffling the treatment labels 1,000 times. Note that when the sample size is
   ##     low there may not be 1,000 unique permutations of the treatment labels.
-  ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.\
+  ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.
   ## Output:
   ## A list of the five p-values: p_N, p_obsS, p_PIE, p_rareS, p_MIHS
   p_vec = c()
@@ -829,6 +829,47 @@ initial_tests_S_N = function(dat_sample, parametric, plot){
       boxplot(dat_sample[, i + 2] ~ dat_sample[, 2], main = col_names[i],
               las = 2)
       mtext(paste('p=', p_vec[i], sep = ''), cex = 0.8)
+    }
+  }
+  return(list(p_N = p_vec[1], p_obs = p_vec[2], p_PIE = p_vec[3], p_rareS = p_vec[4], 
+              p_MIHS = p_vec[5]))
+}
+
+initial_test_S_N_pair = function(dat_in, plot){
+  ## This function takes the output from get_sample_stats_pair() and perform pairwise t tests on 
+  ## whether plots differ by treatments. (I think) the treatment can only be categorical here.
+  ## This function does not allow non-parametric test by shuffling the treatment labels, because the 
+  ## number of possible combinations is likely to be extremely limited.
+  ## Inputs: 
+  ## dat_in: output from get_sample_stats_pair(), with 8 columns and one plot in each row.
+  ## plot: If TRUE, a 2*3 plot is created to illustrate the comparisons of the five variables.
+  ## Output:
+  ## A list of the five p-values: p_N, p_obsS, p_PIE, p_rareS, p_MIHS
+  dat_in = dat_in[with(dat_in, order(pair_label, treatment)), ]
+  rows_trtmt1 = c()
+  rows_trtmt2 = c()
+  for (pair in unique(dat_in$pair_label)){
+   rows_trtmt1 = c(rows_trtmt1, which(dat_in$pair_label == pair)[1])
+   rows_trtmt2 = c(rows_trtmt2, which(dat_in$pair_label == pair)[2])
+  }
+  
+  p_vec = c()
+  t_vec = c()
+  trtmt = unique(dat_in$treatment)
+  for (i in 4:8){
+    vals_1 = dat_in[rows_trtmt1, i]
+    vals_2 = dat_in[rows_trtmt2, i]
+    model = t.test(vals_1, vals_2, paired = T)
+    t_vec = c(t_vec, as.numeric(model$stat))
+    p_vec = c(p_vec, as.numeric(model$p.val))
+  }
+  if (plot == T){
+    par(mfrow = c(2, 3))
+    col_names = c('N', 'Observed S', 'PIE', 'Rarefied S', 'MIH delta-S')
+    for (i in 1:5){
+      boxplot(dat_in[, i + 3] ~ dat_in[, 1], main = col_names[i],
+              las = 2)
+      mtext(paste('p=',round(p_vec[i], digits = 6), sep = ''), cex = 0.8)
     }
   }
   return(list(p_N = p_vec[1], p_obs = p_vec[2], p_PIE = p_vec[3], p_rareS = p_vec[4], 
