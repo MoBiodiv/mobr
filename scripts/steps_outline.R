@@ -24,6 +24,12 @@ dat_p = initial_test_S_N_pair(dat_stats, plot = T)
 dat_reform = reform_quad_data_to_sitesp(dat)
 plot_deltaS_N(dat_reform)
 
+##     Step 3. Kolmogorovo-Smirnov test on the shape of the SAD (Step 6 in Cookbook)
+dat_for_ks = reform_quad_data_for_ks(dat)
+##     There are four options: plots are paired or unpaired, and parametric or nonparametric tests are performed.
+##     Note that the four options return vectors of different lengths, which may require further interpretation.
+p_sad_ks = ks_test_between_treatments(dat_for_ks, T, T) # The second and third inputs can be T or F
+plot_scaled_sads(dat_for_ks)
 
 ## 2. Individual-based data
 ## For now, assume that this kind of data has the following columns (in this order):
@@ -43,3 +49,9 @@ dat_p = initial_test_S_N_pair(dat_stats, plot = T) # Pair-wise tests for paired 
 ##     Step 2. delta-S vs N (Step 4 in Cookbook)
 dat_reform = reform_quad_data_to_sitesp(dat_abd)
 plot_deltaS_N(dat_reform)
+
+##     Step 3. Kolmogorovo-Smirnov test on the shape of the SAD (Step 6 in Cookbook)
+##     See Step 3 for quadrat data for details.
+dat_for_ks = reform_quad_data_for_ks(dat_abd)
+p_sad_ks = ks_test_between_treatments(dat_for_ks, T, T) # The second and third inputs can be T or F
+plot_scaled_sads(dat_for_ks)
