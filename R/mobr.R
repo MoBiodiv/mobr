@@ -991,3 +991,26 @@ ks_test_between_treatments = function(dat_in, parametric, paired){
   }
   return(p_list)
 }
+
+plot_scaled_sads = function(dat_in){
+  ## This function plots the SADs, distinguished by treatments, rescaled by richness and abundance.
+  ## Input: dat_in is a data frame with the same structure as the output from reform_quad_data_for_ks(), 
+  ##     with columns treatment, plot ID, and species abundances. 
+  trtmts = unique(dat_in[, 1])
+  cols = rainbow(length(trtmts))
+  for (i in 1:length(trtmts)){
+    trtmt_rows = dat_in[dat_in[, 1] == trtmts[i], 3:dim(dat_in)[2]]
+    for (j in 1:nrow(trtmt_rows)){
+      trtmt_row = trtmt_rows[j, ]
+      abd_row = sort(trtmt_row[trtmt_row != 0])
+      s_cul = 1:length(abd_row) / length(abd_row)
+      n_cul = sapply(1:length(abd_row), function(x) sum(abd_row[1:x]) / sum(abd_row))
+      if ((i == 1) & (j == 1)){
+        plot(n_cul, s_cul, col = cols[i], xlab = '% abundance', ylab = '% richness', 
+             lwd = 2, type = 'l', log = 'x', xlim = c(n_cul[1], 1))
+      }
+      else {lines(n_cul, s_cul, col = cols[i], lwd = 2, type = 'l')}
+    }
+  }
+  legend('topleft', trtmts, col = cols, lwd = 2)
+}
