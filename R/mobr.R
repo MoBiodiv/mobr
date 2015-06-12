@@ -122,8 +122,6 @@ near_neigh_ind = function(data, nperm=20){
         y_diff = data[, 2] - as.numeric(data[focal_row, 2])
         dist_row = sqrt(x_diff^2 + y_diff^2)
         data_order = data[order(dist_row), ]
-        #vec_list = lapply(1:dim(data_order)[1], seq)
-        #lapply(vec_list, length(unique(data_order[vec_list, 3])))
         for (n in 1:N) {
             sp_id_list = data_order[1:n, 3]
             n_rich = length(unique(sp_id_list))
@@ -881,6 +879,30 @@ reform_quad_data_to_sitesp = function(dat_in){
   return(dat_out)
 }
 
+reform_quad_data_for_ks = function(dat_in){
+  ## This function reshape the input data frame with quadrat data into the proper data structure
+  ## for Kolmogorov-Smirnov test on SADs. The input data has the following 5 columns (in this order):
+  ## treatment, plot ID or pair ID, sample, species ID, abundance.
+  ## THe output data frame has each plot in one row. The first column specifies the treatment for the plot, 
+  ## the second column specifies the plot ID or pair ID, 
+  ## and the subsequent columns are the abundances of species 1, species 2, ...
+  i = sapply(dat_in, is.factor)
+  dat_in[i] = lapply(dat_in[i], as.character)
+  
+  uniq_plot = unique(dat_in[, 1:2])
+  sp_list = unique(dat_in[, 4])
+  S = length(sp_list)
+  dat_out = as.data.frame(matrix(nrow = dim(uniq_plot)[1], ncol = S + 2))
+  for (i in 1:dim(uniq_plot)[1]){
+    plot = uniq_plot[i, ]
+    dat_plot = merge(dat_in, plot)
+    dat_out[i, 1:2] = dat_plot[1, 1:2]
+    sp_count = as.numeric(sapply(sp_list, function(x) sum(dat_plot[which(dat_plot[, 4] == x), 5])))
+    dat_out[i, 3:dim(dat_out)[2]] = sp_count
+  }
+  return(dat_out)
+}
+
 reform_ind_data_to_abd = function(dat_in){
   ## This function reshape the input data frame with individual-level data into the proper
   ## format for get_sample_stats().
@@ -892,3 +914,80 @@ reform_ind_data_to_abd = function(dat_in){
   return (dat_out)
 }
 
+nonpar_ks_test = function(abd1, abd2, nperm = 1000){
+  ## Perform nonparametric Kolmogorov-Smirnov test for two SADs (vector of abundances).
+  n1 = length(abd1)
+  ks_emp = ks.test(abd1, abd2, alternative = 'two.sided')$stat
+  ks_perm = c()
+  abd_full = c(abd1, abd2)
+  labels = 1:length(abd_full)
+  for (i in 1:nperm){
+    label1 = sample(1:length(abd_full), n1)
+    label2 = labels[! labels %in% label1]
+    ks_i = ks.test(abd_full[label1], abd_full[label2], alternative = 't')$stat
+    ks_perm = c(ks_perm, ks_i)
+  }
+  p = length(ks_perm[ks_perm > ks_emp]) / nperm
+  return (p)
+}
+
+ks_test_between_treatments = function(dat_in, parametric, paired){
+  ## This function performs Kolmogorov-Smirnov test between treatments. 
+  ## Inputs:
+  ## dat_in: a data frame where each row is one plot. The first column is treatment, the second column 
+  ##     is plot ID (or pair ID), and the subsequent columns are abundance of species.
+  ## parametric: boolean, whether to perform parametric tests, where p-values are obtained directly, or to perform
+  ##     nonparametric tests, where p-values are obtained by comparing empirical statistic with that from 
+  ##     random shuffling of treatment labels.
+  ## paired: boolean, whether the plots are paired or not
+  ## Output: 
+  ## If "paired" is TRUE, returns a vector of p-values, one for each pair.
+  ## If "paired" is FALSE and "parametric" is TRUE, returns a vector of p-values, one for each combination of plots
+  ##     from the two treatments.
+  ## If "paired" is FALSE and "parmetric" is FALSE, returns one p-value. 
+  if (paired == T){
+    p_list = c(); ks_list = c()
+    pairs = unique(dat_in[, 2])
+    for (pair in pairs){
+      dat_pair = dat_in[dat_in[, 2] == pair, 3:dim(dat_in)[2]]
+      ks_test = ks.test(as.numeric(dat_pair[1, which(dat_pair[1, ]!=0)]), 
+                        as.numeric(dat_pair[2, which(dat_pair[2, ]!=0)]), 
+                        alternative = 'two.sided')
+      if (parametric == T){p_list = c(p_list, as.numeric(ks_test$p))}
+      else {
+        p = nonpar_ks_test(as.numeric(dat_pair[1, which(dat_pair[1, ]!=0)]), 
+                           as.numeric(dat_pair[2, which(dat_pair[2, ]!=0)]))
+        p_list = c(p_list, p)
+      }
+    }
+  }
+  else {
+    trtmt = unique(dat_in[, 1])
+    trtmt1_rows = dat_in[dat_in[, 1] == trtmt[1], 3:dim(dat_in)[2]]
+    trtmt2_rows = dat_in[dat_in[, 1] == trtmt[2], 3:dim(dat_in)[2]]
+    comp_pairs = expand.grid(1:nrow(trtmt1_rows), 1:nrow(trtmt2_rows))
+    if (parametric == T) {
+      p_list = sapply(1:nrow(comp_pairs), function(i) ks.test(as.numeric(trtmt1_rows[comp_pairs[i, 1],trtmt1_rows[comp_pairs[i, 1], ] != 0]), 
+                                                             as.numeric(trtmt2_rows[comp_pairs[i, 2], trtmt2_rows[comp_pairs[i, 2], ] != 0]), 
+                                                             alternative = 't')$p)
+    }
+    else{
+      stat_emp = mean(sapply(1:nrow(comp_pairs), function(i) ks.test(as.numeric(trtmt1_rows[comp_pairs[i, 1],trtmt1_rows[comp_pairs[i, 1], ] != 0]), 
+                                                                as.numeric(trtmt2_rows[comp_pairs[i, 2], trtmt2_rows[comp_pairs[i, 2], ] != 0]), 
+                                                                alternative = 't')$stat))
+      nperm = 200
+      stat_list = c()
+      for (i in 1:nperm){
+        dat_in[, 1] = sample(dat_in[, 1], nrow(dat_in))
+        trtmt1_rows = dat_in[dat_in[, 1] == trtmt[1], 3:dim(dat_in)[2]]
+        trtmt2_rows = dat_in[dat_in[, 1] == trtmt[2], 3:dim(dat_in)[2]]
+        stat_i = mean(sapply(1:nrow(comp_pairs), function(i) ks.test(as.numeric(trtmt1_rows[comp_pairs[i, 1],trtmt1_rows[comp_pairs[i, 1], ] != 0]), 
+                                                                       as.numeric(trtmt2_rows[comp_pairs[i, 2], trtmt2_rows[comp_pairs[i, 2], ] != 0]), 
+                                                                       alternative = 't')$stat))
+        stat_list = c(stat_list, stat_i)
+      }
+    p_list = length(stat_list[stat_list > stat_emp]) / nperm # This is not a list; naming is for consistency.
+    }
+  }
+  return(p_list)
+}
