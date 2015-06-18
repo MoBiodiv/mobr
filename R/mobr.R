@@ -132,21 +132,40 @@ near_neigh_ind = function(data, nperm=20){
     return(S)
 }
 
-near_neigh_quadrat = function(data){
+near_neigh_quadrat = function(data, nperm = 20){
   # The input data is a data frame, with the first three columns being 
   # quadrat ID, x, and y. Column 4 and beyong are the abundances for 
   # species in each quadrat. 
-  data = data[sample(1:dim(data)[1]), ]
-  data_spec = data[, -(1:3)]
-  pair_dist = as.matrix(dist(data[, 2:3]))
-  focal_row = sample(dim(data)[1], 1)
-  dist_row = pair_dist[focal_row, ]
-  data_order = data_spec[order(dist_row), ]
-  data_bool = as.data.frame(ifelse(data_order[, 1:dim(data_order)[2]] == 0, 1, 0))
-  data_rich = cumprod(data_bool)
-  S = as.numeric(dim(data_spec)[2] - rowSums(data_rich))
-  N = as.numeric(cumsum(rowSums(data_order)))
-  return(list(S = S, N = N))
+  S = matrix(0, nrow=nperm, ncol=length(unique(data[, 1])))
+  for (i in 1:nperm){
+    data = data[sample(1:dim(data)[1]), ]
+    data_spec = data[, -(1:3)]
+    pair_dist = as.matrix(dist(data[, 2:3]))
+    focal_row = sample(dim(data)[1], 1)
+    dist_row = pair_dist[focal_row, ]
+    data_order = data_spec[order(dist_row), ]
+    data_bool = as.data.frame(ifelse(data_order[, 1:dim(data_order)[2]] == 0, 1, 0))
+    data_rich = cumprod(data_bool)
+    S[i, ] = as.numeric(dim(data_spec)[2] - rowSums(data_rich))
+  }
+  S = apply(S, 2, mean)
+  return(S)
+}
+
+rarefy_quadrat = function(data, nperm = 20){
+  # This function takes the same input data as near_neigh_quadrat
+  # and calculates the quadrat-based rarefaction without consideration
+  # of the spatial relationships of the quadrats.
+  S = matrix(0, nrow=nperm, ncol=length(unique(data[, 1])))
+  for (i in 1:nperm){
+    data = data[sample(1:dim(data)[1]), ]
+    data_order = data[, -(1:3)]
+    data_bool = as.data.frame(ifelse(data_order[, 1:dim(data_order)[2]] == 0, 1, 0))
+    data_rich = cumprod(data_bool)
+    S[i, ] = as.numeric(dim(data_order)[2] - rowSums(data_rich))
+  }
+  S = apply(S, 2, mean)
+  return(S)
 }
 
 diff_rarefy = function(sad_extend, label_extend){
