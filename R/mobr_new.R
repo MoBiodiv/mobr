@@ -3,9 +3,6 @@
 ## 1. a data frame of plot characteristics, with columns: plot ID, treatment, x, y, area
 ## 2. a data frame where the 1st column is plot ID, and subsequent columns are species abundances
 
-## Additional Functions:
-## 3. Plot of diff curves
-
 ## Functions
 require(rareNMtests)
 require(pracma)
@@ -240,6 +237,7 @@ plotEffectS = function(dat_sp, dat_plot, treatment1, treatment2, Nperm = 1000, C
 plotSADs = function(dat_sp, dat_plot, col = NA){
   # TO DO: add check to ensure that col is the same length as treatments
   require(scales)
+  par(mfrow = c(1, 1))
   trmts = unique(dat_plot[, 2])
   if (is.na(col)) col = rainbow(length(trmts))
   plot(1, type="n", xlab='% abundance (log scale)', ylab='% species', xlim=c(0.01, 1), ylim=c(0, 1))
