@@ -5,9 +5,7 @@
 
 ## Additional Functions:
 ## 3. Plot of diff curves
-## 4. pair-wise t-test
-## 5. additional plots: 3-D plot of S, N, PIE of the plots
-## 6. Output table for effect on S
+## 4. pair-wise t-test (plot, table)
 
 ## Functions
 require(rareNMtests)
@@ -199,4 +197,18 @@ plotSADs = function(dat_sp, dat_plot, col = NA){
     }
   }
   legend('bottomright', trmts, col = col, lwd = 2)
+}
+
+plotSNpie = function(dat_sp, dat_plot, col = NA){
+  # TO DO: add check to ensure that col is the same length as treatments
+  require(rgl)
+  trmts = unique(dat_plot[, 2])
+  if (is.na(col)) col = rainbow(length(trmts))
+  S_list = sapply(1:nrow(dat_sp), function(x) length(which(dat_sp[x, 2:ncol(dat_sp)] != 0)))
+  N_list = apply(dat_sp[, 2:ncol(dat_sp)], 1, sum)
+  PIE_list = sapply(1:nrow(dat_sp), function(x) 
+    N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, 2:ncol(dat_sp)] / N_list[x])^2)))
+  trmt_list = as.character(dat_plot[match(dat_plot[, 1], dat_sp[, 1]), 2])
+  col_list = sapply(trmt_list, function(x) col[which(trmts == x)])
+  plot3d(S_list, N_list, PIE_list, 'S', 'N', 'PIE', col = col_list, size = 8)
 }
