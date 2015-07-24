@@ -14,6 +14,20 @@ require(rareNMtests)
 require(pracma)
 ## Functions to obtain the three kinds of curves: sample-based explicit, sample-based implicit, 
 ## and individual-based rescaled to sample
+get_avg_dens = function(dat_sp, dat_plot, ScaleBy){
+  # Auxillary function to obtain average density within plot for rescaling
+  if(!is.na(ScaleBy)){ # Ask user to specify which treatment is used as "standard" for rescaling. 
+    dat_scale = dat_sp[match(dat_plot[which(dat_plot[, 2] == ScaleBy), 1], dat_sp[, 1]), 2:ncol(dat_sp)]
+    avg_dens = mean(apply(dat_scale, 1, sum))
+  }
+  else{ # If unspecified, uses min density among treatments.
+    trmts = unique(dat_plot[, 2])
+    avg_dens = min(sapply(trmts, function(x) 
+      mean(apply(dat_sp[match(dat_plot[which(dat_plot[, 2] == x), 1], dat_sp[, 1]), 2:ncol(dat_sp)], 1, sum))))
+  }
+  return(avg_dens)
+}
+
 rarefy_sample_explicit = function(dat_sp, dat_plot, treatment){
   plot_trmt = dat_plot[dat_plot[, 2] == treatment, ]
   sp_trmt = dat_sp[match(plot_trmt[, 1], dat_sp[, 1]), ]
@@ -45,15 +59,7 @@ rarefy_sample_implicit = function(dat_sp, dat_plot, treatment){
 }
 
 rarefy_individual_rescaled = function(dat_sp, dat_plot, treatment, ScaleBy = NA){
-  if(!is.na(ScaleBy)){ # Ask user to specify which treatment is used as "standard" for rescaling. 
-    dat_scale = dat_sp[match(dat_plot[which(dat_plot[, 2] == ScaleBy), 1], dat_sp[, 1]), 2:ncol(dat_sp)]
-    avg_dens = mean(apply(dat_scale, 1, sum))
-  }
-  else{ # If unspecified, uses min density among treatments.
-    trmts = unique(dat_plot[, 2])
-    avg_dens = min(sapply(trmts, function(x) 
-                          mean(apply(dat_sp[match(dat_plot[which(dat_plot[, 2] == x), 1], dat_sp[, 1]), 2:ncol(dat_sp)], 1, sum))))
-  }
+  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   sp_trmt = dat_sp[match(dat_plot[dat_plot[, 2] == treatment, 1], dat_sp[, 1]), ]
   trmt_sad = as.numeric(apply(sp_trmt[, 2:ncol(sp_trmt)], 2, sum))
   trmt_sad = trmt_sad[trmt_sad != 0]
@@ -87,11 +93,11 @@ get_deltaSagg = function(dat_sp, dat_plot, treatment1, treatment2){
   return(deltaSagg)
 }
 
-null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95){
+null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95, ScaleBy = NA){
   # This function generates null confidence intervals for the deltaSsad curve assuming 
   # that samples of the two treatments come from the same SAD.
   nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
-  avg_n_plot = mean(apply(dat_sp[, 2:ncol(dat_sp)], 1, sum))
+  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   dat_plot_trmts = dat_plot[dat_plot[, 2] %in% c(treatment1, treatment2), ]
   dat_sp = dat_sp[match(dat_plot_trmts[, 1], dat_sp[, 1]), ] # Only keep the plots for the two given treatments
   sp_extend = unlist(sapply(1:nrow(dat_sp), function(x) rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)])))
@@ -105,7 +111,7 @@ null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI =
       as.numeric(table(factor(sp_extend[trmt_shuffle == x], levels = 2:ncol(dat_sp)))))
     ind_S = sapply(1:2, function(x) rarefaction.individual(sad_shuffle[, x])[, 2])
     trmt_S = sapply(1:2, function(x) 
-      pchip(1:length(unlist(ind_S[x])) / avg_n_plot, unlist(ind_S[x]), 1:floor(length(unlist(ind_S[x])) / avg_n_plot)))
+      pchip(1:length(unlist(ind_S[x])) / avg_dens, unlist(ind_S[x]), 1:floor(length(unlist(ind_S[x])) / avg_dens)))
     deltaSsad_perm[i, ] = (as.numeric(na.omit(unlist(trmt_S[2])[1:min(nplots)] - unlist(trmt_S[1])[1:min(nplots)])))[1:ncol(deltaSsad_perm)]
   }
   quant_lower = as.numeric(na.omit(apply(deltaSsad_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))))
@@ -152,6 +158,26 @@ null_agg = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI =
   quant_lower = as.numeric(na.omit(apply(deltaSagg_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))))
   quant_higher =  as.numeric(na.omit(apply(deltaSagg_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T))))
   return(list(lowerCI = quant_lower, upperCI = quant_higher))
+}
+
+table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA){
+  # Returns a data frame with the effects of SAD, N, and aggregation on diversity across scales
+  nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
+  explicit_sample = sapply(c(treatment1, treatment2), function(x) rarefy_sample_explicit(dat_sp, dat_plot, x)[1:min(nplots)])
+  overall = c(0, as.numeric(na.omit(explicit_sample[, 2] - explicit_sample[, 1])))
+  deltaSsad = c(0, get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2, ScaleBy))
+  deltaSN = c(0, get_deltaSN(dat_sp, dat_plot, treatment1, treatment2))
+  deltaSagg = c(0, get_deltaSagg(dat_sp, dat_plot, treatment1, treatment2))
+  # Rarefy to desired abundances
+  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
+  max_level = floor(log10(avg_dens * min(nplots)))
+  out = sapply(list(overall, deltaSsad, deltaSN, deltaSagg), function(x)
+    pchip(0:min(nplots) * avg_dens, x, 10 ^ (1:max_level)))
+  out = as.data.frame(t(out))
+  row.names(out) = c('overall', 'SAD', 'N', 'aggregation')
+  names(out) = as.character(10 ^ (1:max_level))
+  out$maxN = c(overall[length(overall)], deltaSsad[length(deltaSsad)], deltaSN[length(deltaSN)], deltaSagg[length(deltaSagg)])
+  return(out)
 }
 
 ## Functions for plotting
