@@ -5,7 +5,6 @@
 
 ## Additional Functions:
 ## 3. Plot of diff curves
-## 4. pair-wise t-test (plot, table)
 
 ## Functions
 require(rareNMtests)
@@ -75,10 +74,10 @@ get_deltaSsad = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA)
   return(deltaSsad)
 }
 
-get_deltaSN = function(dat_sp, dat_plot, treatment1, treatment2){
+get_deltaSN = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA){
   nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
   implicit_sample = sapply(c(treatment1, treatment2), function(x) rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min(nplots)])
-  deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2)[1:min(nplots)]
+  deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)[1:min(nplots)]
   deltaSN = as.numeric(na.omit(implicit_sample[, 2] - implicit_sample[, 1] - deltaSsad))
   return(deltaSN)
 }
@@ -117,7 +116,7 @@ null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI =
   return(list(lowerCI = quant_lower, upperCI = quant_higher))
 }
 
-null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95){
+null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95, ScaleBy = NA){
   # This function generates null confidence intervals for the deltaSN curve assuming 
   # that the two treatments do not differe systematically in N.
   nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
@@ -133,7 +132,7 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
     new_counts = sapply(1:nrow(dat_sp), function(x) as.numeric(table(factor(sample(unlist(sad_row[x]), 
       n_plot_shuffle[x], replace = T), levels = 2:ncol(dat_sp)))))
     dat_sp_perm[, 2:ncol(dat_sp_perm)] = as.data.frame(t(new_counts))
-    deltaSN_perm[i, ] = (get_deltaSN(dat_sp_perm, dat_plot, treatment1, treatment2))[1:min(nplots)]  
+    deltaSN_perm[i, ] = (get_deltaSN(dat_sp_perm, dat_plot, treatment1, treatment2, ScaleBy))[1:min(nplots)]  
   }
   quant_lower = as.numeric(na.omit(apply(deltaSN_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))))
   quant_higher =  as.numeric(na.omit(apply(deltaSN_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T))))
@@ -200,10 +199,44 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2){
                      paste(treatment2, '(mean)', sep = ''), paste(treatment2, '(sd)', sep = ''),
                      'p_value')
   # Boxplots
-  
+  par(mfrow = c(2, 2)) # This is not ideal but I cannot get layout to work in Rstudio
+  plot_names = c(paste('Rarified S at N=', min(N_list), sep = ''), 'N', 'PIE', 'Raw S')
+  plot_names = sapply(1:4, function(x) 
+    paste(plot_names[x], ' (p=', round(out[5, x], 6), ')', sep = ''))
+  for (i in 1:length(stats_list)){
+    stat = unlist(stats_list[i])
+    stat_1 = stat[dat_plot[, 2] == treatment1]
+    stat_2 = stat[dat_plot[, 2] == treatment2]
+    boxplot(stat_1, stat_2, names = c(treatment1, treatment2), main = plot_names[i])
+  }
   return(out)
 }  
 ## Functions for plotting
+plotEffectS = function(dat_sp, dat_plot, treatment1, treatment2, Nperm = 1000, CI = 0.95, ScaleBy = NA){
+  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
+  deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)
+  deltaSN = get_deltaSN(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)
+  deltaSagg = get_deltaSagg(dat_sp, dat_plot, treatment1, treatment2)
+  deltaS_list = list(deltaSsad, deltaSN, deltaSagg)
+  
+  sad_CI = null_sad(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI, ScaleBy)
+  N_CI = null_N(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI, ScaleBy)
+  agg_CI = null_agg(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI)
+  null_list = list(sad_CI, N_CI, agg_CI)
+  
+  par(mfrow = c(1, 3))
+  main_list = c('SAD', 'N', 'Aggregation')
+  for (i in 1:3){
+    deltaS = unlist(deltaS_list[i])
+    null_CI = unlist(null_list[i], recursive = F)
+    plot(avg_dens * 1:length(deltaS), deltaS, ylab = expression(Delta~'S'), xlab = 'Number of Individuals', 
+         type = 'l', lwd = 2, ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)), 
+         col = 'red', main = main_list[i], cex.main = 1.8, cex.lab = 1.5, cex.axis = 1.5)
+    lines(avg_dens * 1:length(null_CI$lowerCI), null_CI$lowerCI, type = 'l', lty = 'dashed', lwd = 2)
+    lines(avg_dens * 1:length(null_CI$upperCI), null_CI$upperCI, type = 'l', lty = 'dashed', lwd = 2)
+  }  
+}
+
 plotSADs = function(dat_sp, dat_plot, col = NA){
   # TO DO: add check to ensure that col is the same length as treatments
   require(scales)
