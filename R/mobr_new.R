@@ -240,7 +240,7 @@ plotSADs = function(dat_sp, dat_plot, col = NA){
   par(mfrow = c(1, 1))
   trmts = unique(dat_plot[, 2])
   if (is.na(col)) col = rainbow(length(trmts))
-  plot(1, type="n", xlab='% abundance (log scale)', ylab='% species', xlim=c(0.01, 1), ylim=c(0, 1))
+  plot(1, type="n", xlab='% abundance (log scale)', ylab='% species', xlim=c(0.01, 1), ylim=c(0, 1), log = 'x')
   for(i in 1:length(trmts)){
     col_trmt = col[i]
     plots_trmt = dat_plot[dat_plot[, 2] == trmts[i], 1]
