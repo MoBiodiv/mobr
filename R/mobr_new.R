@@ -178,6 +178,31 @@ table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy =
   return(out)
 }
 
+pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2){
+  dat_plot_trmts = dat_plot[dat_plot[, 2] %in% c(treatment1, treatment2), ]
+  dat_sp = dat_sp[match(dat_plot_trmts[, 1], dat_sp[, 1]), ]
+  S_list = sapply(1:nrow(dat_sp), function(x) length(which(dat_sp[x, 2:ncol(dat_sp)] != 0)))
+  N_list = apply(dat_sp[, 2:ncol(dat_sp)], 1, sum)
+  PIE_list = sapply(1:nrow(dat_sp), function(x) 
+    N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, 2:ncol(dat_sp)] / N_list[x])^2)))
+  rarefied_S_list = sapply(1:nrow(dat_sp), function(x) 
+    as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], inds = min(N_list))[2]))
+  out = as.data.frame(matrix(NA, 5, 4))
+  stats_list = list(rarefied_S_list, N_list, PIE_list, S_list)
+  for (i in 1:length(stats_list)){
+    stat = unlist(stats_list[i])
+    stat_1 = stat[dat_plot[, 2] == treatment1]
+    stat_2 = stat[dat_plot[, 2] == treatment2]
+    out[, i] = c(mean(stat_1), sd(stat_1), mean(stat_2), sd(stat_2),  t.test(stat_1, stat_2)$p.val)
+  }
+  names(out) = c('S_rarefied', 'N', 'PIE', 'S_raw')
+  row.names(out) = c(paste(treatment1, '(mean)', sep = ''), paste(treatment1, '(sd)', sep = ''), 
+                     paste(treatment2, '(mean)', sep = ''), paste(treatment2, '(sd)', sep = ''),
+                     'p_value')
+  # Boxplots
+  
+  return(out)
+}  
 ## Functions for plotting
 plotSADs = function(dat_sp, dat_plot, col = NA){
   # TO DO: add check to ensure that col is the same length as treatments
