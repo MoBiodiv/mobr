@@ -119,6 +119,12 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
   nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
   dat_plot_trmts = dat_plot[dat_plot[, 2] %in% c(treatment1, treatment2), ]
   dat_sp = dat_sp[match(dat_plot_trmts[, 1], dat_sp[, 1]), ] # Only keep the plots for the two given treatments
+  trmt_sads = list()
+  for (trmt in c(treatment1, treatment2)){
+    plots = dat_plot[dat_plot[, 2] == trmt, 1]
+    trmt_sad = apply(dat_sp[dat_sp[, 1] %in% plots, 2:ncol(dat_sp)], 2, sum)
+    trmt_sads = c(trmt_sads, list(rep(2:ncol(dat_sp), trmt_sad)))
+  }
   n_plot = apply(dat_sp[, 2:ncol(dat_sp)], 1, sum) # Abundance within each plot
   sad_row = sapply(1:nrow(dat_sp), function(x) rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)]))
   deltaSN_perm = matrix(NA, nperm, min(nplots))
@@ -126,7 +132,9 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
     n_plot_shuffle = sample(n_plot)
     dat_sp_perm = as.data.frame(matrix(0, nrow(dat_sp), ncol(dat_sp)))
     dat_sp_perm[, 1] = dat_sp[, 1]
-    new_counts = sapply(1:nrow(dat_sp), function(x) as.numeric(table(factor(sample(unlist(sad_row[x]), 
+    new_counts = sapply(1:nrow(dat_sp), function(x) as.numeric(table(factor(sample(
+      (if(length(unlist(sad_row[x])) > 0) unlist(sad_row[x]) 
+       else unlist(trmt_sads[which(c(treatment1, treatment2) == dat_plot[x, 2])])),
       n_plot_shuffle[x], replace = T), levels = 2:ncol(dat_sp)))))
     dat_sp_perm[, 2:ncol(dat_sp_perm)] = as.data.frame(t(new_counts))
     deltaSN_perm[i, ] = (get_deltaSN(dat_sp_perm, dat_plot, treatment1, treatment2, ScaleBy))[1:min(nplots)]  
