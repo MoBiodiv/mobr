@@ -133,7 +133,7 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
     dat_sp_perm = as.data.frame(matrix(0, nrow(dat_sp), ncol(dat_sp)))
     dat_sp_perm[, 1] = dat_sp[, 1]
     new_counts = sapply(1:nrow(dat_sp), function(x) as.numeric(table(factor(sample(
-      (if(length(unlist(sad_row[x])) > 0) unlist(sad_row[x]) 
+      (if(length(unlist(sad_row[x])) > 0) unlist(sad_row[x]) # If plot is empty, use treatment-level SAD
        else unlist(trmt_sads[which(c(treatment1, treatment2) == dat_plot[x, 2])])),
       n_plot_shuffle[x], replace = T), levels = 2:ncol(dat_sp)))))
     dat_sp_perm[, 2:ncol(dat_sp_perm)] = as.data.frame(t(new_counts))
@@ -174,7 +174,7 @@ table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy =
   avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   max_level = floor(log10(avg_dens * min(nplots)))
   out = sapply(list(overall, deltaSsad, deltaSN, deltaSagg), function(x)
-    pchip(0:min(nplots) * avg_dens, x, 10 ^ (1:max_level)))
+    pchip(0:(length(x) - 1) * avg_dens, x, 10 ^ (1:max_level)))
   out = as.data.frame(t(out))
   row.names(out) = c('overall', 'SAD', 'N', 'aggregation')
   names(out) = as.character(10 ^ (1:max_level))
