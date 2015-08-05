@@ -196,9 +196,11 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA){
     rarefied_S_list = sapply(1:nrow(dat_sp), function(x) 
       as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], inds = min(N_list))[2]))
   }
-  else {
+  else { # Remove plots with abundance below lower_N in the analysis of rarefied S
     rarefied_S_list = sapply(1:nrow(dat_sp), function(x) 
-      as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], inds = lower_N)[2]))    
+      (if (sum(dat_sp[x, 2:ncol(dat_sp)]) < lower_N) NA 
+      else as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], inds = lower_N)[2])))
+    if (any(is.na(rarefied_S_list))) print("Warning: some plots are removed in rarefaction.")
   }
   out = as.data.frame(matrix(NA, 5, 4))
   stats_list = list(rarefied_S_list, N_list, PIE_list, S_list)
@@ -206,7 +208,9 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA){
     stat = unlist(stats_list[i])
     stat_1 = stat[dat_plot[, 2] == treatment1]
     stat_2 = stat[dat_plot[, 2] == treatment2]
-    out[, i] = c(mean(stat_1), sd(stat_1), mean(stat_2), sd(stat_2),  t.test(stat_1, stat_2)$p.val)
+    stat_1 = stat_1[!is.na(stat_1)]; stat_2 = stat_2[!is.na(stat_2)]
+    out[, i] = c(mean(stat_1), sd(stat_1), mean(stat_2), sd(stat_2), 
+                 t.test(stat_1, stat_2)$p.val)
   }
   names(out) = c('S_rarefied', 'N', 'PIE', 'S_raw')
   row.names(out) = c(paste(treatment1, '(mean)', sep = ''), paste(treatment1, '(sd)', sep = ''), 
@@ -221,6 +225,7 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA){
     stat = unlist(stats_list[i])
     stat_1 = stat[dat_plot[, 2] == treatment1]
     stat_2 = stat[dat_plot[, 2] == treatment2]
+    stat_1 = stat_1[!is.na(stat_1)]; stat_2 = stat_2[!is.na(stat_2)]
     boxplot(stat_1, stat_2, names = c(treatment1, treatment2), main = plot_names[i])
   }
   return(out)
