@@ -173,24 +173,33 @@ table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy =
   # Rarefy to desired abundances
   avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   max_level = floor(log10(avg_dens * min(nplots)))
-  out = sapply(list(overall, deltaSsad, deltaSN, deltaSagg), function(x)
-    pchip(0:(length(x) - 1) * avg_dens, x, 10 ^ (1:max_level)))
-  out = as.data.frame(t(out))
+  out = as.data.frame(matrix(NA, 4, max_level))
   row.names(out) = c('overall', 'SAD', 'N', 'aggregation')
   names(out) = as.character(10 ^ (1:max_level))
+  for (i in 1:4){
+    x = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[i])
+    out_row = pchip(0:(length(x) - 1) * avg_dens, x, 10 ^ (1:min(max_level, floor(log10((length(x) - 1) * avg_dens)))))
+    out[i, 1:length(out_row)] = out_row
+  }
   out$maxN = c(overall[length(overall)], deltaSsad[length(deltaSsad)], deltaSN[length(deltaSN)], deltaSagg[length(deltaSagg)])
   return(out)
 }
 
-pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2){
+pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA){
   dat_plot_trmts = dat_plot[dat_plot[, 2] %in% c(treatment1, treatment2), ]
   dat_sp = dat_sp[match(dat_plot_trmts[, 1], dat_sp[, 1]), ]
   S_list = sapply(1:nrow(dat_sp), function(x) length(which(dat_sp[x, 2:ncol(dat_sp)] != 0)))
   N_list = apply(dat_sp[, 2:ncol(dat_sp)], 1, sum)
   PIE_list = sapply(1:nrow(dat_sp), function(x) 
     N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, 2:ncol(dat_sp)] / N_list[x])^2)))
-  rarefied_S_list = sapply(1:nrow(dat_sp), function(x) 
-    as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], inds = min(N_list))[2]))
+  if (is.na(lower_N)){
+    rarefied_S_list = sapply(1:nrow(dat_sp), function(x) 
+      as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], inds = min(N_list))[2]))
+  }
+  else {
+    rarefied_S_list = sapply(1:nrow(dat_sp), function(x) 
+      as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], inds = lower_N)[2]))    
+  }
   out = as.data.frame(matrix(NA, 5, 4))
   stats_list = list(rarefied_S_list, N_list, PIE_list, S_list)
   for (i in 1:length(stats_list)){
