@@ -103,8 +103,8 @@ null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI =
     trmt_shuffle = sample(trmt_extend) # Shuffle treatment label of each individual  
     sad_shuffle = sapply(c(treatment1, treatment2), function(x) 
       as.numeric(table(factor(sp_extend[trmt_shuffle == x], levels = 2:ncol(dat_sp)))))
-    ind_S = sapply(1:2, function(x) rarefaction.individual(sad_shuffle[, x])[, 2])
-    trmt_S = sapply(1:2, function(x) 
+    ind_S = lapply(1:2, function(x) rarefaction.individual(sad_shuffle[, x])[, 2])
+    trmt_S = lapply(1:2, function(x) 
       pchip(1:length(unlist(ind_S[x])) / avg_dens, unlist(ind_S[x]), 1:floor(length(unlist(ind_S[x])) / avg_dens)))
     deltaSsad_perm[i, ] = (as.numeric(na.omit(unlist(trmt_S[2])[1:min(nplots)] - unlist(trmt_S[1])[1:min(nplots)])))[1:ncol(deltaSsad_perm)]
   }
@@ -126,7 +126,7 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
     trmt_sads = c(trmt_sads, list(rep(2:ncol(dat_sp), trmt_sad)))
   }
   n_plot = apply(dat_sp[, 2:ncol(dat_sp)], 1, sum) # Abundance within each plot
-  sad_row = sapply(1:nrow(dat_sp), function(x) rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)]))
+  sad_row = lapply(1:nrow(dat_sp), function(x) rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)]))
   deltaSN_perm = matrix(NA, nperm, min(nplots))
   for (i in 1:nperm){
     n_plot_shuffle = sample(n_plot)
