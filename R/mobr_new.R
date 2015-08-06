@@ -168,7 +168,7 @@ table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy =
   explicit_sample = sapply(c(treatment1, treatment2), function(x) rarefy_sample_explicit(dat_sp, dat_plot, x)[1:min(nplots)])
   overall = c(0, as.numeric(na.omit(explicit_sample[, 2] - explicit_sample[, 1])))
   deltaSsad = c(0, get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2, ScaleBy))
-  deltaSN = c(0, get_deltaSN(dat_sp, dat_plot, treatment1, treatment2))
+  deltaSN = c(0, get_deltaSN(dat_sp, dat_plot, treatment1, treatment2, ScaleBy))
   deltaSagg = c(0, get_deltaSagg(dat_sp, dat_plot, treatment1, treatment2))
   # Rarefy to desired abundances
   avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
