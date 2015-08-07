@@ -218,7 +218,7 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA){
                      'p_value')
   # Boxplots
   par(mfrow = c(2, 2)) # This is not ideal but I cannot get layout to work in Rstudio
-  plot_names = c(paste('Rarified S at N=', min(N_list), sep = ''), 'N', 'PIE', 'Raw S')
+  plot_names = c(paste('Rarified S at N=', ifelse(is.na(lower_N), min(N_list), lower_N), sep = ''), 'N', 'PIE', 'Raw S')
   plot_names = sapply(1:4, function(x) 
     paste(plot_names[x], ' (p=', round(out[5, x], 6), ')', sep = ''))
   for (i in 1:length(stats_list)){
