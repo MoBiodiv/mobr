@@ -65,16 +65,16 @@ get_deltaSsad = function(dat_sp, dat_plot, treatment1, treatment2){
   rescaled_ind = sapply(c(treatment1, treatment2), function(x) 
     rarefy_individual(dat_sp, dat_plot, x))
   Nind = min(length(unlist(rescaled_ind[1])), length(unlist(rescaled_ind[2])))
-  deltaSsad = unlist(rescaled_ind[2])[1:Nind] - unlist(rescaled_ind[1])[1:Nind]
-  return(deltaSsad))
+  deltaSsad = as.numeric(unlist(rescaled_ind[2])[1:Nind] - unlist(rescaled_ind[1])[1:Nind])
+  return(deltaSsad)
 }
 
 get_deltaSN = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA){
   avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
   implicit_sample = sapply(c(treatment1, treatment2), function(x) rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min(nplots)])
-  implicit_sample_ind = pchip((1:nrow(implicit_sample)) * avg_dens, implicit_sample[, 2] - implicit_sample[, 1], 
-                              1:floor(nrow(implicit_sample) * avg_dens))
+  implicit_sample_ind = pchip(c(1, (1:nrow(implicit_sample)) * avg_dens), c(0, implicit_sample[, 2] - implicit_sample[, 1]), 
+                              1:floor(nrow(implicit_sample) * avg_dens)) # Use S_diff(1) = 0 for interpolation
   deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2)
   deltaSN = implicit_sample_ind[1:min(length(implicit_sample_ind), length(deltaSsad))] - 
     deltaSsad[1:min(length(implicit_sample_ind), length(deltaSsad))]
@@ -104,11 +104,11 @@ null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI =
     sad_shuffle = sapply(c(treatment1, treatment2), function(x) 
       as.numeric(table(factor(sp_extend[trmt_shuffle == x], levels = 2:ncol(dat_sp)))))
     ind_S = lapply(1:2, function(x) rarefaction.individual(sad_shuffle[, x])[, 2])
-    deltaSsad_perm[i, ] = unlist(ind_S[2])[1:Nind] - unlist(ind_S[1])[1:Nind]
+    deltaSsad_perm[i, ] = as.numeric(unlist(ind_S[2])[1:Nind] - unlist(ind_S[1])[1:Nind])
   }
-  quant_mean = apply(deltaSsad_perm, 2, mean)
-  quant_lower = as.numeric(na.omit(apply(deltaSsad_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))))
-  quant_higher =  as.numeric(na.omit(apply(deltaSsad_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T))))
+  quant_mean = as.numeric(apply(deltaSsad_perm, 2, mean, na.rm = T))
+  quant_lower = as.numeric(apply(deltaSsad_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T)))
+  quant_higher =  as.numeric(apply(deltaSsad_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T)))
   return(list(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
 }
 
@@ -153,35 +153,41 @@ null_agg = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI =
   trmt_index = list(which(dat_plot[, 2] == treatment1), which(dat_plot[, 2] == treatment2))
   deltaSagg_perm = matrix(NA, nperm, min(nplots))
   for (i in 1:nperm){
-    index_shuffle = list(sample(unlist(trmt_index[1])), sample(unlist(trmt_index[2])))
+    index_shuffle = list(sample(unlist(trmt_index[1])), sample(unlist(trmt_index[2]))) # Shuffle within treatments
     new_order = unlist(index_shuffle)[order(unlist(trmt_index))]
     plot_shuffle_loc = dat_plot
     plot_shuffle_loc[unlist(trmt_index), 3:4] = plot_shuffle_loc[new_order, 3:4]
     deltaSagg_perm[i, ] = get_deltaSagg(dat_sp, plot_shuffle_loc, treatment1, treatment2)
   }
-  quant_lower = as.numeric(na.omit(apply(deltaSagg_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))))
-  quant_higher =  as.numeric(na.omit(apply(deltaSagg_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T))))
-  return(list(lowerCI = quant_lower, upperCI = quant_higher))
+  quant_mean = apply(deltaSagg_perm, 2, mean, na.rm = T)
+  quant_lower = apply(deltaSagg_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))
+  quant_higher =  apply(deltaSagg_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T))
+  return(list(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
 }
 
 table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA){
   # Returns a data frame with the effects of SAD, N, and aggregation on diversity across scales
   nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
   explicit_sample = sapply(c(treatment1, treatment2), function(x) rarefy_sample_explicit(dat_sp, dat_plot, x)[1:min(nplots)])
-  overall = c(0, as.numeric(na.omit(explicit_sample[, 2] - explicit_sample[, 1])))
-  deltaSsad = c(0, get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2, ScaleBy))
-  deltaSN = c(0, get_deltaSN(dat_sp, dat_plot, treatment1, treatment2, ScaleBy))
-  deltaSagg = c(0, get_deltaSagg(dat_sp, dat_plot, treatment1, treatment2))
+  overall = as.numeric(na.omit(explicit_sample[, 2] - explicit_sample[, 1]))
+  deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2)
+  deltaSN = get_deltaSN(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)
+  deltaSagg = get_deltaSagg(dat_sp, dat_plot, treatment1, treatment2)
   # Rarefy to desired abundances
   avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   max_level = floor(log10(avg_dens * min(nplots)))
   out = as.data.frame(matrix(NA, 4, max_level))
   row.names(out) = c('overall', 'SAD', 'N', 'aggregation')
   names(out) = as.character(10 ^ (1:max_level))
-  for (i in 1:4){
-    x = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[i])
-    out_row = pchip(0:(length(x) - 1) * avg_dens, x, 10 ^ (1:min(max_level, floor(log10((length(x) - 1) * avg_dens)))))
-    out[i, 1:length(out_row)] = out_row
+  for (row in c(2, 3)){
+    deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
+    out[row, ] = sapply(10^(1:max_level), function(x) ifelse(length(deltaS) >= x, deltaS[x], NA))
+  }
+  for (row in c(1, 4)){
+    deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
+    out_row = pchip((0:length(deltaS)) * avg_dens, c(0, deltaS), 
+                    10 ^ (1:min(max_level, floor(log10(length(deltaS) * avg_dens)))))
+    out[row, 1:length(out_row)] = out_row
   }
   out$maxN = c(overall[length(overall)], deltaSsad[length(deltaSsad)], deltaSN[length(deltaSN)], deltaSagg[length(deltaSagg)])
   return(out)
@@ -232,29 +238,56 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA){
   }
   return(out)
 }  
+
 ## Functions for plotting
 plotEffectS = function(dat_sp, dat_plot, treatment1, treatment2, Nperm = 1000, CI = 0.95, ScaleBy = NA){
   avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
-  deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)
+  avg_A = mean(dat_plot[, 5])
+  deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2)
   deltaSN = get_deltaSN(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)
   deltaSagg = get_deltaSagg(dat_sp, dat_plot, treatment1, treatment2)
   deltaS_list = list(deltaSsad, deltaSN, deltaSagg)
   
-  sad_CI = null_sad(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI, ScaleBy)
+  sad_CI = null_sad(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI)
   N_CI = null_N(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI, ScaleBy)
   agg_CI = null_agg(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI)
   null_list = list(sad_CI, N_CI, agg_CI)
   
-  par(mfrow = c(1, 3))
+  par(mfrow = c(1, 3), mar=c(5,4,6.5,2)+.1)
   main_list = c('SAD', 'N', 'Aggregation')
   for (i in 1:3){
     deltaS = unlist(deltaS_list[i])
     null_CI = unlist(null_list[i], recursive = F)
-    plot(avg_dens * 1:length(deltaS), deltaS, ylab = expression(Delta~'S'), xlab = 'Number of Individuals', 
-         type = 'l', lwd = 2, ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)), 
-         col = 'red', main = main_list[i], cex.main = 1.8, cex.lab = 1.5, cex.axis = 1.5)
-    lines(avg_dens * 1:length(null_CI$lowerCI), null_CI$lowerCI, type = 'l', lty = 'dashed', lwd = 2)
-    lines(avg_dens * 1:length(null_CI$upperCI), null_CI$upperCI, type = 'l', lty = 'dashed', lwd = 2)
+    if (i %in% c(1, 2)){
+      plot(1:length(null_CI$lowerCI), null_CI$lowerCI, type = 'l', col = 'grey84',  ylab = expression(Delta~'S'), 
+           xlab = 'Number of Individuals', ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)), 
+           xlim = c(1, length(deltaS)), cex.lab = 1.5, cex.axis = 1.5)
+      polygon(c(1:length(null_CI$lowerCI), length(null_CI$lowerCI):1), c(null_CI$lowerCI, rev(null_CI$upperCI)),
+              col = 'grey84', border = NA)
+      lines(1:length(null_CI$mean), null_CI$mean, type = 'l', lwd = 2)
+      par(new = T)
+      plot((1:length(deltaS))/avg_dens * avg_A, deltaS, col = 'red', lwd = 2, type = 'l', xaxt = 'n', 
+           yaxt = 'n', xlab = '', ylab = '', ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)), 
+           xlim = c(1, length(deltaS))/avg_dens * avg_A)
+      axis(3, cex.axis = 1.5)
+      mtext('Area', side = 3, line = 2.5)
+      title(main = main_list[i], line = 4.5, cex.main = 1.8)
+    }
+    else{
+      plot(avg_A * 1:length(null_CI$lowerCI), null_CI$lowerCI, type = 'l', col = 'grey84',  ylab = expression(Delta~'S'), 
+           xlab = 'Area', ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)), 
+           xlim = c(0, avg_A * length(deltaS)), cex.lab = 1.5, cex.axis = 1.5)
+      polygon(c(avg_A * 1:length(null_CI$lowerCI), avg_A * length(null_CI$lowerCI):1), c(null_CI$lowerCI, rev(null_CI$upperCI)),
+              col = 'grey84', border = NA)
+      lines(avg_A * 1:length(null_CI$mean), null_CI$mean, type = 'l', lwd = 2)
+      par(new = T)
+      plot((1:length(deltaS)) * avg_dens, deltaS, col = 'red', lwd = 2, type = 'l', xaxt = 'n', 
+           yaxt = 'n', xlab = '', ylab = '', ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)), 
+           xlim = c(0, avg_dens * length(deltaS)))
+      axis(3, cex.axis = 1.5)
+      mtext('Number of Individuals', side = 3, line = 2.5)
+      title(main = main_list[i], line = 4.5, cex.main = 1.8)
+    }
   }  
 }
 
