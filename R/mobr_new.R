@@ -52,30 +52,32 @@ rarefy_sample_implicit = function(dat_sp, dat_plot, treatment){
   return(sample_S)
 }
 
-rarefy_individual_rescaled = function(dat_sp, dat_plot, treatment, ScaleBy = NA){
-  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
+rarefy_individual = function(dat_sp, dat_plot, treatment){
+  # Returns the rarefaction results at each sample size
   sp_trmt = dat_sp[match(dat_plot[dat_plot[, 2] == treatment, 1], dat_sp[, 1]), ]
   trmt_sad = as.numeric(apply(sp_trmt[, 2:ncol(sp_trmt)], 2, sum))
   trmt_sad = trmt_sad[trmt_sad != 0]
   ind_S = rarefaction.individual(trmt_sad)[, 2]
-  adjusted_n = 1:length(ind_S) / avg_dens
-  ind_S_plot = pchip(adjusted_n, ind_S, 1:floor(max(adjusted_n))) # interpolate to integer plot counts
-  return(ind_S_plot)
+  return(ind_S)
 }
 
-get_deltaSsad = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA){
-  nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
+get_deltaSsad = function(dat_sp, dat_plot, treatment1, treatment2){
   rescaled_ind = sapply(c(treatment1, treatment2), function(x) 
-    rarefy_individual_rescaled(dat_sp, dat_plot, x, ScaleBy)[1:min(nplots)])
-  deltaSsad = as.numeric(na.omit(rescaled_ind[, 2] - rescaled_ind[, 1]))
-  return(deltaSsad)
+    rarefy_individual(dat_sp, dat_plot, x))
+  Nind = min(length(unlist(rescaled_ind[1])), length(unlist(rescaled_ind[2])))
+  deltaSsad = unlist(rescaled_ind[2])[1:Nind] - unlist(rescaled_ind[1])[1:Nind]
+  return(deltaSsad))
 }
 
 get_deltaSN = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA){
+  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
   implicit_sample = sapply(c(treatment1, treatment2), function(x) rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min(nplots)])
-  deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)[1:min(nplots)]
-  deltaSN = as.numeric(na.omit(implicit_sample[, 2] - implicit_sample[, 1] - deltaSsad))
+  implicit_sample_ind = pchip((1:nrow(implicit_sample)) * avg_dens, implicit_sample[, 2] - implicit_sample[, 1], 
+                              1:floor(nrow(implicit_sample) * avg_dens))
+  deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2)
+  deltaSN = implicit_sample_ind[1:min(length(implicit_sample_ind), length(deltaSsad))] - 
+    deltaSsad[1:min(length(implicit_sample_ind), length(deltaSsad))]
   return(deltaSN)
 }
 
@@ -87,35 +89,33 @@ get_deltaSagg = function(dat_sp, dat_plot, treatment1, treatment2){
   return(deltaSagg)
 }
 
-null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95, ScaleBy = NA){
+null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95){
   # This function generates null confidence intervals for the deltaSsad curve assuming 
   # that samples of the two treatments come from the same SAD.
-  nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
-  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   dat_plot_trmts = dat_plot[dat_plot[, 2] %in% c(treatment1, treatment2), ]
   dat_sp = dat_sp[match(dat_plot_trmts[, 1], dat_sp[, 1]), ] # Only keep the plots for the two given treatments
   sp_extend = unlist(sapply(1:nrow(dat_sp), function(x) rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)])))
   trmt_extend = unlist(sapply(1:nrow(dat_sp), 
                               function(x) rep(dat_plot[dat_plot[, 1] == dat_sp[x, 1], 2], sum(dat_sp[x, 2:ncol(dat_sp)]))))
-  deltaSsad_perm = matrix(NA, nperm, min(nplots))
+  Nind = min(length(trmt_extend[trmt_extend == treatment1]), length(trmt_extend[trmt_extend == treatment2]))
+  deltaSsad_perm = matrix(NA, nperm, Nind)
   for (i in 1:nperm){
-    trmt_S = matrix(NA, 2, min(nplots))
     trmt_shuffle = sample(trmt_extend) # Shuffle treatment label of each individual  
     sad_shuffle = sapply(c(treatment1, treatment2), function(x) 
       as.numeric(table(factor(sp_extend[trmt_shuffle == x], levels = 2:ncol(dat_sp)))))
     ind_S = lapply(1:2, function(x) rarefaction.individual(sad_shuffle[, x])[, 2])
-    trmt_S = lapply(1:2, function(x) 
-      pchip(1:length(unlist(ind_S[x])) / avg_dens, unlist(ind_S[x]), 1:floor(length(unlist(ind_S[x])) / avg_dens)))
-    deltaSsad_perm[i, ] = (as.numeric(na.omit(unlist(trmt_S[2])[1:min(nplots)] - unlist(trmt_S[1])[1:min(nplots)])))[1:ncol(deltaSsad_perm)]
+    deltaSsad_perm[i, ] = unlist(ind_S[2])[1:Nind] - unlist(ind_S[1])[1:Nind]
   }
+  quant_mean = apply(deltaSsad_perm, 2, mean)
   quant_lower = as.numeric(na.omit(apply(deltaSsad_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))))
   quant_higher =  as.numeric(na.omit(apply(deltaSsad_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T))))
-  return(list(lowerCI = quant_lower, upperCI = quant_higher))
+  return(list(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
 }
 
 null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95, ScaleBy = NA){
   # This function generates null confidence intervals for the deltaSN curve assuming 
   # that the two treatments do not differe systematically in N.
+  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
   nplots = c(nrow(dat_plot[dat_plot[, 2] == treatment1, ]), nrow(dat_plot[dat_plot[, 2] == treatment2, ]))
   dat_plot_trmts = dat_plot[dat_plot[, 2] %in% c(treatment1, treatment2), ]
   dat_sp = dat_sp[match(dat_plot_trmts[, 1], dat_sp[, 1]), ] # Only keep the plots for the two given treatments
@@ -127,7 +127,8 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
   }
   n_plot = apply(dat_sp[, 2:ncol(dat_sp)], 1, sum) # Abundance within each plot
   sad_row = lapply(1:nrow(dat_sp), function(x) rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)]))
-  deltaSN_perm = matrix(NA, nperm, min(nplots))
+  Nind = min(floor(min(nplots) * avg_dens), length(unlist(trmt_sads[1])), length(unlist(trmt_sads[2])))
+  deltaSN_perm = matrix(NA, nperm, Nind)
   for (i in 1:nperm){
     n_plot_shuffle = sample(n_plot)
     dat_sp_perm = as.data.frame(matrix(0, nrow(dat_sp), ncol(dat_sp)))
@@ -137,11 +138,12 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
        else unlist(trmt_sads[which(c(treatment1, treatment2) == dat_plot[x, 2])])),
       n_plot_shuffle[x], replace = T), levels = 2:ncol(dat_sp)))))
     dat_sp_perm[, 2:ncol(dat_sp_perm)] = as.data.frame(t(new_counts))
-    deltaSN_perm[i, ] = (get_deltaSN(dat_sp_perm, dat_plot, treatment1, treatment2, ScaleBy))[1:min(nplots)]  
+    deltaSN_perm[i, ] = (get_deltaSN(dat_sp_perm, dat_plot_trmts, treatment1, treatment2, ScaleBy))[1:Nind]  
   }
-  quant_lower = as.numeric(na.omit(apply(deltaSN_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))))
-  quant_higher =  as.numeric(na.omit(apply(deltaSN_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T))))
-  return(list(lowerCI = quant_lower, upperCI = quant_higher))
+  quant_mean = apply(deltaSN_perm, 2, mean, na.rm = T)
+  quant_lower = apply(deltaSN_perm, 2, function(x) quantile(x, (1-CI)/2, na.rm = T))
+  quant_higher =  apply(deltaSN_perm, 2, function(x) quantile(x, (1+CI)/2, na.rm = T))
+  return(list(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
 }
 
 null_agg = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95){
