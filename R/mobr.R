@@ -168,15 +168,18 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
         n_plot_shuffle = sample(n_plot)
         dat_sp_perm = as.data.frame(matrix(0, nrow(dat_sp), ncol(dat_sp)))
         dat_sp_perm[ , 1] = dat_sp[ , 1]
-        new_counts = sapply(1:nrow(dat_sp), function(x) as.numeric(table(factor(sample((
-                            if (length(unlist(sad_row[x])) > 0) 
-                                unlist(sad_row[x])  # If plot is empty, use treatment-level SAD
-                           else 
-                                unlist(trmt_sads[which(c(treatment1, treatment2) == dat_plot[x, 2])])),
-                                       n_plot_shuffle[x], replace = T), levels = 2:ncol(dat_sp)))))
+        new_counts = sapply(1:nrow(dat_sp), function(x) as.numeric(table(factor(
+                            sample(if (length(unlist(sad_row[x])) > 0) 
+                                       unlist(sad_row[x])  # If plot is empty, use treatment-level SAD
+                                   else
+                                       unlist(trmt_sads[
+                                           which(c(treatment1, treatment2) == 
+                                                 dat_plot[x, 2])]),
+                                   n_plot_shuffle[x], replace = T),
+                            levels = 2:ncol(dat_sp)))))
         dat_sp_perm[ , 2:ncol(dat_sp_perm)] = as.data.frame(t(new_counts))
         deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot_trmts,
-                                        treatment1, treatment2, ScaleBy))[1:Nind]
+                                        treatment1, treatment2, ScaleBy)[1:Nind]
     }
     quant_mean = apply(deltaSN_perm, 2, mean, na.rm = T)
     quant_lower = apply(deltaSN_perm, 2, function(x) 
