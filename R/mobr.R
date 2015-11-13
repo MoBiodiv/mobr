@@ -10,41 +10,38 @@ require(pracma)
 ## sample-based implicit, and individual-based rescaled to sample
 get_avg_dens = function(dat_sp, dat_plot, ScaleBy) {
     # Auxillary function to obtain average density within plot for rescaling Ask user
-    # to specify which treatment is used as 'standard' for rescaling.
+    # to specify which group is used as 'standard' for rescaling.
     if (!is.na(ScaleBy)) {
-        dat_scale = dat_sp[match(dat_plot[which(dat_plot[ , 2] == ScaleBy), 1],
-                                 dat_sp[ , 1]), 2:ncol(dat_sp)]
-        avg_dens = mean(apply(dat_scale, 1, sum))
+        avg_dens = mean(apply(dat_sp[dat_plot$group == ScaleBy, ], 1, sum))
     } else {
-        # If unspecified, uses min density among treatments.
-        trmts = unique(dat_plot[ , 2])
-        avg_dens = min(sapply(trmts, function(x) 
-            mean(apply(dat_sp[match(dat_plot[which(dat_plot[ , 2] == x), 1], dat_sp[ , 1]),
-                              2:ncol(dat_sp)], 1, sum))))
+        # If unspecified, uses min density among groups.
+        groups = unique(dat_plot$group)
+        avg_dens = min(sapply(groups, function(x) 
+                              mean(apply(dat_sp[dat_plot$group == x, ], 1, sum))))
     }
     return(avg_dens)
 }
 
-rarefy_sample_explicit = function(dat_sp, dat_plot, treatment) {
-    plot_trmt = dat_plot[dat_plot[ , 2] == treatment, ]
-    sp_trmt = dat_sp[match(plot_trmt[ , 1], dat_sp[ , 1]), ]
-    explic_loop = matrix(0, nrow(sp_trmt), nrow(sp_trmt))
-    pair_dist = as.matrix(dist(plot_trmt[ , 3:4]))
-    for (i in 1:nrow(plot_trmt)) {
-        focal_site = plot_trmt[i, 1]
+rarefy_sample_explicit = function(dat_sp, dat_plot, group) {
+    plot_grp = dat_plot[dat_plot$group == group, ] 
+    sp_grp = dat_sp[dat_plot$group == group, ]
+    explic_loop = matrix(0, nrow(sp_grp), nrow(sp_grp))
+    pair_dist = as.matrix(dist(plot_grp[ , c('x', 'y')]))
+    for (i in 1:nrow(plot_grp)) {
+        focal_site = rownames(plot_grp)[i]
         dist_to_site = pair_dist[i, ]
         # Shuffle plots, so that tied grouping is not biased by original order.
-        new_order = sample(1:nrow(plot_trmt))  
-        # new_order = 1:nrow(plot_trmt) # Alternative: no shuffles
-        plots_new = plot_trmt[new_order, 1]
+        new_order = sample(1:nrow(plot_grp))  
+        # new_order = 1:nrow(plot_grp) # Alternative: no shuffles
+        plots_new = row.names(plot_grp)[new_order]
         dist_new = dist_to_site[new_order]
         plots_new_ordered = plots_new[order(dist_new)]
         # Move focal site to the front
         plots_new_ordered = c(focal_site, 
                               plots_new_ordered[plots_new_ordered != focal_site])  
-        sp_ordered = sp_trmt[match(sp_trmt[ , 1], plots_new_ordered), 2:ncol(sp_trmt)]
+        sp_ordered = sp_grp[match(row.names(sp_grp), plots_new_ordered), ]
         # 1 for absence, 0 for presence
-        sp_bool = as.data.frame(ifelse(sp_ordered[ , 1:ncol(sp_ordered)] == 0, 1, 0)) 
+        sp_bool = as.data.frame((sp_ordered == 0) * 1) 
         rich = cumprod(sp_bool)
         explic_loop[ , i] = as.numeric(ncol(dat_sp) - 1 - rowSums(rich))
     }
@@ -52,24 +49,22 @@ rarefy_sample_explicit = function(dat_sp, dat_plot, treatment) {
     return(explic_S)
 }
 
-rarefy_sample_implicit = function(dat_sp, dat_plot, treatment) {
-    plot_trmt = dat_plot[dat_plot[ , 2] == treatment, ]
-    sp_trmt = dat_sp[match(plot_trmt[ , 1], dat_sp[ , 1]), ]
-    sample_S = rarefaction.sample(sp_trmt[ , 2:ncol(sp_trmt)])[ , 2]
+rarefy_sample_implicit = function(dat_sp, dat_plot, group) {
+    sp_grp = dat_sp[dat_plot$group == group, ]
+    sample_S = rarefaction.sample(sp_grp)[ , 2]
     return(sample_S)
 }
 
-rarefy_individual = function(dat_sp, dat_plot, treatment) {
+rarefy_individual = function(dat_sp, dat_plot, group) {
     # Returns the rarefaction results at each sample size
-    sp_trmt = dat_sp[match(dat_plot[dat_plot[ , 2] == treatment, 1], dat_sp[ , 1]), ]
-    trmt_sad = as.numeric(apply(sp_trmt[ , 2:ncol(sp_trmt)], 2, sum))
-    trmt_sad = trmt_sad[trmt_sad != 0]
-    ind_S = rarefaction.individual(trmt_sad)[ , 2]
+    sad = apply(dat_sp[dat_plot$group == group, ], 2, sum)
+    ind_S = rarefaction.individual(sad)[ , 2]
     return(ind_S)
 }
 
-get_deltaSsad = function(dat_sp, dat_plot, treatment1, treatment2) {
-    rescaled_ind = sapply(c(treatment1, treatment2), function(x) 
+get_deltaSsad = function(dat_sp, dat_plot, groups) {
+    # the first element of the argument groups must be the reference group
+    rescaled_ind = sapply(groups, function(x) 
                           rarefy_individual(dat_sp, dat_plot, x))
     Nind = min(length(unlist(rescaled_ind[1])), length(unlist(rescaled_ind[2])))
     deltaSsad = as.numeric(unlist(rescaled_ind[2])[1:Nind] - 
@@ -77,57 +72,55 @@ get_deltaSsad = function(dat_sp, dat_plot, treatment1, treatment2) {
     return(deltaSsad)
 }
 
-get_deltaSN = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA) {
+get_deltaSN = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
     avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
-    nplots = c(nrow(dat_plot[dat_plot[ , 2] == treatment1, ]), nrow(dat_plot[dat_plot[ , 
-        2] == treatment2, ]))
-    implicit_sample = sapply(c(treatment1, treatment2), function(x)
-                             rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min(nplots)])
+    min_nplots = min(table(dat_plot$group[dat_plot$group %in% groups]))
+    implicit_sample = sapply(groups, function(x)
+                             rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min_nplots])
+    # rescale sample based differences via intpolation to reflect numbers of individuals sampled
     # Use S_diff(1) = 0 for interpolation
-    implicit_sample_ind = pchip(c(1, (1:nrow(implicit_sample)) * avg_dens), 
-                                c(0, implicit_sample[ , 2] - implicit_sample[ , 1]),
-                                1:floor(nrow(implicit_sample) * avg_dens))
-    deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2)
-    # add variable called min index to clean up code
-    deltaSN = implicit_sample_ind[1:min(length(implicit_sample_ind), 
-                  length(deltaSsad))] - deltaSsad[1:min(length(implicit_sample_ind),
-                  length(deltaSsad))]
+    # here the differences are limited to comparisons of two groups
+    deltaSsamp = pchip(xi=c(1, (1:min_nplots) * avg_dens), 
+                       yi=c(0, implicit_sample[ , 2] - implicit_sample[ , 1]),
+                      x=1:floor(min_nplots * avg_dens))
+    # if the calculation of the sad rarefaction is slow then possibly it should
+    # be allowed as an argument as well.
+    deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
+    min_nind = min(length(deltaSsamp), length(deltaSsad))
+    deltaSN = deltaSsamp[1:min_nind] - deltaSsad[1:min_nind]
     return(deltaSN)
 }
 
-get_deltaSagg = function(dat_sp, dat_plot, treatment1, treatment2) {
-    nplots = c(nrow(dat_plot[dat_plot[ , 2] == treatment1, ]), 
-               nrow(dat_plot[dat_plot[ , 2] == treatment2, ]))
-    implicit_sample = sapply(c(treatment1, treatment2), function(x) 
-        rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min(nplots)])
-    explicit_sample = sapply(c(treatment1, treatment2), function(x) 
-        rarefy_sample_explicit(dat_sp, dat_plot, x)[1:min(nplots)])
+get_deltaSagg = function(dat_sp, dat_plot, groups) {
+    min_nplots = min(table(dat_plot$group[dat_plot$group %in% groups]))
+    implicit_sample = sapply(groups, function(x) 
+                             rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min_nplots])
+    explicit_sample = sapply(groups, function(x) 
+                             rarefy_sample_explicit(dat_sp, dat_plot, x)[1:min_nplots])
     deltaSagg = as.numeric(na.omit(explicit_sample[ , 2] - explicit_sample[ , 1] - 
         (implicit_sample[ , 2] - implicit_sample[ , 1])))
     return(deltaSagg)
 }
 
-null_sad = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000,
-                    CI = 0.95) {
+null_sad = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
     # This function generates null confidence intervals for the deltaSsad curve
     # assuming that samples of the two treatments come from the same SAD.
-    dat_plot_trmts = dat_plot[dat_plot[ , 2] %in% c(treatment1, treatment2), ]
     # Only keep the plots for the two given treatments
-    dat_sp = dat_sp[match(dat_plot_trmts[ , 1], dat_sp[ , 1]), ] 
+    dat_sp = dat_sp[dat_plot$group %in% groups, ] 
     sp_extend = unlist(sapply(1:nrow(dat_sp), function(x) 
-                              rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)])))
-    trmt_extend = unlist(sapply(1:nrow(dat_sp), function(x) 
+                              rep(1:ncol(dat_sp), dat_sp[x, ])))
+    grp_extend = unlist(sapply(1:nrow(dat_sp), function(x) 
                                 rep(dat_plot[dat_plot[ , 1] == dat_sp[x, 1], 2],
                                     sum(dat_sp[x, 2:ncol(dat_sp)]))))
-    Nind = min(length(trmt_extend[trmt_extend == treatment1]), 
-               length(trmt_extend[trmt_extend == treatment2]))
+    Nind = min(length(grp_extend[grp_extend == treatment1]), 
+               length(grp_extend[grp_extend == treatment2]))
     deltaSsad_perm = matrix(NA, nperm, Nind)
     for (i in 1:nperm) {
         # Shuffle treatment label of each individual  
-        trmt_shuffle = sample(trmt_extend)  
+        grp_shuffle = sample(grp_extend)  
         sad_shuffle = sapply(c(treatment1, treatment2), function(x) 
                              as.numeric(table(factor(
-                                 sp_extend[trmt_shuffle == x], levels = 2:ncol(dat_sp)))))
+                                 sp_extend[grp_shuffle == x], levels = 2:ncol(dat_sp)))))
         ind_S = lapply(1:2, function(x) rarefaction.individual(sad_shuffle[ , x])[ , 2])
         deltaSsad_perm[i, ] = as.numeric(unlist(ind_S[2])[1:Nind] - 
                                          unlist(ind_S[1])[1:Nind])
@@ -147,22 +140,22 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
     avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
     nplots = c(nrow(dat_plot[dat_plot[ , 2] == treatment1, ]), 
                nrow(dat_plot[dat_plot[ , 2] == treatment2, ]))
-    dat_plot_trmts = dat_plot[dat_plot[ , 2] %in% c(treatment1, treatment2), ]
+    dat_plot_grps = dat_plot[dat_plot[ , 2] %in% c(treatment1, treatment2), ]
     # Only keep the plots for the two given treatments
-    dat_sp = dat_sp[match(dat_plot_trmts[ , 1], dat_sp[ , 1]), ]  
-    trmt_sads = list()
-    for (trmt in c(treatment1, treatment2)) {
-        plots = dat_plot[dat_plot[ , 2] == trmt, 1]
-        trmt_sad = apply(dat_sp[dat_sp[ , 1] %in% plots, 2:ncol(dat_sp)], 2, sum)
-        trmt_sads = c(trmt_sads, list(rep(2:ncol(dat_sp), trmt_sad)))
+    dat_sp = dat_sp[match(dat_plot_grps[ , 1], dat_sp[ , 1]), ]  
+    grp_sads = list()
+    for (grp in c(treatment1, treatment2)) {
+        plots = dat_plot[dat_plot[ , 2] == grp, 1]
+        grp_sad = apply(dat_sp[dat_sp[ , 1] %in% plots, 2:ncol(dat_sp)], 2, sum)
+        grp_sads = c(grp_sads, list(rep(2:ncol(dat_sp), grp_sad)))
     }
     # Abundance within each plot
     n_plot = apply(dat_sp[ , 2:ncol(dat_sp)], 1, sum)  
     sad_row = lapply(1:nrow(dat_sp), function(x) 
                      rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)]))
     Nind = min(floor(min(nplots) * avg_dens), 
-               length(unlist(trmt_sads[1])), 
-               length(unlist(trmt_sads[2])))
+               length(unlist(grp_sads[1])), 
+               length(unlist(grp_sads[2])))
     deltaSN_perm = matrix(NA, nperm, Nind)
     for (i in 1:nperm) {
         n_plot_shuffle = sample(n_plot)
@@ -172,13 +165,13 @@ null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0
                             sample(if (length(unlist(sad_row[x])) > 0) 
                                        unlist(sad_row[x])  # If plot is empty, use treatment-level SAD
                                    else
-                                       unlist(trmt_sads[
+                                       unlist(grp_sads[
                                            which(c(treatment1, treatment2) == 
                                                  dat_plot[x, 2])]),
                                    n_plot_shuffle[x], replace = T),
                             levels = 2:ncol(dat_sp)))))
         dat_sp_perm[ , 2:ncol(dat_sp_perm)] = as.data.frame(t(new_counts))
-        deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot_trmts,
+        deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot_grps,
                                         treatment1, treatment2, ScaleBy)[1:Nind]
     }
     quant_mean = apply(deltaSN_perm, 2, mean, na.rm = T)
@@ -194,15 +187,15 @@ null_agg = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI =
     # assuming that plots within each treatment have no spatial structure.
     nplots = c(nrow(dat_plot[dat_plot[ , 2] == treatment1, ]),
                nrow(dat_plot[dat_plot[ , 2] == treatment2, ]))
-    trmt_index = list(which(dat_plot[ , 2] == treatment1), 
+    grp_index = list(which(dat_plot[ , 2] == treatment1), 
                       which(dat_plot[ , 2] == treatment2))
     deltaSagg_perm = matrix(NA, nperm, min(nplots))
     for (i in 1:nperm) {
         # Shuffle within treatments
-        index_shuffle = list(sample(unlist(trmt_index[1])), sample(unlist(trmt_index[2])))  
-        new_order = unlist(index_shuffle)[order(unlist(trmt_index))]
+        index_shuffle = list(sample(unlist(grp_index[1])), sample(unlist(grp_index[2])))  
+        new_order = unlist(index_shuffle)[order(unlist(grp_index))]
         plot_shuffle_loc = dat_plot
-        plot_shuffle_loc[unlist(trmt_index), 3:4] = plot_shuffle_loc[new_order, 3:4]
+        plot_shuffle_loc[unlist(grp_index), 3:4] = plot_shuffle_loc[new_order, 3:4]
         deltaSagg_perm[i, ] = get_deltaSagg(dat_sp, plot_shuffle_loc, 
                                             treatment1, treatment2)
     }
@@ -248,8 +241,8 @@ table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy =
 }
 
 pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA) {
-    dat_plot_trmts = dat_plot[dat_plot[ , 2] %in% c(treatment1, treatment2), ]
-    dat_sp = dat_sp[match(dat_plot_trmts[ , 1], dat_sp[ , 1]), ]
+    dat_plot_grps = dat_plot[dat_plot[ , 2] %in% c(treatment1, treatment2), ]
+    dat_sp = dat_sp[match(dat_plot_grps[ , 1], dat_sp[ , 1]), ]
     S_list = sapply(1:nrow(dat_sp), function(x) 
                     length(which(dat_sp[x, 2:ncol(dat_sp)] != 0)))
     N_list = apply(dat_sp[ , 2:ncol(dat_sp)], 1, sum)
@@ -305,19 +298,22 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA) {
     return(out)
 }
 
+lch = function(n, k) lgamma(n+1) - lgamma(k+1) - lgamma(n-k+1)
+
 ## Functions for plotting
-plotEffectS = function(dat_sp, dat_plot, treatment1, treatment2, Nperm = 1000,
+plotEffectS = function(dat_sp, dat_plot, groups, Nperm = 1000,
                        CI = 0.95, ScaleBy = NA) {
+    # get individual densities
     avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
-    avg_A = mean(dat_plot[ , 5])
-    deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2)
-    deltaSN = get_deltaSN(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)
-    deltaSagg = get_deltaSagg(dat_sp, dat_plot, treatment1, treatment2)
+    avg_A = mean(dat_plot$area)
+    deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
+    deltaSN = get_deltaSN(dat_sp, dat_plot, groups, ScaleBy)
+    deltaSagg = get_deltaSagg(dat_sp, dat_plot, groups)
     deltaS_list = list(deltaSsad, deltaSN, deltaSagg)
     
-    sad_CI = null_sad(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI)
-    N_CI = null_N(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI, ScaleBy)
-    agg_CI = null_agg(dat_sp, dat_plot, treatment1, treatment2, Nperm, CI)
+    sad_CI = null_sad(dat_sp, dat_plot, groups, Nperm, CI)
+    N_CI = null_N(dat_sp, dat_plot, groups, Nperm, CI, ScaleBy)
+    agg_CI = null_agg(dat_sp, dat_plot, groups, Nperm, CI)
     null_list = list(sad_CI, N_CI, agg_CI)
     
     par(mfrow = c(1, 3), mar = c(5, 4, 6.5, 2) + 0.1)
@@ -366,38 +362,38 @@ plotSADs = function(dat_sp, dat_plot, col = NA) {
     # TO DO: add check to ensure that col is the same length as treatments
     require(scales)
     par(mfrow = c(1, 1))
-    trmts = unique(dat_plot[ , 2])
+    grps = unique(dat_plot[ , 2])
     if (is.na(col)) 
-        col = rainbow(length(trmts))
+        col = rainbow(length(grps))
     plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
          xlim = c(0.01, 1), ylim = c(0, 1), log = "x")
-    for (i in 1:length(trmts)) {
-        col_trmt = col[i]
-        plots_trmt = dat_plot[dat_plot[ , 2] == trmts[i], 1]
-        dat_trmt = dat_sp[match(plots_trmt, dat_sp[ , 1]), 2:ncol(dat_sp)]
-        for (j in 1:nrow(dat_trmt)) {
-            sad_row = as.numeric(sort(dat_trmt[j, dat_trmt[j, ] != 0]))
+    for (i in 1:length(grps)) {
+        col_grp = col[i]
+        plots_grp = dat_plot[dat_plot[ , 2] == grps[i], 1]
+        dat_grp = dat_sp[match(plots_grp, dat_sp[ , 1]), 2:ncol(dat_sp)]
+        for (j in 1:nrow(dat_grp)) {
+            sad_row = as.numeric(sort(dat_grp[j, dat_grp[j, ] != 0]))
             s_cul = 1:length(sad_row)/length(sad_row)
             n_cul = sapply(1:length(sad_row), function(x) sum(sad_row[1:x]) / sum(sad_row))
-            lines(n_cul, s_cul, col = alpha(col_trmt, 0.5), lwd = 1, type = "l")
+            lines(n_cul, s_cul, col = alpha(col_grp, 0.5), lwd = 1, type = "l")
         }
     }
-    legend("bottomright", trmts, col = col, lwd = 2)
+    legend("bottomright", grps, col = col, lwd = 2)
 }
 
 plotSNpie = function(dat_sp, dat_plot, col = NA) {
     # TO DO: add check to ensure that col is the same length as treatments
     require(rgl)
-    trmts = unique(dat_plot[ , 2])
+    grps = unique(dat_plot[ , 2])
     if (is.na(col)) 
-        col = rainbow(length(trmts))
+        col = rainbow(length(grps))
     S_list = sapply(1:nrow(dat_sp), function(x) 
                     length(which(dat_sp[x, 2:ncol(dat_sp)] != 0)))
     N_list = apply(dat_sp[ , 2:ncol(dat_sp)], 1, sum)
     PIE_list = sapply(1:nrow(dat_sp), function(x) 
                       N_list[x]/(N_list[x] - 1) * 
                       (1 - sum((dat_sp[x, 2:ncol(dat_sp)] / N_list[x])^2)))
-    trmt_list = as.character(dat_plot[match(dat_plot[ , 1], dat_sp[ , 1]), 2])
-    col_list = sapply(trmt_list, function(x) col[which(trmts == x)])
+    grp_list = as.character(dat_plot[match(dat_plot[ , 1], dat_sp[ , 1]), 2])
+    col_list = sapply(grp_list, function(x) col[which(grps == x)])
     plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
