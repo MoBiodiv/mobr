@@ -1,6 +1,6 @@
 ## A rough sketch of what we need in the module Self reminder: need two pieces of
-## inputs: 1. a data frame of plot characteristics, with columns: plot ID,
-## treatment, x, y, area 2. a data frame where the 1st column is plot ID, and
+## inputs: 1. a data frame of plot characteristics, with columns: plot,
+## group, x, y 2. a data frame where rownames are plot ids, and
 ## subsequent columns are species abundances
 
 ## Functions
@@ -107,70 +107,59 @@ null_sad = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
     # assuming that samples of the two treatments come from the same SAD.
     # Only keep the plots for the two given treatments
     dat_sp = dat_sp[dat_plot$group %in% groups, ] 
-    sp_extend = unlist(sapply(1:nrow(dat_sp), function(x) 
-                              rep(1:ncol(dat_sp), dat_sp[x, ])))
-    grp_extend = unlist(sapply(1:nrow(dat_sp), function(x) 
-                                rep(dat_plot[dat_plot[ , 1] == dat_sp[x, 1], 2],
-                                    sum(dat_sp[x, 2:ncol(dat_sp)]))))
-    Nind = min(length(grp_extend[grp_extend == treatment1]), 
-               length(grp_extend[grp_extend == treatment2]))
-    deltaSsad_perm = matrix(NA, nperm, Nind)
+    sp_extend = unlist(apply(dat_sp, 1, function(x) 
+                             rep(1:ncol(dat_sp), x)))
+    n_plot = apply(dat_sp, 1, sum)
+    grp_extend = rep(dat_plot$group, times=n_plot)
+    Nind = min(tapply(n_plot, dat_plot$group, sum)) 
+    dS_perm = matrix(NA, nperm, Nind)
     for (i in 1:nperm) {
         # Shuffle treatment label of each individual  
-        grp_shuffle = sample(grp_extend)  
-        sad_shuffle = sapply(c(treatment1, treatment2), function(x) 
-                             as.numeric(table(factor(
-                                 sp_extend[grp_shuffle == x], levels = 2:ncol(dat_sp)))))
-        ind_S = lapply(1:2, function(x) rarefaction.individual(sad_shuffle[ , x])[ , 2])
-        deltaSsad_perm[i, ] = as.numeric(unlist(ind_S[2])[1:Nind] - 
-                                         unlist(ind_S[1])[1:Nind])
+        grp_shuffle = sample(grp_extend) 
+        sad_shuffle = sapply(groups, function(x) 
+                             as.integer(table(factor(
+                                 sp_extend[grp_shuffle == x], levels=1:ncol(dat_sp)))))
+        ind_S = sapply(1:Nind, function(x) rarefy(t(sad_shuffle), sample=x))
+        # this step is explicitly pairwise 
+        dS_perm[i, ] = ind_S[2, ] - ind_S[1 , ]
     }
-    quant_mean = as.numeric(apply(deltaSsad_perm, 2, mean, na.rm = T))
-    quant_lower = as.numeric(apply(deltaSsad_perm, 2, function(x) 
-                                   quantile(x, (1 - CI)/2, na.rm = T)))
-    quant_higher = as.numeric(apply(deltaSsad_perm, 2, function(x) 
-                                    quantile(x, (1 + CI)/2, na.rm = T)))
-    return(list(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
+    dS_mean = apply(dS_perm, 2, mean)
+    dS_qt = apply(dS_perm, 2, function(x) 
+                  quantile(x, c((1 - CI)/2, (1 + CI)/2)))
+    out = data.frame(mean = dS_mean, lowerCI = dS_qt[1, ], upperCI = dS_qt[2, ])
+    return(out)
 }
 
-null_N = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95, 
-    ScaleBy = NA) {
+null_N = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95, ScaleBy = NA) {
     # This function generates null confidence intervals for the deltaSN curve
     # assuming that the two treatments do not differe systematically in N.
+    dat_sp = dat_sp[dat_plot$group %in% groups, ]
+    dat_plot = dat_plot[dat_plot$group %in% groups, ]
     avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
-    nplots = c(nrow(dat_plot[dat_plot[ , 2] == treatment1, ]), 
-               nrow(dat_plot[dat_plot[ , 2] == treatment2, ]))
-    dat_plot_grps = dat_plot[dat_plot[ , 2] %in% c(treatment1, treatment2), ]
-    # Only keep the plots for the two given treatments
-    dat_sp = dat_sp[match(dat_plot_grps[ , 1], dat_sp[ , 1]), ]  
+    Nplot = min(table(dat_plot$group))
     grp_sads = list()
-    for (grp in c(treatment1, treatment2)) {
-        plots = dat_plot[dat_plot[ , 2] == grp, 1]
-        grp_sad = apply(dat_sp[dat_sp[ , 1] %in% plots, 2:ncol(dat_sp)], 2, sum)
-        grp_sads = c(grp_sads, list(rep(2:ncol(dat_sp), grp_sad)))
+    for (i in groups) {
+        plots = dat_plot$plot[dat_plot$group == i]
+        grp_sad = apply(dat_sp[row.names(dat_sp) %in% plots, ], 2, sum)
+        grp_sads = c(grp_sads, list(rep(1:ncol(dat_sp), grp_sad)))
     }
     # Abundance within each plot
-    n_plot = apply(dat_sp[ , 2:ncol(dat_sp)], 1, sum)  
+    n_plot = apply(dat_sp, 1, sum)  
     sad_row = lapply(1:nrow(dat_sp), function(x) 
-                     rep(2:ncol(dat_sp), dat_sp[x, 2:ncol(dat_sp)]))
-    Nind = min(floor(min(nplots) * avg_dens), 
+                     rep(1:ncol(dat_sp), dat_sp[x, ]))
+    Nind = min(floor(Nplot * avg_dens), 
                length(unlist(grp_sads[1])), 
                length(unlist(grp_sads[2])))
     deltaSN_perm = matrix(NA, nperm, Nind)
+    
+    ## below all this code reduces to doing this kind of operation:
+
     for (i in 1:nperm) {
         n_plot_shuffle = sample(n_plot)
-        dat_sp_perm = as.data.frame(matrix(0, nrow(dat_sp), ncol(dat_sp)))
-        dat_sp_perm[ , 1] = dat_sp[ , 1]
-        new_counts = sapply(1:nrow(dat_sp), function(x) as.numeric(table(factor(
-                            sample(if (length(unlist(sad_row[x])) > 0) 
-                                       unlist(sad_row[x])  # If plot is empty, use treatment-level SAD
-                                   else
-                                       unlist(grp_sads[
-                                           which(c(treatment1, treatment2) == 
-                                                 dat_plot[x, 2])]),
-                                   n_plot_shuffle[x], replace = T),
-                            levels = 2:ncol(dat_sp)))))
-        dat_sp_perm[ , 2:ncol(dat_sp_perm)] = as.data.frame(t(new_counts))
+        dat_sp_perm = sapply(1:nrow(dat_sp), function(x) 
+                             table(c(1:ncol(dat_sp), 
+                                     sample(rep(1:ncol(dat_sp), dat_sp[x,]), 
+                                            size=n_plot_shuffle[x], replace=T))) - 1)
         deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot_grps,
                                         treatment1, treatment2, ScaleBy)[1:Nind]
     }
