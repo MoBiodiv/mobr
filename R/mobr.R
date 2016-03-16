@@ -22,18 +22,59 @@ get_avg_dens = function(dat_sp, dat_plot, ScaleBy) {
     return(avg_dens)
 }
 
+rarefaction = function(x, method, effort=NULL) {
+    # analytical formulations from Cayuela et al. 2015. Ecological and biogeographic null hypotheses for
+    # comparing rarefaction curves. Ecological Monographs 85:437–454.
+    # Appendix A: http://esapubs.org/archive/mono/M085/017/appendix-A.php
+    # possible inputs: sad or sp x site
+    # community matrix examine input properties to determine if input is
+    # compatible with method
+    if (!any(method %in% c('indiv', 'samp')))
+        stop('method must be "indiv" or "samp" for individual or sample based rarefaction, respectively')
+    if (method == 'samp') {
+        if (is.null(dim(x)))
+            stop('For sample based rarefaction "x" must be a site x species matrix as the input')
+        else {
+            x = (x > 0) * 1             
+            n = nrow(x) # empty sites are counted as samples 
+            x = colSums(x)
+        }
+    }
+    if (method == 'indiv') {
+        if (!is.null(dim(x)))
+            x = colSums(x)
+        n = sum(x)
+    }
+    x = x[x > 0] # drop species with no observations
+    S = length(x)
+    if (is.null(effort))
+        effort = 1:n
+    if (any(effort > n))
+        warning('"effort" larger than total number of samples')
+    ldiv = lchoose(n, effort)
+    p = matrix(0, length(effort), S)
+    for (i in seq_along(effort)) {
+        p[i, ] = ifelse(n - x < effort[i], 0, 
+                        exp(lchoose(n - x, effort[i]) - ldiv[i]))
+    }
+    out = rowSums(1 - p)
+    names(out) = effort
+    class(out) = 'rarefaction'
+    return(out)
+}
+
 rarefy_sample_explicit = function(dat_sp, dat_plot, group) {
     plot_grp = dat_plot[dat_plot$group == group, ] 
     sp_grp = dat_sp[dat_plot$group == group, ]
-    explic_loop = matrix(0, nrow(sp_grp), nrow(sp_grp))
+    explicit_loop = matrix(0, nrow(sp_grp), nrow(sp_grp))
     pair_dist = as.matrix(dist(plot_grp[ , c('x', 'y')]))
     for (i in 1:nrow(plot_grp)) {
-        focal_site = rownames(plot_grp)[i]
+        focal_site = plot_grp$plot[i]
         dist_to_site = pair_dist[i, ]
         # Shuffle plots, so that tied grouping is not biased by original order.
         new_order = sample(1:nrow(plot_grp))  
         # new_order = 1:nrow(plot_grp) # Alternative: no shuffles
-        plots_new = row.names(plot_grp)[new_order]
+        plots_new = plot_grp$plot[new_order]
         dist_new = dist_to_site[new_order]
         plots_new_ordered = plots_new[order(dist_new)]
         # Move focal site to the front
@@ -43,22 +84,21 @@ rarefy_sample_explicit = function(dat_sp, dat_plot, group) {
         # 1 for absence, 0 for presence
         sp_bool = as.data.frame((sp_ordered == 0) * 1) 
         rich = cumprod(sp_bool)
-        explic_loop[ , i] = as.numeric(ncol(dat_sp) - 1 - rowSums(rich))
+        explicit_loop[ , i] = as.numeric(ncol(dat_sp) - 1 - rowSums(rich))
     }
-    explic_S = apply(explic_loop, 1, mean)
-    return(explic_S)
+    explicit_S = apply(explicit_loop, 1, mean)
+    return(explicit_S)
 }
 
-rarefy_sample_implicit = function(dat_sp, dat_plot, group) {
+rarefy_sample_implicit = function(dat_sp, dat_plot, group, effort=NULL) {
     sp_grp = dat_sp[dat_plot$group == group, ]
-    sample_S = rarefaction.sample(sp_grp)[ , 2]
+    sample_S = rarefaction(sp_grp, 'samp', effort)
     return(sample_S)
 }
 
-rarefy_individual = function(dat_sp, dat_plot, group) {
-    # Returns the rarefaction results at each sample size
-    sad = apply(dat_sp[dat_plot$group == group, ], 2, sum)
-    ind_S = rarefaction.individual(sad)[ , 2]
+rarefy_individual = function(dat_sp, dat_plot, group, effort=NULL) {
+    sad = colSums(dat_sp[dat_plot$group == group, ])
+    ind_S = rarefaction(sad, 'indiv', effort)
     return(ind_S)
 }
 
@@ -66,23 +106,28 @@ get_deltaSsad = function(dat_sp, dat_plot, groups) {
     # the first element of the argument groups must be the reference group
     rescaled_ind = sapply(groups, function(x) 
                           rarefy_individual(dat_sp, dat_plot, x))
+    #Nind = min(tapply(rowSums(dat_sp),  dat_plot$group, sum))
     Nind = min(length(unlist(rescaled_ind[1])), length(unlist(rescaled_ind[2])))
     deltaSsad = as.numeric(unlist(rescaled_ind[2])[1:Nind] - 
                            unlist(rescaled_ind[1])[1:Nind])
     return(deltaSsad)
 }
 
-get_deltaSN = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
-    avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
-    min_nplots = min(table(dat_plot$group[dat_plot$group %in% groups]))
+get_deltaSN = function(dat_sp, dat_plot, groups, ScaleBy = NA, Nind) {
+    avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy) 
+    # shouldn't the above line be:  'mean(rowSums(dat_sp))' ?
+    effort = 1:min(table(dat_plot$group[dat_plot$group %in% groups]))
     implicit_sample = sapply(groups, function(x)
-                             rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min_nplots])
+                             rarefy_sample_implicit(dat_sp, dat_plot, x, effort))
+    # DJM: It may be more conservative to aggregate the individual rarefaction result
+    # rather than interpolate the sample based differences to an artifical level of 
+    # precision 
     # rescale sample based differences via intpolation to reflect numbers of individuals sampled
     # Use S_diff(1) = 0 for interpolation
     # here the differences are limited to comparisons of two groups
-    deltaSsamp = pchip(xi=c(1, (1:min_nplots) * avg_dens), 
+    deltaSsamp = pchip(xi=c(1, effort * avg_dens), 
                        yi=c(0, implicit_sample[ , 2] - implicit_sample[ , 1]),
-                      x=1:floor(min_nplots * avg_dens))
+                       x=1:Nind)
     # if the calculation of the sad rarefaction is slow then possibly it should
     # be allowed as an argument as well.
     deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
@@ -94,11 +139,11 @@ get_deltaSN = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
 get_deltaSagg = function(dat_sp, dat_plot, groups) {
     min_nplots = min(table(dat_plot$group[dat_plot$group %in% groups]))
     implicit_sample = sapply(groups, function(x) 
-                             rarefy_sample_implicit(dat_sp, dat_plot, x)[1:min_nplots])
+                             rarefy_sample_implicit(dat_sp, dat_plot, x, 1:min_nplots))
     explicit_sample = sapply(groups, function(x) 
                              rarefy_sample_explicit(dat_sp, dat_plot, x)[1:min_nplots])
     deltaSagg = as.numeric(na.omit(explicit_sample[ , 2] - explicit_sample[ , 1] - 
-        (implicit_sample[ , 2] - implicit_sample[ , 1])))
+                                   (implicit_sample[ , 2] - implicit_sample[ , 1])))
     return(deltaSagg)
 }
 
@@ -116,10 +161,11 @@ null_sad = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
     for (i in 1:nperm) {
         # Shuffle treatment label of each individual  
         grp_shuffle = sample(grp_extend) 
+        # see vegan::rrarefy for a possibly better way to shuffle indiv
         sad_shuffle = sapply(groups, function(x) 
                              as.integer(table(factor(
                                  sp_extend[grp_shuffle == x], levels=1:ncol(dat_sp)))))
-        ind_S = sapply(1:Nind, function(x) rarefy(t(sad_shuffle), sample=x))
+        ind_S = rarefaction(t(sad_shuffle), effort=1:Nind)
         # this step is explicitly pairwise 
         dS_perm[i, ] = ind_S[2, ] - ind_S[1 , ]
     }
@@ -133,67 +179,58 @@ null_sad = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
 null_N = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95, ScaleBy = NA) {
     # This function generates null confidence intervals for the deltaSN curve
     # assuming that the two treatments do not differe systematically in N.
+    S = ncol(dat_sp)
     dat_sp = dat_sp[dat_plot$group %in% groups, ]
     dat_plot = dat_plot[dat_plot$group %in% groups, ]
-    avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
     Nplot = min(table(dat_plot$group))
     grp_sads = list()
     for (i in groups) {
         plots = dat_plot$plot[dat_plot$group == i]
-        grp_sad = apply(dat_sp[row.names(dat_sp) %in% plots, ], 2, sum)
-        grp_sads = c(grp_sads, list(rep(1:ncol(dat_sp), grp_sad)))
+        grp_sad = colSums(dat_sp[row.names(dat_sp) %in% plots, ])
+        grp_sads[[i]] = rep(1:S, grp_sad)
     }
     # Abundance within each plot
-    n_plot = apply(dat_sp, 1, sum)  
-    sad_row = lapply(1:nrow(dat_sp), function(x) 
-                     rep(1:ncol(dat_sp), dat_sp[x, ]))
-    Nind = min(floor(Nplot * avg_dens), 
-               length(unlist(grp_sads[1])), 
-               length(unlist(grp_sads[2])))
+    plot_abus = apply(dat_sp, 1, sum)  
+    Nind = min(sapply(grp_sads, length)) 
     deltaSN_perm = matrix(NA, nperm, Nind)
-    
-    ## below all this code reduces to doing this kind of operation:
-
     for (i in 1:nperm) {
-        n_plot_shuffle = sample(n_plot)
-        dat_sp_perm = sapply(1:nrow(dat_sp), function(x) 
-                             table(c(1:ncol(dat_sp), 
-                                     sample(rep(1:ncol(dat_sp), dat_sp[x,]), 
-                                            size=n_plot_shuffle[x], replace=T))) - 1)
-        deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot_grps,
-                                        treatment1, treatment2, ScaleBy)[1:Nind]
+        plot_abu_perm = sample(plot_abus)
+        sp_draws = sapply(1:nplots, function(x) 
+                          sample(rep(1:S, dat_sp[x,]), 
+                                 size=plot_abu_perm[x], replace=T))
+        dat_sp_perm = t(sapply(1:nplots, function(x) 
+                               table(c(1:S, sp_draws[[x]])) - 1 ))
+        deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot, groups, ScaleBy,
+                                        Nind)
     }
     quant_mean = apply(deltaSN_perm, 2, mean, na.rm = T)
     quant_lower = apply(deltaSN_perm, 2, function(x) 
                         quantile(x, (1 - CI)/2, na.rm = T))
     quant_higher = apply(deltaSN_perm, 2, function(x) 
                          quantile(x, (1 + CI)/2, na.rm = T))
-    return(list(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
+    return(data.frame(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
 }
 
-null_agg = function(dat_sp, dat_plot, treatment1, treatment2, nperm = 1000, CI = 0.95) {
+null_agg = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
     # This function generates null confidence intervals for the deltaSagg curve
     # assuming that plots within each treatment have no spatial structure.
-    nplots = c(nrow(dat_plot[dat_plot[ , 2] == treatment1, ]),
-               nrow(dat_plot[dat_plot[ , 2] == treatment2, ]))
-    grp_index = list(which(dat_plot[ , 2] == treatment1), 
-                      which(dat_plot[ , 2] == treatment2))
+    nplots = table(dat_plot$group)
+    grp_index = sapply(groups, function(x) which(dat_plot$group == x))
     deltaSagg_perm = matrix(NA, nperm, min(nplots))
     for (i in 1:nperm) {
         # Shuffle within treatments
-        index_shuffle = list(sample(unlist(grp_index[1])), sample(unlist(grp_index[2])))  
+        index_shuffle = sapply(grp_index, sample)
         new_order = unlist(index_shuffle)[order(unlist(grp_index))]
         plot_shuffle_loc = dat_plot
-        plot_shuffle_loc[unlist(grp_index), 3:4] = plot_shuffle_loc[new_order, 3:4]
-        deltaSagg_perm[i, ] = get_deltaSagg(dat_sp, plot_shuffle_loc, 
-                                            treatment1, treatment2)
+        plot_shuffle_loc[unlist(grp_index), c('x', 'y')] = plot_shuffle_loc[new_order, c('x','y')]
+        deltaSagg_perm[i, ] = get_deltaSagg(dat_sp, plot_shuffle_loc, groups) 
     }
     quant_mean = apply(deltaSagg_perm, 2, mean, na.rm = T)
     quant_lower = apply(deltaSagg_perm, 2, function(x) 
                         quantile(x, (1 - CI)/2, na.rm = T))
     quant_higher = apply(deltaSagg_perm, 2, function(x) 
                          quantile(x, (1 + CI)/2, na.rm = T))
-    return(list(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
+    return(data.frame(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
 }
 
 table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA) {
@@ -240,7 +277,7 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA) {
     if (is.na(lower_N)) {
         rarefied_S_list = sapply(1:nrow(dat_sp), function(x) 
                                  as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], 
-                                                                   inds = min(N_list))[2]))
+                                                                   effort = 1:min(N_list))[2]))
     } else {
         # Remove plots with abundance below lower_N in the analysis of rarefied S
         rarefied_S_list = sapply(1:nrow(dat_sp), function(x) {
@@ -248,7 +285,7 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA) {
                                      NA 
                                  else 
                                      as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)],
-                                                                       inds = lower_N)[2])})
+                                                                       effort = 1:lower_N)[2])})
         if (any(is.na(rarefied_S_list))) 
             print("Warning: some plots are removed in rarefaction.")
     }
