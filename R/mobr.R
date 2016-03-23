@@ -63,7 +63,7 @@ rarefaction = function(x, method, effort=NULL) {
     return(out)
 }
 
-rarefy_sample_explicit = function(dat_sp, dat_plot, group) {
+rarefy_sample_explicit = function(dat_sp, dat_plot, group, effort) {
     plot_grp = dat_plot[dat_plot$group == group, ] 
     sp_grp = dat_sp[dat_plot$group == group, ]
     explicit_loop = matrix(0, nrow(sp_grp), nrow(sp_grp))
@@ -87,7 +87,7 @@ rarefy_sample_explicit = function(dat_sp, dat_plot, group) {
         explicit_loop[ , i] = as.numeric(ncol(dat_sp) - 1 - rowSums(rich))
     }
     explicit_S = apply(explicit_loop, 1, mean)
-    return(explicit_S)
+    return(explicit_S[effort])
 }
 
 rarefy_sample_implicit = function(dat_sp, dat_plot, group, effort=NULL) {
@@ -102,18 +102,19 @@ rarefy_individual = function(dat_sp, dat_plot, group, effort=NULL) {
     return(ind_S)
 }
 
-get_deltaSsad = function(dat_sp, dat_plot, groups) {
+get_deltaSsad = function(dat_sp, dat_plot, groups, Nind=NULL) {
+    if (is.null(Nind))
+        Nind = min(tapply(rowSums(dat_sp),  dat_plot$group, sum))
     # the first element of the argument groups must be the reference group
     rescaled_ind = sapply(groups, function(x) 
-                          rarefy_individual(dat_sp, dat_plot, x))
-    #Nind = min(tapply(rowSums(dat_sp),  dat_plot$group, sum))
-    Nind = min(length(unlist(rescaled_ind[1])), length(unlist(rescaled_ind[2])))
-    deltaSsad = as.numeric(unlist(rescaled_ind[2])[1:Nind] - 
-                           unlist(rescaled_ind[1])[1:Nind])
+                          rarefy_individual(dat_sp, dat_plot, x, 1:Nind))
+    deltaSsad = rescaled_ind[ , 2] - rescaled_ind[ , 1]
     return(deltaSsad)
 }
 
-get_deltaSN = function(dat_sp, dat_plot, groups, ScaleBy = NA, Nind) {
+get_deltaSN = function(dat_sp, dat_plot, groups, ScaleBy = NA, Nind=NULL) {
+    if (is.null(Nind))
+        Nind = min(tapply(rowSums(dat_sp),  dat_plot$group, sum))
     avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy) 
     # shouldn't the above line be:  'mean(rowSums(dat_sp))' ?
     effort = 1:min(table(dat_plot$group[dat_plot$group %in% groups]))
@@ -141,7 +142,7 @@ get_deltaSagg = function(dat_sp, dat_plot, groups) {
     implicit_sample = sapply(groups, function(x) 
                              rarefy_sample_implicit(dat_sp, dat_plot, x, 1:min_nplots))
     explicit_sample = sapply(groups, function(x) 
-                             rarefy_sample_explicit(dat_sp, dat_plot, x)[1:min_nplots])
+                             rarefy_sample_explicit(dat_sp, dat_plot, x, 1:min_nplots))
     deltaSagg = as.numeric(na.omit(explicit_sample[ , 2] - explicit_sample[ , 1] - 
                                    (implicit_sample[ , 2] - implicit_sample[ , 1])))
     return(deltaSagg)
@@ -165,9 +166,9 @@ null_sad = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
         sad_shuffle = sapply(groups, function(x) 
                              as.integer(table(factor(
                                  sp_extend[grp_shuffle == x], levels=1:ncol(dat_sp)))))
-        ind_S = rarefaction(t(sad_shuffle), effort=1:Nind)
+        ind_S = apply(sad_shuffle, 2, rarefaction, 'indiv', 1:Nind)
         # this step is explicitly pairwise 
-        dS_perm[i, ] = ind_S[2, ] - ind_S[1 , ]
+        dS_perm[i, ] = ind_S[ , 2] - ind_S[ , 1]
     }
     dS_mean = apply(dS_perm, 2, mean)
     dS_qt = apply(dS_perm, 2, function(x) 
@@ -195,10 +196,10 @@ null_N = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95, ScaleBy = N
     deltaSN_perm = matrix(NA, nperm, Nind)
     for (i in 1:nperm) {
         plot_abu_perm = sample(plot_abus)
-        sp_draws = sapply(1:nplots, function(x) 
+        sp_draws = sapply(1:nrow(dat_sp), function(x) 
                           sample(rep(1:S, dat_sp[x,]), 
                                  size=plot_abu_perm[x], replace=T))
-        dat_sp_perm = t(sapply(1:nplots, function(x) 
+        dat_sp_perm = t(sapply(1:nrow(dat_sp), function(x) 
                                table(c(1:S, sp_draws[[x]])) - 1 ))
         deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot, groups, ScaleBy,
                                         Nind)
@@ -233,17 +234,20 @@ null_agg = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
     return(data.frame(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
 }
 
-table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy = NA) {
+table_effect_on_S = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
     # Returns a data frame with the effects of SAD, N, and aggregation on diversity
     # across scales
-    nplots = c(nrow(dat_plot[dat_plot[ , 2] == treatment1, ]), 
-               nrow(dat_plot[dat_plot[ , 2] == treatment2, ]))
-    explicit_sample = sapply(c(treatment1, treatment2), function(x) 
-                             rarefy_sample_explicit(dat_sp, dat_plot, x)[1:min(nplots)])
+    # not b/c of spatial ties the values will change every time 
+    # this is calculated therefore best pratice may be
+    # tst = replicate(20, table_effect_on_S(dat_sp, dat_plot, groups, ScaleBy), simplify=FALSE)
+    # plyr::aaply(plyr::laply(tst, as.matrix), c(2, 3), mean)
+    nplots = table(dat_plot$group)
+    explicit_sample = sapply(groups, function(x) 
+                             rarefy_sample_explicit(dat_sp, dat_plot, x, 1:min(nplots)))
     overall = as.numeric(na.omit(explicit_sample[ , 2] - explicit_sample[ , 1]))
-    deltaSsad = get_deltaSsad(dat_sp, dat_plot, treatment1, treatment2)
-    deltaSN = get_deltaSN(dat_sp, dat_plot, treatment1, treatment2, ScaleBy)
-    deltaSagg = get_deltaSagg(dat_sp, dat_plot, treatment1, treatment2)
+    deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
+    deltaSN = get_deltaSN(dat_sp, dat_plot, groups, ScaleBy) # why is this call diff
+    deltaSagg = get_deltaSagg(dat_sp, dat_plot, groups)
     # Rarefy to desired abundances
     avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
     max_level = floor(log10(avg_dens * min(nplots)))
@@ -257,35 +261,33 @@ table_effect_on_S = function(dat_sp, dat_plot, treatment1, treatment2, ScaleBy =
     }
     for (row in c(1, 4)) {
         deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
-        out_row = pchip((0:length(deltaS)) * avg_dens, c(0, deltaS), 
-                        10^(1:min(max_level, floor(log10(length(deltaS) * avg_dens)))))
+        out_row = pchip(xi=(0:length(deltaS)) * avg_dens, yi=c(0, deltaS), 
+                        x=10^(1:min(max_level, floor(log10(length(deltaS) * avg_dens)))))
         out[row, 1:length(out_row)] = out_row
     }
-    out$maxN = c(overall[length(overall)], deltaSsad[length(deltaSsad)], 
-                 deltaSN[length(deltaSN)], deltaSagg[length(deltaSagg)])
+    out = cbind(out, c(overall[length(overall)], deltaSsad[length(deltaSsad)], 
+                deltaSN[length(deltaSN)], deltaSagg[length(deltaSagg)]))
+    names(out)[max_level + 1] = length(deltaSsad)
     return(out)
 }
 
-pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA) {
-    dat_plot_grps = dat_plot[dat_plot[ , 2] %in% c(treatment1, treatment2), ]
-    dat_sp = dat_sp[match(dat_plot_grps[ , 1], dat_sp[ , 1]), ]
-    S_list = sapply(1:nrow(dat_sp), function(x) 
-                    length(which(dat_sp[x, 2:ncol(dat_sp)] != 0)))
-    N_list = apply(dat_sp[ , 2:ncol(dat_sp)], 1, sum)
+pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
+    dat_plot_grps = dat_plot[dat_plot$group %in% groups, ]
+    dat_sp = dat_sp[match(dat_plot_grps$plot, row.names(dat_sp)), ]
+    S_list = rowSums(dat_sp > 0)
+    N_list = rowSums(dat_sp)
     PIE_list = sapply(1:nrow(dat_sp), function(x) 
-                      N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, 2:ncol(dat_sp)]/N_list[x])^2)))
+                      N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, ]/N_list[x])^2)))
     if (is.na(lower_N)) {
-        rarefied_S_list = sapply(1:nrow(dat_sp), function(x) 
-                                 as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)], 
-                                                                   effort = 1:min(N_list))[2]))
+        rarefied_S_list = apply(dat_sp, 1, function(x) 
+                                rarefaction(x, 'indiv', effort = 1:min(N_list)))
     } else {
         # Remove plots with abundance below lower_N in the analysis of rarefied S
-        rarefied_S_list = sapply(1:nrow(dat_sp), function(x) {
-                                 if (sum(dat_sp[x, 2:ncol(dat_sp)]) < lower_N)
-                                     NA 
-                                 else 
-                                     as.numeric(rarefaction.individual(dat_sp[x, 2:ncol(dat_sp)],
-                                                                       effort = 1:lower_N)[2])})
+        rarefied_S_list = apply(dat_sp, 1, function(x) 
+                                if (sum(x) < lower_N)
+                                    rep(NA, lower_N)
+                                else 
+                                    rarefaction(x, 'indiv', effort = 1:lower_N))
         if (any(is.na(rarefied_S_list))) 
             print("Warning: some plots are removed in rarefaction.")
     }
@@ -293,8 +295,8 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA) {
     stats_list = list(rarefied_S_list, N_list, PIE_list, S_list)
     for (i in 1:length(stats_list)) {
         stat = unlist(stats_list[i])
-        stat_1 = stat[dat_plot[ , 2] == treatment1]
-        stat_2 = stat[dat_plot[ , 2] == treatment2]
+        stat_1 = stat[dat_plot$group == groups[1]]
+        stat_2 = stat[dat_plot$group == groups[2]]
         stat_1 = stat_1[!is.na(stat_1)]
         stat_2 = stat_2[!is.na(stat_2)]
         out[ , i] = c(mean(stat_1), sd(stat_1), 
@@ -302,10 +304,10 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA) {
                       t.test(stat_1, stat_2)$p.val)
     }
     names(out) = c("S_rarefied", "N", "PIE", "S_raw")
-    row.names(out) = c(paste(treatment1, "(mean)", sep = ""), 
-                       paste(treatment1, "(sd)", sep = ""), 
-                       paste(treatment2, "(mean)", sep = ""), 
-                       paste(treatment2, "(sd)", sep = ""), "p_value")
+    row.names(out) = c(paste(groups[1], "(mean)", sep = ""), 
+                       paste(groups[1], "(sd)", sep = ""), 
+                       paste(groups[2], "(mean)", sep = ""), 
+                       paste(groups[2], "(sd)", sep = ""), "p_value")
     # Boxplots
     par(mfrow = c(2, 2))  # This is not ideal but I cannot get layout to work in Rstudio
     plot_names = c(paste("Rarified S at N=", 
@@ -315,23 +317,21 @@ pairwise_t = function(dat_sp, dat_plot, treatment1, treatment2, lower_N = NA) {
                         paste(plot_names[x], " (p=", round(out[5, x], 6), ")", sep = ""))
     for (i in 1:length(stats_list)) {
         stat = unlist(stats_list[i])
-        stat_1 = stat[dat_plot[ , 2] == treatment1]
-        stat_2 = stat[dat_plot[ , 2] == treatment2]
+        stat_1 = stat[dat_plot$group == groups[1]]
+        stat_2 = stat[dat_plot$group == groups[2]]
         stat_1 = stat_1[!is.na(stat_1)]
         stat_2 = stat_2[!is.na(stat_2)]
-        boxplot(stat_1, stat_2, names = c(treatment1, treatment2), main = plot_names[i])
+        boxplot(stat_1, stat_2, names = c(groups[1], groups[2]), main = plot_names[i])
     }
     return(out)
 }
-
-lch = function(n, k) lgamma(n+1) - lgamma(k+1) - lgamma(n-k+1)
 
 ## Functions for plotting
 plotEffectS = function(dat_sp, dat_plot, groups, Nperm = 1000,
                        CI = 0.95, ScaleBy = NA) {
     # get individual densities
     avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
-    avg_A = mean(dat_plot$area)
+    #avg_A = mean(dat_plot$area)
     deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
     deltaSN = get_deltaSN(dat_sp, dat_plot, groups, ScaleBy)
     deltaSagg = get_deltaSagg(dat_sp, dat_plot, groups)
@@ -357,21 +357,21 @@ plotEffectS = function(dat_sp, dat_plot, groups, Nperm = 1000,
                     c(null_CI$lowerCI, rev(null_CI$upperCI)), col = "grey84", border = NA)
             lines(1:length(null_CI$mean), null_CI$mean, type = "l", lwd = 2)
             par(new = T)
-            plot((1:length(deltaS))/avg_dens * avg_A, deltaS, col = "red", lwd = 2, 
+            plot((1:length(deltaS))/avg_dens * 1, deltaS, col = "red", lwd = 2, 
                  type = "l", xaxt = "n", yaxt = "n", xlab = "", ylab = "",
                  ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)),
-                 xlim = c(1, length(deltaS))/avg_dens * avg_A)
+                 xlim = c(1, length(deltaS))/avg_dens * 1)
             axis(3, cex.axis = 1.5)
             mtext("Area", side = 3, line = 2.5)
             title(main = main_list[i], line = 4.5, cex.main = 1.8)
         } else {
-            plot(avg_A * 1:length(null_CI$lowerCI), null_CI$lowerCI, type = "l", 
+            plot(1 * 1:length(null_CI$lowerCI), null_CI$lowerCI, type = "l", 
                  col = "grey84", ylab = expression(Delta ~ "S"), xlab = "Area",
                  ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)),
-                 xlim = c(0, avg_A * length(deltaS)), cex.lab = 1.5, cex.axis = 1.5)
-            polygon(c(avg_A * 1:length(null_CI$lowerCI), avg_A * length(null_CI$lowerCI):1), 
+                 xlim = c(0, 1 * length(deltaS)), cex.lab = 1.5, cex.axis = 1.5)
+            polygon(c(1 * 1:length(null_CI$lowerCI), 1 * length(null_CI$lowerCI):1), 
                     c(null_CI$lowerCI, rev(null_CI$upperCI)), col = "grey84", border = NA)
-            lines(avg_A * 1:length(null_CI$mean), null_CI$mean, type = "l", lwd = 2)
+            lines(1 * 1:length(null_CI$mean), null_CI$mean, type = "l", lwd = 2)
             par(new = T)
             plot((1:length(deltaS)) * avg_dens, deltaS, col = "red", lwd = 2,
                  type = "l", xaxt = "n", yaxt = "n", xlab = "", ylab = "",
@@ -388,15 +388,15 @@ plotSADs = function(dat_sp, dat_plot, col = NA) {
     # TO DO: add check to ensure that col is the same length as treatments
     require(scales)
     par(mfrow = c(1, 1))
-    grps = unique(dat_plot[ , 2])
+    grps = unique(dat_plot$group)
     if (is.na(col)) 
         col = rainbow(length(grps))
     plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
          xlim = c(0.01, 1), ylim = c(0, 1), log = "x")
     for (i in 1:length(grps)) {
         col_grp = col[i]
-        plots_grp = dat_plot[dat_plot[ , 2] == grps[i], 1]
-        dat_grp = dat_sp[match(plots_grp, dat_sp[ , 1]), 2:ncol(dat_sp)]
+        plots_grp = dat_plot[dat_plot$group == grps[i], 1]
+        dat_grp = dat_sp[match(plots_grp, row.names(dat_sp)), ]
         for (j in 1:nrow(dat_grp)) {
             sad_row = as.numeric(sort(dat_grp[j, dat_grp[j, ] != 0]))
             s_cul = 1:length(sad_row)/length(sad_row)
@@ -410,16 +410,14 @@ plotSADs = function(dat_sp, dat_plot, col = NA) {
 plotSNpie = function(dat_sp, dat_plot, col = NA) {
     # TO DO: add check to ensure that col is the same length as treatments
     require(rgl)
-    grps = unique(dat_plot[ , 2])
+    grps = unique(dat_plot$group)
     if (is.na(col)) 
         col = rainbow(length(grps))
-    S_list = sapply(1:nrow(dat_sp), function(x) 
-                    length(which(dat_sp[x, 2:ncol(dat_sp)] != 0)))
-    N_list = apply(dat_sp[ , 2:ncol(dat_sp)], 1, sum)
+    S_list = rowSums(dat_sp > 0)
+    N_list = rowSums(dat_sp)
     PIE_list = sapply(1:nrow(dat_sp), function(x) 
-                      N_list[x]/(N_list[x] - 1) * 
-                      (1 - sum((dat_sp[x, 2:ncol(dat_sp)] / N_list[x])^2)))
-    grp_list = as.character(dat_plot[match(dat_plot[ , 1], dat_sp[ , 1]), 2])
+                      N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, ]/N_list[x])^2)))
+    grp_list = as.character(dat_plot$group[match(dat_plot$plot, row.names(dat_sp))])
     col_list = sapply(grp_list, function(x) col[which(grps == x)])
     plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
