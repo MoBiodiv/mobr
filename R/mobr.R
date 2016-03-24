@@ -362,11 +362,11 @@ plotEffectS = function(dat_sp, dat_plot, groups, Nperm = 1000,
                  ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)),
                  xlim = c(1, length(deltaS))/avg_dens * 1)
             axis(3, cex.axis = 1.5)
-            mtext("Area", side = 3, line = 2.5)
+            mtext("Number of Plots", side = 3, line = 2.5)
             title(main = main_list[i], line = 4.5, cex.main = 1.8)
         } else {
             plot(1 * 1:length(null_CI$lowerCI), null_CI$lowerCI, type = "l", 
-                 col = "grey84", ylab = expression(Delta ~ "S"), xlab = "Area",
+                 col = "grey84", ylab = expression(Delta ~ "S"), xlab = "Number of Plots",
                  ylim = c(min(deltaS, null_CI$lowerCI), max(deltaS, null_CI$upperCI)),
                  xlim = c(0, 1 * length(deltaS)), cex.lab = 1.5, cex.axis = 1.5)
             polygon(c(1 * 1:length(null_CI$lowerCI), 1 * length(null_CI$lowerCI):1), 
