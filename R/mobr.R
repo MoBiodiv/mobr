@@ -460,3 +460,7 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
     col_list = sapply(grp_list, function(x) col[which(grps == x)])
     plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
+
+get_delta_stats = function(comm, type, env_var, test = 'all'){
+  
+}
