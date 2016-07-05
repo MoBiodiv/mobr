@@ -8,32 +8,61 @@ require(rareNMtests)
 require(pracma)
 
 ## define mobr object
-make_comm_obj = function(comm, plot_attr, ref_group=NULL) {
+make_comm_obj = function(comm, plot_attr, binary=FALSE, ref_var=NULL, ref_group=NULL) {
+    # carry out some basic checks
+    if (nrow(comm) != nrow(plot_attr))
+        stop("Number of plots in community does not equal number of plots in plot attribute table")
+    if (any(row.names(comm) != row.names(plot_attr)))
+        warning("Row names of community and plot attributes tables do not match")
+    if (binary) 
+        warning("Only sampled based forms of rarefaction can be computed on binary data")
+    else {
+        if (max(comm) == 1)
+            warning("Maximum abundance is 1 which suggests data is binary change the binary argument to TRUE")
+        if (any(rowSums(comm) < 5)) {
+            warning("Sites with less than 5 individuals will be dropped")
+            comm = comm[rowSums(comm) >= 5, ]
+        }
+        if (any(colSums(comm) == 0)) {
+            warning("Some species have zero occurrences and will be dropped from the community table")
+            comm = comm[colSums(comm) == 0, ]
+        }
+    }
+    if (!is.null(ref_var)) {
+        if (is.null(ref_group)) {
+            stop('The reference group (argument "ref_group") must also be provided')
+        } else {
+            ref_data = eval(parse(text=paste('plot_attr$', ref_var, sep='')))
+            if (!(ref_group %in% ref_data))
+                stop('Reference group is not present in the reference variable')
+            group_cts = table(ref_data)
+            if (any(group_cts < 5)) {
+                warning('Some groups in the reference variable have fewer than 5 replicates and therefore will be dropped from future comparisions')
+                row_indices = which(ref_data == names(group_cts)[group_cts < 5])
+                comm = comm[-row_indices, ]
+                plot_attr = plot_attr[-row_indices, ]
+            }    
+        }
+    }  
     out = list()
     out$comm = comm
-    # env is columns that are not x or y
     spat_cols = which(names(plot_attr) %in% c('x', 'y'))
-    out$envi = plot_attr[ , -spat_cols]
-    if (length(spat_cols > 0) {
+    if (length(spat_cols) > 0) {
+        out$envi = plot_attr[ , -spat_cols]
         out$spat = plot_attr[ , spat_cols]
     }
-    if (!is.null(reg_group)) {
+    else {
+        out$envi = plot_attr
+        out$spat = NULL
     }
-
-    # list of checks
-    # Add row checks for names and lengths
-    # is abundance given or only presence-absence
-    # check that species has some occurrences
-    # check that plot has some occurrences > 10 min
-    # out$type 'pres-abs' or 'abu'
-    # 
-    
+    out$ref_var = ref_var
+    out$ref_group = ref_group
     class(out) = 'comm'
-    out
+    return(out)
 }
 
-print.comm = function(...) {
-  
+print.comm = function(x) {
+    lapply(x, head)
 }
 
 print.mobr = function(...) {
