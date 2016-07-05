@@ -6,6 +6,45 @@
 ## Functions
 require(rareNMtests)
 require(pracma)
+
+## define mobr object
+make_comm_obj = function(comm, plot_attr, ref_group=NULL) {
+    out = list()
+    out$comm = comm
+    # env is columns that are not x or y
+    spat_cols = which(names(plot_attr) %in% c('x', 'y'))
+    out$envi = plot_attr[ , -spat_cols]
+    if (length(spat_cols > 0) {
+        out$spat = plot_attr[ , spat_cols]
+    }
+    if (!is.null(reg_group)) {
+    }
+
+    # list of checks
+    # Add row checks for names and lengths
+    # is abundance given or only presence-absence
+    # check that species has some occurrences
+    # check that plot has some occurrences > 10 min
+    # out$type 'pres-abs' or 'abu'
+    # 
+    
+    class(out) = 'comm'
+    out
+}
+
+print.comm = function(...) {
+  
+}
+
+print.mobr = function(...) {
+   # print rarefaction and delta rarefaction curves
+}
+
+
+summary.mobr = function(...) {
+   #  print summary anova style table
+}
+
 ## Functions to obtain the three kinds of curves: sample-based explicit,
 ## sample-based implicit, and individual-based rescaled to sample
 get_avg_dens = function(dat_sp, dat_plot, ScaleBy) {
