@@ -514,48 +514,91 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
     plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
-get_delta_stats = function(comm, type, env_var, test = 'all'){
-  comm_out = list()  # This is the object with the outputs 
-  comm_out$type = type
+get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat'),
+                           log.scale = FALSE, inds = NULL){
+  # Inputs:
+  # comm - a 'comm' type object, with attributes ...
+  # type - if the environmental variable is 'categorical' (anova-type) or 'continuous' (regression-type)
+  # env_var - string, name of the environmental variable
+  # test - tests to be included. A single value in c('indiv', 'sampl', 'spat'), or a combination of them as a list. 
+  #   The default is test = c('indiv', 'sampl', 'spat') (all three tests).
+  # inds - argument for individual-based rarefaction. If given a single number, will be taken as the number of points for
+  #   for rarefaction. log.scale will then be employed (see below). If given a list of numbers, will be taken as the levels of N 
+  #   for rarefaction. Default (NULL) will result in rarefaction at all possible N.
+  # log.scale - If number of points for rarefaction is given, log.scale = TRUE leads to values evenly spaced on log scale,
+  #   log.scale = FAlSE (default) leads to values evenly spaced on arithmetic scale.
+  # Output:
+  # mobr - a 'mobr' type object, with attributes...
+  
+  #ToDO: check type %in% c('categorical', 'continuous')
+  #TODO: other checks
+  mobr = list()  # This is the object with the outputs 
+  mobr$type = type
   # Assume: env_var is a string with variable name
   # group_sad is the overall SAD for all plots within a group (level of env_var) lumped together
   plot_count = count(comm$envi, env_var) # Number of plots within each group (env level)
   group_keep = plot_count[which(plot_count$freq >= min_plot), 1] # Groups that will be included in steps 2 & 3
-  # TODO: if ref_group not in group_keep: print warning
   
   group_sad = aggregate(comm$comm, by = list(comm$envi[, env_var]), FUN = sum)
+  group_level = group_sad[ , 1]
+  group_sad = group_sad[ , -1]
   minN_group = min(apply(group_sad, 1, sum))
   # TODO: warning if minN_group is too low (e.g., < 20)?
-  
-  
+
   if (type == 'continuous'){
-    # 1. Ind-based rarefaction (effect of SAD) vs env_var vs N
-    # Assess rarefied S - env relationship at 10 log-even levels of N
-    comm_out$ind_sample_size = floor(exp(seq(10) * log(minN_group) / 10)) # sample sizes for ind-based rarefaction
-    comm_out$ind_rare = as.data.frame(rarefy(group_sad[, -1], comm_out$ind_sample_size)) # rarefied S for each group
-    comm_out$ind_r = apply(comm_out$ind_rare, 2, 
-                           function(x){cor(x, as.numeric(group_sad[, 1]), method = 'spearman')}) # Another option: Pearson?
-    # 1'. Null test for ind-based rarefaction
-    sp_extent = unlist(apply(group_sad[, -1], 1, function(x) rep(1:(ncol(group_sad) - 1), x)))
-    env_extent = rep(group_sad[, 1], time = apply(group_sad[, -1], 1, sum))
-    null_ind_r_mat = matrix(NA, nperm, length(comm_out$ind_sample_size))
-    for (i in 1:nperm){
-      env_shuffle = sample(env_extent)
-      sad_shuffle = sapply(group_sad[, 1], function(x) 
-        as.integer(table(factor(
-          sp_extent[env_shuffle == x], levels=1:(ncol(group_sad) - 1)))))
-    perm_ind_rare = as.data.frame(rarefy(sad_shuffle, comm_out$ind_sample_size, MARGIN = 2))
-    null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_sad[, 1]), method = 'spearman')})
+    if ('indiv' %in% test){
+      # 1. Ind-based rarefaction (effect of SAD) vs env_var vs N
+      if (comm$analyses$indiv == F){
+        print('Error: individual-based rarefaction not allowed by data.')
+      }
+      else {
+        # Assess rarefied S - env relationship at 10 log-even levels of N
+        if (length(inds) > 1){
+          mobr$ind_sample_size = inds
+        }
+        else if (is.null(inds)){
+          mobr$ind_sample_size = seq(minN_group)
+        }
+        else {
+          if (log.scale = T){
+            mobr$ind_sample_size = floor(exp(seq(10) * log(minN_group) / 10))
+          }
+          else {
+            mobr$ind_sample_size = floor(seq(10) * minN_group / 10)
+          }
+        }
+        mobr$ind_rare = as.data.frame(rarefy(group_sad, mobr$ind_sample_size)) # rarefied S for each group 
+        mobr$ind_r = apply(mobr$ind_rare, 2, 
+                            function(x){cor(x, as.numeric(group_level), method = 'spearman')}) # Another option: Pearson?
+        # 1'. Null test for ind-based rarefaction
+        sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
+        env_extent = rep(group_level, time = apply(group_sad, 1, sum))
+        null_ind_r_mat = matrix(NA, nperm, length(mobr$ind_sample_size))
+        for (i in 1:nperm){
+          env_shuffle = sample(env_extent)
+          sad_shuffle = sapply(group_level, function(x) 
+            as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
+          perm_ind_rare = as.data.frame(rarefy(sad_shuffle, mobr$ind_sample_size, MARGIN = 2))
+          null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_level), method = 'spearman')})
+        }
+        mobr$ind_r_null = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+      }
+    if ('sampl' %in% test){
+      # 2. Effect of density vs env_var vs N
+      if (comm$test$sampl == F){
+        print('Error: ')
+      }
+      else{
+        comm$comm_group = comm$comm[which(comm$envi[, env_var] %in% group_keep), ] # Only keep groups with >= min_plot plots
+        ref_dens = sum(comm$comm_group) / nrow(comm$comm_group) # Using plot-level average density for scaling
+        
+      }
     }
-    comm_out$ind_r_null_mean = apply(null_ind_r_mat, 2, mean)
-    comm_out$ind_r_null_CI = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.975))) # 95% CI
-    
-    # 2. Effect of density vs env_var vs N
-    # TBD after concensus w/in group
     
     # 3. Effect of aggregation vs env_var vs N
+    
   }
   
-  class(comm_out) = 'comm_out'
-  return(comm_out)
+  class(mobr) = 'mobr'
+  return(mobr)
 }
