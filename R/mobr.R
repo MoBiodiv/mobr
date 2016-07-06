@@ -515,7 +515,7 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
 } 
 
 get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat'),
-                           log.scale = FALSE, inds = NULL){
+                           log.scale = FALSE, inds = NULL, ref = 'mean'){
   # Inputs:
   # comm - a 'comm' type object, with attributes ...
   # type - if the environmental variable is 'categorical' (anova-type) or 'continuous' (regression-type)
@@ -527,6 +527,9 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
   #   for rarefaction. Default (NULL) will result in rarefaction at all possible N.
   # log.scale - If number of points for rarefaction is given, log.scale = TRUE leads to values evenly spaced on log scale,
   #   log.scale = FAlSE (default) leads to values evenly spaced on arithmetic scale.
+  # ref - reference density used in converting number of plots to number of individuals. Can take one of three values:
+  #   'mean', 'max', 'min'. If 'mean', the average plot-level abundance across all plots are used. If 'min' or 'max', 
+  #   the minimum/maximum plot-level abundance is used.
   # Output:
   # mobr - a 'mobr' type object, with attributes...
   
@@ -543,6 +546,23 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
   group_level = group_sad[ , 1]
   group_sad = group_sad[ , -1]
   minN_group = min(apply(group_sad, 1, sum))
+  
+  rows_keep_group = which(comm$envi[, env_var] %in% group_keep)
+  comm_group = comm$comm[rows_keep_group, ]
+  env_var_keep = comm$envi[rows_keep_group, env_var]
+  keep_group_sad = aggregate(comm_group, by = list(env_var_keep), FUN = sum)
+  row.names(keep_group_sad) = keep_group_sad[, 1]
+  keep_group_sad = keep_group_sad[, -1]
+  if (ref == 'mean'){
+    ref_dens = sum(comm$comm_group) / nrow(comm$comm_group)
+  }
+  else if (ref == 'max'){
+    ref_dens = max(apply(comm$comm_group, 1, sum))
+  }
+  else {
+    ref_dens = min(apply(comm$comm_group, 1, sum))
+  }
+  
   # TODO: warning if minN_group is too low (e.g., < 20)?
 
   if (type == 'continuous'){
@@ -583,15 +603,31 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
         }
         mobr$ind_r_null = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
       }
+    # 2. Effect of density vs env_var vs N
     if ('sampl' %in% test){
-      # 2. Effect of density vs env_var vs N
       if (comm$test$sampl == F){
-        print('Error: ')
+        print('Error: sample-based analysis not allowed by data.')
       }
       else{
-        comm$comm_group = comm$comm[which(comm$envi[, env_var] %in% group_keep), ] # Only keep groups with >= min_plot plots
-        ref_dens = sum(comm$comm_group) / nrow(comm$comm_group) # Using plot-level average density for scaling
-        
+        plot_sample_size = round(ref_dens * seq(min(plot_count$freq)))
+        mobr$plot_sample_size = plot_sample_size[plot_sample_size <= minN_group] 
+        mobr$samp_rare = sapply(group_keep, 
+                                function(x) rarefaction.sample(comm$comm[which(comm$envi[, env_var] == x), ])[1:length(mobr$plot_sample_size), 2])
+        mobr$samp_rare = as.data.frame(mobr$samp_rare)
+        n = c(1, ref_dens * seq(length(mobr$plot_sample_size))) # Levels of n that match sample-based rarefied S (integer unnecessary)
+        names(mobr$samp_rare) = as.character(group_keep)
+        mobr$effect_N = as.data.frame(matrix(NA, nrow = length(group_keep), ncol = length(mobr$plot_sample_size)))
+        for (i in 1:ncol(mobr$samp_rare)){
+          col = mobr$samp_rare[, i]
+          col_name = names(mobr$samp_rare)[i]
+          S = c(1, col)
+          interp_sample = pchip(n, S, mobr$plot_sample_size)
+          row_keep_group_sad = keep_group_sad[which(row.names(keep_group_sad) == col_name), ]
+          rare_indiv = as.numeric(rarefy(row_keep_group_sad, n))
+          mobr$effect_N[i, ] = rare_indiv[-1] - interp_sample
+        }
+        mobr$sample_r = apply(mobr$effect_N, 2, 
+                           function(x){cor(x, as.numeric(group_keep), method = 'spearman')})
       }
     }
     
