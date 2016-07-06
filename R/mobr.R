@@ -514,8 +514,10 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
 } 
 
 # Auxillary function: difference between the ind-based rarefaction and the sample-based rarefaction
-# Output: a list of two components: $plot_sample_size: levels of n at which the deduction is done
-#   $deltaS: a data frame, difference between the two curves at plot_sample_size for each plot
+# Output: a list of four components: $plot_sample_size: levels of n at which the deduction is done
+#   $samp_rare: sample-based rarefaction output
+#   $effect_N: a data frame, difference between the two curves at plot_sample_size for each plot
+#   $env_levels: a list that matches to the rows of effect
 effect_of_N = function(comm_group, env_var_keep, ref_dens, min_plot_group){
   out = list()
   # lumped SAD for each group
@@ -531,6 +533,7 @@ effect_of_N = function(comm_group, env_var_keep, ref_dens, min_plot_group){
   samp_rare = sapply(group_keep, function(x) rarefaction.sample(comm_group[which(env_var_keep == x), ])[1:length(out$plot_sample_size), 2])
   samp_rare = as.data.frame(samp_rare)
   names(samp_rare) = as.character(group_keep)
+  out$samp_rare = samp_rare
   n = c(1, ref_dens * seq(length(out$plot_sample_size)))
   out$effect_N = as.data.frame(matrix(NA, nrow = length(group_keep), ncol = length(out$plot_sample_size)))
   for (i in 1:ncol(samp_rare)){
@@ -543,6 +546,7 @@ effect_of_N = function(comm_group, env_var_keep, ref_dens, min_plot_group){
     out$effect_N[i, ] = rare_indiv[-1] - interp_sample
   }
   row.names(out$effect_N) = names(samp_rare)
+  out$env_levels = group_keep
   out
 }
 
@@ -646,66 +650,30 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
         print('Error: sample-based analysis not allowed by data.')
       }
       else{
-        plot_sample_size = round(ref_dens * seq(min(plot_count$freq)))
-        mobr$plot_sample_size = plot_sample_size[plot_sample_size <= minN_group] 
-        mobr$samp_rare = sapply(group_keep, 
-                                function(x) rarefaction.sample(comm$comm[which(comm$envi[, env_var] == x), ])[1:length(mobr$plot_sample_size), 2])
-        mobr$samp_rare = as.data.frame(mobr$samp_rare)
-        n = c(1, ref_dens * seq(length(mobr$plot_sample_size))) # Levels of n that match sample-based rarefied S (integer unnecessary)
-        names(mobr$samp_rare) = as.character(group_keep)
-        mobr$effect_N = as.data.frame(matrix(NA, nrow = length(group_keep), ncol = length(mobr$plot_sample_size)))
-        for (i in 1:ncol(mobr$samp_rare)){
-          col = mobr$samp_rare[, i]
-          col_name = names(mobr$samp_rare)[i]
-          S = c(1, col)
-          interp_sample = pchip(n, S, mobr$plot_sample_size)
-          row_keep_group_sad = keep_group_sad[which(row.names(keep_group_sad) == col_name), ]
-          rare_indiv = as.numeric(rarefy(row_keep_group_sad, n))
-          mobr$effect_N[i, ] = rare_indiv[-1] - interp_sample
+        out = effect_of_N(comm_group, env_var_keep, ref_dens, min(plot_count$freq))
+        mobr$plot_sample_size = out$plot_sample_size
+        mobr$samp_rare = out$samp_rare
+        mobr$effect_N = out$effect_N
         }
         mobr$sample_r = apply(mobr$effect_N, 2, 
-                           function(x){cor(x, as.numeric(group_keep), method = corr)})
+                           function(x){cor(x, as.numeric(out$env_levels), method = corr)})
         # 2'. Null test for effect of N
-        
-        
-        null_N = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95, ScaleBy = NA) {
-          # This function generates null confidence intervals for the deltaSN curve
-          # assuming that the two treatments do not differe systematically in N.
-          S = ncol(dat_sp)
-          dat_sp = dat_sp[dat_plot$group %in% groups, ]
-          dat_plot = dat_plot[dat_plot$group %in% groups, ]
-          Nplot = min(table(dat_plot$group))
-          grp_sads = list()
-          for (i in groups) {
-            plots = dat_plot$plot[dat_plot$group == i]
-            grp_sad = colSums(dat_sp[row.names(dat_sp) %in% plots, ])
-            grp_sads[[i]] = rep(1:S, grp_sad)
-          }
-          # Abundance within each plot
-          plot_abus = apply(dat_sp, 1, sum)  
-          Nind = min(sapply(grp_sads, length)) 
-          deltaSN_perm = matrix(NA, nperm, Nind)
-          for (i in 1:nperm) {
-            plot_abu_perm = sample(plot_abus)
-            sp_draws = sapply(1:nrow(dat_sp), function(x) 
-              sample(rep(1:S, dat_sp[x,]), 
-                     size=plot_abu_perm[x], replace=T))
-            dat_sp_perm = t(sapply(1:nrow(dat_sp), function(x) 
-              table(c(1:S, sp_draws[[x]])) - 1 ))
-            deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot, groups, ScaleBy,
-                                            Nind)
-          }
-          quant_mean = apply(deltaSN_perm, 2, mean, na.rm = T)
-          quant_lower = apply(deltaSN_perm, 2, function(x) 
-            quantile(x, (1 - CI)/2, na.rm = T))
-          quant_higher = apply(deltaSN_perm, 2, function(x) 
-            quantile(x, (1 + CI)/2, na.rm = T))
-          return(data.frame(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
+        plot_abd = apply(comm_group, 1, sum)
+        null_samp_r_mat = matrix(NA, nperm, length(mobr$sample_r))
+        for (i in 1:nperm){
+          plot_abd_perm = sample(plot_abd)
+          sp_draws = sapply(1:nrow(comm_group), function(x) 
+            sample(rep(1:ncol(comm_group), comm_group[x,]), 
+                   size = plot_abd_perm[x], replace = T))
+          comm_perm = t(sapply(1:nrow(comm_group), function(x) 
+            table(c(1:ncol(comm_group), sp_draws[[x]])) - 1 ))
+          out = effect_of_N(comm_perm, env_var_keep, ref_dens, min(plot_count$freq))
+          perm_r = apply(out$effect_N, 2, 
+                         function(x){cor(x, as.numeric(out$env_levels), method = corr)})
+          null_samp_r_mat[i, ] = perm_r[1:length(mobr$sample_r)]
         }
-        
-      }
-    }
-    
+        mobr$samp_r_null = apply(null_samp_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+
     # 3. Effect of aggregation vs env_var vs N
     
   }
