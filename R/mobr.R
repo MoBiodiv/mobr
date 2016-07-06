@@ -6,6 +6,13 @@
 ## Functions
 require(rareNMtests)
 require(pracma)
+require(plyr)
+require(vegan)
+
+# Global constants
+min_ind = 5
+min_plot = 5
+nperm = 1000
 
 ## define mobr object
 make_comm_obj = function(comm, plot_attr, ref_group=NULL) {
@@ -17,7 +24,7 @@ make_comm_obj = function(comm, plot_attr, ref_group=NULL) {
     if (length(spat_cols > 0) {
         out$spat = plot_attr[ , spat_cols]
     }
-    if (!is.null(reg_group)) {
+    if (!is.null(ref_group)) {
     }
 
     # list of checks
@@ -462,5 +469,47 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
 } 
 
 get_delta_stats = function(comm, type, env_var, test = 'all'){
+  comm_out = list()  # This is the object with the outputs 
+  comm_out$type = type
+  # Assume: env_var is a string with variable name
+  # group_sad is the overall SAD for all plots within a group (level of env_var) lumped together
+  plot_count = count(comm$envi, env_var) # Number of plots within each group (env level)
+  group_keep = plot_count[which(plot_count$freq >= min_plot), 1] # Groups that will be included in steps 2 & 3
+  # TODO: if ref_group not in group_keep: print warning
   
+  group_sad = aggregate(comm$comm, by = list(comm$envi[, env_var]), FUN = sum)
+  minN_group = min(apply(group_sad, 1, sum))
+  # TODO: warning if minN_group is too low (e.g., < 20)?
+  
+  
+  if (type == 'continuous'){
+    # 1. Ind-based rarefaction (effect of SAD) vs env_var vs N
+    # Assess rarefied S - env relationship at 10 log-even levels of N
+    comm_out$ind_sample_size = floor(exp(seq(10) * log(minN_group) / 10)) # sample sizes for ind-based rarefaction
+    comm_out$ind_rare = as.data.frame(rarefy(group_sad[, -1], comm_out$ind_sample_size)) # rarefied S for each group
+    comm_out$ind_r = apply(comm_out$ind_rare, 2, 
+                           function(x){cor(x, as.numeric(group_sad[, 1]), method = 'spearman')}) # Another option: Pearson?
+    # 1'. Null test for ind-based rarefaction
+    sp_extent = unlist(apply(group_sad[, -1], 1, function(x) rep(1:(ncol(group_sad) - 1), x)))
+    env_extent = rep(group_sad[, 1], time = apply(group_sad[, -1], 1, sum))
+    null_ind_r_mat = matrix(NA, nperm, length(comm_out$ind_sample_size))
+    for (i in 1:nperm){
+      env_shuffle = sample(env_extent)
+      sad_shuffle = sapply(group_sad[, 1], function(x) 
+        as.integer(table(factor(
+          sp_extent[env_shuffle == x], levels=1:(ncol(group_sad) - 1)))))
+    perm_ind_rare = as.data.frame(rarefy(sad_shuffle, comm_out$ind_sample_size, MARGIN = 2))
+    null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_sad[, 1]), method = 'spearman')})
+    }
+    comm_out$ind_r_null_mean = apply(null_ind_r_mat, 2, mean)
+    comm_out$ind_r_null_CI = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.975))) # 95% CI
+    
+    # 2. Effect of density vs env_var vs N
+    # TBD after concensus w/in group
+    
+    # 3. Effect of aggregation vs env_var vs N
+  }
+  
+  class(comm_out) = 'comm_out'
+  return(comm_out)
 }
