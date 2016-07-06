@@ -12,7 +12,6 @@ require(vegan)
 # Global constants
 min_ind = 5
 min_plot = 5
-nperm = 1000
 
 ## define mobr object
 make_comm_obj = function(comm, plot_attr, binary=FALSE, ref_var=NULL, ref_group=NULL) {
@@ -514,8 +513,42 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
     plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
+# Auxillary function: difference between the ind-based rarefaction and the sample-based rarefaction
+# Output: a list of two components: $plot_sample_size: levels of n at which the deduction is done
+#   $deltaS: a data frame, difference between the two curves at plot_sample_size for each plot
+effect_of_N = function(comm_group, env_var_keep, ref_dens, min_plot_group){
+  out = list()
+  # lumped SAD for each group
+  group_keep = unique(env_var_keep)
+  keep_group_sad = aggregate(comm_group, by = list(env_var_keep), FUN = sum)
+  row.names(keep_group_sad) = keep_group_sad[, 1]
+  keep_group_sad = keep_group_sad[, -1]
+  
+  minN_group = min(apply(keep_group_sad, 1, sum))
+  plot_sample_size = round(ref_dens * seq(min_plot_group))
+  out$plot_sample_size = plot_sample_size[plot_sample_size <= minN_group]
+  
+  samp_rare = sapply(group_keep, function(x) rarefaction.sample(comm_group[which(env_var_keep == x), ])[1:length(out$plot_sample_size), 2])
+  samp_rare = as.data.frame(samp_rare)
+  names(samp_rare) = as.character(group_keep)
+  n = c(1, ref_dens * seq(length(out$plot_sample_size)))
+  out$effect_N = as.data.frame(matrix(NA, nrow = length(group_keep), ncol = length(out$plot_sample_size)))
+  for (i in 1:ncol(samp_rare)){
+    col = samp_rare[, i]
+    col_name = names(samp_rare)[i]
+    S = c(1, col)
+    interp_sample = pchip(n, S, out$plot_sample_size)
+    row_keep_group_sad = keep_group_sad[which(row.names(keep_group_sad) == col_name), ]
+    rare_indiv = as.numeric(rarefy(row_keep_group_sad, n))
+    out$effect_N[i, ] = rare_indiv[-1] - interp_sample
+  }
+  row.names(out$effect_N) = names(samp_rare)
+  out
+}
+
 get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat'),
-                           log.scale = FALSE, inds = NULL, ref = 'mean'){
+                           log.scale = FALSE, inds = NULL, ref = 'mean', corr = 'spearman',
+                           nperm = 1000){
   # Inputs:
   # comm - a 'comm' type object, with attributes ...
   # type - if the environmental variable is 'categorical' (anova-type) or 'continuous' (regression-type)
@@ -530,11 +563,15 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
   # ref - reference density used in converting number of plots to number of individuals. Can take one of three values:
   #   'mean', 'max', 'min'. If 'mean', the average plot-level abundance across all plots are used. If 'min' or 'max', 
   #   the minimum/maximum plot-level abundance is used.
+  # corr - which correlation is used for S/delta S vs environmental variable. Can be 'spearman' (default, rank correlation)
+  #   or 'pearson' (less recommended because of potential nonlinearity)
+  # nperm - number of iterations for null models
   # Output:
   # mobr - a 'mobr' type object, with attributes...
   
   #ToDO: check type %in% c('categorical', 'continuous')
   #TODO: other checks
+  # TODO: groups as row names in all outputs?
   mobr = list()  # This is the object with the outputs 
   mobr$type = type
   # Assume: env_var is a string with variable name
@@ -589,7 +626,7 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
         }
         mobr$ind_rare = as.data.frame(rarefy(group_sad, mobr$ind_sample_size)) # rarefied S for each group 
         mobr$ind_r = apply(mobr$ind_rare, 2, 
-                            function(x){cor(x, as.numeric(group_level), method = 'spearman')}) # Another option: Pearson?
+                            function(x){cor(x, as.numeric(group_level), method = corr)}) 
         # 1'. Null test for ind-based rarefaction
         sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
         env_extent = rep(group_level, time = apply(group_sad, 1, sum))
@@ -599,7 +636,7 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
           sad_shuffle = sapply(group_level, function(x) 
             as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
           perm_ind_rare = as.data.frame(rarefy(sad_shuffle, mobr$ind_sample_size, MARGIN = 2))
-          null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_level), method = 'spearman')})
+          null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_level), method = corr)})
         }
         mobr$ind_r_null = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
       }
@@ -627,7 +664,45 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
           mobr$effect_N[i, ] = rare_indiv[-1] - interp_sample
         }
         mobr$sample_r = apply(mobr$effect_N, 2, 
-                           function(x){cor(x, as.numeric(group_keep), method = 'spearman')})
+                           function(x){cor(x, as.numeric(group_keep), method = corr)})
+        # 2'. Null test for effect of N
+        
+        
+        null_N = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95, ScaleBy = NA) {
+          # This function generates null confidence intervals for the deltaSN curve
+          # assuming that the two treatments do not differe systematically in N.
+          S = ncol(dat_sp)
+          dat_sp = dat_sp[dat_plot$group %in% groups, ]
+          dat_plot = dat_plot[dat_plot$group %in% groups, ]
+          Nplot = min(table(dat_plot$group))
+          grp_sads = list()
+          for (i in groups) {
+            plots = dat_plot$plot[dat_plot$group == i]
+            grp_sad = colSums(dat_sp[row.names(dat_sp) %in% plots, ])
+            grp_sads[[i]] = rep(1:S, grp_sad)
+          }
+          # Abundance within each plot
+          plot_abus = apply(dat_sp, 1, sum)  
+          Nind = min(sapply(grp_sads, length)) 
+          deltaSN_perm = matrix(NA, nperm, Nind)
+          for (i in 1:nperm) {
+            plot_abu_perm = sample(plot_abus)
+            sp_draws = sapply(1:nrow(dat_sp), function(x) 
+              sample(rep(1:S, dat_sp[x,]), 
+                     size=plot_abu_perm[x], replace=T))
+            dat_sp_perm = t(sapply(1:nrow(dat_sp), function(x) 
+              table(c(1:S, sp_draws[[x]])) - 1 ))
+            deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot, groups, ScaleBy,
+                                            Nind)
+          }
+          quant_mean = apply(deltaSN_perm, 2, mean, na.rm = T)
+          quant_lower = apply(deltaSN_perm, 2, function(x) 
+            quantile(x, (1 - CI)/2, na.rm = T))
+          quant_higher = apply(deltaSN_perm, 2, function(x) 
+            quantile(x, (1 + CI)/2, na.rm = T))
+          return(data.frame(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
+        }
+        
       }
     }
     
