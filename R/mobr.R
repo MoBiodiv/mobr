@@ -9,24 +9,31 @@ require(pracma)
 
 ## define mobr object
 make_comm_obj = function(comm, plot_attr, binary=FALSE, ref_var=NULL, ref_group=NULL) {
+    # possibly make ref_var and ref_group mandatory arguments
+    out = list()
+    out$analyses = list(indiv=T, sampl=T, spat= T)
     # carry out some basic checks
+    if (nrow(comm) < 5) {
+        stop("Number of plots in community is less than five therefore only individual rarefaction will be computed")
+        out$analyses$samp = FALSE
+        out$analyses$spat = FALSE
+    }
     if (nrow(comm) != nrow(plot_attr))
         stop("Number of plots in community does not equal number of plots in plot attribute table")
     if (any(row.names(comm) != row.names(plot_attr)))
         warning("Row names of community and plot attributes tables do not match")
-    if (binary) 
-        warning("Only sampled based forms of rarefaction can be computed on binary data")
+    if (binary)  {
+        warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
+        out$analyses$indiv = FALSE
+        out$analyses$samp = FALSE
+    } 
     else {
         if (max(comm) == 1)
-            warning("Maximum abundance is 1 which suggests data is binary change the binary argument to TRUE")
-        if (any(rowSums(comm) < 5)) {
-            warning("Sites with less than 5 individuals will be dropped")
-            comm = comm[rowSums(comm) >= 5, ]
-        }
-        if (any(colSums(comm) == 0)) {
-            warning("Some species have zero occurrences and will be dropped from the community table")
-            comm = comm[colSums(comm) == 0, ]
-        }
+            warning("Maximum abundance is 1 which suggests data is binary, change the binary argument to TRUE")
+    }
+    if (any(colSums(comm) == 0)) {
+        warning("Some species have zero occurrences and will be dropped from the community table")
+        comm = comm[colSums(comm) != 0, ]
     }
     if (!is.null(ref_var)) {
         if (is.null(ref_group)) {
@@ -43,8 +50,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE, ref_var=NULL, ref_group=
                 plot_attr = plot_attr[-row_indices, ]
             }    
         }
-    }  
-    out = list()
+    }
     out$comm = comm
     spat_cols = which(names(plot_attr) %in% c('x', 'y'))
     if (length(spat_cols) > 0) {
@@ -52,6 +58,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE, ref_var=NULL, ref_group=
         out$spat = plot_attr[ , spat_cols]
     }
     else {
+        out$analyses$spat = FALSE
         out$envi = plot_attr
         out$spat = NULL
     }
@@ -62,13 +69,17 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE, ref_var=NULL, ref_group=
 }
 
 print.comm = function(x) {
-    lapply(x, head)
+    cat('Printing the head of each attribute in the object\n')
+    print(lapply(x, head))
 }
 
 print.mobr = function(...) {
-   # print rarefaction and delta rarefaction curves
+   # print rarefaction and delta rarefaction summaries
 }
 
+plot.mobr = function(...) {
+  # plot rarefation and delta rarefaction curves
+}
 
 summary.mobr = function(...) {
    #  print summary anova style table
@@ -76,9 +87,15 @@ summary.mobr = function(...) {
 
 ## Functions to obtain the three kinds of curves: sample-based explicit,
 ## sample-based implicit, and individual-based rescaled to sample
-get_avg_dens = function(dat_sp, dat_plot, ScaleBy) {
+get_avg_dens = function(comm_obj, ref_var=NULL, ref_group=NULL) {
     # Auxillary function to obtain average density within plot for rescaling Ask user
     # to specify which group is used as 'standard' for rescaling.
+    if (!is.null(ref_var)) {
+        if (is.null(ref_group)) 
+            stop('The reference group (argument "ref_group") must also be provided')
+        else
+            ref_data = eval(parse(text=paste('plot_attr$', ref_var, sep='')))
+    }            
     if (!is.na(ScaleBy)) {
         avg_dens = mean(apply(dat_sp[dat_plot$group == ScaleBy, ], 1, sum))
     } else {
