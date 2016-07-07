@@ -609,7 +609,8 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
   mobr$type = type
   # Assume: env_var is a string with variable name
   # group_sad is the overall SAD for all plots within a group (level of env_var) lumped together
-  plot_count = count(comm$envi, env_var) # Number of plots within each group (env level)
+  plot_count = data.frame(table(comm$envi[, env_var])) # Number of plots within each group (env level)
+  names(plot_count) = c(env_var, 'freq')
   group_keep = plot_count[which(plot_count$freq >= min_plot), 1] # Groups that will be included in steps 2 & 3
   
   group_sad = aggregate(comm$comm, by = list(comm$envi[, env_var]), FUN = sum)
@@ -710,6 +711,23 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
         print('Error: spatially explicit analysis not allowed by data.')
       }
       else {
+        mobr$sample_rarefy = data.frame(stringsAsFactors = F)
+        for (group in group_keep){
+          comm_one_group = comm$comm[which(comm$envi[, env_var] %in% group), ]
+          xy_one_group = comm$spat[which(comm$envi[, env_var] %in% group), ]
+          explicit_S_group = rarefy_sample_explicit(comm_one_group, xy_one_group)
+          implicit_S_group = rarefaction.sample(comm_one_group)[, 2]
+          deltaS_group = implicit_S_group - explicit_S_group
+          dat_group = cbind(rep(group, nrow(comm_one_group)), seq(nrow(comm_one_group)), implicit_S_group,
+                            explicit_S_group, deltaS_group)
+          mobr$sample_rarefy = rbind(mobr$sample_rarefy, dat_group)
+        }
+        names(mobr$sample_rarefy) = c('env', 'Nplot', 'Simpl', 'Sexpl', 'deltaS')
+        mobr$spat_r = sapply(1:min(plot_count$freq), 
+                             function(x) cor(as.numeric(mobr$sample_rarefy$deltaS[mobr$sample_rarefy$Nplot == x]), 
+                                             as.numeric(mobr$sample_rarefy$env[mobr$sample_rarefy$Nplot == x]), method = corr))
+        })
+        # 3'. Null test for aggregation effect on delta S
         
       }
     }
