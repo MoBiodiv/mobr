@@ -624,6 +624,8 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
   keep_group_sad = aggregate(comm_group, by = list(env_var_keep), FUN = sum)
   row.names(keep_group_sad) = keep_group_sad[, 1]
   keep_group_sad = keep_group_sad[, -1]
+  
+
   if (ref == 'mean'){
     ref_dens = sum(comm$comm_group) / nrow(comm$comm_group)
   }
@@ -735,7 +737,7 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
             comm_perm = comm$comm[which(comm$envi[, env_var] %in% group), ]
             xy_perm = perm_spat[which(comm$envi[, env_var] %in% group), ]
             explicit_S_perm = rarefy_sample_explicit(comm_perm, xy_perm)
-            implicit_S_perm = rarefaction.sample(comm_perm)[, 2]
+            implicit_S_perm = as.numeric(as.character(mobr$sample_rarefy$Simpl[mobr$sample_rare$env %in% group]))
             deltaS_perm = implicit_S_perm - explicit_S_perm
             dat_group_perm = cbind(rep(group, nrow(comm_perm)), seq(nrow(comm_perm)), deltaS_perm)
             sample_rarefy_perm = rbind(sample_rarefy_perm, dat_group_perm)
