@@ -654,7 +654,7 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
         mobr$plot_sample_size = out$plot_sample_size
         mobr$samp_rare = out$samp_rare
         mobr$effect_N = out$effect_N
-        }
+        
         mobr$sample_r = apply(mobr$effect_N, 2, 
                            function(x){cor(x, as.numeric(out$env_levels), method = corr)})
         # 2'. Null test for effect of N
@@ -673,11 +673,20 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
           null_samp_r_mat[i, ] = perm_r[1:length(mobr$sample_r)]
         }
         mobr$samp_r_null = apply(null_samp_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-
+      }
+    }
     # 3. Effect of aggregation vs env_var vs N
-    
-  }
-  
+    if ('spat' %in% test){
+      if (comm$test$spat == F){
+        print('Error: spatially explicit analysis not allowed by data.')
+      }
+      else {
+        
+      }
+    }
+
+      
+        
   class(mobr) = 'mobr'
   return(mobr)
 }
