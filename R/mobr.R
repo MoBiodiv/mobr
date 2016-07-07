@@ -550,6 +550,35 @@ effect_of_N = function(comm_group, env_var_keep, ref_dens, min_plot_group){
   out
 }
 
+# Auxillary function: spatially-explicit sample-based rarefaction 
+# 
+rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
+  #plot_grp = dat_plot[dat_plot$group == group, ] 
+  #sp_grp = dat_sp[dat_plot$group == group, ]
+  row.names(comm_one_group) = as.character(seq(nrow(comm_one_group)))
+  explicit_loop = matrix(0, nrow(comm_one_group), nrow(comm_one_group))
+  pair_dist = as.matrix(dist(xy_one_group))
+  for (i in 1:nrow(comm_one_group)) {
+    focal_site = row.names(comm_one_group)[i]
+    dist_to_site = pair_dist[i, ]
+    # Shuffle plots, so that tied grouping is not biased by original order.
+    new_order = sample(1:nrow(comm_one_group))  
+    plots_new = row.names(comm_one_group)[new_order]
+    dist_new = dist_to_site[new_order]
+    plots_new_ordered = plots_new[order(dist_new)]
+    # Move focal site to the front
+    plots_new_ordered = c(focal_site, 
+                          plots_new_ordered[plots_new_ordered != focal_site])  
+    comm_ordered = comm_one_group[match(row.names(comm_one_group), plots_new_ordered), ]
+    # 1 for absence, 0 for presence
+    comm_bool = as.data.frame((comm_ordered == 0) * 1) 
+    rich = cumprod(comm_bool)
+    explicit_loop[ , i] = as.numeric(ncol(comm_one_group) - rowSums(rich))
+  }
+  explicit_S = apply(explicit_loop, 1, mean)
+  return(explicit_S)
+}
+
 get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat'),
                            log.scale = FALSE, inds = NULL, ref = 'mean', corr = 'spearman',
                            nperm = 1000){
@@ -686,7 +715,6 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
     }
 
       
-        
   class(mobr) = 'mobr'
   return(mobr)
 }
