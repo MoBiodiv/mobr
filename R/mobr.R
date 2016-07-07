@@ -726,12 +726,28 @@ get_delta_stats = function(comm, type, env_var, test = c('indiv', 'sampl', 'spat
         mobr$spat_r = sapply(1:min(plot_count$freq), 
                              function(x) cor(as.numeric(mobr$sample_rarefy$deltaS[mobr$sample_rarefy$Nplot == x]), 
                                              as.numeric(mobr$sample_rarefy$env[mobr$sample_rarefy$Nplot == x]), method = corr))
-        })
         # 3'. Null test for aggregation effect on delta S
-        
+        null_spat_r_mat = matrix(NA, nperm, length(mobr$spat_r))
+        for (i in 1:nperm){
+          perm_spat = comm$spat[sample(seq(nrow(comm$spat))),]
+          sample_rarefy_perm = data.frame(env = numeric(), Nplot = numeric(), deltaS = numeric(), stringsAsFactors = F)
+          for (group in group_keep){
+            comm_perm = comm$comm[which(comm$envi[, env_var] %in% group), ]
+            xy_perm = perm_spat[which(comm$envi[, env_var] %in% group), ]
+            explicit_S_perm = rarefy_sample_explicit(comm_perm, xy_perm)
+            implicit_S_perm = rarefaction.sample(comm_perm)[, 2]
+            deltaS_perm = implicit_S_perm - explicit_S_perm
+            dat_group_perm = cbind(rep(group, nrow(comm_perm)), seq(nrow(comm_perm)), deltaS_perm)
+            sample_rarefy_perm = rbind(sample_rarefy_perm, dat_group_perm)
+          }
+          names(sample_rarefy_perm) = c('env', 'Nplot', 'deltaS')
+          null_spat_r_mat[i, ] = sapply(1:min(plot_count$freq), 
+                                        function(x) cor(as.numeric(sample_rarefy_perm$deltaS[sample_rarefy_perm$Nplot == x]), 
+                                                        as.numeric(sample_rarefy_perm$env[sample_rarefy_perm$Nplot == x]), method = corr))
+        }
+        mobr$spat_r_null = apply(null_spat_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
       }
     }
-
       
   class(mobr) = 'mobr'
   return(mobr)
