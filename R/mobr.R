@@ -390,32 +390,40 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 
 get_delta_stats = function(comm, env_var, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
-                           type=NULL, log_scale=FALSE, inds=NULL,
+                           type='discrete', log_scale=FALSE, inds=NULL,
                            density_stat ='mean', corr='spearman', 
                            nperm=1000) {
   # Inputs:
   # comm - a 'comm' type object, with attributes ...
   # type - if the envronmental variable is 'discrete' vs 'continous'
   # env_var - string, name of the envronmental variable
+  # ref_group - the group that will be used as a reference in pair-wise comparisons (ie., all other groups will be compared with it).
+  #   This argument is only needed then type == 'discrete'.
   # test - tests to be included. A single value in c('indiv', 'sampl', 'spat'), or a combination of them as a list. 
   #   The default is test = c('indiv', 'sampl', 'spat') (all three tests).
+  # type - pair-wise comparisons ('discrete') or regression ('continuous'). For the discrete case, ref_group has to be specified as the baseline.
   # inds - argument for individual-based rarefaction. If given a single number, will be taken as the number of points for
   #   for rarefaction. log_scale will then be employed (see below). If given a list of numbers, will be taken as the levels of N 
   #   for rarefaction. Default (NULL) will result in rarefaction at all possible N.
   # log_scale - If number of points for rarefaction is given, log_scale = TRUE leads to values evenly spaced on log scale,
   #   log_scale = FAlSE (default) leads to values evenly spaced on arithmetic scale.
-  # ref - reference density used in converting number of plots to number of individuals. Can take one of three values:
+  # density_stat - reference density used in converting number of plots to number of individuals. Can take one of three values:
   #   'mean', 'max', 'min'. If 'mean', the average plot-level abundance across all plots are used. If 'min' or 'max', 
   #   the minimum/maximum plot-level abundance is used.
-  # corr - which correlation is used for S/delta S vs envronmental variable. Can be 'spearman' (default, rank correlation)
+  # corr - which correlation is used for S/delta S vs envronmental variable in the continuous case. Can be 'spearman' (default, rank correlation)
   #   or 'pearson' (less recommended because of potential nonlinearity)
   # nperm - number of iterations for null models
   # Output:
   # out - a 'mobr' type object, with attributes...
   # check tests
-    env_data = eval(parse(text=paste('comm$env$', env_var, sep='')))
+    env_data = comm$env[, env_var]
+    groups = unique(env_data)
+    if (!(type %in% c('continuous', 'discrete')))
+      stop('"type" has to be "discrete" or "continuous".')
+    if (type == 'continuous' & !(corr %in% c('spearman', 'pearson')))
+      stop('"corr" has to be "spearman" or "pearson".')
     if ('factor' %in% class(env_data)) {
-        if (type == 'continous') {
+        if (type == 'continuous') {
             group_vals = data.frame(groups=groups, 
                                     values=as.integer(env_data)[match(groups, env_data)])
             warning(paste(env_var, 'is a factor but will be treated as a continous variable for the analysis which the following values'))
@@ -443,14 +451,14 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
                       tests_string))
     }
     # TODO: groups as row names in all outputs?
-    out = list()  # This is the object with the outputs 
+    out = list()  # This is the object with the outputs
     out$type = type
     # Assume: env_var is a string with variable name
     # group_sad is the overall SAD for all plots within a group (level of env_var) lumped together
     #group_cts = plot_count = count(comm$env, env_var) # Number of plots within each group (env level)
     #group_keep = plot_count[which(plot_count$freq >= min_plot), 1] # Groups that will be included in steps 2 & 3
     group_sad = aggregate(comm$comm, by=list(env_data), sum)
-    group_levels = as.character(group_sad[ , 1])
+    group_levels = group_sad[ , 1]
     group_sad = group_sad[ , -1]
     group_minN = min(rowSums(group_sad))
     #rows_keep_group = which(env_data %in% group_keep)
@@ -467,6 +475,70 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
        ref_dens = min(rowSums(comm$comm))
     else 
        stop('The argument ref must be set to mean, min or max')
+    
+    # 1. Individual-based rarefaction (effect of SAD) vs env_var vs N
+    if ('indiv' %in% approved_tests) {
+      if (is.null(inds))
+        ind_sample_size = seq(group_minN)
+      else if (length(inds) > 1)
+        ind_sample_size = inds
+      else {
+        if (log_scale == T)
+          ind_sample_size = floor(exp(seq(inds) * log(group_minN) / inds))
+        else
+          ind_sample_size = floor(seq(inds) * group_minN / inds)
+      }
+      ind_rare = data.frame(apply(group_sad, 1, function(x) 
+        rarefaction(x, 'indiv', ind_sample_size)))
+      row.names(ind_rare) = NULL
+      out$indiv_rare = cbind(ind_sample_size, ind_rare)
+      names(out$indiv_rare) = c('sample', as.character(group_levels)
+    
+      if (type == 'continuous'){
+        ind_cor = apply(ind_rare, 1, function(x) 
+          cor(x, as.numeric(group_levels), method = corr))
+        
+        # Null test 
+        sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
+        env_extent = rep(group_levels, time = apply(group_sad, 1, sum))
+        null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
+        for (i in 1:nperm){
+          env_shuffle = sample(env_extent)
+          sad_shuffle = sapply(group_levels, function(x) 
+            as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
+          perm_ind_rare = apply(sad_shuffle, MARGIN = 2, function(x)
+            rarefaction(x, 'indiv', ind_sample_size))
+          null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){cor(x, as.numeric(group_levels), method = corr)})
+        }
+        ind_r_null_CI = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+        out$stat$indiv = data.frame(cbind(ind_cor, t(ind_r_null_CI)))
+        row.names(out$stat$indiv) = NULL
+        names(out$stat$indiv) = c('r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+      }
+      else { # discrete case
+        for (group in group_levels){
+          if ()
+        }
+      }
+    names(out$ind_rare) = group_vals$groups
+    ind_cor = apply(out$ind_rare, 1, function(x) 
+      cor(x, group_vals$values, method=corr)) 
+    out$ind_rare = data.frame(N=out$ind_sample_size, out$ind_rare,
+                              cor=ind_cor)
+    # 1'. Null test for ind-based rarefaction
+    sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
+    env_extent = rep(group_level, time = apply(group_sad, 1, sum))
+    null_ind_r_mat = matrix(NA, nperm, length(out$ind_sample_size))
+    for (i in 1:nperm){
+      env_shuffle = sample(env_extent)
+      sad_shuffle = sapply(group_level, function(x) 
+        as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
+      perm_ind_rare = as.data.frame(rarefy(sad_shuffle, out$ind_sample_size, MARGIN = 2))
+      null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_level), method = corr)})
+    }
+    out$ind_r_null = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+}
+
     if (type == 'continuous') {
         # 1. Ind-based rarefaction (effect of SAD) vs env_var vs N
         if ('indiv' %in% approved_tests) {
