@@ -492,7 +492,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         rarefaction(x, 'indiv', ind_sample_size)))
       row.names(ind_rare) = NULL
       out$indiv_rare = cbind(ind_sample_size, ind_rare)
-      names(out$indiv_rare) = c('sample', as.character(group_levels)
+      names(out$indiv_rare) = c('sample', as.character(group_levels))
     
       if (type == 'continuous'){
         ind_cor = apply(ind_rare, 1, function(x) 
@@ -511,67 +511,40 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
           null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){cor(x, as.numeric(group_levels), method = corr)})
         }
         ind_r_null_CI = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
-        out$stat$indiv = data.frame(cbind(ind_cor, t(ind_r_null_CI)))
-        row.names(out$stat$indiv) = NULL
-        names(out$stat$indiv) = c('r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+        out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor, t(ind_r_null_CI)))
+        names(out$continuous$indiv) = c('sample', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
       }
       else { # discrete case
+        ref_sad = group_sad[which(as.character(group_levels) == as.character(ref_group)), ]
+        out$discrete$indiv = data.frame(sample = numeric(), group = character(), deltaS_emp = numeric(), deltaS_null_low = numeric(), 
+                                        deltaS_null_median = numeric(), deltaS_null_high = numeric(), stringsAsFactors = F)
         for (group in group_levels){
-          if ()
+          if (as.character(group) != as.character(ref_group)){
+            deltaS = out$indiv_rare[, as.character(group)] - out$indiv_rare[, as.character(ref_group)]
+            group_levels_pairwise = c(as.character(ref_group), as.character(group))
+            level_sad = group_sad[which(as.character(group_levels) == as.character(group)), ]
+            comp_sad = rbind(ref_sad, level_sad)
+            sp_extent = unlist(apply(comp_sad, 1, function(x) rep(1:ncol(comp_sad), x)))
+            env_extent = rep(group_levels_pairwise, time = apply(comp_sad, 1, sum))
+            null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
+            for (i in 1:nperm){
+              env_shuffle = sample(env_extent)
+              sad_shuffle = sapply(group_levels_pairwise, function(x) 
+                as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(comp_sad)))))
+              perm_ind_rare = apply(sad_shuffle, MARGIN = 2, function(x)
+                rarefaction(x, 'indiv', ind_sample_size))
+              null_ind_deltaS_mat[i, ] = perm_ind_rare[, as.character(group)] - perm_ind_rare[, as.character(ref_group)]
+            }
+            ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
+            ind_group = data.frame(cbind(rep(as.character(group), length(ind_sample_size)),ind_sample_size,  
+                                         deltaS, t(ind_deltaS_null_CI)))
+            out$discrete$indiv = rbind(out$discrete$indiv, ind_group, stringsAsFactors = F)
+          }
         }
+        names(out$discrete$indiv) = c('group', 'sample', 'deltaS_emp', 'deltaS_null_low', 'deltaS_null_median', 'deltaS_null_high')
       }
-    names(out$ind_rare) = group_vals$groups
-    ind_cor = apply(out$ind_rare, 1, function(x) 
-      cor(x, group_vals$values, method=corr)) 
-    out$ind_rare = data.frame(N=out$ind_sample_size, out$ind_rare,
-                              cor=ind_cor)
-    # 1'. Null test for ind-based rarefaction
-    sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
-    env_extent = rep(group_level, time = apply(group_sad, 1, sum))
-    null_ind_r_mat = matrix(NA, nperm, length(out$ind_sample_size))
-    for (i in 1:nperm){
-      env_shuffle = sample(env_extent)
-      sad_shuffle = sapply(group_level, function(x) 
-        as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
-      perm_ind_rare = as.data.frame(rarefy(sad_shuffle, out$ind_sample_size, MARGIN = 2))
-      null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_level), method = corr)})
     }
-    out$ind_r_null = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
-}
-
-    if (type == 'continuous') {
-        # 1. Ind-based rarefaction (effect of SAD) vs env_var vs N
-        if ('indiv' %in% approved_tests) {
-            # Assess rarefied S - env relationship at 10 log-even levels of N
-            #if (length(inds) > 1)
-            #    out$ind_sample_size = inds
-            #else if (is.null(inds))
-                out$ind_sample_size = seq(group_minN)
-            #else if (log_scale == T)
-            #    out$ind_sample_size = floor(exp(seq(10) * log(group_minN) / 10))
-            #else 
-            #    out$ind_sample_size = floor(seq(10) * group_minN / 10)
-        }
-        out$ind_rare = data.frame(apply(group_sad, 1, function(x) 
-                             rarefaction(x, 'indiv', out$ind_sample_size)))
-        names(out$ind_rare) = group_vals$groups
-        ind_cor = apply(out$ind_rare, 1, function(x) 
-                            cor(x, group_vals$values, method=corr)) 
-        out$ind_rare = data.frame(N=out$ind_sample_size, out$ind_rare,
-                                  cor=ind_cor)
-        # 1'. Null test for ind-based rarefaction
-        sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
-        env_extent = rep(group_level, time = apply(group_sad, 1, sum))
-        null_ind_r_mat = matrix(NA, nperm, length(out$ind_sample_size))
-        for (i in 1:nperm){
-          env_shuffle = sample(env_extent)
-          sad_shuffle = sapply(group_level, function(x) 
-            as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
-          perm_ind_rare = as.data.frame(rarefy(sad_shuffle, out$ind_sample_size, MARGIN = 2))
-          null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_level), method = corr)})
-        }
-        out$ind_r_null = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
-      }
+    
     # Issue number unique warning 
     n_uni_perms = factorial(nrow(comm$comm))
     if (n_uni_perms < 120) 
