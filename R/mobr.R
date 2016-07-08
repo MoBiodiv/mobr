@@ -564,6 +564,35 @@ enforce_min_group_size = function(comm, group_data, min_group_size) {
     return(comm)
 }
 
+# Auxillary function: spatially-explicit sample-based rarefaction 
+# 
+rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
+  #plot_grp = dat_plot[dat_plot$group == group, ] 
+  #sp_grp = dat_sp[dat_plot$group == group, ]
+  row.names(comm_one_group) = as.character(seq(nrow(comm_one_group)))
+  explicit_loop = matrix(0, nrow(comm_one_group), nrow(comm_one_group))
+  pair_dist = as.matrix(dist(xy_one_group))
+  for (i in 1:nrow(comm_one_group)) {
+    focal_site = row.names(comm_one_group)[i]
+    dist_to_site = pair_dist[i, ]
+    # Shuffle plots, so that tied grouping is not biased by original order.
+    new_order = sample(1:nrow(comm_one_group))  
+    plots_new = row.names(comm_one_group)[new_order]
+    dist_new = dist_to_site[new_order]
+    plots_new_ordered = plots_new[order(dist_new)]
+    # Move focal site to the front
+    plots_new_ordered = c(focal_site, 
+                          plots_new_ordered[plots_new_ordered != focal_site])  
+    comm_ordered = comm_one_group[match(row.names(comm_one_group), plots_new_ordered), ]
+    # 1 for absence, 0 for presence
+    comm_bool = as.data.frame((comm_ordered == 0) * 1) 
+    rich = cumprod(comm_bool)
+    explicit_loop[ , i] = as.numeric(ncol(comm_one_group) - rowSums(rich))
+  }
+  explicit_S = apply(explicit_loop, 1, mean)
+  return(explicit_S)
+}
+
 get_delta_stats = function(comm, env_var, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
                            type=NULL, log_scale=FALSE, inds=NULL,
@@ -720,12 +749,43 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         print('Error: spatially explicit analysis not allowed by data.')
       }
       else {
-        
+        mobr$sample_rarefy = data.frame(stringsAsFactors = F)
+        for (group in group_keep){
+          comm_one_group = comm$comm[which(comm$envi[, env_var] %in% group), ]
+          xy_one_group = comm$spat[which(comm$envi[, env_var] %in% group), ]
+          explicit_S_group = rarefy_sample_explicit(comm_one_group, xy_one_group)
+          implicit_S_group = rarefaction.sample(comm_one_group)[, 2]
+          deltaS_group = implicit_S_group - explicit_S_group
+          dat_group = cbind(rep(group, nrow(comm_one_group)), seq(nrow(comm_one_group)), implicit_S_group,
+                            explicit_S_group, deltaS_group)
+          mobr$sample_rarefy = rbind(mobr$sample_rarefy, dat_group)
+        }
+        names(mobr$sample_rarefy) = c('env', 'Nplot', 'Simpl', 'Sexpl', 'deltaS')
+        mobr$spat_r = sapply(1:min(plot_count$freq), 
+                             function(x) cor(as.numeric(mobr$sample_rarefy$deltaS[mobr$sample_rarefy$Nplot == x]), 
+                                             as.numeric(mobr$sample_rarefy$env[mobr$sample_rarefy$Nplot == x]), method = corr))
+        # 3'. Null test for aggregation effect on delta S
+        null_spat_r_mat = matrix(NA, nperm, length(mobr$spat_r))
+        for (i in 1:nperm){
+          perm_spat = comm$spat[sample(seq(nrow(comm$spat))),]
+          sample_rarefy_perm = data.frame(env = numeric(), Nplot = numeric(), deltaS = numeric(), stringsAsFactors = F)
+          for (group in group_keep){
+            comm_perm = comm$comm[which(comm$envi[, env_var] %in% group), ]
+            xy_perm = perm_spat[which(comm$envi[, env_var] %in% group), ]
+            explicit_S_perm = rarefy_sample_explicit(comm_perm, xy_perm)
+            implicit_S_perm = as.numeric(as.character(mobr$sample_rarefy$Simpl[mobr$sample_rare$env %in% group]))
+            deltaS_perm = implicit_S_perm - explicit_S_perm
+            dat_group_perm = cbind(rep(group, nrow(comm_perm)), seq(nrow(comm_perm)), deltaS_perm)
+            sample_rarefy_perm = rbind(sample_rarefy_perm, dat_group_perm)
+          }
+          names(sample_rarefy_perm) = c('env', 'Nplot', 'deltaS')
+          null_spat_r_mat[i, ] = sapply(1:min(plot_count$freq), 
+                                        function(x) cor(as.numeric(sample_rarefy_perm$deltaS[sample_rarefy_perm$Nplot == x]), 
+                                                        as.numeric(sample_rarefy_perm$env[sample_rarefy_perm$Nplot == x]), method = corr))
+        }
+        mobr$spat_r_null = apply(null_spat_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
       }
     }
-
-      
-        
   class(out) = 'mobr'
   return(out)
 }
