@@ -6,9 +6,6 @@
 ## Functions
 require(pracma)
 
-# Global constants
-min_ind = 5
-min_plot = 5
 
 ## define mobr object
 make_comm_obj = function(comm, plot_attr, binary=FALSE) {
@@ -440,7 +437,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     group_levels = group_sad[ , 1]
     group_sad = group_sad[ , -1]
     group_minN = min(rowSums(group_sad))
-    group_plots = data.frame(table(comm$env[, env_var])) # Number of plots within each group
+    group_plots = data.frame(table(env_data)) # Number of plots within each group
     plot_abd = apply(comm$comm, 1, sum)
     #rows_keep_group = which(env_data %in% group_keep)
     #comm_group = comm$comm[rows_keep_group, ]
@@ -533,17 +530,20 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
       else
         out$sample_rare = data.frame(group = character(), sample_plot = numeric(), impl_S = numeric())
       for (group in group_levels){
-        comm_group = comm$comm[as.character(comm$env[, env_var]) == as.character(group), ]
+        comm_group = comm$comm[as.character(env_data) == as.character(group), ]
         impl_S = as.numeric(rarefaction(comm_group, 'samp'))
         sample_rare_group = data.frame(cbind(rep(as.character(group), length(impl_S)), seq(length(impl_S)), impl_S))
         if ('spat' %in% approved_tests){
-          xy_group = comm$spat[as.character(comm$env[, env_var]) == as.character(group), ]
+          xy_group = comm$spat[as.character(env_data) == as.character(group), ]
           expl_S = rarefy_sample_explicit(comm_group, xy_group)
           sample_rare_group = cbind(sample_rare_group, expl_S)
         }
         out$sample_rare = rbind(out$sample_rare, sample_rare_group)
       }
-      names(out$sample_rare) = c('group', 'sample_plot', 'impl_S', 'expl_S')
+      if ('spat' %in% approved_tests)
+        names(out$sample_rare) = c('group', 'sample_plot', 'impl_S', 'expl_S')
+      else
+        names(out$sample_rare) = c('group', 'sample_plot', 'impl_S')
     }
     
     # 2. Sample-based rarefaction (effect of density) vs env_var vs N
@@ -562,7 +562,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         effect_N_by_group = data.frame(matrix(NA, ncol = 4, nrow = max(group_plots$Freq)))
         for (i in 1:length(group_levels)){
           group = group_levels[i]
-          comm_group = comm$comm[which(comm$env[, env_var] == group), ]
+          comm_group = comm$comm[which(env_data == group), ]
           group_effect_N = effect_of_N(comm_group, ref_dens)
           if (i == 1)
             effect_N_by_group[, i] = group_effect_N$effort[1:nrow(effect_N_by_group)]
@@ -577,14 +577,14 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         for (i in 1:nperm){
           plot_abd_perm = sample(plot_abd)
           sp_draws = sapply(1:nrow(comm$comm), function(x)
-            sample(rep(1:ncol(comm$comm), comm$comm[x, ]),
-                   size = plot_abd_perm[x], replace = T))
+            sample(rep(1:ncol(comm$comm), comm$comm[x, ],
+                   size = plot_abd_perm[x], replace = T)))
           comm_perm = t(sapply(1:nrow(comm$comm), function(x)
             table(c(1:ncol(comm$comm), sp_draws[[x]])) - 1 ))
           effect_N_perm = data.frame(matrix(NA, ncol = 4, nrow = max(group_plots$Freq)))
           for (i in 1:length(group_levels)){
             group = group_levels[i]
-            comm_group = comm_perm[which(comm$env[, env_var] == group), ]
+            comm_group = comm_perm[which(env_data == group), ]
             group_N_perm = effect_of_N(comm_group, ref_dens)
             if (i == 1)
               effect_N_perm[, i] = group_N_perm$effort[1:nrow(effect_N_perm)]
@@ -597,6 +597,49 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         N_r_null_CI = apply(null_N_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
         out$continuous$N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))
         names(out$continuous$N) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+      }
+      else {
+        for (group in group_levels){
+          if (as.character(group) != as.character(ref_group)){
+            comm_2groups = comm$comm[which(as.character(env_data) %in% 
+                                       c(as.character(group), as.character(ref_group))), ]
+            if (density_stat == 'mean')
+              ref_dens = sum(comm_2groups) / nrow(comm_2groups)
+            else if (density_stat == 'max')
+              ref_dens = max(rowSums(comm_2groups))
+            else if (density_stat == 'min')
+              ref_dens = min(rowSums(comm_2groups))
+            else 
+              stop('The argument ref must be set to mean, min or max')
+            
+            effect_N_ref = effect_of_N(comm$comm[which(as.character(env_data) == as.character(ref_group)), ], ref_dens)
+            effect_N_group = effect_of_N(comm$comm[which(env_data == group), ], ref_dens)
+            ddeltaS_group = effect_N_group$deltaS[1:min(nrow(effect_N_ref), nrow(effect_N_group))] - 
+              effect_N_ref$deltaS[1:min(nrow(effect_N_ref), nrow(effect_N_group))]
+            
+            null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_group))
+            for (i in 1:nperm){
+              plot_abd_perm = sample(plot_abd[which(as.character(env_data) %in% c(as.character(group), as.character(ref_group)))])
+              sp_draws = sapply(1:nrow(comm_2groups), function(x)
+                sample(rep(1:ncol(comm_2groups), comm_2groups[x, ],
+                           size = plot_abd_perm[x], replace = T)))
+              comm_perm = t(sapply(1:nrow(comm_2groups), function(x)
+                table(c(1:ncol(comm_2groups), sp_draws[[x]])) - 1 ))
+              
+              ID_ref = as.character(which(as.character(env_data) == as.character(ref_group)))  
+              N_ref_perm = effect_of_N(comm_perm[which(row.names(comm_2groups) %in% ID_ref), ], ref_dens)
+              ID_group = as.character(which(as.character(env_data) == as.character(group)))
+              N_group_perm = effect_of_N(comm_perm[which(row.names(comm_2groups) %in% ID_group), ], ref_dens)
+              ddeltaS_perm = N_ref_perm$deltaS[1:min(nrow(N_ref_perm), nrow(N_group_perm))] - 
+                N_group_perm$deltaS[1:min(nrow(N_ref_perm), nrow(N_group_perm))]
+              null_N_deltaS_mat[i, ] = ddeltaS_perm[1:ncol(null_N_deltaS_mat)]  
+            }
+            N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+            N_group = data.frame(cbind(rep(as.character(group), length(ddeltaS_group)),effect_N_group$effort[1:length(ddeltaS_group)],  
+                                         ddeltaS_group, t(N_deltaS_null_CI)))
+            out$discrete$N = rbind(out$discrete$N, N_group, stringsAsFactors = F)
+          }
+        }
       }
     }
     # 3. Sample-based spatially-explicit rarecation (effect of aggregation) vs env_var vs N
@@ -630,8 +673,8 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
             xy_perm = comm$spat[sample(nrow(comm$spat)), ]
             deltaS_perm = c()
             for (group in unique(sample_rare_keep$group)){
-              comm_group = comm$comm[as.character(comm$env[, env_var]) == as.character(group), ]
-              xy_perm_group = xy_perm[as.character(comm$env[, env_var]) == as.character(group), ]
+              comm_group = comm$comm[as.character(env_data) == as.character(group), ]
+              xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
               expl_S_perm = rarefy_sample_explicit(comm_group, xy_perm_group)
               deltaS_perm = c(deltaS_perm, as.numeric(as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])) - expl_S_perm)
             }
@@ -649,7 +692,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
           out$discrete$agg = data.frame(group = character(), sample_plot = numeric(), ddeltaS_emp = numeric(), 
                                         ddeltaS_null_low = numeric(), ddeltaS_median = numeric(), 
                                         ddeltaS_high = numeric())
-          ref_comm = comm$comm[as.character(comm$env[, env_var]) == as.character(ref_group), ]
+          ref_comm = comm$comm[as.character(env_data) == as.character(ref_group), ]
           impl_S_ref = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(ref_group))]
           impl_S_ref = as.numeric(as.character(impl_S_ref))
           for (group in unique(group_keep)){
@@ -659,15 +702,15 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
               ddeltaS_group = sample_rare_keep$deltaS[sample_rare_keep$group == group][1:min_plot_group] - 
                 sample_rare_keep$deltaS[as.character(sample_rare_keep$group) == as.character(ref_group)][1:min_plot_group]
               
-              comm_group = comm$comm[as.character(comm$env[, env_var]) == as.character(group), ]
+              comm_group = comm$comm[as.character(env_data) == as.character(group), ]
               impl_S_group = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(group))]
               impl_S_group = as.numeric(as.character(impl_S_group))
               
               null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
               for (i in 1:nperm){
                 xy_perm = comm$spat[sample(nrow(comm$spat)), ]
-                xy_perm_group = xy_perm[as.character(comm$env[, env_var]) == as.character(group), ]
-                xy_perm_ref = xy_perm[as.character(comm$env[, env_var]) == as.character(ref_group), ]
+                xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
+                xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
                 expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
                 expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
                 null_agg_deltaS_mat[i, ] = impl_S_group[1:min_plot_group] - expl_S_perm_group[1:min_plot_group] - 
@@ -684,6 +727,6 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         }
       }
     }
-  class(out) = 'mobr'
-  return(out)
+    class(out) = 'mobr'
+    return(out)
 }
