@@ -390,7 +390,7 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 
 get_delta_stats = function(comm, env_var, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
-                           type='discrete', log_scale=FALSE, inds=NULL,
+                           type='discrete', log_scale=FALSE, inds=NULL, min_plot = NULL, 
                            density_stat ='mean', corr='spearman', 
                            nperm=1000) {
   # Inputs:
@@ -405,6 +405,11 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
   # inds - argument for individual-based rarefaction. If given a single number, will be taken as the number of points for
   #   for rarefaction. log_scale will then be employed (see below). If given a list of numbers, will be taken as the levels of N 
   #   for rarefaction. Default (NULL) will result in rarefaction at all possible N.
+  # min_plots - minimal number of plots for each group for test 'spat', where plots are randomized within groups for null test.
+  #   If a value is given, all groups with less than min_plots plots will be removed. If NULL (default), all groups are kept.
+  #   Warnings will be issued if 1. there is only one group left in discrete case, or 2. there are less than three groups left in continuous case, 
+  #   or 3. ref_group is removed in discrete case. In these three cases, the test will not be carried out.
+  #   Another warning will be issued if any of the remaining groups have less than five plots, but the test will be carried out in this case.
   # log_scale - If number of points for rarefaction is given, log_scale = TRUE leads to values evenly spaced on log scale,
   #   log_scale = FAlSE (default) leads to values evenly spaced on arithmetic scale.
   # density_stat - reference density used in converting number of plots to number of individuals. Can take one of three values:
@@ -455,12 +460,12 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     out$type = type
     # Assume: env_var is a string with variable name
     # group_sad is the overall SAD for all plots within a group (level of env_var) lumped together
-    #group_cts = plot_count = count(comm$env, env_var) # Number of plots within each group (env level)
     #group_keep = plot_count[which(plot_count$freq >= min_plot), 1] # Groups that will be included in steps 2 & 3
     group_sad = aggregate(comm$comm, by=list(env_data), sum)
     group_levels = group_sad[ , 1]
     group_sad = group_sad[ , -1]
     group_minN = min(rowSums(group_sad))
+    group_plots = data.frame(table(comm$env[, env_var])) # Number of plots within each group
     #rows_keep_group = which(env_data %in% group_keep)
     #comm_group = comm$comm[rows_keep_group, ]
     #env_var_keep = comm$env[rows_keep_group, env_var]
@@ -546,7 +551,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     }
     
     # Sample-based spatially-implicit and -explicit rarefaction 
-    if ('sampl' %in% approved_tests){
+    if ('sampl' %in% approved_tests | 'spat' %in% approved_tests){
       if ('spat' %in% approved_tests)
         out$sample_rare = data.frame(group = character(), sample_plot = numeric(), impl_S = numeric(), expl_S = numeric())
       else
@@ -567,6 +572,55 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     
     # 2. Sample-based rarefaction (effect of density) vs env_var vs N
     
+    # 3. Sample-based spatially-explicit rarecation (effect of aggregation) vs env_var vs N
+    if ('spat' %in% approved_tests){
+      if (!is.null(min_plot))
+        group_keep = group_plots[which(group_plots$Freq>=min_plot), 1]
+      else
+        group_keep = group_levels
+      
+      if (length(group_keep) == 1 & type == 'discrete')
+        warning('Error: pair-wise comparison cannot be conducted on one group.')
+      else if (length(group_keep) < 3 & type == 'continuous')
+        warning('Error: correlation analysis cannot be conducted with less than three groups.')
+      else if (!(as.character(ref_group) %in% as.character(group_keep)) & type == 'discrete')
+        warning('Error: reference group does not have enough plots and have been dropped.')
+      else {
+        sample_rare_keep = out$sample_rare[which(out$sample_rare$group %in% as.character(group_keep)), ]
+        sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$impl_S)) - 
+          as.numeric(as.character(sample_rare_keep$expl_S))
+        if (type == 'continuous'){
+          min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% as.character(group_keep))])
+          r_emp = sapply(seq(min_plot_group), function(x)
+            cor(sample_rare_keep$deltaS[which(sample_rare_keep$sample_plot == x)], 
+                as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
+          # Null test
+          null_agg_r_mat = matrix(NA, nperm, min_plot_group)
+          for (i in 1:nperm){
+            xy_perm = comm$spat[sample(nrow(comm$spat)), ]
+            deltaS_perm = c()
+            for (group in unique(sample_rare_keep$group)){
+              comm_group = comm$comm[as.character(comm$env[, env_var]) == as.character(group), ]
+              xy_perm_group = xy_perm[as.character(comm$env[, env_var]) == as.character(group), ]
+              expl_S_perm = rarefy_sample_explicit(comm_group, xy_perm_group)
+              deltaS_perm = c(deltaS_perm, as.numeric(as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])) - expl_S_perm)
+            }
+            null_agg_r_mat[i, ] = sapply(seq(min_plot_group), function(x)
+              cor(deltaS_perm[which(sample_rare_keep$sample_plot == x)], 
+                  as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
+          }
+          agg_r_null_CI = apply(null_agg_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
+          out$continuous$agg = data.frame(cbind(seq(min_plot_group), r_emp, t(agg_r_null_CI)))
+          names(out$continuous$agg) = c('sample_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+        }
+        else {
+          if (min(group_plots$Freq[group_plots[, 1] %in% group_keep]) < 5)
+            warning('Warning: some groups have less than 5 plots. The results of the null model are not very informative.')
+          
+        }
+      }
+      
+    }
     # Issue number unique warning 
     n_uni_perms = factorial(nrow(comm$comm))
     if (n_uni_perms < 120) 
