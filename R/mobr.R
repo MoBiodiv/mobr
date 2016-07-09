@@ -493,7 +493,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
       row.names(ind_rare) = NULL
       out$indiv_rare = cbind(ind_sample_size, ind_rare)
       names(out$indiv_rare) = c('sample', as.character(group_levels))
-    
+      
       if (type == 'continuous'){
         ind_cor = apply(ind_rare, 1, function(x) 
           cor(x, as.numeric(group_levels), method = corr))
@@ -512,7 +512,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         }
         ind_r_null_CI = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
         out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor, t(ind_r_null_CI)))
-        names(out$continuous$indiv) = c('sample', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+        names(out$continuous$indiv) = c('sample_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
       }
       else { # discrete case
         ref_sad = group_sad[which(as.character(group_levels) == as.character(ref_group)), ]
@@ -541,9 +541,31 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
             out$discrete$indiv = rbind(out$discrete$indiv, ind_group, stringsAsFactors = F)
           }
         }
-        names(out$discrete$indiv) = c('group', 'sample', 'deltaS_emp', 'deltaS_null_low', 'deltaS_null_median', 'deltaS_null_high')
+        names(out$discrete$indiv) = c('group', 'sample_ind', 'deltaS_emp', 'deltaS_null_low', 'deltaS_null_median', 'deltaS_null_high')
       }
     }
+    
+    # Sample-based spatially-implicit and -explicit rarefaction 
+    if ('sampl' %in% approved_tests){
+      if ('spat' %in% approved_tests)
+        out$sample_rare = data.frame(group = character(), sample_plot = numeric(), impl_S = numeric(), expl_S = numeric())
+      else
+        out$sample_rare = data.frame(group = character(), sample_plot = numeric(), impl_S = numeric())
+      for (group in group_levels){
+        comm_group = comm$comm[as.character(comm$env[, env_var]) == as.character(group), ]
+        impl_S = as.numeric(rarefaction(comm_group, 'samp'))
+        sample_rare_group = data.frame(cbind(rep(as.character(group), length(impl_S)), seq(length(impl_S)), impl_S))
+        if ('spat' %in% approved_tests){
+          xy_group = comm$spat[as.character(comm$env[, env_var]) == as.character(group), ]
+          expl_S = rarefy_sample_explicit(comm_group, xy_group)
+          sample_rare_group = cbind(sample_rare_group, expl_S)
+        }
+        out$sample_rare = rbind(out$sample_rare, sample_rare_group)
+      }
+      names(out$sample_rare) = c('group', 'sample_plot', 'impl_S', 'expl_S')
+    }
+    
+    # 2. Sample-based rarefaction (effect of density) vs env_var vs N
     
     # Issue number unique warning 
     n_uni_perms = factorial(nrow(comm$comm))
