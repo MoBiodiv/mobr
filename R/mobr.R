@@ -338,27 +338,27 @@ effect_of_N = function(comm, env_var, ref_dens, min_plot_group){
   out
 }
 
-enforce_min_group_size = function(comm, group_data, min_group_size) {
-    group_cts = table(group_data)
-    if (any(group_cts < min_group_size)) {
-        small_groups = names(group_cts)[group_cts < min_group_size]
-        large_groups = names(group_cts)[group_cts >= min_group_size]
-        if (length(large_groups) == 0)
-            stop(paste('No groups have at least', min_group_size, 'replicates'))
-        if (length(large_groups) == 1) 
-            stop(paste('Only the group', large_groups, 'has at least',
-                       min_group_size, 'replicates'))
-        warning(paste('The groups', paste(small_groups, collapse=', '),
-                      'have less than', min_group_size, 
-                      'plots and therefore will be dropped'))
-        row_indices = which(env_data == small_groups)
-        comm$comm = comm$comm[-row_indices, ]
-        comm$env = comm$env[-row_indices, ]
-        comm$spat = comm$spat[-row_indices, ]
-    }
-    return(comm)
-}
-
+# enforce_min_group_size = function(comm, group_data, min_group_size) {
+#     group_cts = table(group_data)
+#     if (any(group_cts < min_group_size)) {
+#         small_groups = names(group_cts)[group_cts < min_group_size]
+#         large_groups = names(group_cts)[group_cts >= min_group_size]
+#         if (length(large_groups) == 0)
+#             stop(paste('No groups have at least', min_group_size, 'replicates'))
+#         if (length(large_groups) == 1) 
+#             stop(paste('Only the group', large_groups, 'has at least',
+#                        min_group_size, 'replicates'))
+#         warning(paste('The groups', paste(small_groups, collapse=', '),
+#                       'have less than', min_group_size, 
+#                       'plots and therefore will be dropped'))
+#         row_indices = which(env_data == small_groups)
+#         comm$comm = comm$comm[-row_indices, ]
+#         comm$env = comm$env[-row_indices, ]
+#         comm$spat = comm$spat[-row_indices, ]
+#     }
+#     return(comm)
+# }
+# 
 # Auxillary function: spatially-explicit sample-based rarefaction 
 # 
 rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
