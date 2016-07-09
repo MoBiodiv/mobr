@@ -303,27 +303,24 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
 #   $samp_rare: sample-based rarefaction output
 #   $effect_N: a data frame, difference between the two curves at plot_sample_size for each plot
 #   $env_levels: a list that matches to the rows of effect
-effect_of_N = function(comm, env_var, ref_dens, min_plot_group){
-    out = list()
-    # lumped SAD for each group
-    groups = unique(env_var_keep)
-    keep_group_sad = aggregate(comm_group, by = list(env_var_keep), FUN = sum)
-    row.names(keep_group_sad) = keep_group_sad[, 1]
-    keep_group_sad = keep_group_sad[, -1]
+effect_of_N = function(comm_group, env_var_keep, ref_dens, min_plot_group){
+  out = list()
+  # lumped SAD for each group
+  group_keep = unique(env_var_keep)
+  keep_group_sad = aggregate(comm_group, by = list(env_var_keep), FUN = sum)
+  row.names(keep_group_sad) = keep_group_sad[, 1]
+  keep_group_sad = keep_group_sad[, -1]
   
-    minN_group = min(rowSums(keep_group_sad))
-    plot_sample_size = round(ref_dens * seq(min_plot_group))
+  minN_group = min(apply(keep_group_sad, 1, sum))
+  plot_sample_size = round(ref_dens * seq(min_plot_group))
   out$plot_sample_size = plot_sample_size[plot_sample_size <= minN_group]
   
-  samp_rare = sapply(group_keep, function(x) 
-                     rarefaction(comm_group[which(env_var_keep == x), ],
-                                 'samp', 1:length(out$plot_sample_size)))
+  samp_rare = sapply(group_keep, function(x) rarefaction.sample(comm_group[which(env_var_keep == x), ])[1:length(out$plot_sample_size), 2])
   samp_rare = as.data.frame(samp_rare)
   names(samp_rare) = as.character(group_keep)
   out$samp_rare = samp_rare
   n = c(1, ref_dens * seq(length(out$plot_sample_size)))
-  out$effect_N = as.data.frame(matrix(NA, nrow = length(group_keep),
-                                      ncol = length(out$plot_sample_size)))
+  out$effect_N = as.data.frame(matrix(NA, nrow = length(group_keep), ncol = length(out$plot_sample_size)))
   for (i in 1:ncol(samp_rare)){
     col = samp_rare[, i]
     col_name = names(samp_rare)[i]
@@ -571,7 +568,10 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     }
     
     # 2. Sample-based rarefaction (effect of density) vs env_var vs N
-    
+    if ('sampl' %in% approved_tests){
+      # TODO: Checks?
+      
+    }
     # 3. Sample-based spatially-explicit rarecation (effect of aggregation) vs env_var vs N
     if ('spat' %in% approved_tests){
       if (!is.null(min_plot))
