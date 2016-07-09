@@ -298,12 +298,13 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
     plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
-# Auxillary function: difference between the ind-based rarefaction and the sample-based rarefaction
-# Output: a list of four components: $plot_sample_size: levels of n at which the deduction is done
-#   $samp_rare: sample-based rarefaction output
-#   $effect_N: a data frame, difference between the two curves at plot_sample_size for each plot
-#   $env_levels: a list that matches to the rows of effect
-effect_of_N = function(comm_group, env_var_keep, ref_dens, min_plot_group){
+# Auxillary function: difference between the ind-based rarefaction and the sample-based rarefaction for one group
+#   with the evaluation sample size (number of individuals) defined by ref_dens
+# Output: a two-column data frame, with sample size
+#   and deltaS (effect of N)
+effect_of_N = function(comm_group, ref_dens){
+  group_sad = colSums(comm_group)
+  
   out = list()
   # lumped SAD for each group
   group_keep = unique(env_var_keep)
@@ -455,9 +456,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     # TODO: groups as row names in all outputs?
     out = list()  # This is the object with the outputs
     out$type = type
-    # Assume: env_var is a string with variable name
-    # group_sad is the overall SAD for all plots within a group (level of env_var) lumped together
-    #group_keep = plot_count[which(plot_count$freq >= min_plot), 1] # Groups that will be included in steps 2 & 3
+
     group_sad = aggregate(comm$comm, by=list(env_data), sum)
     group_levels = group_sad[ , 1]
     group_sad = group_sad[ , -1]
@@ -469,11 +468,11 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     #keep_group_sad = aggregate(comm_group, by = list(env_var_keep), FUN = sum)
     #row.names(keep_group_sad) = keep_group_sad[, 1]
     #keep_group_sad = keep_group_sad[, -1]
-    if (ref == 'mean')
+    if (density_stat == 'mean')
         ref_dens = sum(comm$comm) / nrow(comm$comm)
-    else if (ref == 'max')
+    else if (density_stat == 'max')
         ref_dens = max(rowSums(comm$comm))
-    else if (ref == 'min')
+    else if (density_stat == 'min')
        ref_dens = min(rowSums(comm$comm))
     else 
        stop('The argument ref must be set to mean, min or max')
@@ -570,7 +569,22 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     # 2. Sample-based rarefaction (effect of density) vs env_var vs N
     if ('sampl' %in% approved_tests){
       # TODO: Checks?
-      
+      if (type == 'continuous'){
+        if (density_stat == 'mean')
+          ref_dens = sum(comm$comm) / nrow(comm$comm)
+        else if (density_stat == 'max')
+          ref_dens = max(rowSums(comm$comm))
+        else if (density_stat == 'min')
+          ref_dens = min(rowSums(comm$comm))
+        else 
+          stop('The argument ref must be set to mean, min or max')
+        
+        plot_rescaled_ind = seq(min(group_plots$Freq)) * ref_dens
+        plot_rescaled_ind_interger = round(plot_rescaled_ind)
+        for (group in group_levels){
+          
+        }
+      }
     }
     # 3. Sample-based spatially-explicit rarecation (effect of aggregation) vs env_var vs N
     if ('spat' %in% approved_tests){
