@@ -575,20 +575,20 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         # Null model
         null_N_r_mat = matrix(NA, nperm, length(r_emp))
         for (i in 1:nperm){
-          plot_abd_perm = sample(plot_abd)
+          plot_abd_perm = as.numeric(sample(plot_abd))
           sp_draws = sapply(1:nrow(comm$comm), function(x)
-            sample(rep(1:ncol(comm$comm), comm$comm[x, ],
-                   size = plot_abd_perm[x], replace = T)))
+            sample(rep(1:ncol(comm$comm), as.numeric(group_sad[which(group_levels == env_data[x]), ])),
+                   size = plot_abd_perm[x], replace = T))
           comm_perm = t(sapply(1:nrow(comm$comm), function(x)
             table(c(1:ncol(comm$comm), sp_draws[[x]])) - 1 ))
           effect_N_perm = data.frame(matrix(NA, ncol = 4, nrow = max(group_plots$Freq)))
-          for (i in 1:length(group_levels)){
-            group = group_levels[i]
+          for (j in 1:length(group_levels)){
+            group = group_levels[j]
             comm_group = comm_perm[which(env_data == group), ]
             group_N_perm = effect_of_N(comm_group, ref_dens)
-            if (i == 1)
-              effect_N_perm[, i] = group_N_perm$effort[1:nrow(effect_N_perm)]
-            effect_N_perm[, i + 1] = group_N_perm$deltaS[1:nrow(effect_N_perm)]
+            if (j == 1)
+              effect_N_perm[, j] = group_N_perm$effort[1:nrow(effect_N_perm)]
+            effect_N_perm[, j + 1] = group_N_perm$deltaS[1:nrow(effect_N_perm)]
           }
           effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
           null_N_r_mat[i, ] = apply(effect_N_perm[, 2:4], 1, function(x)
@@ -603,6 +603,8 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
           if (as.character(group) != as.character(ref_group)){
             comm_2groups = comm$comm[which(as.character(env_data) %in% 
                                        c(as.character(group), as.character(ref_group))), ]
+            env_2groups = env_data[which(as.character(env_data) %in% 
+                                           c(as.character(group), as.character(ref_group)))]
             if (density_stat == 'mean')
               ref_dens = sum(comm_2groups) / nrow(comm_2groups)
             else if (density_stat == 'max')
@@ -621,8 +623,8 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
             for (i in 1:nperm){
               plot_abd_perm = sample(plot_abd[which(as.character(env_data) %in% c(as.character(group), as.character(ref_group)))])
               sp_draws = sapply(1:nrow(comm_2groups), function(x)
-                sample(rep(1:ncol(comm_2groups), comm_2groups[x, ],
-                           size = plot_abd_perm[x], replace = T)))
+                sample(rep(1:ncol(comm_2groups), as.numeric(group_sad[which(group_levels == env_2groups[x]), ])),
+                       size = plot_abd_perm[x], replace = T))
               comm_perm = t(sapply(1:nrow(comm_2groups), function(x)
                 table(c(1:ncol(comm_2groups), sp_draws[[x]])) - 1 ))
               
@@ -640,6 +642,8 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
             out$discrete$N = rbind(out$discrete$N, N_group, stringsAsFactors = F)
           }
         }
+        names(out$discrete$N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
+                                  'ddeltaS_null_median', 'ddeltaS_null_high')
       }
     }
     # 3. Sample-based spatially-explicit rarecation (effect of aggregation) vs env_var vs N
