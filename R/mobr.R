@@ -516,7 +516,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
             ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
             ind_group = data.frame(cbind(rep(as.character(group), length(ind_sample_size)),ind_sample_size,  
                                          deltaS, t(ind_deltaS_null_CI)))
-            out$discrete$indiv = rbind(out$discrete$indiv, ind_group, stringsAsFactors = F)
+            out$discrete$indiv = rbind(out$discrete$indiv, ind_group)
           }
         }
         names(out$discrete$indiv) = c('group', 'effort_ind', 'deltaS_emp', 'deltaS_null_low', 'deltaS_null_median', 'deltaS_null_high')
@@ -639,7 +639,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
             N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
             N_group = data.frame(cbind(rep(as.character(group), length(ddeltaS_group)),effect_N_group$effort[1:length(ddeltaS_group)],  
                                          ddeltaS_group, t(N_deltaS_null_CI)))
-            out$discrete$N = rbind(out$discrete$N, N_group, stringsAsFactors = F)
+            out$discrete$N = rbind(out$discrete$N, N_group)
           }
         }
         names(out$discrete$N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
@@ -723,7 +723,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
               agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
               agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
                                            ddeltaS_group, t(agg_deltaS_null_CI)))
-              out$discrete$agg = rbind(out$discrete$agg, agg_group, stringsAsFactors = F)
+              out$discrete$agg = rbind(out$discrete$agg, agg_group)
             }
           }
           names(out$discrete$agg) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
