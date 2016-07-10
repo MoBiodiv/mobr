@@ -58,8 +58,58 @@ print.mobr = function(...) {
    # print rarefaction and delta rarefaction summaries
 }
 
-plot.mobr = function(...) {
+plot.mobr = function(mobr, type, group = NULL) {
   # plot rarefation and delta rarefaction curves
+  # Input: 
+  # mobr object
+  # type: 'discrete' or 'continuous'
+  # group: which group to plot. Only required for type = 'discrete' and there are more than one 
+  #   pair-wise comparison
+  if (is.null(mobr[[type]]))
+    stop(paste("Error: 'mobr' object does not have attribute '", type, "'.", sep = ''))
+  else {
+    tests = c('indiv', 'N', 'agg')
+    names = c('Effect of SAD', 'Effect of N', 'Effect of Aggregation')
+    par(mfrow = c(1, 3))
+    xlabs = c('number of individuals', 'number of individuals', 'number of plots')
+    if (type == 'discrete'){
+      ylabs = rep('delta-S', 3)
+      if (is.null(group) & length(unique(mobr[[type]][[tests[1]]][, 1])) > 1)
+        stop("Error: 'group' has to be specified.")
+      for (i in 1:3){
+        if (is.null(group))
+          mobr_group_test = mobr[[type]][[tests[i]]]
+        else {
+          mobr_group_test = mobr[[type]][[tests[i]]]
+          mobr_group_test = mobr_group_test[which(as.character(mobr_group_test$group) == as.character(group)), ]
+        }
+        for (icol in 2:ncol(mobr_group_test))
+          mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
+        plot(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red', 
+             xlab = xlabs[i], ylab = ylabs[i], xlim = c(0, max(mobr_group_test[, 2])), main = names[i],
+             ylim = c(min(mobr_group_test[, 3:ncol(mobr_group_test)]), max(mobr_group_test[, 3:ncol(mobr_group_test)])))
+        polygon(c(mobr_group_test[, 2], rev(mobr_group_test[, 2])), 
+                c(mobr_group_test[, 4], rev(mobr_group_test[, 6])), col = '#C1CDCD', border = NA)
+        lines(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red')
+        lines(mobr_group_test[, 2], mobr_group_test[, 5], lwd = 2, type = 'l')
+      }
+    }
+    else{
+      ylabs = rep('r', 3)
+      for (i in 1:3){
+        mobr_group_test = mobr[[type]][[tests[i]]]
+        for (icol in 1:ncol(mobr_group_test))
+          mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
+        plot(mobr_group_test[, 1], mobr_group_test[, 2], lwd = 2, type = 'l', col = 'red', 
+             xlab = xlabs[i], ylab = ylabs[i], xlim = c(0, max(mobr_group_test[, 1])), main = names[i],
+             ylim = c(-1, 1))
+        polygon(c(mobr_group_test[, 1], rev(mobr_group_test[, 1])), 
+                c(mobr_group_test[, 3], rev(mobr_group_test[, 5])), col = '#C1CDCD', border = NA)
+        lines(mobr_group_test[, 1], mobr_group_test[, 2], lwd = 2, type = 'l', col = 'red')
+        lines(mobr_group_test[, 1], mobr_group_test[, 4], lwd = 2, type = 'l')
+      }
+    }
+  }
 }
 
 summary.mobr = function(...) {
