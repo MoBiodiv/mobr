@@ -4,14 +4,8 @@
 ## subsequent columns are species abundances
 
 ## Functions
-require(rareNMtests)
 require(pracma)
-require(plyr)
-require(vegan)
 
-# Global constants
-min_ind = 5
-min_plot = 5
 
 ## define mobr object
 make_comm_obj = function(comm, plot_attr, binary=FALSE) {
@@ -72,37 +66,6 @@ summary.mobr = function(...) {
    #  print summary anova style table
 }
 
-## Functions to obtain the three kinds of curves: sample-based explicit,
-## sample-based implicit, and individual-based rescaled to sample
-get_avg_dens = function(comm, ref_var=NULL, ref_group=NULL) {
-    # Auxillary function to obtain average density within plot for rescaling Ask user
-    # to specify which group is used as 'standard' for rescaling.
-    if (is.null(ref_var)) {
-        if (is.null(comm$ref_var)) {
-            warning('The reference variable was not provided; therefore, average density is for the entire community')
-            avg_dens = mean(rowSums(comm$comm))
-        }
-        else {
-            ref_data = eval(parse(text=paste('comm$env$', ref_var, sep='')))
-        }
-    }
-    else {
-        if (is.null(ref_group)) 
-            stop('The reference group (argument "ref_group") must also be provided')
-        else
-            ref_data = eval(parse(text=paste('comm$env$', ref_var, sep='')))
-    }
-    if (!is.na(ScaleBy)) {
-        avg_dens = mean(apply(dat_sp[dat_plot$group == ScaleBy, ], 1, sum))
-    } else {
-        # If unspecified, uses min density among groups.
-        groups = unique(dat_plot$group)
-        avg_dens = min(sapply(groups, function(x) 
-                              mean(apply(dat_sp[dat_plot$group == x, ], 1, sum))))
-    }
-    return(avg_dens)
-}
-
 rarefaction = function(x, method, effort=NULL) {
     # analytical formulations from Cayuela et al. 2015. Ecological and biogeographic null hypotheses for
     # comparing rarefaction curves. Ecological Monographs 85:437–454.
@@ -142,177 +105,6 @@ rarefaction = function(x, method, effort=NULL) {
     names(out) = effort
     class(out) = 'rarefaction'
     return(out)
-}
-
-rarefy_sample_explicit = function(dat_sp, dat_plot, group, effort) {
-    plot_grp = dat_plot[dat_plot$group == group, ] 
-    sp_grp = dat_sp[dat_plot$group == group, ]
-    explicit_loop = matrix(0, nrow(sp_grp), nrow(sp_grp))
-    pair_dist = as.matrix(dist(plot_grp[ , c('x', 'y')]))
-    for (i in 1:nrow(plot_grp)) {
-        focal_site = plot_grp$plot[i]
-        dist_to_site = pair_dist[i, ]
-        # Shuffle plots, so that tied grouping is not biased by original order.
-        new_order = sample(1:nrow(plot_grp))  
-        # new_order = 1:nrow(plot_grp) # Alternative: no shuffles
-        plots_new = plot_grp$plot[new_order]
-        dist_new = dist_to_site[new_order]
-        plots_new_ordered = plots_new[order(dist_new)]
-        # Move focal site to the front
-        plots_new_ordered = c(focal_site, 
-                              plots_new_ordered[plots_new_ordered != focal_site])  
-        sp_ordered = sp_grp[match(row.names(sp_grp), plots_new_ordered), ]
-        # 1 for absence, 0 for presence
-        sp_bool = as.data.frame((sp_ordered == 0) * 1) 
-        rich = cumprod(sp_bool)
-        explicit_loop[ , i] = as.numeric(ncol(dat_sp) - 1 - rowSums(rich))
-    }
-    explicit_S = apply(explicit_loop, 1, mean)
-    return(explicit_S[effort])
-}
-
-rarefy_sample_implicit = function(dat_sp, dat_plot, group, effort=NULL) {
-    sp_grp = dat_sp[dat_plot$group == group, ]
-    sample_S = rarefaction(sp_grp, 'samp', effort)
-    return(sample_S)
-}
-
-rarefy_individual = function(dat_sp, dat_plot, group, effort=NULL) {
-    sad = colSums(dat_sp[dat_plot$group == group, ])
-    ind_S = rarefaction(sad, 'indiv', effort)
-    return(ind_S)
-}
-
-get_deltaSsad = function(dat_sp, dat_plot, groups, Nind=NULL) {
-    if (is.null(Nind))
-        Nind = min(tapply(rowSums(dat_sp),  dat_plot$group, sum))
-    # the first element of the argument groups must be the reference group
-    rescaled_ind = sapply(groups, function(x) 
-                          rarefy_individual(dat_sp, dat_plot, x, 1:Nind))
-    deltaSsad = rescaled_ind[ , 2] - rescaled_ind[ , 1]
-    return(deltaSsad)
-}
-
-get_deltaSN = function(dat_sp, dat_plot, groups, ScaleBy = NA, Nind=NULL) {
-    if (is.null(Nind))
-        Nind = min(tapply(rowSums(dat_sp),  dat_plot$group, sum))
-    avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy) 
-    # shouldn't the above line be:  'mean(rowSums(dat_sp))' ?
-    effort = 1:min(table(dat_plot$group[dat_plot$group %in% groups]))
-    implicit_sample = sapply(groups, function(x)
-                             rarefy_sample_implicit(dat_sp, dat_plot, x, effort))
-    # DJM: It may be more conservative to aggregate the individual rarefaction result
-    # rather than interpolate the sample based differences to an artifical level of 
-    # precision 
-    # rescale sample based differences via intpolation to reflect numbers of individuals sampled
-    # Use S_diff(1) = 0 for interpolation
-    # here the differences are limited to comparisons of two groups
-    deltaSsamp = pchip(xi=c(1, effort * avg_dens), 
-                       yi=c(0, implicit_sample[ , 2] - implicit_sample[ , 1]),
-                       x=1:Nind)
-    # if the calculation of the sad rarefaction is slow then possibly it should
-    # be allowed as an argument as well.
-    deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
-    min_nind = min(length(deltaSsamp), length(deltaSsad))
-    deltaSN = deltaSsamp[1:min_nind] - deltaSsad[1:min_nind]
-    return(deltaSN)
-}
-
-get_deltaSagg = function(dat_sp, dat_plot, groups) {
-    min_nplots = min(table(dat_plot$group[dat_plot$group %in% groups]))
-    implicit_sample = sapply(groups, function(x) 
-                             rarefy_sample_implicit(dat_sp, dat_plot, x, 1:min_nplots))
-    explicit_sample = sapply(groups, function(x) 
-                             rarefy_sample_explicit(dat_sp, dat_plot, x, 1:min_nplots))
-    deltaSagg = as.numeric(na.omit(explicit_sample[ , 2] - explicit_sample[ , 1] - 
-                                   (implicit_sample[ , 2] - implicit_sample[ , 1])))
-    return(deltaSagg)
-}
-
-null_sad = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
-    # This function generates null confidence intervals for the deltaSsad curve
-    # assuming that samples of the two treatments come from the same SAD.
-    # Only keep the plots for the two given treatments
-    dat_sp = dat_sp[dat_plot$group %in% groups, ] 
-    sp_extend = unlist(apply(dat_sp, 1, function(x) 
-                             rep(1:ncol(dat_sp), x)))
-    n_plot = apply(dat_sp, 1, sum)
-    grp_extend = rep(dat_plot$group, times=n_plot)
-    Nind = min(tapply(n_plot, dat_plot$group, sum)) 
-    dS_perm = matrix(NA, nperm, Nind)
-    for (i in 1:nperm) {
-        # Shuffle treatment label of each individual  
-        grp_shuffle = sample(grp_extend) 
-        # see vegan::rrarefy for a possibly better way to shuffle indiv
-        sad_shuffle = sapply(groups, function(x) 
-                             as.integer(table(factor(
-                                 sp_extend[grp_shuffle == x], levels=1:ncol(dat_sp)))))
-        ind_S = apply(sad_shuffle, 2, rarefaction, 'indiv', 1:Nind)
-        # this step is explicitly pairwise 
-        dS_perm[i, ] = ind_S[ , 2] - ind_S[ , 1]
-    }
-    dS_mean = apply(dS_perm, 2, mean)
-    dS_qt = apply(dS_perm, 2, function(x) 
-                  quantile(x, c((1 - CI)/2, (1 + CI)/2)))
-    out = data.frame(mean = dS_mean, lowerCI = dS_qt[1, ], upperCI = dS_qt[2, ])
-    return(out)
-}
-
-null_N = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95, ScaleBy = NA) {
-    # This function generates null confidence intervals for the deltaSN curve
-    # assuming that the two treatments do not differe systematically in N.
-    S = ncol(dat_sp)
-    dat_sp = dat_sp[dat_plot$group %in% groups, ]
-    dat_plot = dat_plot[dat_plot$group %in% groups, ]
-    Nplot = min(table(dat_plot$group))
-    grp_sads = list()
-    for (i in groups) {
-        plots = dat_plot$plot[dat_plot$group == i]
-        grp_sad = colSums(dat_sp[row.names(dat_sp) %in% plots, ])
-        grp_sads[[i]] = rep(1:S, grp_sad)
-    }
-    # Abundance within each plot
-    plot_abus = apply(dat_sp, 1, sum)  
-    Nind = min(sapply(grp_sads, length)) 
-    deltaSN_perm = matrix(NA, nperm, Nind)
-    for (i in 1:nperm) {
-        plot_abu_perm = sample(plot_abus)
-        sp_draws = sapply(1:nrow(dat_sp), function(x) 
-                          sample(rep(1:S, dat_sp[x,]), 
-                                 size=plot_abu_perm[x], replace=T))
-        dat_sp_perm = t(sapply(1:nrow(dat_sp), function(x) 
-                               table(c(1:S, sp_draws[[x]])) - 1 ))
-        deltaSN_perm[i, ] = get_deltaSN(dat_sp_perm, dat_plot, groups, ScaleBy,
-                                        Nind)
-    }
-    quant_mean = apply(deltaSN_perm, 2, mean, na.rm = T)
-    quant_lower = apply(deltaSN_perm, 2, function(x) 
-                        quantile(x, (1 - CI)/2, na.rm = T))
-    quant_higher = apply(deltaSN_perm, 2, function(x) 
-                         quantile(x, (1 + CI)/2, na.rm = T))
-    return(data.frame(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
-}
-
-null_agg = function(dat_sp, dat_plot, groups, nperm = 1000, CI = 0.95) {
-    # This function generates null confidence intervals for the deltaSagg curve
-    # assuming that plots within each treatment have no spatial structure.
-    nplots = table(dat_plot$group)
-    grp_index = sapply(groups, function(x) which(dat_plot$group == x))
-    deltaSagg_perm = matrix(NA, nperm, min(nplots))
-    for (i in 1:nperm) {
-        # Shuffle within treatments
-        index_shuffle = sapply(grp_index, sample)
-        new_order = unlist(index_shuffle)[order(unlist(grp_index))]
-        plot_shuffle_loc = dat_plot
-        plot_shuffle_loc[unlist(grp_index), c('x', 'y')] = plot_shuffle_loc[new_order, c('x','y')]
-        deltaSagg_perm[i, ] = get_deltaSagg(dat_sp, plot_shuffle_loc, groups) 
-    }
-    quant_mean = apply(deltaSagg_perm, 2, mean, na.rm = T)
-    quant_lower = apply(deltaSagg_perm, 2, function(x) 
-                        quantile(x, (1 - CI)/2, na.rm = T))
-    quant_higher = apply(deltaSagg_perm, 2, function(x) 
-                         quantile(x, (1 + CI)/2, na.rm = T))
-    return(data.frame(mean = quant_mean, lowerCI = quant_lower, upperCI = quant_higher))
 }
 
 table_effect_on_S = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
@@ -503,67 +295,44 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
     plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
-# Auxillary function: difference between the ind-based rarefaction and the sample-based rarefaction
-# Output: a list of four components: $plot_sample_size: levels of n at which the deduction is done
-#   $samp_rare: sample-based rarefaction output
-#   $effect_N: a data frame, difference between the two curves at plot_sample_size for each plot
-#   $env_levels: a list that matches to the rows of effect
-effect_of_N = function(comm, env_var, ref_dens, min_plot_group){
-    out = list()
-    # lumped SAD for each group
-    groups = unique(env_var_keep)
-    keep_group_sad = aggregate(comm_group, by = list(env_var_keep), FUN = sum)
-    row.names(keep_group_sad) = keep_group_sad[, 1]
-    keep_group_sad = keep_group_sad[, -1]
-  
-    minN_group = min(rowSums(keep_group_sad))
-    plot_sample_size = round(ref_dens * seq(min_plot_group))
-  out$plot_sample_size = plot_sample_size[plot_sample_size <= minN_group]
-  
-  samp_rare = sapply(group_keep, function(x) 
-                     rarefaction(comm_group[which(env_var_keep == x), ],
-                                 'samp', 1:length(out$plot_sample_size)))
-  samp_rare = as.data.frame(samp_rare)
-  names(samp_rare) = as.character(group_keep)
-  out$samp_rare = samp_rare
-  n = c(1, ref_dens * seq(length(out$plot_sample_size)))
-  out$effect_N = as.data.frame(matrix(NA, nrow = length(group_keep),
-                                      ncol = length(out$plot_sample_size)))
-  for (i in 1:ncol(samp_rare)){
-    col = samp_rare[, i]
-    col_name = names(samp_rare)[i]
-    S = c(1, col)
-    interp_sample = pchip(n, S, out$plot_sample_size)
-    row_keep_group_sad = keep_group_sad[which(row.names(keep_group_sad) == col_name), ]
-    rare_indiv = as.numeric(rarefy(row_keep_group_sad, n))
-    out$effect_N[i, ] = rare_indiv[-1] - interp_sample
-  }
-  row.names(out$effect_N) = names(samp_rare)
-  out$env_levels = group_keep
-  out
+# Auxillary function: difference between the ind-based rarefaction and the sample-based rarefaction for one group
+#   with the evaluation sample size (number of individuals) defined by ref_dens
+# Output: a two-column data frame, with sample size
+#   and deltaS (effect of N)
+effect_of_N = function(comm_group, ref_dens){
+  group_sad = colSums(comm_group)
+  S_samp_rare = as.numeric(rarefaction(comm_group, 'samp'))
+  plot_to_ind = round(ref_dens * (1:nrow(comm_group)))
+  plot_to_ind = plot_to_ind[which(plot_to_ind <= sum(comm_group))]
+  interp_S_samp_rare = pchip(c(1, ref_dens * (1:nrow(comm_group))), c(1, S_samp_rare), plot_to_ind)
+  S_indiv_rare = rarefaction(group_sad, 'indiv', effort = plot_to_ind)
+  deltaS = as.numeric(S_indiv_rare) - interp_S_samp_rare
+  out = data.frame(cbind(plot_to_ind, deltaS))
+  names(out) = c('effort', 'deltaS')
+  return(out)
 }
 
-enforce_min_group_size = function(comm, group_data, min_group_size) {
-    group_cts = table(group_data)
-    if (any(group_cts < min_group_size)) {
-        small_groups = names(group_cts)[group_cts < min_group_size]
-        large_groups = names(group_cts)[group_cts >= min_group_size]
-        if (length(large_groups) == 0)
-            stop(paste('No groups have at least', min_group_size, 'replicates'))
-        if (length(large_groups) == 1) 
-            stop(paste('Only the group', large_groups, 'has at least',
-                       min_group_size, 'replicates'))
-        warning(paste('The groups', paste(small_groups, collapse=', '),
-                      'have less than', min_group_size, 
-                      'plots and therefore will be dropped'))
-        row_indices = which(env_data == small_groups)
-        comm$comm = comm$comm[-row_indices, ]
-        comm$env = comm$env[-row_indices, ]
-        comm$spat = comm$spat[-row_indices, ]
-    }
-    return(comm)
-}
-
+# enforce_min_group_size = function(comm, group_data, min_group_size) {
+#     group_cts = table(group_data)
+#     if (any(group_cts < min_group_size)) {
+#         small_groups = names(group_cts)[group_cts < min_group_size]
+#         large_groups = names(group_cts)[group_cts >= min_group_size]
+#         if (length(large_groups) == 0)
+#             stop(paste('No groups have at least', min_group_size, 'replicates'))
+#         if (length(large_groups) == 1) 
+#             stop(paste('Only the group', large_groups, 'has at least',
+#                        min_group_size, 'replicates'))
+#         warning(paste('The groups', paste(small_groups, collapse=', '),
+#                       'have less than', min_group_size, 
+#                       'plots and therefore will be dropped'))
+#         row_indices = which(env_data == small_groups)
+#         comm$comm = comm$comm[-row_indices, ]
+#         comm$env = comm$env[-row_indices, ]
+#         comm$spat = comm$spat[-row_indices, ]
+#     }
+#     return(comm)
+# }
+# 
 # Auxillary function: spatially-explicit sample-based rarefaction 
 # 
 rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
@@ -595,32 +364,45 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 
 get_delta_stats = function(comm, env_var, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
-                           type=NULL, log_scale=FALSE, inds=NULL,
+                           type='discrete', log_scale=FALSE, inds=NULL, min_plot = NULL, 
                            density_stat ='mean', corr='spearman', 
                            nperm=1000) {
   # Inputs:
   # comm - a 'comm' type object, with attributes ...
   # type - if the envronmental variable is 'discrete' vs 'continous'
   # env_var - string, name of the envronmental variable
+  # ref_group - the group that will be used as a reference in pair-wise comparisons (ie., all other groups will be compared with it).
+  #   This argument is only needed then type == 'discrete'.
   # test - tests to be included. A single value in c('indiv', 'sampl', 'spat'), or a combination of them as a list. 
   #   The default is test = c('indiv', 'sampl', 'spat') (all three tests).
+  # type - pair-wise comparisons ('discrete') or regression ('continuous'). For the discrete case, ref_group has to be specified as the baseline.
   # inds - argument for individual-based rarefaction. If given a single number, will be taken as the number of points for
   #   for rarefaction. log_scale will then be employed (see below). If given a list of numbers, will be taken as the levels of N 
   #   for rarefaction. Default (NULL) will result in rarefaction at all possible N.
+  # min_plots - minimal number of plots for each group for test 'spat', where plots are randomized within groups for null test.
+  #   If a value is given, all groups with less than min_plots plots will be removed. If NULL (default), all groups are kept.
+  #   Warnings will be issued if 1. there is only one group left in discrete case, or 2. there are less than three groups left in continuous case, 
+  #   or 3. ref_group is removed in discrete case. In these three cases, the test will not be carried out.
+  #   Another warning will be issued if any of the remaining groups have less than five plots, but the test will be carried out in this case.
   # log_scale - If number of points for rarefaction is given, log_scale = TRUE leads to values evenly spaced on log scale,
   #   log_scale = FAlSE (default) leads to values evenly spaced on arithmetic scale.
-  # ref - reference density used in converting number of plots to number of individuals. Can take one of three values:
+  # density_stat - reference density used in converting number of plots to number of individuals. Can take one of three values:
   #   'mean', 'max', 'min'. If 'mean', the average plot-level abundance across all plots are used. If 'min' or 'max', 
   #   the minimum/maximum plot-level abundance is used.
-  # corr - which correlation is used for S/delta S vs envronmental variable. Can be 'spearman' (default, rank correlation)
+  # corr - which correlation is used for S/delta S vs envronmental variable in the continuous case. Can be 'spearman' (default, rank correlation)
   #   or 'pearson' (less recommended because of potential nonlinearity)
   # nperm - number of iterations for null models
   # Output:
   # out - a 'mobr' type object, with attributes...
   # check tests
-    env_data = eval(parse(text=paste('comm$env$', env_var, sep='')))
+    env_data = comm$env[, env_var]
+    groups = unique(env_data)
+    if (!(type %in% c('continuous', 'discrete')))
+      stop('"type" has to be "discrete" or "continuous".')
+    if (type == 'continuous' & !(corr %in% c('spearman', 'pearson')))
+      stop('"corr" has to be "spearman" or "pearson".')
     if ('factor' %in% class(env_data)) {
-        if (type == 'continous') {
+        if (type == 'continuous') {
             group_vals = data.frame(groups=groups, 
                                     values=as.integer(env_data)[match(groups, env_data)])
             warning(paste(env_var, 'is a factor but will be treated as a continous variable for the analysis which the following values'))
@@ -648,144 +430,303 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
                       tests_string))
     }
     # TODO: groups as row names in all outputs?
-    out = list()  # This is the object with the outputs 
+    out = list()  # This is the object with the outputs
     out$type = type
-    # Assume: env_var is a string with variable name
-    # group_sad is the overall SAD for all plots within a group (level of env_var) lumped together
-    #group_cts = plot_count = count(comm$env, env_var) # Number of plots within each group (env level)
-    #group_keep = plot_count[which(plot_count$freq >= min_plot), 1] # Groups that will be included in steps 2 & 3
+
     group_sad = aggregate(comm$comm, by=list(env_data), sum)
-    group_levels = as.character(group_sad[ , 1])
+    group_levels = group_sad[ , 1]
     group_sad = group_sad[ , -1]
     group_minN = min(rowSums(group_sad))
+    group_plots = data.frame(table(env_data)) # Number of plots within each group
+    plot_abd = apply(comm$comm, 1, sum)
     #rows_keep_group = which(env_data %in% group_keep)
     #comm_group = comm$comm[rows_keep_group, ]
     #env_var_keep = comm$env[rows_keep_group, env_var]
     #keep_group_sad = aggregate(comm_group, by = list(env_var_keep), FUN = sum)
     #row.names(keep_group_sad) = keep_group_sad[, 1]
     #keep_group_sad = keep_group_sad[, -1]
-    if (ref == 'mean')
+    if (density_stat == 'mean')
         ref_dens = sum(comm$comm) / nrow(comm$comm)
-    else if (ref == 'max')
+    else if (density_stat == 'max')
         ref_dens = max(rowSums(comm$comm))
-    else if (ref == 'min')
+    else if (density_stat == 'min')
        ref_dens = min(rowSums(comm$comm))
     else 
        stop('The argument ref must be set to mean, min or max')
-    if (type == 'continuous') {
-        # 1. Ind-based rarefaction (effect of SAD) vs env_var vs N
-        if ('indiv' %in% approved_tests) {
-            # Assess rarefied S - env relationship at 10 log-even levels of N
-            #if (length(inds) > 1)
-            #    out$ind_sample_size = inds
-            #else if (is.null(inds))
-                out$ind_sample_size = seq(group_minN)
-            #else if (log_scale == T)
-            #    out$ind_sample_size = floor(exp(seq(10) * log(group_minN) / 10))
-            #else 
-            #    out$ind_sample_size = floor(seq(10) * group_minN / 10)
-        }
-        out$ind_rare = data.frame(apply(group_sad, 1, function(x) 
-                             rarefaction(x, 'indiv', out$ind_sample_size)))
-        names(out$ind_rare) = group_vals$groups
-        ind_cor = apply(out$ind_rare, 1, function(x) 
-                            cor(x, group_vals$values, method=corr)) 
-        out$ind_rare = data.frame(N=out$ind_sample_size, out$ind_rare,
-                                  cor=ind_cor)
-        # 1'. Null test for ind-based rarefaction
+    
+    # 1. Individual-based rarefaction (effect of SAD) vs env_var vs N
+    if ('indiv' %in% approved_tests) {
+      if (is.null(inds))
+        ind_sample_size = seq(group_minN)
+      else if (length(inds) > 1)
+        ind_sample_size = inds
+      else {
+        if (log_scale == T)
+          ind_sample_size = floor(exp(seq(inds) * log(group_minN) / inds))
+        else
+          ind_sample_size = floor(seq(inds) * group_minN / inds)
+      }
+      ind_rare = data.frame(apply(group_sad, 1, function(x) 
+        rarefaction(x, 'indiv', ind_sample_size)))
+      row.names(ind_rare) = NULL
+      out$indiv_rare = cbind(ind_sample_size, ind_rare)
+      names(out$indiv_rare) = c('sample', as.character(group_levels))
+      
+      if (type == 'continuous'){
+        ind_cor = apply(ind_rare, 1, function(x) 
+          cor(x, as.numeric(group_levels), method = corr))
+        
+        # Null test 
         sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
-        env_extent = rep(group_level, time = apply(group_sad, 1, sum))
-        null_ind_r_mat = matrix(NA, nperm, length(out$ind_sample_size))
+        env_extent = rep(group_levels, time = apply(group_sad, 1, sum))
+        null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
         for (i in 1:nperm){
           env_shuffle = sample(env_extent)
-          sad_shuffle = sapply(group_level, function(x) 
+          sad_shuffle = sapply(group_levels, function(x) 
             as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
-          perm_ind_rare = as.data.frame(rarefy(sad_shuffle, out$ind_sample_size, MARGIN = 2))
-          null_ind_r_mat[i, ] = apply(perm_ind_rare, 2, function(x){cor(x, as.numeric(group_level), method = corr)})
+          perm_ind_rare = apply(sad_shuffle, MARGIN = 2, function(x)
+            rarefaction(x, 'indiv', ind_sample_size))
+          null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){cor(x, as.numeric(group_levels), method = corr)})
         }
-        out$ind_r_null = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+        ind_r_null_CI = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+        out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor, t(ind_r_null_CI)))
+        names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
       }
-    # Issue number unique warning 
-    n_uni_perms = factorial(nrow(comm$comm))
-    if (n_uni_perms < 120) 
-        warning(paste('The number of possible permutations are only', n_uni_perms,
-                      'and therefore the results of the null model are not very informative'))
-    # 2. Effect of density vs env_var vs N
-    if ('sampl' %in% test){
-      if (comm$test$sampl == F){
-        print('Error: sample-based analysis not allowed by data.')
+      else { # discrete case
+        ref_sad = group_sad[which(as.character(group_levels) == as.character(ref_group)), ]
+        out$discrete$indiv = data.frame(sample = numeric(), group = character(), deltaS_emp = numeric(), deltaS_null_low = numeric(), 
+                                        deltaS_null_median = numeric(), deltaS_null_high = numeric(), stringsAsFactors = F)
+        for (group in group_levels){
+          if (as.character(group) != as.character(ref_group)){
+            deltaS = out$indiv_rare[, as.character(group)] - out$indiv_rare[, as.character(ref_group)]
+            group_levels_pairwise = c(as.character(ref_group), as.character(group))
+            level_sad = group_sad[which(as.character(group_levels) == as.character(group)), ]
+            comp_sad = rbind(ref_sad, level_sad)
+            sp_extent = unlist(apply(comp_sad, 1, function(x) rep(1:ncol(comp_sad), x)))
+            env_extent = rep(group_levels_pairwise, time = apply(comp_sad, 1, sum))
+            null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
+            for (i in 1:nperm){
+              env_shuffle = sample(env_extent)
+              sad_shuffle = sapply(group_levels_pairwise, function(x) 
+                as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(comp_sad)))))
+              perm_ind_rare = apply(sad_shuffle, MARGIN = 2, function(x)
+                rarefaction(x, 'indiv', ind_sample_size))
+              null_ind_deltaS_mat[i, ] = perm_ind_rare[, as.character(group)] - perm_ind_rare[, as.character(ref_group)]
+            }
+            ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
+            ind_group = data.frame(cbind(rep(as.character(group), length(ind_sample_size)),ind_sample_size,  
+                                         deltaS, t(ind_deltaS_null_CI)))
+            out$discrete$indiv = rbind(out$discrete$indiv, ind_group, stringsAsFactors = F)
+          }
+        }
+        names(out$discrete$indiv) = c('group', 'effort_ind', 'deltaS_emp', 'deltaS_null_low', 'deltaS_null_median', 'deltaS_null_high')
       }
-      else{
-        out = effect_of_N(comm_group, env_var_keep, ref_dens, min(plot_count$freq))
-        out$plot_sample_size = out$plot_sample_size
-        out$samp_rare = out$samp_rare
-        out$effect_N = out$effect_N
+    }
+    
+    # Sample-based spatially-implicit and -explicit rarefaction 
+    if ('sampl' %in% approved_tests | 'spat' %in% approved_tests){
+      if ('spat' %in% approved_tests)
+        out$sample_rare = data.frame(group = character(), sample_plot = numeric(), impl_S = numeric(), expl_S = numeric())
+      else
+        out$sample_rare = data.frame(group = character(), sample_plot = numeric(), impl_S = numeric())
+      for (group in group_levels){
+        comm_group = comm$comm[as.character(env_data) == as.character(group), ]
+        impl_S = as.numeric(rarefaction(comm_group, 'samp'))
+        sample_rare_group = data.frame(cbind(rep(as.character(group), length(impl_S)), seq(length(impl_S)), impl_S))
+        if ('spat' %in% approved_tests){
+          xy_group = comm$spat[as.character(env_data) == as.character(group), ]
+          expl_S = rarefy_sample_explicit(comm_group, xy_group)
+          sample_rare_group = cbind(sample_rare_group, expl_S)
+        }
+        out$sample_rare = rbind(out$sample_rare, sample_rare_group)
+      }
+      if ('spat' %in% approved_tests)
+        names(out$sample_rare) = c('group', 'sample_plot', 'impl_S', 'expl_S')
+      else
+        names(out$sample_rare) = c('group', 'sample_plot', 'impl_S')
+    }
+    
+    # 2. Sample-based rarefaction (effect of density) vs env_var vs N
+    if ('sampl' %in% approved_tests){
+      # TODO: Checks?
+      if (type == 'continuous'){
+        if (density_stat == 'mean')
+          ref_dens = sum(comm$comm) / nrow(comm$comm)
+        else if (density_stat == 'max')
+          ref_dens = max(rowSums(comm$comm))
+        else if (density_stat == 'min')
+          ref_dens = min(rowSums(comm$comm))
+        else 
+          stop('The argument ref must be set to mean, min or max')
         
-        out$sample_r = apply(out$effect_N, 2, 
-                           function(x){cor(x, as.numeric(out$env_levels), method = corr)})
-        # 2'. Null test for effect of N
-        plot_abd = apply(comm_group, 1, sum)
-        null_samp_r_mat = matrix(NA, nperm, length(out$sample_r))
+        effect_N_by_group = data.frame(matrix(NA, ncol = 4, nrow = max(group_plots$Freq)))
+        for (i in 1:length(group_levels)){
+          group = group_levels[i]
+          comm_group = comm$comm[which(env_data == group), ]
+          group_effect_N = effect_of_N(comm_group, ref_dens)
+          if (i == 1)
+            effect_N_by_group[, i] = group_effect_N$effort[1:nrow(effect_N_by_group)]
+          effect_N_by_group[, i + 1] = group_effect_N$deltaS[1:nrow(effect_N_by_group)]
+        }
+        effect_N_by_group = effect_N_by_group[complete.cases(effect_N_by_group), ]
+        r_emp = apply(effect_N_by_group[, 2:4], 1, function(x)
+          cor(x, as.numeric(group_levels), method = corr))
+        
+        # Null model
+        null_N_r_mat = matrix(NA, nperm, length(r_emp))
         for (i in 1:nperm){
           plot_abd_perm = sample(plot_abd)
-          sp_draws = sapply(1:nrow(comm_group), function(x) 
-            sample(rep(1:ncol(comm_group), comm_group[x,]), 
-                   size = plot_abd_perm[x], replace = T))
-          comm_perm = t(sapply(1:nrow(comm_group), function(x) 
-            table(c(1:ncol(comm_group), sp_draws[[x]])) - 1 ))
-          out = effect_of_N(comm_perm, env_var_keep, ref_dens, min(plot_count$freq))
-          perm_r = apply(out$effect_N, 2, 
-                         function(x){cor(x, as.numeric(out$env_levels), method = corr)})
-          null_samp_r_mat[i, ] = perm_r[1:length(out$sample_r)]
+          sp_draws = sapply(1:nrow(comm$comm), function(x)
+            sample(rep(1:ncol(comm$comm), comm$comm[x, ],
+                   size = plot_abd_perm[x], replace = T)))
+          comm_perm = t(sapply(1:nrow(comm$comm), function(x)
+            table(c(1:ncol(comm$comm), sp_draws[[x]])) - 1 ))
+          effect_N_perm = data.frame(matrix(NA, ncol = 4, nrow = max(group_plots$Freq)))
+          for (i in 1:length(group_levels)){
+            group = group_levels[i]
+            comm_group = comm_perm[which(env_data == group), ]
+            group_N_perm = effect_of_N(comm_group, ref_dens)
+            if (i == 1)
+              effect_N_perm[, i] = group_N_perm$effort[1:nrow(effect_N_perm)]
+            effect_N_perm[, i + 1] = group_N_perm$deltaS[1:nrow(effect_N_perm)]
+          }
+          effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
+          null_N_r_mat[i, ] = apply(effect_N_perm[, 2:4], 1, function(x)
+            cor(x, as.numeric(group_levels), method = corr))[1:ncol(null_N_r_mat)]
         }
-        out$samp_r_null = apply(null_samp_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-      }
-    }
-    groups = levels(env_data)
-    comm = enforce_min_group_size(comm, env_data, min_group_size=5)
-    # 3. Effect of aggregation vs env_var vs N
-    if ('spat' %in% test){
-      if (comm$test$spat == F){
-        print('Error: spatially explicit analysis not allowed by data.')
+        N_r_null_CI = apply(null_N_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+        out$continuous$N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))
+        names(out$continuous$N) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
       }
       else {
-        mobr$sample_rarefy = data.frame(stringsAsFactors = F)
-        for (group in group_keep){
-          comm_one_group = comm$comm[which(comm$envi[, env_var] %in% group), ]
-          xy_one_group = comm$spat[which(comm$envi[, env_var] %in% group), ]
-          explicit_S_group = rarefy_sample_explicit(comm_one_group, xy_one_group)
-          implicit_S_group = rarefaction.sample(comm_one_group)[, 2]
-          deltaS_group = implicit_S_group - explicit_S_group
-          dat_group = cbind(rep(group, nrow(comm_one_group)), seq(nrow(comm_one_group)), implicit_S_group,
-                            explicit_S_group, deltaS_group)
-          mobr$sample_rarefy = rbind(mobr$sample_rarefy, dat_group)
-        }
-        names(mobr$sample_rarefy) = c('env', 'Nplot', 'Simpl', 'Sexpl', 'deltaS')
-        mobr$spat_r = sapply(1:min(plot_count$freq), 
-                             function(x) cor(as.numeric(mobr$sample_rarefy$deltaS[mobr$sample_rarefy$Nplot == x]), 
-                                             as.numeric(mobr$sample_rarefy$env[mobr$sample_rarefy$Nplot == x]), method = corr))
-        # 3'. Null test for aggregation effect on delta S
-        null_spat_r_mat = matrix(NA, nperm, length(mobr$spat_r))
-        for (i in 1:nperm){
-          perm_spat = comm$spat[sample(seq(nrow(comm$spat))),]
-          sample_rarefy_perm = data.frame(env = numeric(), Nplot = numeric(), deltaS = numeric(), stringsAsFactors = F)
-          for (group in group_keep){
-            comm_perm = comm$comm[which(comm$envi[, env_var] %in% group), ]
-            xy_perm = perm_spat[which(comm$envi[, env_var] %in% group), ]
-            explicit_S_perm = rarefy_sample_explicit(comm_perm, xy_perm)
-            implicit_S_perm = as.numeric(as.character(mobr$sample_rarefy$Simpl[mobr$sample_rare$env %in% group]))
-            deltaS_perm = implicit_S_perm - explicit_S_perm
-            dat_group_perm = cbind(rep(group, nrow(comm_perm)), seq(nrow(comm_perm)), deltaS_perm)
-            sample_rarefy_perm = rbind(sample_rarefy_perm, dat_group_perm)
+        for (group in group_levels){
+          if (as.character(group) != as.character(ref_group)){
+            comm_2groups = comm$comm[which(as.character(env_data) %in% 
+                                       c(as.character(group), as.character(ref_group))), ]
+            if (density_stat == 'mean')
+              ref_dens = sum(comm_2groups) / nrow(comm_2groups)
+            else if (density_stat == 'max')
+              ref_dens = max(rowSums(comm_2groups))
+            else if (density_stat == 'min')
+              ref_dens = min(rowSums(comm_2groups))
+            else 
+              stop('The argument ref must be set to mean, min or max')
+            
+            effect_N_ref = effect_of_N(comm$comm[which(as.character(env_data) == as.character(ref_group)), ], ref_dens)
+            effect_N_group = effect_of_N(comm$comm[which(env_data == group), ], ref_dens)
+            ddeltaS_group = effect_N_group$deltaS[1:min(nrow(effect_N_ref), nrow(effect_N_group))] - 
+              effect_N_ref$deltaS[1:min(nrow(effect_N_ref), nrow(effect_N_group))]
+            
+            null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_group))
+            for (i in 1:nperm){
+              plot_abd_perm = sample(plot_abd[which(as.character(env_data) %in% c(as.character(group), as.character(ref_group)))])
+              sp_draws = sapply(1:nrow(comm_2groups), function(x)
+                sample(rep(1:ncol(comm_2groups), comm_2groups[x, ],
+                           size = plot_abd_perm[x], replace = T)))
+              comm_perm = t(sapply(1:nrow(comm_2groups), function(x)
+                table(c(1:ncol(comm_2groups), sp_draws[[x]])) - 1 ))
+              
+              ID_ref = as.character(which(as.character(env_data) == as.character(ref_group)))  
+              N_ref_perm = effect_of_N(comm_perm[which(row.names(comm_2groups) %in% ID_ref), ], ref_dens)
+              ID_group = as.character(which(as.character(env_data) == as.character(group)))
+              N_group_perm = effect_of_N(comm_perm[which(row.names(comm_2groups) %in% ID_group), ], ref_dens)
+              ddeltaS_perm = N_ref_perm$deltaS[1:min(nrow(N_ref_perm), nrow(N_group_perm))] - 
+                N_group_perm$deltaS[1:min(nrow(N_ref_perm), nrow(N_group_perm))]
+              null_N_deltaS_mat[i, ] = ddeltaS_perm[1:ncol(null_N_deltaS_mat)]  
+            }
+            N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+            N_group = data.frame(cbind(rep(as.character(group), length(ddeltaS_group)),effect_N_group$effort[1:length(ddeltaS_group)],  
+                                         ddeltaS_group, t(N_deltaS_null_CI)))
+            out$discrete$N = rbind(out$discrete$N, N_group, stringsAsFactors = F)
           }
-          names(sample_rarefy_perm) = c('env', 'Nplot', 'deltaS')
-          null_spat_r_mat[i, ] = sapply(1:min(plot_count$freq), 
-                                        function(x) cor(as.numeric(sample_rarefy_perm$deltaS[sample_rarefy_perm$Nplot == x]), 
-                                                        as.numeric(sample_rarefy_perm$env[sample_rarefy_perm$Nplot == x]), method = corr))
         }
-        mobr$spat_r_null = apply(null_spat_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
       }
     }
-  class(out) = 'mobr'
-  return(out)
+    # 3. Sample-based spatially-explicit rarecation (effect of aggregation) vs env_var vs N
+    if ('spat' %in% approved_tests){
+      if (!is.null(min_plot))
+        group_keep = group_plots[which(group_plots$Freq>=min_plot), 1]
+      else
+        group_keep = group_levels
+      
+      if (length(group_keep) == 1 & type == 'discrete')
+        warning('Error: pair-wise comparison cannot be conducted on one group.')
+      else if (length(group_keep) < 3 & type == 'continuous')
+        warning('Error: correlation analysis cannot be conducted with less than three groups.')
+      else if (!(as.character(ref_group) %in% as.character(group_keep)) & type == 'discrete')
+        warning('Error: reference group does not have enough plots and have been dropped.')
+      else {
+        sample_rare_keep = out$sample_rare[which(out$sample_rare$group %in% as.character(group_keep)), ]
+        sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$impl_S)) - 
+          as.numeric(as.character(sample_rare_keep$expl_S))
+        if (min(group_plots$Freq[group_plots[, 1] %in% group_keep]) < 5)
+          warning('Warning: some groups have less than 5 plots. The results of the null model are not very informative.')
+        
+        if (type == 'continuous'){
+          min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% as.character(group_keep))])
+          r_emp = sapply(seq(min_plot_group), function(x)
+            cor(sample_rare_keep$deltaS[which(sample_rare_keep$sample_plot == x)], 
+                as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
+          # Null test
+          null_agg_r_mat = matrix(NA, nperm, min_plot_group)
+          for (i in 1:nperm){
+            xy_perm = comm$spat[sample(nrow(comm$spat)), ]
+            deltaS_perm = c()
+            for (group in unique(sample_rare_keep$group)){
+              comm_group = comm$comm[as.character(env_data) == as.character(group), ]
+              xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
+              expl_S_perm = rarefy_sample_explicit(comm_group, xy_perm_group)
+              deltaS_perm = c(deltaS_perm, as.numeric(as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])) - expl_S_perm)
+            }
+            null_agg_r_mat[i, ] = sapply(seq(min_plot_group), function(x)
+              cor(deltaS_perm[which(sample_rare_keep$sample_plot == x)], 
+                  as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
+          }
+          agg_r_null_CI = apply(null_agg_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
+          out$continuous$agg = data.frame(cbind(seq(min_plot_group), r_emp, t(agg_r_null_CI)))
+          names(out$continuous$agg) = c('effort_sample', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+        }
+        
+        else {
+          ref_sample = sample_rare_keep[which(as.character(sample_rare_keep$group) == as.character(ref_group)), ]
+          out$discrete$agg = data.frame(group = character(), sample_plot = numeric(), ddeltaS_emp = numeric(), 
+                                        ddeltaS_null_low = numeric(), ddeltaS_median = numeric(), 
+                                        ddeltaS_high = numeric())
+          ref_comm = comm$comm[as.character(env_data) == as.character(ref_group), ]
+          impl_S_ref = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(ref_group))]
+          impl_S_ref = as.numeric(as.character(impl_S_ref))
+          for (group in unique(group_keep)){
+            if ((as.character(group) != as.character(ref_group))){
+              min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% 
+                                                            c(as.character(group), as.character(ref_group)))])
+              ddeltaS_group = sample_rare_keep$deltaS[sample_rare_keep$group == group][1:min_plot_group] - 
+                sample_rare_keep$deltaS[as.character(sample_rare_keep$group) == as.character(ref_group)][1:min_plot_group]
+              
+              comm_group = comm$comm[as.character(env_data) == as.character(group), ]
+              impl_S_group = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(group))]
+              impl_S_group = as.numeric(as.character(impl_S_group))
+              
+              null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
+              for (i in 1:nperm){
+                xy_perm = comm$spat[sample(nrow(comm$spat)), ]
+                xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
+                xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
+                expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
+                expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
+                null_agg_deltaS_mat[i, ] = impl_S_group[1:min_plot_group] - expl_S_perm_group[1:min_plot_group] - 
+                  (impl_S_ref[1:min_plot_group] - expl_S_perm_ref[1:min_plot_group])
+              }
+              agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
+              agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
+                                           ddeltaS_group, t(agg_deltaS_null_CI)))
+              out$discrete$agg = rbind(out$discrete$agg, agg_group, stringsAsFactors = F)
+            }
+          }
+          names(out$discrete$agg) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
+                                      'ddeltaS_null_median', 'ddeltaS_null_high')
+        }
+      }
+    }
+    class(out) = 'mobr'
+    return(out)
 }
