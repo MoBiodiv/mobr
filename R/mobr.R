@@ -1,13 +1,30 @@
-## A rough sketch of what we need in the module Self reminder: need two pieces of
-## inputs: 1. a data frame of plot characteristics, with columns: plot,
-## group, x, y 2. a data frame where rownames are plot ids, and
-## subsequent columns are species abundances
-
-## Functions
 require(pracma)
 
 
-## define mobr object
+#' Create a community ('comm') object.
+#' 
+#' The 'comm' object will be passed on for analyses of biodiversity across scales.
+#' 
+#'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
+#'  or presence/absence (1/0).
+#'  @param plot_attr matrix which includes the environmental attributes and spatial 
+#'  coordinates of the plots. Environmnetal attributes are mandatory, while spatial
+#'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
+#'  names "x" and/or "y". 
+#'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
+#'  @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
+#'  "env" is the environmental attribute matrix, without the spatial coordinates. "spat" 
+#'  contains the spatial coordinates (1-D or 2-D). "tests" specifies whether each of the 
+#'  three tests in the biodiversity analyses is allowed by data.
+#'  @export
+#'  @examples
+#'  {
+#'  library(vegan)
+#'  data(mite)
+#'  data(mite.env)
+#'  data(mite.xy)
+#'  mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
+#'  }
 make_comm_obj = function(comm, plot_attr, binary=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
     out = list()
