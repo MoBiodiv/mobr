@@ -1,13 +1,30 @@
-## A rough sketch of what we need in the module Self reminder: need two pieces of
-## inputs: 1. a data frame of plot characteristics, with columns: plot,
-## group, x, y 2. a data frame where rownames are plot ids, and
-## subsequent columns are species abundances
-
-## Functions
 require(pracma)
 
 
-## define mobr object
+#' Create a community ('comm') object.
+#' 
+#' The 'comm' object will be passed on for analyses of biodiversity across scales.
+#' 
+#'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
+#'  or presence/absence (1/0).
+#'  @param plot_attr matrix which includes the environmental attributes and spatial 
+#'  coordinates of the plots. Environmnetal attributes are mandatory, while spatial
+#'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
+#'  names "x" and/or "y". 
+#'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
+#'  @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
+#'  "env" is the environmental attribute matrix, without the spatial coordinates. "spat" 
+#'  contains the spatial coordinates (1-D or 2-D). "tests" specifies whether each of the 
+#'  three tests in the biodiversity analyses is allowed by data.
+#'  @export
+#'  @examples
+#'  {
+#'  library(vegan)
+#'  data(mite)
+#'  data(mite.env)
+#'  data(mite.xy)
+#'  mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
+#'  }
 make_comm_obj = function(comm, plot_attr, binary=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
     out = list()
@@ -34,15 +51,15 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
         warning("Some species have zero occurrences and will be dropped from the community table")
         comm = comm[colSums(comm) != 0, ]
     }
-    out$comm = comm
+    out$comm = data.frame(comm)
     spat_cols = which(names(plot_attr) %in% c('x', 'y'))
     if (length(spat_cols) > 0) {
-        out$env = plot_attr[ , -spat_cols]
-        out$spat = plot_attr[ , spat_cols]
+        out$env = data.frame(plot_attr[ , -spat_cols])
+        out$spat = data.frame(plot_attr[ , spat_cols])
     }
     else {
         out$sampling$spat = FALSE
-        out$env = plot_attr
+        out$env = data.frame(plot_attr)
         out$spat = NULL
     }
     class(out) = 'comm'
@@ -58,56 +75,53 @@ print.mobr = function(...) {
    # print rarefaction and delta rarefaction summaries
 }
 
-plot.mobr = function(mobr, type, group = NULL) {
+plot.mobr = function(mobr, group = NULL) {
   # plot rarefation and delta rarefaction curves
   # Input: 
   # mobr object
   # type: 'discrete' or 'continuous'
   # group: which group to plot. Only required for type = 'discrete' and there are more than one 
   #   pair-wise comparison
-  if (is.null(mobr[[type]]))
-    stop(paste("Error: 'mobr' object does not have attribute '", type, "'.", sep = ''))
-  else {
-    tests = c('indiv', 'N', 'agg')
-    names = c('Effect of SAD', 'Effect of N', 'Effect of Aggregation')
-    par(mfrow = c(1, 3))
-    xlabs = c('number of individuals', 'number of individuals', 'number of plots')
-    if (type == 'discrete'){
-      ylabs = rep('delta-S', 3)
-      if (is.null(group) & length(unique(mobr[[type]][[tests[1]]][, 1])) > 1)
-        stop("Error: 'group' has to be specified.")
-      for (i in 1:3){
-        if (is.null(group))
-          mobr_group_test = mobr[[type]][[tests[i]]]
-        else {
-          mobr_group_test = mobr[[type]][[tests[i]]]
-          mobr_group_test = mobr_group_test[which(as.character(mobr_group_test$group) == as.character(group)), ]
-        }
-        for (icol in 2:ncol(mobr_group_test))
-          mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
-        plot(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red', 
-             xlab = xlabs[i], ylab = ylabs[i], xlim = c(0, max(mobr_group_test[, 2])), main = names[i],
-             ylim = c(min(mobr_group_test[, 3:ncol(mobr_group_test)]), max(mobr_group_test[, 3:ncol(mobr_group_test)])))
-        polygon(c(mobr_group_test[, 2], rev(mobr_group_test[, 2])), 
-                c(mobr_group_test[, 4], rev(mobr_group_test[, 6])), col = '#C1CDCD', border = NA)
-        lines(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red')
-        lines(mobr_group_test[, 2], mobr_group_test[, 5], lwd = 2, type = 'l')
-      }
-    }
-    else{
-      ylabs = rep('r', 3)
-      for (i in 1:3){
+  type = mobr$type
+  tests = c('indiv', 'N', 'agg')
+  names = c('Effect of SAD', 'Effect of N', 'Effect of Aggregation')
+  par(mfrow = c(1, 3))
+  xlabs = c('number of individuals', 'number of individuals', 'number of plots')
+  if (type == 'discrete'){
+    ylabs = rep('delta-S', 3)
+    if (is.null(group) & length(unique(mobr[[type]][[tests[1]]][, 1])) > 1)
+      stop("Error: 'group' has to be specified.")
+    for (i in 1:3){
+      if (is.null(group))
         mobr_group_test = mobr[[type]][[tests[i]]]
-        for (icol in 1:ncol(mobr_group_test))
-          mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
-        plot(mobr_group_test[, 1], mobr_group_test[, 2], lwd = 2, type = 'l', col = 'red', 
-             xlab = xlabs[i], ylab = ylabs[i], xlim = c(0, max(mobr_group_test[, 1])), main = names[i],
-             ylim = c(-1, 1))
-        polygon(c(mobr_group_test[, 1], rev(mobr_group_test[, 1])), 
-                c(mobr_group_test[, 3], rev(mobr_group_test[, 5])), col = '#C1CDCD', border = NA)
-        lines(mobr_group_test[, 1], mobr_group_test[, 2], lwd = 2, type = 'l', col = 'red')
-        lines(mobr_group_test[, 1], mobr_group_test[, 4], lwd = 2, type = 'l')
+      else {
+        mobr_group_test = mobr[[type]][[tests[i]]]
+        mobr_group_test = mobr_group_test[which(as.character(mobr_group_test$group) == as.character(group)), ]
       }
+      for (icol in 2:ncol(mobr_group_test))
+        mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
+      plot(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red', 
+            xlab = xlabs[i], ylab = ylabs[i], xlim = c(0, max(mobr_group_test[, 2])), main = names[i],
+            ylim = c(min(mobr_group_test[, 3:ncol(mobr_group_test)]), max(mobr_group_test[, 3:ncol(mobr_group_test)])))
+      polygon(c(mobr_group_test[, 2], rev(mobr_group_test[, 2])), 
+              c(mobr_group_test[, 4], rev(mobr_group_test[, 6])), col = '#C1CDCD', border = NA)
+      lines(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red')
+      lines(mobr_group_test[, 2], mobr_group_test[, 5], lwd = 2, type = 'l')
+    }
+  }
+  else{
+    ylabs = rep('r', 3)
+    for (i in 1:3){
+      mobr_group_test = mobr[[type]][[tests[i]]]
+      for (icol in 1:ncol(mobr_group_test))
+        mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
+      plot(mobr_group_test[, 1], mobr_group_test[, 2], lwd = 2, type = 'l', col = 'red', 
+            xlab = xlabs[i], ylab = ylabs[i], xlim = c(0, max(mobr_group_test[, 1])), main = names[i],
+            ylim = c(-1, 1))
+      polygon(c(mobr_group_test[, 1], rev(mobr_group_test[, 1])), 
+              c(mobr_group_test[, 3], rev(mobr_group_test[, 5])), col = '#C1CDCD', border = NA)
+      lines(mobr_group_test[, 1], mobr_group_test[, 2], lwd = 2, type = 'l', col = 'red')
+      lines(mobr_group_test[, 1], mobr_group_test[, 4], lwd = 2, type = 'l')
     }
   }
 }
@@ -201,6 +215,31 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
   explicit_S = apply(explicit_loop, 1, mean)
   return(explicit_S)
 }
+
+#' Conduct the MOBR tests on biodiversity across scales.
+#' 
+#' 
+#' 
+#'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
+#'  or presence/absence (1/0).
+#'  @param plot_attr matrix which includes the environmental attributes and spatial 
+#'  coordinates of the plots. Environmnetal attributes are mandatory, while spatial
+#'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
+#'  names "x" and/or "y". 
+#'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
+#'  @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
+#'  "env" is the environmental attribute matrix, without the spatial coordinates. "spat" 
+#'  contains the spatial coordinates (1-D or 2-D). "tests" specifies whether each of the 
+#'  three tests in the biodiversity analyses is allowed by data.
+#'  @export
+#'  @examples
+#'  {
+#'  library(vegan)
+#'  data(mite)
+#'  data(mite.env)
+#'  data(mite.xy)
+#'  mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
+#'  }
 
 get_delta_stats = function(comm, env_var, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
