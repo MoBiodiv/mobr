@@ -51,15 +51,15 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
         warning("Some species have zero occurrences and will be dropped from the community table")
         comm = comm[colSums(comm) != 0, ]
     }
-    out$comm = comm
+    out$comm = data.frame(comm)
     spat_cols = which(names(plot_attr) %in% c('x', 'y'))
     if (length(spat_cols) > 0) {
-        out$env = plot_attr[ , -spat_cols]
-        out$spat = plot_attr[ , spat_cols]
+        out$env = data.frame(plot_attr[ , -spat_cols])
+        out$spat = data.frame(plot_attr[ , spat_cols])
     }
     else {
         out$sampling$spat = FALSE
-        out$env = plot_attr
+        out$env = data.frame(plot_attr)
         out$spat = NULL
     }
     class(out) = 'comm'
@@ -218,6 +218,31 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
   explicit_S = apply(explicit_loop, 1, mean)
   return(explicit_S)
 }
+
+#' Conduct .
+#' 
+#' The 'comm' object will be passed on for analyses of biodiversity across scales.
+#' 
+#'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
+#'  or presence/absence (1/0).
+#'  @param plot_attr matrix which includes the environmental attributes and spatial 
+#'  coordinates of the plots. Environmnetal attributes are mandatory, while spatial
+#'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
+#'  names "x" and/or "y". 
+#'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
+#'  @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
+#'  "env" is the environmental attribute matrix, without the spatial coordinates. "spat" 
+#'  contains the spatial coordinates (1-D or 2-D). "tests" specifies whether each of the 
+#'  three tests in the biodiversity analyses is allowed by data.
+#'  @export
+#'  @examples
+#'  {
+#'  library(vegan)
+#'  data(mite)
+#'  data(mite.env)
+#'  data(mite.xy)
+#'  mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
+#'  }
 
 get_delta_stats = function(comm, env_var, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
