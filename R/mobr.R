@@ -49,7 +49,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
     }
     if (any(colSums(comm) == 0)) {
         warning("Some species have zero occurrences and will be dropped from the community table")
-        comm = comm[colSums(comm) != 0, ]
+        comm = comm[, colSums(comm) != 0]
     }
     out$comm = data.frame(comm)
     spat_cols = which(names(plot_attr) %in% c('x', 'y'))
@@ -216,16 +216,13 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
   return(explicit_S)
 }
 
-#' Conduct the MOBR tests on biodiversity across scales.
+#' Conduct the MOBR tests on drivers of biodiversity across scales.
 #' 
+#' There are three tests, on effects of 1. the shape of the SAD, 2. treatment/group-level density,
+#' 3. degree of aggregation. The user can specificy to conduct one or more of these tests.
 #' 
-#' 
-#'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
-#'  or presence/absence (1/0).
-#'  @param plot_attr matrix which includes the environmental attributes and spatial 
-#'  coordinates of the plots. Environmnetal attributes are mandatory, while spatial
-#'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
-#'  names "x" and/or "y". 
+#'  @param comm "comm" object created by make_comm_obj()
+#'  @param env_var a character string specifying the environmental variable in comm$ 
 #'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
 #'  @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
 #'  "env" is the environmental attribute matrix, without the spatial coordinates. "spat" 
