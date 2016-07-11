@@ -1,4 +1,4 @@
-# Measurment of Biodiversity in R (mobr)
+# Measurement of Biodiversity in R (mobr)
 
 This reposititory hosts an R package that is being developed for 
 estimating biodiversity and the components of its change.
