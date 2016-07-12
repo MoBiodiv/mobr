@@ -8,7 +8,7 @@ require(pracma)
 #'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
 #'  or presence/absence (1/0).
 #'  @param plot_attr matrix which includes the environmental attributes and spatial 
-#'  coordinates of the plots. Environmnetal attributes are mandatory, while spatial
+#'  coordinates of the plots. Environmental attributes are mandatory, while spatial
 #'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
 #'  names "x" and/or "y". 
 #'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
@@ -132,6 +132,47 @@ summary.mobr = function(...) {
    #  print summary anova style table
 }
 
+plot_rarefy = function(mobr){
+  # Plot the three curves for an mobr project, 
+  # separated by groups
+  # Output is a 1*3 figure with the three curves (of each group) separated into subplots
+  
+  cols = rainbow(ncol(mobr$indiv_rare) - 1)
+  par(mfrow = c(1, 3), oma=c(0,0,2,0))
+  for (icol in 2:ncol(mobr$indiv_rare)){
+    if (icol == 2)
+      plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
+           col = cols[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
+           main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
+           ylim = c(min(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)]), max(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)])))
+    else
+      lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = cols[icol - 1])
+  }
+  
+  groups = unique(mobr$sample_rare$group)
+  for (i in 1:length(groups)){
+    group = groups[i]
+    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
+    if (i == 1)
+      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, type = 'l',
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           main = 'Sample-based Rarefaction')
+    else
+      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = cols[i])
+  }
+  
+  for (i in 1:length(groups)){
+    group = groups[i]
+    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
+    if (i == 1)
+      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           main = 'Accumulation Curve')
+    else
+      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = cols[i])
+  }
+}
+
 rarefaction = function(x, method, effort=NULL) {
     # analytical formulations from Cayuela et al. 2015. Ecological and biogeographic null hypotheses for
     # comparing rarefaction curves. Ecological Monographs 85:437–454.
@@ -224,12 +265,38 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 #' 3. degree of aggregation. The user can specificy to conduct one or more of these tests.
 #' 
 #'  @param comm "comm" object created by make_comm_obj()
-#'  @param env_var a character string specifying the environmental variable in comm$ 
-#'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
-#'  @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
-#'  "env" is the environmental attribute matrix, without the spatial coordinates. "spat" 
-#'  contains the spatial coordinates (1-D or 2-D). "tests" specifies whether each of the 
-#'  three tests in the biodiversity analyses is allowed by data.
+#'  @param env_var a character string specifying the environmental variable in comm$env used
+#'  to separate plots into distinct groups. This is the explanatory variable.
+#'  @param ref_group one value of env_var, used to define the reference group to which all other groups are compared with
+#'  when "type" is discrete. It is not needed when "test" is continuous.
+#'  @param tests specifies which one or more of the three tests ('indiv', 'sampl', 'spat') are to be performed. 
+#'  Default is to include all three tests.
+#'  @param type "discrete" or "continuous". If "discrete", pair-wise comparisons are conducted between all other groups and
+#'  the reference group. If "continuous", a correlation analysis is conducted between the response variables and env_var.
+#'  @param inds effort size at which the individual-based rarefaction curves are to be evaluated, and to which the sample-based
+#'  rarefaction curves are to be interpolated. It can take three types of values, a single integer, a vector of 
+#'  intergers, and NULL. If inds = NULL (default), the curves are evaluated at every possible effort size, from 1 to 
+#'  the total number of individuals within the group (slow). If inds is a single integer, it is taken as the number 
+#'  of points at which the curves are evaluated; the positions of the points are determined by the "log_scale" argument.
+#'  If inds is a vector of integers, it is taken as the exact points at which the curves are evaluated.
+#'  @param log_scale if "inds" is given a single integer, "log_scale" determines the position of the points. If log_scale is TRUE,
+#'  the points are equally spaced on logarithmic scale. If it is FALSE (default), the points are equally spaced on arithmetic scale.
+#'  @param min_plot minimal number of plots for test 'spat', where plots are randomized within groups as null test. If it is given
+#'  a value, all groups with fewer plots than min_plot are removed for this test. If it is NULL (default), all groups are kept. Warnings
+#'  are issued if 1. there is only one group left and "type" is discrete, or 2. there are less than three groups left and "type" is continuous,
+#'  or 3. reference group ("ref_group") is removed and "type" is discrete. In these three scenarios, the function will terminate.
+#'  A different warning is issued if any of the remaining groups have less than five plots (which have less than 120 permutations), but the 
+#'  test will be carried out.
+#'  @param density_stat reference density used in converting number of plots to numbers of individuals, a step in test "sampl". It can take
+#'  one of the three values: "mean", "max", or "min". If it is "mean", the average plot-level abundance across plots (all plots when "type"
+#'  is "continuous, all plots within the two groups for each pair-wise comparison when "type" is "discrete") are used. If it is "min" or "max",
+#'  the minimum/maximul plot-level density is used.
+#'  @param corr which kind of correlation to use when "type" is "continuous". It can take two values,
+#'  "spearman" or "pearson". "spearman" (default) is generally recommended because the relationship between 
+#'  the response and "env_var" may not be linear.
+#'  @param nperm number of iterations to run for null tests.
+#'
+#'  @return a "mobr" object with attributes...
 #'  @export
 #'  @examples
 #'  {
@@ -238,11 +305,12 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 #'  data(mite.env)
 #'  data(mite.xy)
 #'  mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
+#'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub', ref_group = 'None', inds = 20)
 #'  }
 
 get_delta_stats = function(comm, env_var, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
-                           type='discrete', log_scale=FALSE, inds=NULL, min_plot = NULL, 
+                           type='discrete', inds=NULL, log_scale=FALSE, min_plot = NULL, 
                            density_stat ='mean', corr='spearman', 
                            nperm=1000) {
   # Inputs:
