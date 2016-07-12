@@ -8,7 +8,7 @@ require(pracma)
 #'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
 #'  or presence/absence (1/0).
 #'  @param plot_attr matrix which includes the environmental attributes and spatial 
-#'  coordinates of the plots. Environmnetal attributes are mandatory, while spatial
+#'  coordinates of the plots. Environmnzetal attributes are mandatory, while spatial
 #'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
 #'  names "x" and/or "y". 
 #'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
@@ -130,6 +130,47 @@ plot.mobr = function(mobr, group = NULL) {
 
 summary.mobr = function(...) {
    #  print summary anova style table
+}
+
+plot_rarefy = function(mobr){
+  # Plot the three curves for an mobr project, 
+  # separated by groups
+  # Output is a 1*3 figure with the three curves (of each group) separated into subplots
+  
+  cols = rainbow(ncol(mobr$indiv_rare) - 1)
+  par(mfrow = c(1, 3), oma=c(0,0,2,0))
+  for (icol in 2:ncol(mobr$indiv_rare)){
+    if (icol == 2)
+      plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
+           col = cols[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
+           main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
+           ylim = c(min(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)]), max(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)])))
+    else
+      lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = cols[icol - 1])
+  }
+  
+  groups = unique(mobr$sample_rare$group)
+  for (i in 1:length(groups)){
+    group = groups[i]
+    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
+    if (i == 1)
+      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, type = 'l',
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           main = 'Sample-based Rarefaction')
+    else
+      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = cols[i])
+  }
+  
+  for (i in 1:length(groups)){
+    group = groups[i]
+    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
+    if (i == 1)
+      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           main = 'Accumulation Curve')
+    else
+      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = cols[i])
+  }
 }
 
 rarefaction = function(x, method, effort=NULL) {
