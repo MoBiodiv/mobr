@@ -58,7 +58,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
         out$spat = data.frame(plot_attr[ , spat_cols])
     }
     else {
-        out$sampling$spat = FALSE
+        out$tests$spat = FALSE
         out$env = data.frame(plot_attr)
         out$spat = NULL
     }
