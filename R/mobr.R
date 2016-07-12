@@ -58,7 +58,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
         out$spat = data.frame(plot_attr[ , spat_cols])
     }
     else {
-        out$sampling$spat = FALSE
+        out$tests$spat = FALSE
         out$env = data.frame(plot_attr)
         out$spat = NULL
     }
@@ -98,11 +98,12 @@ plot.mobr = function(mobr, group = NULL) {
         mobr_group_test = mobr[[type]][[tests[i]]]
         mobr_group_test = mobr_group_test[which(as.character(mobr_group_test$group) == as.character(group)), ]
       }
+      mobr_group_test = mobr_group_test[complete.cases(mobr_group_test), ]
       for (icol in 2:ncol(mobr_group_test))
         mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
       plot(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red', 
             xlab = xlabs[i], ylab = ylabs[i], xlim = c(0, max(mobr_group_test[, 2])), main = names[i],
-            ylim = c(min(mobr_group_test[, 3:ncol(mobr_group_test)]), max(mobr_group_test[, 3:ncol(mobr_group_test)])))
+            ylim = c(min(mobr_group_test[, 3:ncol(mobr_group_test)], na.rm = T), max(mobr_group_test[, 3:ncol(mobr_group_test)], na.rm = T)))
       polygon(c(mobr_group_test[, 2], rev(mobr_group_test[, 2])), 
               c(mobr_group_test[, 4], rev(mobr_group_test[, 6])), col = '#C1CDCD', border = NA)
       lines(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red')
@@ -113,6 +114,7 @@ plot.mobr = function(mobr, group = NULL) {
     ylabs = rep('r', 3)
     for (i in 1:3){
       mobr_group_test = mobr[[type]][[tests[i]]]
+      mobr_group_test = mobr_group_test[complete.cases(mobr_group_test), ]
       for (icol in 1:ncol(mobr_group_test))
         mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
       plot(mobr_group_test[, 1], mobr_group_test[, 2], lwd = 2, type = 'l', col = 'red', 
@@ -172,18 +174,18 @@ rarefaction = function(x, method, effort=NULL) {
 }
 
 # Auxillary function: difference between the ind-based rarefaction and the sample-based rarefaction for one group
-#   with the evaluation sample size (number of individuals) defined by ref_dens
-# Output: a two-column data frame, with sample size
+#   with the evaluation sample size (number of individuals) defined by ref_dens,
+#   evaluated at specified points (given by "effort")
+# Output: a two-column data frame, with sample size (effort)
 #   and deltaS (effect of N)
-effect_of_N = function(comm_group, ref_dens){
+effect_of_N = function(comm_group, ref_dens, effort){
   group_sad = colSums(comm_group)
   S_samp_rare = as.numeric(rarefaction(comm_group, 'samp'))
-  plot_to_ind = round(ref_dens * (1:nrow(comm_group)))
-  plot_to_ind = plot_to_ind[which(plot_to_ind <= sum(comm_group))]
-  interp_S_samp_rare = pchip(c(1, ref_dens * (1:nrow(comm_group))), c(1, S_samp_rare), plot_to_ind)
-  S_indiv_rare = rarefaction(group_sad, 'indiv', effort = plot_to_ind)
+  effort = effort[which(effort <= min(sum(comm_group), ref_dens * nrow(comm_group)))]
+  interp_S_samp_rare = pchip(c(1, ref_dens * (1:nrow(comm_group))), c(1, S_samp_rare), effort)
+  S_indiv_rare = rarefaction(group_sad, 'indiv', effort = effort)
   deltaS = as.numeric(S_indiv_rare) - interp_S_samp_rare
-  out = data.frame(cbind(plot_to_ind, deltaS))
+  out = data.frame(cbind(effort, deltaS))
   names(out) = c('effort', 'deltaS')
   return(out)
 }
@@ -324,18 +326,22 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     else 
        stop('The argument ref must be set to mean, min or max')
     
+    if (is.null(inds))
+      ind_sample_size = seq(group_minN)
+    else if (length(inds) > 1)
+      ind_sample_size = inds
+    else {
+      if (log_scale == T)
+        ind_sample_size = floor(exp(seq(inds) * log(group_minN) / inds))
+      else
+        ind_sample_size = floor(seq(inds) * group_minN / inds)
+    }
+    ind_sample_size = unique(ind_sample_size)
+    if (!(1 %in% ind_sample_size)) # Force (1, 1) to be included
+      ind_sample_size = c(1, ind_sample_size)
+    
     # 1. Individual-based rarefaction (effect of SAD) vs env_var vs N
     if ('indiv' %in% approved_tests) {
-      if (is.null(inds))
-        ind_sample_size = seq(group_minN)
-      else if (length(inds) > 1)
-        ind_sample_size = inds
-      else {
-        if (log_scale == T)
-          ind_sample_size = floor(exp(seq(inds) * log(group_minN) / inds))
-        else
-          ind_sample_size = floor(seq(inds) * group_minN / inds)
-      }
       ind_rare = data.frame(apply(group_sad, 1, function(x) 
         rarefaction(x, 'indiv', ind_sample_size)))
       row.names(ind_rare) = NULL
@@ -433,7 +439,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         for (i in 1:length(group_levels)){
           group = group_levels[i]
           comm_group = comm$comm[which(env_data == group), ]
-          group_effect_N = effect_of_N(comm_group, ref_dens)
+          group_effect_N = effect_of_N(comm_group, ref_dens, ind_sample_size)
           if (i == 1)
             effect_N_by_group[, i] = group_effect_N$effort[1:nrow(effect_N_by_group)]
           effect_N_by_group[, i + 1] = group_effect_N$deltaS[1:nrow(effect_N_by_group)]
@@ -455,7 +461,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
           for (j in 1:length(group_levels)){
             group = group_levels[j]
             comm_group = comm_perm[which(env_data == group), ]
-            group_N_perm = effect_of_N(comm_group, ref_dens)
+            group_N_perm = effect_of_N(comm_group, ref_dens, ind_sample_size)
             if (j == 1)
               effect_N_perm[, j] = group_N_perm$effort[1:nrow(effect_N_perm)]
             effect_N_perm[, j + 1] = group_N_perm$deltaS[1:nrow(effect_N_perm)]
@@ -484,8 +490,8 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
             else 
               stop('The argument ref must be set to mean, min or max')
             
-            effect_N_ref = effect_of_N(comm$comm[which(as.character(env_data) == as.character(ref_group)), ], ref_dens)
-            effect_N_group = effect_of_N(comm$comm[which(env_data == group), ], ref_dens)
+            effect_N_ref = effect_of_N(comm$comm[which(as.character(env_data) == as.character(ref_group)), ], ref_dens, ind_sample_size)
+            effect_N_group = effect_of_N(comm$comm[which(env_data == group), ], ref_dens, ind_sample_size)
             ddeltaS_group = effect_N_group$deltaS[1:min(nrow(effect_N_ref), nrow(effect_N_group))] - 
               effect_N_ref$deltaS[1:min(nrow(effect_N_ref), nrow(effect_N_group))]
             
@@ -499,9 +505,9 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
                 table(c(1:ncol(comm_2groups), sp_draws[[x]])) - 1 ))
               
               ID_ref = as.character(which(as.character(env_data) == as.character(ref_group)))  
-              N_ref_perm = effect_of_N(comm_perm[which(row.names(comm_2groups) %in% ID_ref), ], ref_dens)
+              N_ref_perm = effect_of_N(comm_perm[which(row.names(comm_2groups) %in% ID_ref), ], ref_dens, ind_sample_size)
               ID_group = as.character(which(as.character(env_data) == as.character(group)))
-              N_group_perm = effect_of_N(comm_perm[which(row.names(comm_2groups) %in% ID_group), ], ref_dens)
+              N_group_perm = effect_of_N(comm_perm[which(row.names(comm_2groups) %in% ID_group), ], ref_dens, ind_sample_size)
               ddeltaS_perm = N_ref_perm$deltaS[1:min(nrow(N_ref_perm), nrow(N_group_perm))] - 
                 N_group_perm$deltaS[1:min(nrow(N_ref_perm), nrow(N_group_perm))]
               null_N_deltaS_mat[i, ] = ddeltaS_perm[1:ncol(null_N_deltaS_mat)]  
