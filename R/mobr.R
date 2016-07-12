@@ -8,7 +8,7 @@ require(pracma)
 #'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
 #'  or presence/absence (1/0).
 #'  @param plot_attr matrix which includes the environmental attributes and spatial 
-#'  coordinates of the plots. Environmnzetal attributes are mandatory, while spatial
+#'  coordinates of the plots. Environmental attributes are mandatory, while spatial
 #'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
 #'  names "x" and/or "y". 
 #'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
