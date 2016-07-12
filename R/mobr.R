@@ -265,12 +265,38 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 #' 3. degree of aggregation. The user can specificy to conduct one or more of these tests.
 #' 
 #'  @param comm "comm" object created by make_comm_obj()
-#'  @param env_var a character string specifying the environmental variable in comm$ 
-#'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
-#'  @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
-#'  "env" is the environmental attribute matrix, without the spatial coordinates. "spat" 
-#'  contains the spatial coordinates (1-D or 2-D). "tests" specifies whether each of the 
-#'  three tests in the biodiversity analyses is allowed by data.
+#'  @param env_var a character string specifying the environmental variable in comm$env used
+#'  to separate plots into distinct groups. This is the explanatory variable.
+#'  @param ref_group one value of env_var, used to define the reference group to which all other groups are compared with
+#'  when "type" is discrete. It is not needed when "test" is continuous.
+#'  @param tests specifies which one or more of the three tests ('indiv', 'sampl', 'spat') are to be performed. 
+#'  Default is to include all three tests.
+#'  @param type "discrete" or "continuous". If "discrete", pair-wise comparisons are conducted between all other groups and
+#'  the reference group. If "continuous", a correlation analysis is conducted between the response variables and env_var.
+#'  @param inds effort size at which the individual-based rarefaction curves are to be evaluated, and to which the sample-based
+#'  rarefaction curves are to be interpolated. It can take three types of values, a single integer, a vector of 
+#'  intergers, and NULL. If inds = NULL (default), the curves are evaluated at every possible effort size, from 1 to 
+#'  the total number of individuals within the group (slow). If inds is a single integer, it is taken as the number 
+#'  of points at which the curves are evaluated; the positions of the points are determined by the "log_scale" argument.
+#'  If inds is a vector of integers, it is taken as the exact points at which the curves are evaluated.
+#'  @param log_scale if "inds" is given a single integer, "log_scale" determines the position of the points. If log_scale is TRUE,
+#'  the points are equally spaced on logarithmic scale. If it is FALSE (default), the points are equally spaced on arithmetic scale.
+#'  @param min_plot minimal number of plots for test 'spat', where plots are randomized within groups as null test. If it is given
+#'  a value, all groups with fewer plots than min_plot are removed for this test. If it is NULL (default), all groups are kept. Warnings
+#'  are issued if 1. there is only one group left and "type" is discrete, or 2. there are less than three groups left and "type" is continuous,
+#'  or 3. reference group ("ref_group") is removed and "type" is discrete. In these three scenarios, the function will terminate.
+#'  A different warning is issued if any of the remaining groups have less than five plots (which have less than 120 permutations), but the 
+#'  test will be carried out.
+#'  @param density_stat reference density used in converting number of plots to numbers of individuals, a step in test "sampl". It can take
+#'  one of the three values: "mean", "max", or "min". If it is "mean", the average plot-level abundance across plots (all plots when "type"
+#'  is "continuous, all plots within the two groups for each pair-wise comparison when "type" is "discrete") are used. If it is "min" or "max",
+#'  the minimum/maximul plot-level density is used.
+#'  @param corr which kind of correlation to use when "type" is "continuous". It can take two values,
+#'  "spearman" or "pearson". "spearman" (default) is generally recommended because the relationship between 
+#'  the response and "env_var" may not be linear.
+#'  @param nperm number of iterations to run for null tests.
+#'
+#'  @return a "mobr" object with attributes...
 #'  @export
 #'  @examples
 #'  {
@@ -279,11 +305,12 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 #'  data(mite.env)
 #'  data(mite.xy)
 #'  mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
+#'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub', ref_group = 'None', inds = 20)
 #'  }
 
 get_delta_stats = function(comm, env_var, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
-                           type='discrete', log_scale=FALSE, inds=NULL, min_plot = NULL, 
+                           type='discrete', inds=NULL, log_scale=FALSE, min_plot = NULL, 
                            density_stat ='mean', corr='spearman', 
                            nperm=1000) {
   # Inputs:
