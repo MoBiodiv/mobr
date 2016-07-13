@@ -715,3 +715,133 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
     class(out) = 'mobr'
     return(out)
 }
+
+table_effect_on_S = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
+  # Returns a data frame with the effects of SAD, N, and aggregation on diversity
+  # across scales
+  # not b/c of spatial ties the values will change every time 
+  # this is calculated therefore best pratice may be
+  # tst = replicate(20, table_effect_on_S(dat_sp, dat_plot, groups, ScaleBy), simplify=FALSE)
+  # plyr::aaply(plyr::laply(tst, as.matrix), c(2, 3), mean)
+  nplots = table(dat_plot$group)
+  explicit_sample = sapply(groups, function(x) 
+    rarefy_sample_explicit(dat_sp, dat_plot, x, 1:min(nplots)))
+  overall = as.numeric(na.omit(explicit_sample[ , 2] - explicit_sample[ , 1]))
+  deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
+  deltaSN = get_deltaSN(dat_sp, dat_plot, groups, ScaleBy) # why is this call diff
+  deltaSagg = get_deltaSagg(dat_sp, dat_plot, groups)
+  # Rarefy to desired abundances
+  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
+  max_level = floor(log10(avg_dens * min(nplots)))
+  out = as.data.frame(matrix(NA, 4, max_level))
+  row.names(out) = c("overall", "SAD", "N", "aggregation")
+  names(out) = as.character(10^(1:max_level))
+  for (row in c(2, 3)) {
+    deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
+    out[row, ] = sapply(10^(1:max_level), function(x) 
+      ifelse(length(deltaS) >= x, deltaS[x], NA))
+  }
+  for (row in c(1, 4)) {
+    deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
+    out_row = pchip(xi=(0:length(deltaS)) * avg_dens, yi=c(0, deltaS), 
+                    x=10^(1:min(max_level, floor(log10(length(deltaS) * avg_dens)))))
+    out[row, 1:length(out_row)] = out_row
+  }
+  out = cbind(out, c(overall[length(overall)], deltaSsad[length(deltaSsad)], 
+                     deltaSN[length(deltaSN)], deltaSagg[length(deltaSagg)]))
+  names(out)[max_level + 1] = length(deltaSsad)
+  return(out)
+}
+
+pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
+  dat_plot_grps = dat_plot[dat_plot$group %in% groups, ]
+  dat_sp = dat_sp[match(dat_plot_grps$plot, row.names(dat_sp)), ]
+  S_list = rowSums(dat_sp > 0)
+  N_list = rowSums(dat_sp)
+  PIE_list = sapply(1:nrow(dat_sp), function(x) 
+    N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, ]/N_list[x])^2)))
+  if (is.na(lower_N)) {
+    rarefied_S_list = apply(dat_sp, 1, function(x) 
+      rarefaction(x, 'indiv', effort = 1:min(N_list)))
+  } else {
+    # Remove plots with abundance below lower_N in the analysis of rarefied S
+    rarefied_S_list = apply(dat_sp, 1, function(x) 
+      if (sum(x) < lower_N)
+        rep(NA, lower_N)
+      else 
+        rarefaction(x, 'indiv', effort = 1:lower_N))
+    if (any(is.na(rarefied_S_list))) 
+      print("Warning: some plots are removed in rarefaction.")
+  }
+  out = as.data.frame(matrix(NA, 5, 4))
+  stats_list = list(rarefied_S_list, N_list, PIE_list, S_list)
+  for (i in 1:length(stats_list)) {
+    stat = unlist(stats_list[i])
+    stat_1 = stat[dat_plot$group == groups[1]]
+    stat_2 = stat[dat_plot$group == groups[2]]
+    stat_1 = stat_1[!is.na(stat_1)]
+    stat_2 = stat_2[!is.na(stat_2)]
+    out[ , i] = c(mean(stat_1), sd(stat_1), 
+                  mean(stat_2), sd(stat_2), 
+                  t.test(stat_1, stat_2)$p.val)
+  }
+  names(out) = c("S_rarefied", "N", "PIE", "S_raw")
+  row.names(out) = c(paste(groups[1], "(mean)", sep = ""), 
+                     paste(groups[1], "(sd)", sep = ""), 
+                     paste(groups[2], "(mean)", sep = ""), 
+                     paste(groups[2], "(sd)", sep = ""), "p_value")
+  # Boxplots
+  par(mfrow = c(2, 2))  # This is not ideal but I cannot get layout to work in Rstudio
+  plot_names = c(paste("Rarified S at N=", 
+                       ifelse(is.na(lower_N), min(N_list), lower_N), sep = ""),
+                 "N", "PIE", "Raw S")
+  plot_names = sapply(1:4, function(x) 
+    paste(plot_names[x], " (p=", round(out[5, x], 6), ")", sep = ""))
+  for (i in 1:length(stats_list)) {
+    stat = unlist(stats_list[i])
+    stat_1 = stat[dat_plot$group == groups[1]]
+    stat_2 = stat[dat_plot$group == groups[2]]
+    stat_1 = stat_1[!is.na(stat_1)]
+    stat_2 = stat_2[!is.na(stat_2)]
+    boxplot(stat_1, stat_2, names = c(groups[1], groups[2]), main = plot_names[i])
+  }
+  return(out)
+}
+
+plotSADs = function(dat_sp, dat_plot, col = NA) {
+  # TO DO: add check to ensure that col is the same length as treatments
+  require(scales)
+  par(mfrow = c(1, 1))
+  grps = unique(dat_plot$group)
+  if (is.na(col)) 
+    col = rainbow(length(grps))
+  plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
+       xlim = c(0.01, 1), ylim = c(0, 1), log = "x")
+  for (i in 1:length(grps)) {
+    col_grp = col[i]
+    plots_grp = dat_plot[dat_plot$group == grps[i], 1]
+    dat_grp = dat_sp[match(plots_grp, row.names(dat_sp)), ]
+    for (j in 1:nrow(dat_grp)) {
+      sad_row = as.numeric(sort(dat_grp[j, dat_grp[j, ] != 0]))
+      s_cul = 1:length(sad_row)/length(sad_row)
+      n_cul = sapply(1:length(sad_row), function(x) sum(sad_row[1:x]) / sum(sad_row))
+      lines(n_cul, s_cul, col = alpha(col_grp, 0.5), lwd = 1, type = "l")
+    }
+  }
+  legend("bottomright", grps, col = col, lwd = 2)
+}
+
+plotSNpie = function(dat_sp, dat_plot, col = NA) {
+  # TO DO: add check to ensure that col is the same length as treatments
+  require(rgl)
+  grps = unique(dat_plot$group)
+  if (is.na(col)) 
+    col = rainbow(length(grps))
+  S_list = rowSums(dat_sp > 0)
+  N_list = rowSums(dat_sp)
+  PIE_list = sapply(1:nrow(dat_sp), function(x) 
+    N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, ]/N_list[x])^2)))
+  grp_list = as.character(dat_plot$group[match(dat_plot$plot, row.names(dat_sp))])
+  col_list = sapply(grp_list, function(x) col[which(grps == x)])
+  plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
+} 
