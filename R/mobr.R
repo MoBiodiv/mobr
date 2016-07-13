@@ -351,26 +351,21 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
       stop('"type" has to be "discrete" or "continuous".')
     if (type == 'continuous' & !(corr %in% c('spearman', 'pearson')))
       stop('"corr" has to be "spearman" or "pearson".')
-    if ('factor' %in% class(env_data)) {
-        if (type == 'continuous') {
-            group_vals = data.frame(groups=groups, 
-                                    values=as.integer(env_data)[match(groups, env_data)])
-            warning(paste(env_var, 'is a factor but will be treated as a continous variable for the analysis which the following values'))
-            print(group_vals)
-        }
-        else if (type == 'discrete') {
-            if (is.null(ref_group))
-                stop('For a discrete analysis you must specify a ref_group to compare groups to')
-            else if (!(ref_group %in% env_data))
-                stop(paste('Reference group is not present in', env_var))
-        }
-    } else if (type == 'discrete') {
-        warning(paste(env_var, 'is not a factor and each unique value will be treated as a grouping variable'))
-        if (is.null(ref_group))
-            stop('For a discrete analysis you must specify a ref_group to compare groups to')
-        else if (!(ref_group %in% env_data))
-            stop(paste('Reference group is not present in', env_var))
+    if (type == 'discrete') {
+      if (is.null(ref_group))
+        stop('For a discrete analysis you must specify a ref_group to compare groups to')
+      else if (!(ref_group %in% env_data))
+        stop(paste('Reference group is not present in', env_var))
     }
+    if ('factor' %in% class(env_data) & type == 'continuous') {
+        group_vals = data.frame(groups=groups, 
+                                values=as.integer(env_data)[match(groups, env_data)])
+        warning(paste(env_var, 'is a factor but will be treated as a continous variable for the analysis which the following values'))
+        print(group_vals)
+        }
+    } else if (!('factor' %in% class(env_data)) & type == 'discrete') 
+        warning(paste(env_var, 'is not a factor and each unique value will be treated as a grouping variable'))
+
     test_status = sapply(tests, function(x) 
                          eval(parse(text=paste('comm$tests$', x, sep=''))))
     approved_tests = tests[which(test_status == TRUE)]
