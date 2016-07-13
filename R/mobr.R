@@ -1,3 +1,7 @@
+library(devtools)
+install_github('JohnsonHsieh/Jade')
+library(Jade)
+
 require(pracma)
 
 
@@ -446,18 +450,15 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         for (group in group_levels){
           if (as.character(group) != as.character(ref_group)){
             deltaS = out$indiv_rare[, as.character(group)] - out$indiv_rare[, as.character(ref_group)]
-            #group_levels_pairwise = c(as.character(ref_group), as.character(group))
             level_sad = group_sad[which(as.character(group_levels) == as.character(group)), ]
-            #comp_sad = rbind(ref_sad, level_sad)
-            if (sum(level_sad) < sum(ref_sad))
-              sad_highN_extent = sp_extent[which(as.character(env_extent) == as.character(ref_group))]
-            else
-              sad_highN_extent = sp_extent[which(as.character(env_extent) == as.character(group))]
-            
+            comp_sad = rbind(ref_sad, level_sad)
+
             null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
             for (i in 1:nperm){
+              comp_sad_lumped = as.numeric(colSums(comp_sad))
+              meta_freq = SpecDist(comp_sad_lumped)$probability
               sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
-                data.frame(table(sample(sad_highN_extent, x, replace = T)))[, 2])
+                data.frame(table(sample(1:length(meta_freq), x, replace = T, prob = meta_freq)))[, 2])
               perm_ind_rare = sapply(sad_perm, function(x)
                 rarefaction(x, 'indiv', ind_sample_size))
               null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
