@@ -362,7 +362,6 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
                                 values=as.integer(env_data)[match(groups, env_data)])
         warning(paste(env_var, 'is a factor but will be treated as a continous variable for the analysis which the following values'))
         print(group_vals)
-        }
     } else if (!('factor' %in% class(env_data)) & type == 'discrete') 
         warning(paste(env_var, 'is not a factor and each unique value will be treated as a grouping variable'))
 
@@ -374,7 +373,6 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         warning(paste('Based upon the attributes of the community object only the following tests will be performed:',
                       tests_string))
     }
-    # TODO: groups as row names in all outputs?
     out = list()  # This is the object with the outputs
     out$type = type
 
@@ -403,9 +401,7 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
       else
         ind_sample_size = floor(seq(inds) * group_minN / inds)
     }
-    ind_sample_size = unique(ind_sample_size)
-    if (!(1 %in% ind_sample_size)) # Force (1, 1) to be included
-      ind_sample_size = c(1, ind_sample_size)
+    ind_sample_size = unique(c(1, ind_sample_size)) # Force (1, 1) to be included
     
     # 1. Individual-based rarefaction (effect of SAD) vs env_var vs N
     if ('indiv' %in% approved_tests) {
@@ -424,11 +420,12 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         env_extent = rep(group_levels, time = apply(group_sad, 1, sum))
         null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
         for (i in 1:nperm){
-          #env_shuffle = sample(env_extent)
-          #sad_shuffle = sapply(group_levels, function(x) 
-            #as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
-          # The above section would need to be fixed!
-          perm_ind_rare = apply(sad_shuffle, MARGIN = 2, function(x)
+          overall_sad_lumped = as.numeric(colSums(group_sad))
+          meta_freq = SpecDist(overall_sad_lumped)$probability
+          sad_perm = sapply(as.numeric(rowSums(group_sad)), function(x)
+            data.frame(table(sample(1:length(meta_freq), x, replace = T, prob = meta_freq)))[, 2])
+          
+          perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
             rarefaction(x, 'indiv', ind_sample_size))
           null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){cor(x, as.numeric(group_levels), method = corr)})
         }
