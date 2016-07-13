@@ -45,9 +45,9 @@ boxplot.comm <- function(comm, env_var){
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
    boxplot(PIE_sample ~ comm$env[, env_var], ylab = "PIE of samples", notch = T, main = title)
    
-   betaPIE <- PIE_plot - PIE_sample
+   beta_PIE <- PIE_plot - PIE_sample
    test <- kruskal.test(beta_PIE ~ comm$env[, env_var])
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
-   boxplot(betaPIE ~ comm$env[, env_var], ylab = "beta PIE", notch = T, main = title)
+   boxplot(beta_PIE ~ comm$env[, env_var], ylab = "beta PIE", notch = T, main = title)
 }
 
