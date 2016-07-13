@@ -425,9 +425,10 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         env_extent = rep(group_levels, time = apply(group_sad, 1, sum))
         null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
         for (i in 1:nperm){
-          env_shuffle = sample(env_extent)
-          sad_shuffle = sapply(group_levels, function(x) 
-            as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
+          #env_shuffle = sample(env_extent)
+          #sad_shuffle = sapply(group_levels, function(x) 
+            #as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(group_sad)))))
+          # The above section would need to be fixed!
           perm_ind_rare = apply(sad_shuffle, MARGIN = 2, function(x)
             rarefaction(x, 'indiv', ind_sample_size))
           null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){cor(x, as.numeric(group_levels), method = corr)})
@@ -437,25 +438,29 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
       }
       else { # discrete case
+        sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
+        env_extent = rep(group_levels, time = apply(group_sad, 1, sum))
         ref_sad = group_sad[which(as.character(group_levels) == as.character(ref_group)), ]
         out$discrete$indiv = data.frame(sample = numeric(), group = character(), deltaS_emp = numeric(), deltaS_null_low = numeric(), 
                                         deltaS_null_median = numeric(), deltaS_null_high = numeric(), stringsAsFactors = F)
         for (group in group_levels){
           if (as.character(group) != as.character(ref_group)){
             deltaS = out$indiv_rare[, as.character(group)] - out$indiv_rare[, as.character(ref_group)]
-            group_levels_pairwise = c(as.character(ref_group), as.character(group))
+            #group_levels_pairwise = c(as.character(ref_group), as.character(group))
             level_sad = group_sad[which(as.character(group_levels) == as.character(group)), ]
-            comp_sad = rbind(ref_sad, level_sad)
-            sp_extent = unlist(apply(comp_sad, 1, function(x) rep(1:ncol(comp_sad), x)))
-            env_extent = rep(group_levels_pairwise, time = apply(comp_sad, 1, sum))
+            #comp_sad = rbind(ref_sad, level_sad)
+            if (sum(level_sad) < sum(ref_sad))
+              sad_highN_extent = sp_extent[which(as.character(env_extent) == as.character(ref_group))]
+            else
+              sad_highN_extent = sp_extent[which(as.character(env_extent) == as.character(group))]
+            
             null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
             for (i in 1:nperm){
-              env_shuffle = sample(env_extent)
-              sad_shuffle = sapply(group_levels_pairwise, function(x) 
-                as.integer(table(factor(sp_extent[env_shuffle == x], levels=1:ncol(comp_sad)))))
-              perm_ind_rare = apply(sad_shuffle, MARGIN = 2, function(x)
+              sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
+                data.frame(table(sample(sad_highN_extent, x, replace = T)))[, 2])
+              perm_ind_rare = sapply(sad_perm, function(x)
                 rarefaction(x, 'indiv', ind_sample_size))
-              null_ind_deltaS_mat[i, ] = perm_ind_rare[, as.character(group)] - perm_ind_rare[, as.character(ref_group)]
+              null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
             }
             ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
             ind_group = data.frame(cbind(rep(as.character(group), length(ind_sample_size)),ind_sample_size,  
