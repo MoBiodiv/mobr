@@ -312,7 +312,7 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 #'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub', ref_group = 'None', inds = 20)
 #'  }
 
-get_delta_stats = function(comm, env_var, ref_group=NULL, 
+get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
                            type='discrete', inds=NULL, log_scale=FALSE, min_plot = NULL, 
                            density_stat ='mean', corr='spearman', 
@@ -321,6 +321,8 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
   # comm - a 'comm' type object, with attributes ...
   # type - if the envronmental variable is 'discrete' vs 'continous'
   # env_var - string, name of the envronmental variable
+  # group_var - string, optional name of field in comm$env that grouping should
+  #   carried out on.
   # ref_group - the group that will be used as a reference in pair-wise comparisons (ie., all other groups will be compared with it).
   #   This argument is only needed then type == 'discrete'.
   # test - tests to be included. A single value in c('indiv', 'sampl', 'spat'), or a combination of them as a list. 
@@ -345,10 +347,14 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
   # Output:
   # out - a 'mobr' type object, with attributes...
   # check tests
-    env_data = comm$env[, env_var]
-    groups = unique(env_data)
+    env_data = comm$env[ , env_var]
+    if (is.null(group_var)) 
+        groups = unique(env_data)
+    else {
+        groups = comm$env[ , group_var]
+    }
     if (!(type %in% c('continuous', 'discrete')))
-      stop('"type" has to be "discrete" or "continuous".')
+        stop('"type" has to be "discrete" or "continuous".')
     if (type == 'continuous' & !(corr %in% c('spearman', 'pearson')))
       stop('"corr" has to be "spearman" or "pearson".')
     if (type == 'discrete') {
@@ -370,17 +376,20 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     approved_tests = tests[which(test_status == TRUE)]
     if (any(test_status == FALSE)) {
         tests_string = paste(tests[which(tests %in% approved_tests)], collapse=' and ')
-        warning(paste('Based upon the attributes of the community object only the following tests will be performed:',
-                      tests_string))
+        cat(paste('Based upon the attributes of the community object only the following tests will be performed:',
+                  tests_string))
     }
     out = list()  # This is the object with the outputs
     out$type = type
 
-    group_sad = aggregate(comm$comm, by=list(env_data), sum)
-    group_levels = group_sad[ , 1]
+    group_sad = aggregate(comm$comm, by=list(groups), sum)
+    if (is.null(group_var))
+        group_levels = group_sad[ , 1]
+    else
+        group_levels = tapply(env_data, list(groups), mean)
     group_sad = group_sad[ , -1]
     group_minN = min(rowSums(group_sad))
-    group_plots = data.frame(table(env_data)) # Number of plots within each group
+    group_plots = data.frame(table(groups)) # Number of plots within each group
     plot_abd = apply(comm$comm, 1, sum)
     if (density_stat == 'mean')
         ref_dens = sum(comm$comm) / nrow(comm$comm)
@@ -406,18 +415,17 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
     # 1. Individual-based rarefaction (effect of SAD) vs env_var vs N
     if ('indiv' %in% approved_tests) {
       ind_rare = data.frame(apply(group_sad, 1, function(x) 
-        rarefaction(x, 'indiv', ind_sample_size)))
+                            rarefaction(x, 'indiv', ind_sample_size)))
       row.names(ind_rare) = NULL
       out$indiv_rare = cbind(ind_sample_size, ind_rare)
       names(out$indiv_rare) = c('sample', as.character(group_levels))
       
       if (type == 'continuous'){
         ind_cor = apply(ind_rare, 1, function(x) 
-          cor(x, as.numeric(group_levels), method = corr))
-        
+                        cor(x, as.numeric(group_levels), method=corr))
         # Null test 
         sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
-        env_extent = rep(group_levels, time = apply(group_sad, 1, sum))
+        env_extent = rep(group_levels, times=rowSums(group_sad))
         null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
         for (i in 1:nperm){
           overall_sad_lumped = as.numeric(colSums(group_sad))
@@ -501,40 +509,61 @@ get_delta_stats = function(comm, env_var, ref_group=NULL,
         else 
           stop('The argument ref must be set to mean, min or max')
         
-        effect_N_by_group = data.frame(matrix(NA, ncol = 4, nrow = max(group_plots$Freq)))
+        effect_N_by_group = data.frame(matrix(NA, ncol=length(group_levels)+1,
+                                              nrow=max(group_plots$Freq)))
         for (i in 1:length(group_levels)){
-          group = group_levels[i]
-          comm_group = comm$comm[which(env_data == group), ]
+          if (is.null(group_var)) {
+              group = group_levels[i]
+              comm_group = comm$comm[which(env_data == group), ]
+          } else {
+              group = names(group_levels)[i]
+              comm_group = comm$comm[which(groups == group), ]
+          }
           group_effect_N = effect_of_N(comm_group, ref_dens, ind_sample_size)
           if (i == 1)
             effect_N_by_group[, i] = group_effect_N$effort[1:nrow(effect_N_by_group)]
           effect_N_by_group[, i + 1] = group_effect_N$deltaS[1:nrow(effect_N_by_group)]
         }
         effect_N_by_group = effect_N_by_group[complete.cases(effect_N_by_group), ]
-        r_emp = apply(effect_N_by_group[, 2:4], 1, function(x)
-          cor(x, as.numeric(group_levels), method = corr))
+        r_emp = apply(effect_N_by_group[ , -1], 1, function(x)
+                      cor(x, as.numeric(group_levels), method = corr))
         
         # Null model
         null_N_r_mat = matrix(NA, nperm, length(r_emp))
         for (i in 1:nperm){
           plot_abd_perm = as.numeric(sample(plot_abd))
-          sp_draws = sapply(1:nrow(comm$comm), function(x)
-            sample(rep(1:ncol(comm$comm), as.numeric(group_sad[which(group_levels == env_data[x]), ])),
-                   size = plot_abd_perm[x], replace = T))
+          ## TODO: clean up this shuffling code so it is easier to read!
+          if (is.null(group_var))
+              sp_draws = sapply(1:nrow(comm$comm), function(x)
+                                sample(rep(1:ncol(comm$comm), 
+                                       as.numeric(group_sad[which(group_levels == env_data[x]), ])),
+                                       size = plot_abd_perm[x], replace = T))
+          else
+              sp_draws = sapply(1:nrow(comm$comm), function(x)
+                                sample(rep(1:ncol(comm$comm), 
+                                       as.numeric(group_sad[which(names(group_levels) == groups[x]), ])),
+                                       size = plot_abd_perm[x], replace = T))
           comm_perm = t(sapply(1:nrow(comm$comm), function(x)
-            table(c(1:ncol(comm$comm), sp_draws[[x]])) - 1 ))
-          effect_N_perm = data.frame(matrix(NA, ncol = 4, nrow = max(group_plots$Freq)))
+                               table(c(1:ncol(comm$comm), sp_draws[[x]])) - 1 ))
+          effect_N_perm = data.frame(matrix(NA, ncol=length(group_levels),
+                                            nrow=max(group_plots$Freq)))
           for (j in 1:length(group_levels)){
-            group = group_levels[j]
-            comm_group = comm_perm[which(env_data == group), ]
-            group_N_perm = effect_of_N(comm_group, ref_dens, ind_sample_size)
-            if (j == 1)
-              effect_N_perm[, j] = group_N_perm$effort[1:nrow(effect_N_perm)]
-            effect_N_perm[, j + 1] = group_N_perm$deltaS[1:nrow(effect_N_perm)]
+              if (is.null(group_var)) {
+                  group = group_levels[j]
+                  comm_group = comm_perm[which(env_data == group), ]
+              } else {
+                  group = names(group_levels)[j]
+                 comm_group = comm_perm[which(groups == group), ]
+              }
+              group_N_perm = effect_of_N(comm_group, ref_dens, ind_sample_size)
+              if (j == 1)
+                  effect_N_perm[, j] = group_N_perm$effort[1:nrow(effect_N_perm)]
+              effect_N_perm[, j + 1] = group_N_perm$deltaS[1:nrow(effect_N_perm)]
           }
           effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
-          null_N_r_mat[i, ] = apply(effect_N_perm[, 2:4], 1, function(x)
-            cor(x, as.numeric(group_levels), method = corr))[1:ncol(null_N_r_mat)]
+          null_N_r_mat[i, ] = apply(effect_N_perm[ , -1], 1, function(x)
+                                    cor(x, as.numeric(group_levels),
+                                        method = corr)) #[1:ncol(null_N_r_mat)]
         }
         N_r_null_CI = apply(null_N_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
         out$continuous$N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))

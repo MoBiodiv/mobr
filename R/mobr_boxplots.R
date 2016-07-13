@@ -28,13 +28,26 @@ boxplot.comm <- function(comm, env_var){
    PIE_plot <- diversity(colSums(comm$comm), index = "simpson")
    
    par(mfrow = c(2,3))
-   boxplot(nInd_sample ~ comm$env[, env_var], ylab = "No. of individuals") 
-   boxplot(nSpec_sample ~ comm$env[, env_var], ylab = "No. of species") 
-   boxplot(nSpec_rare ~ comm$env[, env_var], ylab = "No. of species - rarefied")
    
-   boxplot(PIE_sample ~ comm$env[, env_var], ylab = "PIE of samples")
+   test <- kruskal.test(nInd_sample ~ comm$env[, env_var])
+   title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
+   boxplot(nInd_sample ~ comm$env[, env_var], ylab = "No. of individuals", notch = T, main = title) 
+   
+   test <- kruskal.test(nSpec_sample ~ comm$env[, env_var])
+   title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
+   boxplot(nSpec_sample ~ comm$env[, env_var], ylab = "No. of species", notch = T, main = title)
+   
+   test <- kruskal.test(nSpec_rare ~ comm$env[, env_var])
+   title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
+   boxplot(nSpec_rare ~ comm$env[, env_var], ylab = "No. of species - rarefied", notch = T, main = title)
+   
+   test <- kruskal.test(PIE_sample ~ comm$env[, env_var])
+   title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
+   boxplot(PIE_sample ~ comm$env[, env_var], ylab = "PIE of samples", notch = T, main = title)
    
    betaPIE <- PIE_plot - PIE_sample
-   boxplot(betaPIE ~ comm$env[, env_var], ylab = "beta PIE")
+   test <- kruskal.test(beta_PIE ~ comm$env[, env_var])
+   title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
+   boxplot(betaPIE ~ comm$env[, env_var], ylab = "beta PIE", notch = T, main = title)
 }
 
