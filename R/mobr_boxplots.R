@@ -27,28 +27,42 @@ boxplot.comm <- function(comm, env_var){
    PIE_sample <- diversity(comm$comm, index = "simpson")
    PIE_plot <- diversity(colSums(comm$comm), index = "simpson")
    
-   par(mfrow = c(2,3))
+   par(mfcol = c(2,5))
    
-   test <- kruskal.test(nInd_sample ~ comm$env[, env_var])
+   test <- kruskal.test(nInd_sample ~ env_data)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
-   boxplot(nInd_sample ~ comm$env[, env_var], ylab = "No. of individuals", notch = T, main = title) 
+   boxplot(nInd_sample ~ env_data, ylab = "No. of individuals", notch = T, main = title) 
+   plot(TukeyHSD(aov(nInd_sample ~ env_data)))
    
-   test <- kruskal.test(nSpec_sample ~ comm$env[, env_var])
+   test <- kruskal.test(nSpec_sample ~ env_data)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
-   boxplot(nSpec_sample ~ comm$env[, env_var], ylab = "No. of species", notch = T, main = title)
+   boxplot(nSpec_sample ~ env_data, ylab = "No. of species", notch = T, main = title)
+   plot(TukeyHSD(aov(nSpec_sample ~ env_data)))
    
-   test <- kruskal.test(nSpec_rare ~ comm$env[, env_var])
+   test <- kruskal.test(nSpec_rare ~ env_data)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
-   boxplot(nSpec_rare ~ comm$env[, env_var], ylab = "No. of species - rarefied", notch = T, main = title)
+   boxplot(nSpec_rare ~ env_data, ylab = "No. of species - rarefied", notch = T, main = title)
+   plot(TukeyHSD(aov(nSpec_rare ~ env_data)))
    
-   test <- kruskal.test(PIE_sample ~ comm$env[, env_var])
+   test <- kruskal.test(PIE_sample ~ env_data)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
-   boxplot(PIE_sample ~ comm$env[, env_var], ylab = "PIE of samples", notch = T, main = title)
+   boxplot(PIE_sample ~ env_data, ylab = "PIE of samples", notch = T, main = title)
+   plot(TukeyHSD(aov(PIE_sample ~ env_data)))
    
    beta_PIE <- PIE_plot - PIE_sample
-   test <- kruskal.test(beta_PIE ~ comm$env[, env_var])
+   test <- kruskal.test(beta_PIE ~ env_data)
 
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
-   boxplot(beta_PIE ~ comm$env[, env_var], ylab = "beta PIE", notch = T, main = title)
+   boxplot(beta_PIE ~ env_data, ylab = "beta PIE", notch = T, main = title)
+   plot(TukeyHSD(aov(beta_PIE ~ env_data)))
+   
+   outdat <- data.frame(Groups       = env_data,
+                        nInd_sample  = nInd_sample,
+                        nSpec_sample = nSpec_sample,
+                        nSpec_rare   = nSpec_rare,
+                        PIE_sample   = PIE_sample,
+                        betaPIE      = betaPIE)
+   
+   return(outdat)
 }
 
