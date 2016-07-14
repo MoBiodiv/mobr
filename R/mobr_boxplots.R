@@ -61,7 +61,7 @@ boxplot.comm <- function(comm, env_var){
                         nSpec_sample = nSpec_sample,
                         nSpec_rare   = nSpec_rare,
                         PIE_sample   = PIE_sample,
-                        betaPIE      = betaPIE)
+                        beta_PIE      = beta_PIE)
    
    return(outdat)
 }
