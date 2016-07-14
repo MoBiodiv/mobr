@@ -148,7 +148,7 @@ plot_rarefy = function(mobr){
       plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
            col = cols[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
            main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
-           ylim = c(min(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)]), max(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)])))
+           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
     else
       lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = cols[icol - 1])
   }
@@ -159,7 +159,7 @@ plot_rarefy = function(mobr){
     dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
     if (i == 1)
       plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i], ylim = c(0, mobr$sample_rare$impl_S),
            main = 'Sample-based Rarefaction')
     else
       lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = cols[i])
@@ -170,7 +170,7 @@ plot_rarefy = function(mobr){
     dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
     if (i == 1)
       plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],ylim = c(0, mobr$sample_rare$expl_S),
            main = 'Accumulation Curve')
     else
       lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = cols[i])
@@ -229,7 +229,7 @@ effect_of_N = function(comm_group, ref_dens, effort){
   effort = effort[which(effort <= min(sum(comm_group), ref_dens * nrow(comm_group)))]
   interp_S_samp_rare = pchip(c(1, ref_dens * (1:nrow(comm_group))), c(1, S_samp_rare), effort)
   S_indiv_rare = rarefaction(group_sad, 'indiv', effort = effort)
-  deltaS = as.numeric(S_indiv_rare) - interp_S_samp_rare
+  deltaS = interp_S_samp_rare - as.numeric(S_indiv_rare)
   out = data.frame(cbind(effort, deltaS))
   names(out) = c('effort', 'deltaS')
   return(out)
@@ -543,7 +543,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                   comm_group = comm_perm[which(env_data == group), ]
               } else {
                   group = names(group_levels)[j]
-                 comm_group = comm_perm[which(groups == group), ]
+                  comm_group = comm_perm[which(groups == group), ]
               }
               group_N_perm = effect_of_N(comm_group, ref_dens, ind_sample_size)
               if (j == 1)
@@ -625,8 +625,8 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
         stop('Error: reference group does not have enough plots and have been dropped.')
       else {
         sample_rare_keep = out$sample_rare[which(out$sample_rare$group %in% as.character(group_keep)), ]
-        sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$impl_S)) - 
-                                  as.numeric(as.character(sample_rare_keep$expl_S))
+        sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$expl_S)) - 
+                                  as.numeric(as.character(sample_rare_keep$impl_S))
         if (min(group_plots$Freq[group_plots[, 1] %in% group_keep]) < 5)
           warning('Warning: some groups have less than 5 plots. The results of the null model are not very informative.')
         
@@ -644,7 +644,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               comm_group = comm$comm[as.character(env_data) == as.character(group), ]
               xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
               expl_S_perm = rarefy_sample_explicit(comm_group, xy_perm_group)
-              deltaS_perm = c(deltaS_perm, as.numeric(as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])) - expl_S_perm)
+              deltaS_perm = c(deltaS_perm, as.numeric(expl_S_perm - as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])))
             }
             null_agg_r_mat[i, ] = sapply(seq(min_plot_group), function(x)
               cor(deltaS_perm[which(sample_rare_keep$sample_plot == x)], 
@@ -681,8 +681,8 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                 xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
                 expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
                 expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
-                null_agg_deltaS_mat[i, ] = impl_S_group[1:min_plot_group] - expl_S_perm_group[1:min_plot_group] - 
-                  (impl_S_ref[1:min_plot_group] - expl_S_perm_ref[1:min_plot_group])
+                null_agg_deltaS_mat[i, ] = expl_S_group[1:min_plot_group] - impl_S_perm_group[1:min_plot_group] - 
+                  (expl_S_ref[1:min_plot_group] - impl_S_perm_ref[1:min_plot_group])
               }
               agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
               agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
