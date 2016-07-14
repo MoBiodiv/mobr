@@ -1,5 +1,5 @@
-library(devtools)
-install_github('JohnsonHsieh/Jade')
+#library(devtools)
+#install_github('JohnsonHsieh/Jade')
 library(Jade)
 
 require(pracma)
@@ -791,41 +791,41 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
   return(out)
 }
 
-plotSADs = function(dat_sp, dat_plot, col = NA) {
+plotSADs = function(comm_obj, env_var, col = NA) {
   # TO DO: add check to ensure that col is the same length as treatments
   require(scales)
   par(mfrow = c(1, 1))
-  grps = unique(dat_plot$group)
+  env_data = comm_obj$env[ , env_var]
+  grps = unique(env_data)
   if (is.na(col)) 
     col = rainbow(length(grps))
   plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
        xlim = c(0.01, 1), ylim = c(0, 1), log = "x")
   for (i in 1:length(grps)) {
     col_grp = col[i]
-    plots_grp = dat_plot[dat_plot$group == grps[i], 1]
-    dat_grp = dat_sp[match(plots_grp, row.names(dat_sp)), ]
-    for (j in 1:nrow(dat_grp)) {
-      sad_row = as.numeric(sort(dat_grp[j, dat_grp[j, ] != 0]))
+    comm_grp = comm_obj$comm[env_data == grps[i], ]
+    for (j in 1:nrow(comm_grp)) {
+      sad_row = as.numeric(sort(comm_grp[j, comm_grp[j, ] != 0]))
       s_cul = 1:length(sad_row)/length(sad_row)
       n_cul = sapply(1:length(sad_row), function(x) sum(sad_row[1:x]) / sum(sad_row))
       lines(n_cul, s_cul, col = alpha(col_grp, 0.5), lwd = 1, type = "l")
     }
   }
-  legend("bottomright", grps, col = col, lwd = 2)
+  legend("bottomright", legend=grps, col = col, lwd = 2)
 }
 
-plotSNpie = function(dat_sp, dat_plot, col = NA) {
+plotSNpie = function(comm_obj, env_var, col = NA) {
   # TO DO: add check to ensure that col is the same length as treatments
   require(rgl)
-  grps = unique(dat_plot$group)
+  env_data = comm_obj$env[ , env_var]
+  grps = unique(env_data)
   if (is.na(col)) 
     col = rainbow(length(grps))
-  S_list = rowSums(dat_sp > 0)
-  N_list = rowSums(dat_sp)
-  PIE_list = sapply(1:nrow(dat_sp), function(x) 
-    N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, ]/N_list[x])^2)))
-  grp_list = as.character(dat_plot$group[match(dat_plot$plot, row.names(dat_sp))])
-  col_list = sapply(grp_list, function(x) col[which(grps == x)])
+  S_list = rowSums(comm_obj$comm > 0)
+  N_list = rowSums(comm_obj$comm)
+  PIE_list = sapply(1:nrow(comm$comm), function(x) 
+    N_list[x]/(N_list[x] - 1) * (1 - sum((comm_obj$comm[x, ]/N_list[x])^2)))
+  col_list = sapply(env_data, function(x) col[which(grps == x)])
   plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
