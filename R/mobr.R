@@ -1,5 +1,5 @@
-#library(devtools)
-#install_github('JohnsonHsieh/Jade')
+library(devtools)
+install_github('JohnsonHsieh/Jade')
 library(Jade)
 
 require(pracma)
@@ -829,13 +829,14 @@ plotSNpie = function(comm_obj, env_var, col = NA) {
   plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
-plot_9_panels(mobr, group, ref_group, out_dir){
+plot_9_panels = function(mobr, group, ref_group){
   type = mobr$type
   if (type == 'continuous')
     stop("Currently this plot only works for mobr object with type discrete.")
   else{
     cols = c('red', 'blue')
-    png(out_dir, width = 1500, height = 1500)
+    deltaS_col = 'turquoise'
+    ddeltaS_col = 'magenta'
     par(mfrow = c(3, 3))
     
     # Create the three sets of curves
@@ -870,6 +871,46 @@ plot_9_panels(mobr, group, ref_group, out_dir){
     lines(mobr$indiv_rare$sample, mobr$indiv_rare[[ref_group]], 
           type = 'l', lwd = 2, col = cols[2])
     
+    # Create the plots for the three delta-S between groups
+    minN = min(nrow(sample_rare_group), nrow(sample_rare_ref))
+    delta_Sspat = sample_rare_group$expl_S[1:minN] - sample_rare_ref$expl_S[1:minN]
+    plot(seq(minN), delta_Sspat, ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of plots', ylab = 'delta S')
+    abline(h = 0, lwd = 2, lty = 2)
     
+    delta_Ssample = sample_rare_group$impl_S[1:minN] - sample_rare_ref$impl_S[1:minN]
+    plot(seq(minN), delta_Ssample, ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of plots', ylab = 'delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+   
+    deltaS_Sind = mobr$indiv_rare[[group]] - mobr$indiv_rare[[ref_group]]
+    plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of individuals', ylab = 'delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+    
+    # Create the plots for the three d-delta S
+    mobr$discrete$agg[, -1] = lapply(mobr$discrete$agg[, -1], function(x)
+      as.numeric(as.character(x))) 
+    ddelta_Sspat = mobr$discrete$agg[which(as.character(mobr$discrete$agg$group) == as.character(group)), ]
+    plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, ylim = c(min(ddelta_Sspat$ddeltaS_emp, 0), max(ddelta_Sspat$ddeltaS_emp, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = ddeltaS_col, 
+         xlab = 'Number of plots', ylab = 'delta-delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+    
+    mobr$discrete$N[, -1] = lapply(mobr$discrete$N[, -1], function(x)
+      as.numeric(as.character(x))) 
+    ddelta_Ssample = mobr$discrete$N[which(as.character(mobr$discrete$N$group) == as.character(group)), ]
+    plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp, ylim = c(min(ddelta_Ssample$ddeltaS_emp, 0), max(ddelta_Ssample$ddeltaS_emp, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = ddeltaS_col, 
+         xlab = 'Number of individuals', ylab = 'delta-delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+    
+    plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of individuals', ylab = 'delta S')
+    abline(h = 0, lwd = 2, lty = 2)
   }
 }
