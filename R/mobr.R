@@ -148,7 +148,7 @@ plot_rarefy = function(mobr){
       plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
            col = cols[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
            main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
-           ylim = c(min(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)]), max(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)])))
+           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
     else
       lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = cols[icol - 1])
   }
@@ -159,7 +159,7 @@ plot_rarefy = function(mobr){
     dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
     if (i == 1)
       plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i], ylim = c(0, mobr$sample_rare$impl_S),
            main = 'Sample-based Rarefaction')
     else
       lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = cols[i])
@@ -170,7 +170,7 @@ plot_rarefy = function(mobr){
     dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
     if (i == 1)
       plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],ylim = c(0, mobr$sample_rare$expl_S),
            main = 'Accumulation Curve')
     else
       lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = cols[i])
