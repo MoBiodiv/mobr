@@ -829,4 +829,47 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
   plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
-plot_9_panels(ombr)
+plot_9_panels(mobr, group, ref_group, out_dir){
+  type = mobr$type
+  if (type == 'continuous')
+    stop("Currently this plot only works for mobr object with type discrete.")
+  else{
+    cols = c('red', 'blue')
+    png(out_dir, width = 1500, height = 1500)
+    par(mfrow = c(3, 3))
+    
+    # Create the three sets of curves
+    mobr$sample_rare[, -1] = lapply(mobr$sample_rare[, -1], function(x)
+      as.numeric(as.character(x)))
+    sample_rare_group = mobr$sample_rare[mobr$sample_rare == group, ]
+    sample_rare_ref = mobr$sample_rare[mobr$sample_rare == ref_group, ]
+    plot(1:nrow(sample_rare_group), sample_rare_group$expl_S, 
+         xlab = 'Number of plots', ylab = 'Richness (S)', 
+         xlim = c(0, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
+         ylim = c(min(sample_rare_ref$expl_S, sample_rare_group$expl_S), 
+                  max(sample_rare_ref$expl_S, sample_rare_group$expl_S)), 
+         type = 'l', lwd = 2, col = cols[1], cex.lab = 1.5, cex.axis = 1.5, 
+         main = 'Spatial', cex.main = 2)
+    lines(1:nrow(sample_rare_ref), sample_rare_ref$expl_S, type = 'l', 
+          lwd = 2, col = cols[2])
+    
+    plot(1:nrow(sample_rare_group), sample_rare_group$impl_S, 
+         xlab = 'Number of plots', ylab = 'Richness (S)', 
+         xlim = c(0, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
+         ylim = c(min(sample_rare_ref$impl_S, sample_rare_group$impl_S), 
+                  max(sample_rare_ref$impl_S, sample_rare_group$impl_S)), 
+         type = 'l', lwd = 2, col = cols[1], cex.lab = 1.5, cex.axis = 1.5, 
+         main = 'Sample', cex.main = 2)
+    lines(1:nrow(sample_rare_ref), sample_rare_ref$impl_S, type = 'l', 
+          lwd = 2, col = cols[2])
+    
+    plot(mobr$indiv_rare$sample, mobr$indiv_rare[[group]], xlab = 'Number of individuals', 
+         ylab = 'Richness (S)', xlim = c(0, max(mobr$indiv_rare$sample)), 
+         ylim = c(0, max(mobr$indiv_rare[, -1])), type = 'l', lwd = 2, 
+         col = cols[1], cex.lab = 1.5, cex.axis = 1.5, main = 'Individual', cex.main = 2)
+    lines(mobr$indiv_rare$sample, mobr$indiv_rare[[ref_group]], 
+          type = 'l', lwd = 2, col = cols[2])
+    
+    
+  }
+}
