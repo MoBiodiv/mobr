@@ -681,8 +681,8 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                 xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
                 expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
                 expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
-                null_agg_deltaS_mat[i, ] = expl_S_group[1:min_plot_group] - impl_S_perm_group[1:min_plot_group] - 
-                  (expl_S_ref[1:min_plot_group] - impl_S_perm_ref[1:min_plot_group])
+                null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
+                  (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
               }
               agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
               agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
@@ -828,3 +828,5 @@ plotSNpie = function(dat_sp, dat_plot, col = NA) {
   col_list = sapply(grp_list, function(x) col[which(grps == x)])
   plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
+
+plot_9_panels(ombr)
