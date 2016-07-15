@@ -709,7 +709,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
               for (i in 1:nperm){
                 expl_S_perm_group = avg_swap_rare(comm_group, rep(group, nrow(comm_group)), 1)
-                expl_S_perm_ref = avg_swap_rare(ref_comm, rep(ref, nrow(ref_comm)), 1)
+                expl_S_perm_ref = avg_swap_rare(ref_comm, rep(ref_group, nrow(ref_comm)), 1)
                 null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
                   (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
               }
