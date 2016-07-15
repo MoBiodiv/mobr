@@ -263,6 +263,31 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
   return(explicit_S)
 }
 
+# Dan's functionings to remove aggregation
+intra_sp_swap = function(comm, groups) {
+  group_levels = unique(groups)
+  comm_group_noagg = matrix(NA, ncol=ncol(comm), nrow=nrow(comm))
+  for(i in seq_along(group_levels)) {
+    row_indices = groups == group_levels[i]
+    comm_group = comm[row_indices, ]
+    sp_sums = colSums(comm_group)
+    tmp_comm = sapply(sp_sums, function(x) 
+      table(c(sample(1:nrow(comm_group), x,
+                     replace=T),
+              1:nrow(comm_group))) - 1)
+    comm_group_noagg[row_indices, ] = tmp_comm
+  }  
+  comm_group_noagg
+}
+
+avg_swap_rare = function(comm, groups, nperm=1000, effort=NULL){
+  S = replicate(nperm, 
+                rarefaction(intra_sp_swap(comm, groups),
+                            'samp', effort))
+  Savg = apply(S, 1, mean)
+  Savg
+}
+
 #' Conduct the MOBR tests on drivers of biodiversity across scales.
 #' 
 #' There are three tests, on effects of 1. the shape of the SAD, 2. treatment/group-level density,
