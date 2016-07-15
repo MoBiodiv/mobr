@@ -1,8 +1,5 @@
-library(devtools)
-install_github('JohnsonHsieh/Jade')
 library(Jade)
-
-require(pracma)
+library(pracma)
 
 
 #' Create a community ('comm') object.
