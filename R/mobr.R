@@ -148,7 +148,7 @@ plot_rarefy = function(mobr){
       plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
            col = cols[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
            main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
-           ylim = c(min(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)]), max(mobr$indiv_rare[, 2:ncol(mobr$indiv_rare)])))
+           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
     else
       lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = cols[icol - 1])
   }
@@ -159,7 +159,7 @@ plot_rarefy = function(mobr){
     dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
     if (i == 1)
       plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i], ylim = c(0, mobr$sample_rare$impl_S),
            main = 'Sample-based Rarefaction')
     else
       lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = cols[i])
@@ -170,7 +170,7 @@ plot_rarefy = function(mobr){
     dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
     if (i == 1)
       plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],
+           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],ylim = c(0, mobr$sample_rare$expl_S),
            main = 'Accumulation Curve')
     else
       lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = cols[i])
@@ -229,7 +229,7 @@ effect_of_N = function(comm_group, ref_dens, effort){
   effort = effort[which(effort <= min(sum(comm_group), ref_dens * nrow(comm_group)))]
   interp_S_samp_rare = pchip(c(1, ref_dens * (1:nrow(comm_group))), c(1, S_samp_rare), effort)
   S_indiv_rare = rarefaction(group_sad, 'indiv', effort = effort)
-  deltaS = as.numeric(S_indiv_rare) - interp_S_samp_rare
+  deltaS = interp_S_samp_rare - as.numeric(S_indiv_rare)
   out = data.frame(cbind(effort, deltaS))
   names(out) = c('effort', 'deltaS')
   return(out)
@@ -543,7 +543,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                   comm_group = comm_perm[which(env_data == group), ]
               } else {
                   group = names(group_levels)[j]
-                 comm_group = comm_perm[which(groups == group), ]
+                  comm_group = comm_perm[which(groups == group), ]
               }
               group_N_perm = effect_of_N(comm_group, ref_dens, ind_sample_size)
               if (j == 1)
@@ -625,8 +625,8 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
         stop('Error: reference group does not have enough plots and have been dropped.')
       else {
         sample_rare_keep = out$sample_rare[which(out$sample_rare$group %in% as.character(group_keep)), ]
-        sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$impl_S)) - 
-                                  as.numeric(as.character(sample_rare_keep$expl_S))
+        sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$expl_S)) - 
+                                  as.numeric(as.character(sample_rare_keep$impl_S))
         if (min(group_plots$Freq[group_plots[, 1] %in% group_keep]) < 5)
           warning('Warning: some groups have less than 5 plots. The results of the null model are not very informative.')
         
@@ -644,7 +644,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               comm_group = comm$comm[as.character(env_data) == as.character(group), ]
               xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
               expl_S_perm = rarefy_sample_explicit(comm_group, xy_perm_group)
-              deltaS_perm = c(deltaS_perm, as.numeric(as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])) - expl_S_perm)
+              deltaS_perm = c(deltaS_perm, as.numeric(expl_S_perm - as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])))
             }
             null_agg_r_mat[i, ] = sapply(seq(min_plot_group), function(x)
               cor(deltaS_perm[which(sample_rare_keep$sample_plot == x)], 
@@ -681,8 +681,8 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                 xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
                 expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
                 expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
-                null_agg_deltaS_mat[i, ] = impl_S_group[1:min_plot_group] - expl_S_perm_group[1:min_plot_group] - 
-                  (impl_S_ref[1:min_plot_group] - expl_S_perm_ref[1:min_plot_group])
+                null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
+                  (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
               }
               agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
               agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
@@ -791,40 +791,126 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
   return(out)
 }
 
-plotSADs = function(dat_sp, dat_plot, col = NA) {
+plotSADs = function(comm_obj, env_var, col = NA) {
   # TO DO: add check to ensure that col is the same length as treatments
   require(scales)
   par(mfrow = c(1, 1))
-  grps = unique(dat_plot$group)
+  env_data = comm_obj$env[ , env_var]
+  grps = unique(env_data)
   if (is.na(col)) 
     col = rainbow(length(grps))
   plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
        xlim = c(0.01, 1), ylim = c(0, 1), log = "x")
   for (i in 1:length(grps)) {
     col_grp = col[i]
-    plots_grp = dat_plot[dat_plot$group == grps[i], 1]
-    dat_grp = dat_sp[match(plots_grp, row.names(dat_sp)), ]
-    for (j in 1:nrow(dat_grp)) {
-      sad_row = as.numeric(sort(dat_grp[j, dat_grp[j, ] != 0]))
+    comm_grp = comm_obj$comm[env_data == grps[i], ]
+    for (j in 1:nrow(comm_grp)) {
+      sad_row = as.numeric(sort(comm_grp[j, comm_grp[j, ] != 0]))
       s_cul = 1:length(sad_row)/length(sad_row)
       n_cul = sapply(1:length(sad_row), function(x) sum(sad_row[1:x]) / sum(sad_row))
       lines(n_cul, s_cul, col = alpha(col_grp, 0.5), lwd = 1, type = "l")
     }
   }
-  legend("bottomright", grps, col = col, lwd = 2)
+  legend("bottomright", legend=grps, col = col, lwd = 2)
 }
 
-plotSNpie = function(dat_sp, dat_plot, col = NA) {
+plotSNpie = function(comm_obj, env_var, col = NA) {
   # TO DO: add check to ensure that col is the same length as treatments
   require(rgl)
-  grps = unique(dat_plot$group)
+  env_data = comm_obj$env[ , env_var]
+  grps = unique(env_data)
   if (is.na(col)) 
     col = rainbow(length(grps))
-  S_list = rowSums(dat_sp > 0)
-  N_list = rowSums(dat_sp)
-  PIE_list = sapply(1:nrow(dat_sp), function(x) 
-    N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, ]/N_list[x])^2)))
-  grp_list = as.character(dat_plot$group[match(dat_plot$plot, row.names(dat_sp))])
-  col_list = sapply(grp_list, function(x) col[which(grps == x)])
+  S_list = rowSums(comm_obj$comm > 0)
+  N_list = rowSums(comm_obj$comm)
+  PIE_list = sapply(1:nrow(comm$comm), function(x) 
+    N_list[x]/(N_list[x] - 1) * (1 - sum((comm_obj$comm[x, ]/N_list[x])^2)))
+  col_list = sapply(env_data, function(x) col[which(grps == x)])
   plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
+
+plot_9_panels = function(mobr, group, ref_group){
+  type = mobr$type
+  if (type == 'continuous')
+    stop("Currently this plot only works for mobr object with type discrete.")
+  else{
+    cols = c('red', 'blue')
+    deltaS_col = 'turquoise'
+    ddeltaS_col = 'magenta'
+    par(mfrow = c(3, 3))
+    
+    # Create the three sets of curves
+    mobr$sample_rare[, -1] = lapply(mobr$sample_rare[, -1], function(x)
+      as.numeric(as.character(x)))
+    sample_rare_group = mobr$sample_rare[mobr$sample_rare == group, ]
+    sample_rare_ref = mobr$sample_rare[mobr$sample_rare == ref_group, ]
+    plot(1:nrow(sample_rare_group), sample_rare_group$expl_S, 
+         xlab = 'Number of plots', ylab = 'Richness (S)', 
+         xlim = c(0, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
+         ylim = c(min(sample_rare_ref$expl_S, sample_rare_group$expl_S), 
+                  max(sample_rare_ref$expl_S, sample_rare_group$expl_S)), 
+         type = 'l', lwd = 2, col = cols[1], cex.lab = 1.5, cex.axis = 1.5, 
+         main = 'Spatial', cex.main = 2)
+    lines(1:nrow(sample_rare_ref), sample_rare_ref$expl_S, type = 'l', 
+          lwd = 2, col = cols[2])
+    
+    plot(1:nrow(sample_rare_group), sample_rare_group$impl_S, 
+         xlab = 'Number of plots', ylab = 'Richness (S)', 
+         xlim = c(0, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
+         ylim = c(min(sample_rare_ref$impl_S, sample_rare_group$impl_S), 
+                  max(sample_rare_ref$impl_S, sample_rare_group$impl_S)), 
+         type = 'l', lwd = 2, col = cols[1], cex.lab = 1.5, cex.axis = 1.5, 
+         main = 'Sample', cex.main = 2)
+    lines(1:nrow(sample_rare_ref), sample_rare_ref$impl_S, type = 'l', 
+          lwd = 2, col = cols[2])
+    
+    plot(mobr$indiv_rare$sample, mobr$indiv_rare[[group]], xlab = 'Number of individuals', 
+         ylab = 'Richness (S)', xlim = c(0, max(mobr$indiv_rare$sample)), 
+         ylim = c(0, max(mobr$indiv_rare[, -1])), type = 'l', lwd = 2, 
+         col = cols[1], cex.lab = 1.5, cex.axis = 1.5, main = 'Individual', cex.main = 2)
+    lines(mobr$indiv_rare$sample, mobr$indiv_rare[[ref_group]], 
+          type = 'l', lwd = 2, col = cols[2])
+    
+    # Create the plots for the three delta-S between groups
+    minN = min(nrow(sample_rare_group), nrow(sample_rare_ref))
+    delta_Sspat = sample_rare_group$expl_S[1:minN] - sample_rare_ref$expl_S[1:minN]
+    plot(seq(minN), delta_Sspat, ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of plots', ylab = 'delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+    
+    delta_Ssample = sample_rare_group$impl_S[1:minN] - sample_rare_ref$impl_S[1:minN]
+    plot(seq(minN), delta_Ssample, ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of plots', ylab = 'delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+   
+    deltaS_Sind = mobr$indiv_rare[[group]] - mobr$indiv_rare[[ref_group]]
+    plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of individuals', ylab = 'delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+    
+    # Create the plots for the three d-delta S
+    mobr$discrete$agg[, -1] = lapply(mobr$discrete$agg[, -1], function(x)
+      as.numeric(as.character(x))) 
+    ddelta_Sspat = mobr$discrete$agg[which(as.character(mobr$discrete$agg$group) == as.character(group)), ]
+    plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, ylim = c(min(ddelta_Sspat$ddeltaS_emp, 0), max(ddelta_Sspat$ddeltaS_emp, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = ddeltaS_col, 
+         xlab = 'Number of plots', ylab = 'delta-delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+    
+    mobr$discrete$N[, -1] = lapply(mobr$discrete$N[, -1], function(x)
+      as.numeric(as.character(x))) 
+    ddelta_Ssample = mobr$discrete$N[which(as.character(mobr$discrete$N$group) == as.character(group)), ]
+    plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp, ylim = c(min(ddelta_Ssample$ddeltaS_emp, 0), max(ddelta_Ssample$ddeltaS_emp, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = ddeltaS_col, 
+         xlab = 'Number of individuals', ylab = 'delta-delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+    
+    plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of individuals', ylab = 'delta S')
+    abline(h = 0, lwd = 2, lty = 2)
+  }
+}
