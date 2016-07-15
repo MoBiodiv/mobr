@@ -1,120 +1,199 @@
-#' Boxplots for initial comparison of diversity in different groups of samples
-#'
-#' @param comm Community object
-#' @param env_var String with the name of the grouping variable
-#'
-#' @examples
-#' 
-#' library(vegan)
-#' data(mite)
-#' data(mite.env)
-#' data(mite.xy)
-#' mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
-#' boxplot(mite_comm, "Topo")
-#' 
-boxplot.comm <- function(comm, env_var){
-   
+# install Spade R package
+# see http://chao.stat.nthu.edu.tw/wordpress/software_download/
+#library(devtools)
+#install_github('AnneChao/SpadeR')
+
+
+# ------------------------------------------------------------------------------
+# Calculate sample based and group based biodiversity statistics
+mob_stats <- function(comm, group_var)
+{
    require(vegan)
+   require(SpadeR)
    
-   env_data = comm$env[, env_var]
-   groups = unique(env_data)
+   group_id  = comm$env[, group_var]
    
-   nInd_sample <- rowSums(comm$comm)      # inidividuals in each sample
-   nSpec_sample <- rowSums(comm$comm > 0) # species in each sample
+   # Sample based statistics
+   N_sample <- rowSums(comm$comm)      # individuals in each sample
+   S_sample <- rowSums(comm$comm > 0) # species in each sample
    
-   n.min <- min(nInd_sample)  # lowest number of individuals observed
-   nSpec_rare <- apply(comm$comm, MARGIN = 1, FUN=function(x){rarefaction(as.numeric(x), method = "indiv", effort = n.min)})
+   # rarefied species richness
+   Nmin_sample <- min(N_sample)              # lowest number of individuals in sample
+   S_rare_sample <- apply(comm$comm, MARGIN = 1,
+                          FUN=function(x){rarefaction(as.numeric(x), method = "indiv", effort = Nmin_sample)})
    
    PIE_sample <- diversity(comm$comm, index = "simpson")
-   PIE_group <- by(comm$comm, env_data, FUN = function(x){diversity(colSums(x), index = "simpson")})
+   
+   # extrapolated species richness - iChao1 estimator for each sample
+   S_ext_sample <- apply(comm$comm, MARGIN = 1,
+                         FUN=function(x){ChaoSpecies(x, datatype = "abundance")$Species.Table[5,1]})
+   
+   # Group based statistics
+   
+   # abundance distribution pooled in group
+   abund_group <- by(comm$comm, group_id, FUN = function(x){colSums(x)})
+   
+   N_group     <- sapply(abund_group, sum)
+   S_group     <- sapply(abund_group, function(x){sum(x > 0)})
+   
+   Nmin_group <- min(N_group) 
+   S_rare_group <- sapply(abund_group,
+                          FUN=function(x){rarefaction(as.numeric(x), method = "indiv", effort = Nmin_group)})
+   
+   PIE_group   <- sapply(abund_group, diversity, index = "simpson")
    
    # calculate Chao estimator of species richness using JADE
-   nSpec_jade <- apply(comm$comm, MARGIN = 1, FUN = function(x){nrow(SpecDist(x))})
+   S_ext_group <- sapply(abund_group, 
+                         FUN = function(x){ChaoSpecies(x, datatype = "abundance")$Species.Table[5, ]})
    
-   # create diversity boxplots ------------------------------
-   windows(width = 10, height = 8, title = "Boxplots")
-   op <- par(mfcol = c(2,4), las = 1, cex.main = 1.5, cex.lab = 1.5,
-             cex.axis = 1.1, font.main = 1)
+   betaPIE_sample <- PIE_group[group_id] - PIE_sample
+   
+   stats_samples <- data.frame(group   = group_id,
+                               N       = N_sample,
+                               S       = S_sample,
+                               S_rare  = S_rare_sample,
+                               S_ext   = S_ext_sample,
+                               PIE     = PIE_sample,
+                               betaPIE = betaPIE_sample
+                               )
+   
+   stats_groups <- data.frame(group  = levels(group_id),
+                              N      = N_group,
+                              S      = S_group,
+                              S_rare = S_rare_group,
+                              S_ext_mean  = S_ext_group[1,],
+                              S_ext_CIlow = S_ext_group[3,],
+                              S_ext_CIup  = S_ext_group[4,],
+                              PIE    = PIE_group)
+   
+   return(list(samples = stats_samples,
+               groups  = stats_groups))
+   
+}
+
+# ------------------------------------------------------------------------------
+# Boxplots for sample based comparisons
+plot_samples <- function(sample_stats, tukey = F)
+{
+   # create local diversity boxplots ------------------------------
+   op <- par(mfcol = c(2,4), las = 1, font.main = 1)
    
    # raw species richness
-   par(fig = c(0.32, 0.68, 0.5, 1), new = T)
-   test <- kruskal.test(nSpec_sample ~ env_data)
+   par(fig = c(0.32, 0.68, 0.5, 1))
+   test <- kruskal.test(S ~ group, data = sample_stats)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   boxplot(nSpec_sample ~ env_data, ylab = "No. of species", notch = T, main = title)
+   boxplot(S ~ group, data = sample_stats, ylab = "No. of species", notch = T, main = title)
    
    # number of individuals
    par(fig = c(0, 0.25, 0, 0.5), new = T)
-   test <- kruskal.test(nInd_sample ~ env_data)
+   test <- kruskal.test(N ~ group, data = sample_stats)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   boxplot(nInd_sample ~ env_data, ylab = "No. of individuals", notch = T, main = title) 
+   boxplot(N ~ group, data = sample_stats, ylab = "No. of individuals", notch = T, main = title) 
    
    # number of species rarefied
    par(fig = c(0.25, 0.5, 0, 0.5), new = T)
-   test <- kruskal.test(nSpec_rare ~ env_data)
+   test <- kruskal.test(S_rare ~ group, data = sample_stats)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   ylabel <- paste("No. of species (n = ",n.min,")",sep = "")
-   boxplot(nSpec_rare ~ env_data, ylab = ylabel , notch = T, main = title)
+   ylabel <- paste("No. of species (n = ",min(sample_stats$N),")",sep = "")
+   boxplot(S_rare ~ group, data = sample_stats, ylab = ylabel , notch = T, main = title)
    
    # number of species extrapolated
    par(fig = c(0.5, 0.75, 0, 0.5), new = T)
-   test <- kruskal.test(nSpec_jade ~ env_data)
+   test <- kruskal.test(S_ext ~ group, data = sample_stats)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
    ylabel <- "No. of species extrapolated"
-   boxplot(nSpec_jade ~ env_data, ylab = ylabel , notch = T, main = title)
+   boxplot(S_ext ~ group, data = sample_stats, ylab = ylabel , notch = T, main = title)
    
    # PIE
    par(fig = c(0.75, 1, 0, 0.5), new = T)
-   test <- kruskal.test(PIE_sample ~ env_data)
+   test <- kruskal.test(PIE ~ group, data = sample_stats)
    title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   boxplot(PIE_sample ~ env_data, ylab = "PIE", notch = T, main = title)
+   boxplot(PIE ~ group, data = sample_stats, ylab = "PIE", notch = T, main = title)
    
+   par(op)
    
-   # create Tukey plot ------------------------------
-   windows(width = 15, height = 8, title = "Tukey HSD")
-   op <- par(mfcol = c(2,4), las = 0, cex.main = 1.5, cex.lab = 1.5,
-             cex.axis = 1.1, font.main = 1)
+   if (tukey == T){
+      # create Tukey plot ------------------------------
+      op <- par(mfcol = c(2,4), las = 0, font.main = 1)
+      
+      par(fig = c(0.375, 0.625, 0.5, 1))
+      plot(TukeyHSD(aov(S ~ group, data = sample_stats)))
+      legend("topright",c("No. of species"), cex = 1, bty = "n")
+      
+      par(fig = c(0, 0.25, 0, 0.5), new = T)
+      plot(TukeyHSD(aov(N ~ group, data = sample_stats)))
+      legend("topright",c("No. of individuals"), cex = 1, bty = "n")
+      
+      par(fig = c(0.25, 0.5, 0, 0.5), new = T)
+      plot(TukeyHSD(aov(S_rare ~ group, data = sample_stats)))
+      legend("topright", paste("Species (n = ", min(sample_stats$N),")",sep = ""),
+             cex = 1, bty = "n")
+      
+      par(fig = c(0.5, 0.75, 0, 0.5), new = T)
+      plot(TukeyHSD(aov(S_ext ~ group, data = sample_stats)))
+      legend("topright",c("Species extrapolated"), cex = 1, bty = "n")
+      
+      par(fig = c(0.75, 1, 0, 0.5), new = T)
+      plot(TukeyHSD(aov(PIE ~ group,  data = sample_stats)))
+      legend("topright",c("PIE"), cex = 1, bty = "n")
+      
+      par(op)
+   }
    
-   par(fig = c(0.375, 0.625, 0.5, 1), new = T)
-   plot(TukeyHSD(aov(nSpec_sample ~ env_data)))
-   legend("topright",c("No. of species"), cex = 1.5, bty = "n")
-   
-   par(fig = c(0, 0.25, 0, 0.5), new = T)
-   plot(TukeyHSD(aov(nInd_sample ~ env_data)))
-   legend("topright",c("No. of individuals"), cex = 1.5, bty = "n")
-   
-   par(fig = c(0.25, 0.5, 0, 0.5), new = T)
-   plot(TukeyHSD(aov(nSpec_rare ~ env_data)))
-   legend("topright", paste("No. of species (n = ",n.min,")",sep = ""),
-          cex = 1.5, bty = "n")
-   
-   par(fig = c(0.5, 0.75, 0, 0.5), new = T)
-   plot(TukeyHSD(aov(nSpec_jade ~ env_data)))
-   legend("topright",c("No. of species extrapolated"), cex = 1.5, bty = "n")
-   
-   par(fig = c(0.75, 1, 0, 0.5), new = T)
-   plot(TukeyHSD(aov(PIE_sample ~ env_data)))
-   legend("topright",c("PIE"), cex = 1.5, bty = "n")
-
-   
-   # 
-   # # PIE plot and beta PIE
-   # 
-   # boxplot(PIE_sample ~ env_data, ylab = "PIE", notch = T)
-   # 
-   # beta_PIE <- PIE_plot - PIE_sample
-   # test <- kruskal.test(beta_PIE ~ env_data)
-   # 
-   # title <- paste("Kruskal-Test: p = ", round(test$p.value, digits = 2), sep = "")
-   # boxplot(beta_PIE ~ env_data, ylab = "beta PIE", notch = T, main = title)
-   # plot(TukeyHSD(aov(beta_PIE ~ env_data)))
-   
-   outdat <- data.frame(Groups       = env_data,
-                        nInd_sample  = nInd_sample,
-                        nSpec_sample = nSpec_sample,
-                        nSpec_rare   = nSpec_rare,
-                        nSpec_jade   = nSpec_jade,
-                        PIE_sample   = PIE_sample)
-   
-   return(outdat)
 }
 
+
+# ------------------------------------------------------------------------------
+# Plot for group-based comparisons
+plot_groups <- function(group_stats)
+{
+   require(plotrix)
+   op <- par(mfrow = c(1,3), las = 1, font.main = 1)
+   
+   minS <- min(group_stats[1, 3:7])
+   maxS <- max(group_stats[2, 3:7])
+   
+   plot(S ~ group, data = group_stats, boxwex = 0, ylim = c(0.95*minS, 1.05*maxS),
+        ylab = "", main = "Species")
+   points(S ~ group,data = group_stats, pch = 19, cex = 1.5)
+   points(c(0.8,1.8), group_stats$S_rare, pch = 3, cex = 1.5 )
+   plotCI(c(1.2,2.2), group_stats$S_ext_mean, pch = 1, cex = 1.5,
+          li = group_stats$S_ext_CIlow, ui = group_stats$S_ext_CIup, add = T)
+   legend("top",c("Observed S", "Rarefied S", "Extrapolated S"), pch = c(19,3,1), cex = 1)
+   
+   plot(N ~ group, data = group_stats, boxwex = 0, ylab = "", main = "Individuals")
+   points(N ~ group, data =group_stats, pch = 19)
+   
+   plot(PIE ~ group, data = group_stats, boxwex = 0, ylab = "", main = "PIE")
+   points(PIE ~ group, data =group_stats, pch = 19)
+   
+   par(op)
+}
+
+# ------------------------------------------------------------------------------
+# Plot for betaPIE
+plot_betaPIE <- function(mob_stats)
+{
+   op <- par(mfrow = c(1,2), las = 1, font.main = 1)
+   pie_range <- range(c(mob_stats$samples$PIE, mob_stats$groups$PIE))
+   boxplot(PIE ~ group, data = mob_stats$sample, ylim = pie_range, ylab = "PIE",
+           notch = T, main = "Sample and group PIE")
+   points(c(1.1, 2.1), mob_stats$groups$PIE, pch = 23, bg = "grey", cex = 1.5)
+   
+   boxplot(betaPIE ~ group, data = mob_stats$samples,
+           ylab = " betaPIE", notch = T, main = "Group PIE - sample PIE")
+   par(op)
+}
+   
+# ------------------------------------------------------------------------------
+# # Example 
+# library(vegan)
+# data(mite)
+# data(mite.env)
+# data(mite.xy)
+# mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
+# 
+# mite_stats <- mob_stats(mite_comm, "Topo")
+# plot_samples(mite_stats$samples, tukey = T)
+# plot_groups(mite_stats$groups)
+# plot_betaPIE(mite_stats)
