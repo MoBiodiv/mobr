@@ -672,12 +672,10 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
           # Null test
           null_agg_r_mat = matrix(NA, nperm, min_plot_group)
           for (i in 1:nperm){
-            xy_perm = comm$spat[sample(nrow(comm$spat)), ]
             deltaS_perm = c()
             for (group in unique(sample_rare_keep$group)){
               comm_group = comm$comm[as.character(env_data) == as.character(group), ]
-              xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
-              expl_S_perm = rarefy_sample_explicit(comm_group, xy_perm_group)
+              expl_S_perm = avg_swap_rare(comm_group, rep(group, nrow(comm_group)), 1)
               deltaS_perm = c(deltaS_perm, as.numeric(expl_S_perm - as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])))
             }
             null_agg_r_mat[i, ] = sapply(seq(min_plot_group), function(x)
@@ -710,11 +708,8 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               
               null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
               for (i in 1:nperm){
-                xy_perm = comm$spat[sample(nrow(comm$spat)), ]
-                xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
-                xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
-                expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
-                expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
+                expl_S_perm_group = avg_swap_rare(comm_group, rep(group, nrow(comm_group)), 1)
+                expl_S_perm_ref = avg_swap_rare(ref_comm, rep(ref, nrow(ref_comm)), 1)
                 null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
                   (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
               }
