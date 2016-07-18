@@ -72,8 +72,9 @@ print.comm = function(x) {
     print(lapply(x, head))
 }
 
-print.mobr = function(...) {
-   # print rarefaction and delta rarefaction summaries
+print.mobr = function(x) {
+    cat('Printing the head of each attribute in the object\n')
+    print(lapply(x, head))
 }
 
 plot.mobr = function(mobr, group = NULL) {
@@ -262,88 +263,80 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 
 #' Conduct the MOBR tests on drivers of biodiversity across scales.
 #' 
-#' There are three tests, on effects of 1. the shape of the SAD, 2. treatment/group-level density,
-#' 3. degree of aggregation. The user can specificy to conduct one or more of these tests.
+#' There are three tests, on effects of 1. the shape of the SAD, 2.
+#' treatment/group-level density, 3. degree of aggregation. The user can
+#' specificy to conduct one or more of these tests.
 #' 
-#'  @param comm "comm" object created by make_comm_obj()
-#'  @param env_var a character string specifying the environmental variable in comm$env used
-#'  to separate plots into distinct groups. This is the explanatory variable.
-#'  @param ref_group one value of env_var, used to define the reference group to which all other groups are compared with
-#'  when "type" is discrete. It is not needed when "test" is continuous.
-#'  @param tests specifies which one or more of the three tests ('indiv', 'sampl', 'spat') are to be performed. 
-#'  Default is to include all three tests.
-#'  @param type "discrete" or "continuous". If "discrete", pair-wise comparisons are conducted between all other groups and
-#'  the reference group. If "continuous", a correlation analysis is conducted between the response variables and env_var.
-#'  @param inds effort size at which the individual-based rarefaction curves are to be evaluated, and to which the sample-based
-#'  rarefaction curves are to be interpolated. It can take three types of values, a single integer, a vector of 
-#'  intergers, and NULL. If inds = NULL (default), the curves are evaluated at every possible effort size, from 1 to 
-#'  the total number of individuals within the group (slow). If inds is a single integer, it is taken as the number 
-#'  of points at which the curves are evaluated; the positions of the points are determined by the "log_scale" argument.
-#'  If inds is a vector of integers, it is taken as the exact points at which the curves are evaluated.
-#'  @param log_scale if "inds" is given a single integer, "log_scale" determines the position of the points. If log_scale is TRUE,
-#'  the points are equally spaced on logarithmic scale. If it is FALSE (default), the points are equally spaced on arithmetic scale.
-#'  @param min_plot minimal number of plots for test 'spat', where plots are randomized within groups as null test. If it is given
-#'  a value, all groups with fewer plots than min_plot are removed for this test. If it is NULL (default), all groups are kept. Warnings
-#'  are issued if 1. there is only one group left and "type" is discrete, or 2. there are less than three groups left and "type" is continuous,
-#'  or 3. reference group ("ref_group") is removed and "type" is discrete. In these three scenarios, the function will terminate.
-#'  A different warning is issued if any of the remaining groups have less than five plots (which have less than 120 permutations), but the 
-#'  test will be carried out.
-#'  @param density_stat reference density used in converting number of plots to numbers of individuals, a step in test "sampl". It can take
-#'  one of the three values: "mean", "max", or "min". If it is "mean", the average plot-level abundance across plots (all plots when "type"
-#'  is "continuous, all plots within the two groups for each pair-wise comparison when "type" is "discrete") are used. If it is "min" or "max",
-#'  the minimum/maximul plot-level density is used.
-#'  @param corr which kind of correlation to use when "type" is "continuous". It can take two values,
-#'  "spearman" or "pearson". "spearman" (default) is generally recommended because the relationship between 
-#'  the response and "env_var" may not be linear.
-#'  @param nperm number of iterations to run for null tests.
-#'
-#'  @return a "mobr" object with attributes...
-#'  @export
+#' @param comm "comm" object created by make_comm_obj()
+#' @param env_var a character string specifying the environmental variable to in
+#'   comm$env used for a comparison
+#' @param group_var an optional character string to specify group membership. If
+#'   it is NULL then each unique value of env_var is used as the group variable
+#' @param ref_group a character string used to define the reference group to
+#'   which all other groups are compared with when "type" is discrete. It is not
+#'   needed when "type" is continuous.
+#' @param tests specifies which one or more of the three tests ('indiv',
+#'   'sampl', 'spat') are to be performed. Default is to include all three
+#'   tests.
+#' @param type "discrete" or "continuous". If "discrete", pair-wise comparisons
+#'   are conducted between all other groups and the reference group. If
+#'   "continuous", a correlation analysis is conducted between the response
+#'   variables and env_var.
+#' @param inds effort size at which the individual-based rarefaction curves are
+#'   to be evaluated, and to which the sample-based rarefaction curves are to be
+#'   interpolated. It can take three types of values, a single integer, a vector
+#'   of intergers, and NULL. If inds = NULL (default), the curves are evaluated
+#'   at every possible effort size, from 1 to the total number of individuals
+#'   within the group (slow). If inds is a single integer, it is taken as the
+#'   number of points at which the curves are evaluated; the positions of the
+#'   points are determined by the "log_scale" argument. If inds is a vector of
+#'   integers, it is taken as the exact points at which the curves are
+#'   evaluated.
+#' @param log_scale if "inds" is given a single integer, "log_scale" determines
+#'   the position of the points. If log_scale is TRUE, the points are equally
+#'   spaced on logarithmic scale. If it is FALSE (default), the points are
+#'   equally spaced on arithmetic scale.
+#' @param min_plot minimal number of plots for test 'spat', where plots are
+#'   randomized within groups as null test. If it is given a value, all groups
+#'   with fewer plots than min_plot are removed for this test. If it is NULL
+#'   (default), all groups are kept. Warnings are issued if 1. there is only one
+#'   group left and "type" is discrete, or 2. there are less than three groups
+#'   left and "type" is continuous, or 3. reference group ("ref_group") is
+#'   removed and "type" is discrete. In these three scenarios, the function will
+#'   terminate. A different warning is issued if any of the remaining groups
+#'   have less than five plots (which have less than 120 permutations), but the 
+#'   test will be carried out.
+#' @param density_stat reference density used in converting number of plots to
+#'   numbers of individuals, a step in test "sampl". It can take one of the
+#'   three values: "mean", "max", or "min". If it is "mean", the average
+#'   plot-level abundance across plots (all plots when "type" is "continuous,
+#'   all plots within the two groups for each pair-wise comparison when "type"
+#'   is "discrete") are used. If it is "min" or "max", the minimum/maximul
+#'   plot-level density is used.
+#' @param corr which kind of correlation to use when "type" is "continuous". It
+#'   can take two values, "spearman" or "pearson". "spearman" (default) is
+#'   generally recommended because the relationship between the response and
+#'   "env_var" may not be linear.
+#' @param nperm number of iterations to run for null tests.
+#'   
+#' @return a "mobr" object with attributes...
+#' @export
 #'  @examples
 #'  {
 #'  library(vegan)
 #'  data(mite)
 #'  data(mite.env)
 #'  data(mite.xy)
-#'  mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
-#'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub', ref_group = 'None', inds = 20)
+#'  mite_comm = make_comm_obj(mite, data.frame(mite.env, mite.xy))
+#'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub',
+#'                                       ref_group = 'None', inds = 20)
 #'  }
 
 get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL, 
                            tests=c('indiv', 'sampl', 'spat'),
-                           type='discrete', inds=NULL, log_scale=FALSE, min_plot = NULL, 
-                           density_stat ='mean', corr='spearman', 
-                           nperm=1000) {
-  # Inputs:
-  # comm - a 'comm' type object, with attributes ...
-  # type - if the envronmental variable is 'discrete' vs 'continous'
-  # env_var - string, name of the envronmental variable
-  # group_var - string, optional name of field in comm$env that grouping should
-  #   carried out on.
-  # ref_group - the group that will be used as a reference in pair-wise comparisons (ie., all other groups will be compared with it).
-  #   This argument is only needed then type == 'discrete'.
-  # test - tests to be included. A single value in c('indiv', 'sampl', 'spat'), or a combination of them as a list. 
-  #   The default is test = c('indiv', 'sampl', 'spat') (all three tests).
-  # type - pair-wise comparisons ('discrete') or regression ('continuous'). For the discrete case, ref_group has to be specified as the baseline.
-  # inds - argument for individual-based rarefaction. If given a single number, will be taken as the number of points for
-  #   for rarefaction. log_scale will then be employed (see below). If given a list of numbers, will be taken as the levels of N 
-  #   for rarefaction. Default (NULL) will result in rarefaction at all possible N.
-  # min_plots - minimal number of plots for each group for test 'spat', where plots are randomized within groups for null test.
-  #   If a value is given, all groups with less than min_plots plots will be removed. If NULL (default), all groups are kept.
-  #   Warnings will be issued if 1. there is only one group left in discrete case, or 2. there are less than three groups left in continuous case, 
-  #   or 3. ref_group is removed in discrete case. In these three cases, the test will not be carried out.
-  #   Another warning will be issued if any of the remaining groups have less than five plots, but the test will be carried out in this case.
-  # log_scale - If number of points for rarefaction is given, log_scale = TRUE leads to values evenly spaced on log scale,
-  #   log_scale = FAlSE (default) leads to values evenly spaced on arithmetic scale.
-  # density_stat - reference density used in converting number of plots to number of individuals. Can take one of three values:
-  #   'mean', 'max', 'min'. If 'mean', the average plot-level abundance across all plots are used. If 'min' or 'max', 
-  #   the minimum/maximum plot-level abundance is used.
-  # corr - which correlation is used for S/delta S vs envronmental variable in the continuous case. Can be 'spearman' (default, rank correlation)
-  #   or 'pearson' (less recommended because of potential nonlinearity)
-  # nperm - number of iterations for null models
-  # Output:
-  # out - a 'mobr' type object, with attributes...
-  # check tests
+                           type='discrete', inds=NULL, log_scale=FALSE,
+                           min_plot = NULL, density_stat ='mean',
+                           corr='spearman', nperm=1000) {
     env_data = comm$env[ , env_var]
     if (is.null(group_var)) 
         groups = env_data
@@ -367,16 +360,16 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
         print(group_vals)
     } else if (!('factor' %in% class(env_data)) & type == 'discrete') 
         warning(paste(env_var, 'is not a factor and each unique value will be treated as a grouping variable'))
-
     test_status = sapply(tests, function(x) 
                          eval(parse(text=paste('comm$tests$', x, sep=''))))
     approved_tests = tests[which(test_status == TRUE)]
     if (any(test_status == FALSE)) {
-        tests_string = paste(tests[which(tests %in% approved_tests)], collapse=' and ')
+        tests_string = paste(tests[which(tests %in% approved_tests)],
+                             collapse=' and ')
         cat(paste('Based upon the attributes of the community object only the following tests will be performed:',
                   tests_string))
     }
-    out = list()  # This is the object with the outputs
+    out = list()  
     out$type = type
 
     group_sad = aggregate(comm$comm, by=list(groups), sum)
@@ -387,7 +380,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
     group_sad = group_sad[ , -1]
     group_minN = min(rowSums(group_sad))
     group_plots = data.frame(table(groups)) # Number of plots within each group
-    plot_abd = apply(comm$comm, 1, sum)
+    plot_abd = rowSums(comm$comm)
     if (density_stat == 'mean')
         ref_dens = sum(comm$comm) / nrow(comm$comm)
     else if (density_stat == 'max')
@@ -413,7 +406,6 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
     if ('indiv' %in% approved_tests) {
       ind_rare = data.frame(apply(group_sad, 1, function(x) 
                             rarefaction(x, 'indiv', ind_sample_size)))
-      row.names(ind_rare) = NULL
       out$indiv_rare = cbind(ind_sample_size, ind_rare)
       names(out$indiv_rare) = c('sample', as.character(group_levels))
       
@@ -428,20 +420,31 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
           overall_sad_lumped = as.numeric(colSums(group_sad))
           meta_freq = SpecDist(overall_sad_lumped)$probability
           sad_perm = sapply(as.numeric(rowSums(group_sad)), function(x)
-            data.frame(table(sample(1:length(meta_freq), x, replace = T, prob = meta_freq)))[, 2])
-          
+                            data.frame(table(sample(1:length(meta_freq),
+                                                    x, replace = T,
+                                                    prob = meta_freq)))[, 2])
           perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
-            rarefaction(x, 'indiv', ind_sample_size))
-          null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){cor(x, as.numeric(group_levels), method = corr)})
+                                rarefaction(x, 'indiv', ind_sample_size))
+          null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){
+                                      cor(x, as.numeric(group_levels),
+                                          method = corr)})
         }
-        ind_r_null_CI = apply(null_ind_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
-        out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor, t(ind_r_null_CI)))
-        names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+        ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
+                              quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+        out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor,
+                                                t(ind_r_null_CI)))
+        names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low',
+                                        'r_null_median', 'r_null_high')
       }
       else { # discrete case
-        ref_sad = group_sad[which(as.character(group_levels) == as.character(ref_group)), ]
-        out$discrete$indiv = data.frame(sample = numeric(), group = character(), deltaS_emp = numeric(), deltaS_null_low = numeric(), 
-                                        deltaS_null_median = numeric(), deltaS_null_high = numeric(), stringsAsFactors = F)
+        ref_sad = group_sad[which(as.character(group_levels) ==
+                                  as.character(ref_group)), ]
+        out$discrete$indiv = data.frame(sample = numeric(), group = character(),
+                                        deltaS_emp = numeric(),
+                                        deltaS_null_low = numeric(), 
+                                        deltaS_null_median = numeric(),
+                                        deltaS_null_high = numeric(),
+                                        stringsAsFactors = F)
         for (group in group_levels){
           if (as.character(group) != as.character(ref_group)){
             deltaS = out$indiv_rare[, as.character(group)] - out$indiv_rare[, as.character(ref_group)]
@@ -453,13 +456,17 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               comp_sad_lumped = as.numeric(colSums(comp_sad))
               meta_freq = SpecDist(comp_sad_lumped)$probability
               sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
-                data.frame(table(sample(1:length(meta_freq), x, replace = T, prob = meta_freq)))[, 2])
+                data.frame(table(sample(1:length(meta_freq), x, replace = T,
+                                        prob = meta_freq)))[, 2])
               perm_ind_rare = sapply(sad_perm, function(x)
                 rarefaction(x, 'indiv', ind_sample_size))
               null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
             }
-            ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
-            ind_group = data.frame(cbind(rep(as.character(group), length(ind_sample_size)),ind_sample_size,  
+            ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x)
+                                       quantile(x, c(0.025, 0.5, 0.975)))
+            ind_group = data.frame(cbind(rep(as.character(group),
+                                             length(ind_sample_size)),
+                                         ind_sample_size,  
                                          deltaS, t(ind_deltaS_null_CI)))
             out$discrete$indiv = rbind(out$discrete$indiv, ind_group)
           }
