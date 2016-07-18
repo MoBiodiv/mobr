@@ -150,14 +150,16 @@ plot_groups <- function(group_stats)
    require(plotrix)
    op <- par(mfrow = c(1,3), las = 1, font.main = 1)
    
-   minS <- min(group_stats[1, 3:7])
-   maxS <- max(group_stats[2, 3:7])
+   minS <- min(group_stats[, 3:7])
+   maxS <- max(group_stats[, 3:7])
+   
+   ngroups <- nrow(group_stats)
    
    plot(S ~ group, data = group_stats, boxwex = 0, ylim = c(0.95*minS, 1.05*maxS),
         ylab = "", main = "Species")
    points(S ~ group,data = group_stats, pch = 19, cex = 1.5)
-   points(c(0.8,1.8), group_stats$S_rare, pch = 3, cex = 1.5 )
-   plotCI(c(1.2,2.2), group_stats$S_ext_mean, pch = 1, cex = 1.5,
+   points((1:ngroups)-0.2, group_stats$S_rare, pch = 3, cex = 1.5 )
+   plotCI((1:ngroups)+0.2, group_stats$S_ext_mean, pch = 1, cex = 1.5,
           li = group_stats$S_ext_CIlow, ui = group_stats$S_ext_CIup, add = T)
    legend("top",c("Observed S", "Rarefied S", "Extrapolated S"), pch = c(19,3,1), cex = 1)
    
@@ -174,11 +176,13 @@ plot_groups <- function(group_stats)
 # Plot for betaPIE
 plot_betaPIE <- function(mob_stats)
 {
+   ngroups <- nrow(mob_stats$groups)
+   
    op <- par(mfrow = c(1,2), las = 1, font.main = 1)
    pie_range <- range(c(mob_stats$samples$PIE, mob_stats$groups$PIE))
    boxplot(PIE ~ group, data = mob_stats$sample, ylim = pie_range, ylab = "PIE",
            notch = T, main = "Sample and group PIE")
-   points(c(1.1, 2.1), mob_stats$groups$PIE, pch = 23, bg = "grey", cex = 1.5)
+   points((1:ngroups)+0.1, mob_stats$groups$PIE, pch = 23, bg = "grey", cex = 1.5)
    
    boxplot(betaPIE ~ group, data = mob_stats$samples,
            ylab = " betaPIE", notch = T, main = "Group PIE - sample PIE")
