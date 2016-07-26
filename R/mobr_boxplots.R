@@ -57,7 +57,7 @@ mob_stats <- function(comm, group_var)
                                betaPIE = betaPIE_sample
                                )
    
-   stats_groups <- data.frame(group  = levels(group_id),
+   stats_groups <- data.frame(group  = factor(levels(group_id), levels = levels(group_id), ordered = is.ordered(group_id)),
                               N      = N_group,
                               S      = S_group,
                               S_rare = S_rare_group,
@@ -157,7 +157,7 @@ plot_groups <- function(group_stats)
    
    plot(S ~ group, data = group_stats, boxwex = 0, ylim = c(0.95*minS, 1.05*maxS),
         ylab = "", main = "Species")
-   points(S ~ group,data = group_stats, pch = 19, cex = 1.5)
+   points(S ~ group, data = group_stats, pch = 19, cex = 1.5)
    points((1:ngroups)-0.2, group_stats$S_rare, pch = 3, cex = 1.5 )
    plotCI((1:ngroups)+0.2, group_stats$S_ext_mean, pch = 1, cex = 1.5,
           li = group_stats$S_ext_CIlow, ui = group_stats$S_ext_CIup, add = T)
