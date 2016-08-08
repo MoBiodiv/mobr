@@ -1,8 +1,6 @@
-######
-## Jon's data
-#########
-# 1) invasion data
-require(R.matlab)
+library(R.matlab)
+source('./R/mobr.R')
+# 1) invasion data -------------------------
 dat_dir = paste('./data/', 'joninvade.mat', sep = '')
 
 dat_matlab = readMat(dat_dir)
@@ -27,29 +25,22 @@ env = dat_plot[,2]
 ## make community matrix:
 comm = make_comm_obj(comm, data.frame(group=env, x=spat[,1], y=spat[,2]))
 
-
 names(comm$env) = 'groups'
 
 
-tst.inv = get_delta_stats(comm, 'groups', ref_group='uninvaded', type='discrete', log_scale=TRUE, inds=NULL, nperm=100)
+tst.inv = get_delta_stats(comm, 'groups', ref_group='uninvaded',
+                          type='discrete', log_scale=TRUE,
+                          nperm=100)
 
 save(tst.inv, file='./results/tst.inv.Rdata')
 
 pdf("tst.inv.pdf", height = 5, width = 10)
 plot.mobr(tst.inv)
-dev.off()
-
-pdf("tst.inv.box.pdf", height = 6, width = 8)
 boxplot.comm(comm, "groups")
-dev.off()
-
-pdf("tst.inv.rarefy.pdf", height = 5, width = 10)
 plot_rarefy(tst.inv)
 dev.off()
 
-#############
-# 2) Morlaix #
-#############
+# 2) Morlaix ------------------
 
 dat_dir = paste('./data/', 'morlaix.mat', sep = '')
 
@@ -74,23 +65,17 @@ env = dat_plot[,2]
 comm = make_comm_obj(comm, data.frame(group=env))
 names(comm$env) = 'groups'
 
-tst.mor = get_delta_stats(comm, 'groups', ref_group='before', type='discrete', log_scale=TRUE, inds=NULL, nperm=100)
+tst.mor = get_delta_stats(comm, 'groups', ref_group='before',
+                          type='discrete', log_scale=TRUE,
+                          nperm=100)
 save(tst.mor, file='./results/tst.mor.Rdata')
 
 pdf("tst.mor.pdf", height = 5, width = 10)
 plot.mobr(tst.mor)
-dev.off()
-
-pdf("tst.mor.box.pdf", height = 6, width = 8)
 boxplot.comm(comm, "groups")
-dev.off()
-
-pdf("tst.mor.rarefy.pdf", height = 5, width = 10)
 plot_rarefy(tst.mor)
-dev.off()
 
-#####
-# 3) Jon's fire data:
+# 3) Jon's fire data: ---------------------------
 
 dat_unburned = read.csv("./data/fire_data_unburned.csv")
 head(dat_unburned)
@@ -145,29 +130,24 @@ spat = dat_burned_xy[,2:3]
 env = dat.all.2[,2]
 
 ## make community matrix:
-comm = make_comm_obj(comm, data.frame(group=env, x=spat[,1], y=spat[,2]))
+comm = make_comm_obj(comm, data.frame(group=env, x=spat[,1],
+                                      y=spat[,2]))
 
 names(comm$env) = 'groups'
 
-tst.fire = get_delta_stats(comm, 'groups', ref_group='unburned', type='discrete', log_scale=TRUE, inds=NULL, nperm=100)
+tst.fire = get_delta_stats(comm, 'groups', ref_group='unburned',
+                           type='discrete', log_scale=TRUE,
+                           nperm=100)
 save(tst.fire, file='./results/tst.fire.Rdata')
 
 pdf("tst.fire.pdf", height = 5, width = 10)
 plot.mobr(tst.fire)
-dev.off()
-
-pdf("tst.fire.box.pdf", height = 6, width = 8)
 boxplot.comm(comm, "groups")
-dev.off()
-
-pdf("tst.fire.rarefy.pdf", height = 5, width = 10)
 plot_rarefy(tst.fire)
 dev.off()
 
 
-#####
-# 4) jon coffee
-######
+# 4) coffee -----------------------------------
 
 dat_coffee = read.csv("./data/coffee_comm.csv")
 head(dat_coffee)
@@ -196,19 +176,11 @@ save(tst.coffee, file='./results/tst.coffee.Rdata')
 
 pdf("tst.coffee.pdf", height = 5, width = 10)
 plot.mobr(tst.coffee)
-dev.off()
-
-pdf("tst.coffee.box.pdf", height = 6, width = 8)
 boxplot.comm(comm, "groups")
-dev.off()
-
-pdf("tst.coffee.rarefy.pdf", height = 5, width = 10)
 plot_rarefy(tst.coffee)
 dev.off()
 
-###
-# 5) Cattle_tank
-####
+# 5) Cattle_tank -----------------
 
 dat_cattle_high= read.csv("./data/Cattle_tank_high.csv")
 head(dat_cattle_high)
@@ -253,12 +225,6 @@ save(tst.cattle, file='./results/tst.cattle.Rdata')
 
 pdf("tst.cattle.pdf", height = 5, width = 10)
 plot.mobr(tst.cattle)
-dev.off()
-
-pdf("tst.cattle.box.pdf", height = 6, width = 8)
 boxplot.comm(comm, "groups")
-dev.off()
-
-pdf("tst.cattle.rarefy.pdf", height = 5, width = 10)
 plot_rarefy(tst.cattle)
 dev.off()
