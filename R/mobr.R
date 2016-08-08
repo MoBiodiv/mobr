@@ -524,7 +524,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
         group_levels = tapply(env_data, list(groups), mean)
     group_sad = group_sad[ , -1]
     group_minN = min(rowSums(group_sad))
-    group_plots = as.numeric(table(groups)) # Number of plots within each group
+    group_plots = data.frame(table(groups)) # Number of plots within each group
     plot_abd = rowSums(comm$comm)
     if (density_stat == 'mean')
         indiv_dens = sum(comm$comm) / nrow(comm$comm)
