@@ -820,14 +820,11 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               
               null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
               for (i in 1:nperm){
-                comm_perm = swap_binary_species(rbind(comm_group, ref_comm), group_for_2)
-                comm_group_perm = comm_perm[1:nrow(comm_group), ]
-                comm_ref_perm = comm_perm[-(1:nrow(comm_group)), ]
-                
-                xy_group = comm$spat[as.character(env_data) == as.character(group), ]
-                expl_S_perm_group = rarefy_sample_explicit(comm_group_perm, xy_group)
-                expl_S_perm_ref = rarefy_sample_explicit(comm_ref_perm, xy_ref)
-                
+                xy_perm = comm$spat[sample(nrow(comm$spat)), ]
+                xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
+                xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
+                expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
+                expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
                 null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
                   (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
               }
