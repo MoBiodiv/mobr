@@ -134,12 +134,12 @@ summary.mobr = function(...) {
    #  print summary anova style table
 }
 
-plot_rarefy = function(mobr){
+plot_rarefy = function(mobr, cols=NULL){
   # Plot the three curves for an mobr project, 
   # separated by groups
   # Output is a 1*3 figure with the three curves (of each group) separated into subplots
-  
-  cols = rainbow(ncol(mobr$indiv_rare) - 1)
+  if (is.null(cols))
+    cols = rainbow(ncol(mobr$indiv_rare) - 1)
   par(mfrow = c(1, 3), oma=c(0,0,2,0))
   for (icol in 2:ncol(mobr$indiv_rare)){
     if (icol == 2)
@@ -235,7 +235,7 @@ effect_of_N = function(comm_group, ref_dens, inds){
   # using the ref_density (i.e., not the observed density)
   rescaled_effort = round(1:nplots * ref_dens)
   if (max(rescaled_effort) > max(inds)) 
-    warning('Extrapoloating the rarefaction curve because the number of rescaled individuals is larger than the inds argument')
+    warning('Extrapolating the rarefaction curve because the number of rescaled individuals is larger than the inds argument')
   interp_S_samp = pchip(c(1, rescaled_effort),
                         c(1, S_samp), inds)
   S_indiv = rarefaction(comm_group, 'indiv', inds)
@@ -597,7 +597,10 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
             comp_sad = rbind(ref_sad, level_sad)
 
             null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
+            pb <- txtProgressBar(min = 0, max = nperm, style = 3)
+            cat('effect of SAD')
             for (i in 1:nperm){
+              setTxtProgressBar(pb, i)
               comp_sad_lumped = as.numeric(colSums(comp_sad))
               meta_freq = SpecDist(comp_sad_lumped)$probability
               sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
@@ -606,7 +609,9 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               perm_ind_rare = sapply(sad_perm, function(x)
                 rarefaction(x, 'indiv', ind_sample_size))
               null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
+              setTxtProgressBar(pb, i)
             }
+            close(pb)
             ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x)
                                        quantile(x, c(0.025, 0.5, 0.975)))
             ind_group = data.frame(cbind(rep(as.character(group),
@@ -616,7 +621,9 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
             out$discrete$indiv = rbind(out$discrete$indiv, ind_group)
           }
         }
-        names(out$discrete$indiv) = c('group', 'effort_ind', 'deltaS_emp', 'deltaS_null_low', 'deltaS_null_median', 'deltaS_null_high')
+        names(out$discrete$indiv) = c('group', 'effort_ind', 'deltaS_emp',
+                                      'deltaS_null_low', 'deltaS_null_median',
+                                      'deltaS_null_high')
       }
     }
     
@@ -630,6 +637,13 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
         comm_group = comm$comm[as.character(env_data) == as.character(group), ]
         #impl_S = as.numeric(rarefaction(comm_group, 'samp'))
         # replace sample-based rarefaction curve with the new curve
+        #nplots = nrow(comm_group)
+        #group_dens = sum(comm_group) / nplots
+        #samp_effort = round((1:nplots) * group_dens)
+        #S_samp = rarefaction(comm_group, 'indiv', samp_effort)
+        #rescaled_effort = round(1:nplots * ref_dens)
+        #interp_S_samp = pchip(c(1, rescaled_effort),
+        #                      c(1, S_samp), ind_sample_size)
         impl_S = avg_perm_rare(comm_group, 'noagg', nperm = 100)
         sample_rare_group = data.frame(cbind(rep(as.character(group), length(impl_S)), seq(length(impl_S)), impl_S))
         if ('spat' %in% approved_tests){
@@ -973,7 +987,7 @@ plotSNpie = function(comm_obj, env_var, col = NA) {
   plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
-plot_9_panels = function(mobr, group, ref_group){
+plot_9_panels = function(mobr, trt_group, ref_group){
   type = mobr$type
   if (type == 'continuous')
     stop("Currently this plot only works for mobr object with type discrete.")
@@ -985,8 +999,8 @@ plot_9_panels = function(mobr, group, ref_group){
     
     # Create the three sets of curves
     mobr$sample_rare[, -1] = lapply(mobr$sample_rare[, -1], function(x)
-      as.numeric(as.character(x)))
-    sample_rare_group = mobr$sample_rare[mobr$sample_rare == group, ]
+                                    as.numeric(as.character(x)))
+    sample_rare_group = mobr$sample_rare[mobr$sample_rare == trt_group, ]
     sample_rare_ref = mobr$sample_rare[mobr$sample_rare == ref_group, ]
     plot(1:nrow(sample_rare_group), sample_rare_group$expl_S, 
          xlab = 'Number of plots', ylab = 'Richness (S)', 
@@ -1008,7 +1022,7 @@ plot_9_panels = function(mobr, group, ref_group){
     lines(1:nrow(sample_rare_ref), sample_rare_ref$impl_S, type = 'l', 
           lwd = 2, col = cols[2])
     
-    plot(mobr$indiv_rare$sample, mobr$indiv_rare[[group]], xlab = 'Number of individuals', 
+    plot(mobr$indiv_rare$sample, mobr$indiv_rare[[trt_group]], xlab = 'Number of individuals', 
          ylab = 'Richness (S)', xlim = c(0, max(mobr$indiv_rare$sample)), 
          ylim = c(0, max(mobr$indiv_rare[, -1])), type = 'l', lwd = 2, 
          col = cols[1], cex.lab = 1.5, cex.axis = 1.5, main = 'Individual', cex.main = 2)
@@ -1029,7 +1043,7 @@ plot_9_panels = function(mobr, group, ref_group){
          xlab = 'Number of plots', ylab = 'delta S')
     abline(h = 0, lwd = 2, lty = 2)
    
-    deltaS_Sind = mobr$indiv_rare[[group]] - mobr$indiv_rare[[ref_group]]
+    deltaS_Sind = mobr$indiv_rare[[trt_group]] - mobr$indiv_rare[[ref_group]]
     plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
          cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
          xlab = 'Number of individuals', ylab = 'delta S')
@@ -1038,23 +1052,45 @@ plot_9_panels = function(mobr, group, ref_group){
     # Create the plots for the three d-delta S
     mobr$discrete$agg[, -1] = lapply(mobr$discrete$agg[, -1], function(x)
       as.numeric(as.character(x))) 
-    ddelta_Sspat = mobr$discrete$agg[which(as.character(mobr$discrete$agg$group) == as.character(group)), ]
-    plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, ylim = c(min(ddelta_Sspat$ddeltaS_emp, 0), max(ddelta_Sspat$ddeltaS_emp, 0)),
-         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = ddeltaS_col, 
+    ddelta_Sspat = mobr$discrete$agg[which(as.character(mobr$discrete$agg$group) == as.character(trt_group)), ]
+    plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
+         ylim = range(ddelta_Sspat[ , -(1:2)]),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
          xlab = 'Number of plots', ylab = 'delta-delta S')
+    polygon(c(ddelta_Sspat$effort_sample, rev(ddelta_Sspat$effort_sample)), 
+            c(ddelta_Sspat$ddeltaS_null_low, rev(ddelta_Sspat$ddeltaS_null_high)),
+            col = '#C1CDCD', border = NA)
     abline(h = 0, lwd = 2, lty = 2)
+    lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
+          lwd = 2, col = ddeltaS_col)
     
     mobr$discrete$N[, -1] = lapply(mobr$discrete$N[, -1], function(x)
       as.numeric(as.character(x))) 
-    ddelta_Ssample = mobr$discrete$N[which(as.character(mobr$discrete$N$group) == as.character(group)), ]
-    plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp, ylim = c(min(ddelta_Ssample$ddeltaS_emp, 0), max(ddelta_Ssample$ddeltaS_emp, 0)),
-         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = ddeltaS_col, 
+    ddelta_Ssample = mobr$discrete$N[which(as.character(mobr$discrete$N$group) == as.character(trt_group)), ]
+    plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
+         ylim = range(ddelta_Ssample[ , -(1:2)]),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
          xlab = 'Number of individuals', ylab = 'delta-delta S')
+    polygon(c(ddelta_Ssample$effort_sample, rev(ddelta_Ssample$effort_sample)), 
+            c(ddelta_Ssample$ddeltaS_null_low, rev(ddelta_Ssample$ddeltaS_null_high)),
+            col = '#C1CDCD', border = NA)
     abline(h = 0, lwd = 2, lty = 2)
+    lines(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
+          lwd = 2, col = ddeltaS_col)
     
-    plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
-         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+    mobr$discrete$ind[, -1] = lapply(mobr$discrete$ind[, -1], function(x)
+                                     as.numeric(as.character(x))) 
+    delta_Sind = mobr$discrete$ind[which(as.character(mobr$discrete$ind$group) == as.character(trt_group)), ]
+    plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
+         ylim = range(delta_Sind[ , -(1:2)]),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'n',
          xlab = 'Number of individuals', ylab = 'delta S')
+    polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
+            c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
+            col = '#C1CDCD', border = NA)
     abline(h = 0, lwd = 2, lty = 2)
+    lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
+          lwd = 2, col = ddeltaS_col)
+    
   }
 }
