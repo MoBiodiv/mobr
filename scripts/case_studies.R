@@ -1,5 +1,6 @@
 library(R.matlab)
 source('./R/mobr.R')
+source('./R/mobr_boxplots.R')
 # 1) invasion data -------------------------
 dat_dir = paste('./data/', 'joninvade.mat', sep = '')
 
@@ -13,8 +14,7 @@ dat_plot[, 3] = unlist(dat_matlab$x)
 dat_plot[, 4] = unlist(dat_matlab$y)
 dat_plot[, 5] = rep(1, nrow(dat_plot))
 
-dat_sp[, 1] = 1:nrow(dat_plot)
-dat_sp[, 2:ncol(dat_sp)] = t(dat_matlab$comary)
+dat_sp = t(dat_matlab$comary)
 
 # give reasonable names to env. data set:
 
@@ -34,10 +34,15 @@ tst.inv = get_delta_stats(comm, 'groups', ref_group='uninvaded',
 
 save(tst.inv, file='./results/tst.inv.Rdata')
 
+stats <- mob_stats(comm, 'groups')
+
 pdf("tst.inv.pdf", height = 5, width = 10)
-plot.mobr(tst.inv)
-boxplot.comm(comm, "groups")
+plot_samples(stats$samples)
+plot_groups(stats$groups)
+plot_betaPIE(stats)
 plot_rarefy(tst.inv)
+
+plot(tst.inv)
 dev.off()
 
 # 2) Morlaix ------------------
