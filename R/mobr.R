@@ -94,7 +94,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
     par(mfrow = c(1, 3))
   xlabs = c('number of individuals', 'number of individuals', 'number of plots')
   if (type == 'discrete'){
-    ylabs = c(rep('delta-delta-S', 2), 'delta-S')
+    ylabs = c('delta-S', rep('delta-delta-S', 2))
     if (is.null(group) & length(unique(mobr[[type]][[tests[1]]][, 1])) > 1)
       stop("Error: 'group' has to be specified.")
     if(mobr$log_scale) {
@@ -109,7 +109,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
       ylim = range(lapply(mobr$discrete, function(x)
                           lapply(x[ , -(1:2)], function(y)
                                  as.numeric(as.character(y)))))
-    for (i in 1:3){
+    for (i in 3:1){
       if (i == 3)
         plot_log=''
       if (is.null(group))
@@ -1121,7 +1121,7 @@ plot_9_panels = function(mobr, trt_group, ref_group,
     plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
          ylim = ylim, log=plot_log,
          cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
-         xlab = 'Number of plots', ylab = 'delta-delta S')
+         xlab = 'Number of individuals', ylab = 'delta-delta S')
     polygon(c(ddelta_Ssample$effort_sample, rev(ddelta_Ssample$effort_sample)), 
             c(ddelta_Ssample$ddeltaS_null_low, rev(ddelta_Ssample$ddeltaS_null_high)),
             col = '#C1CDCD', border = NA)
