@@ -25,9 +25,13 @@ mob_stats <- function(comm, group_var)
    PIE_sample <- diversity(comm$comm, index = "simpson")
    
    # extrapolated species richness - iChao1 estimator for each sample
-   S_ext_sample <- apply(comm$comm, MARGIN = 1,
-                         FUN=function(x){ChaoSpecies(x, datatype = "abundance")$Species.Table[5,1]})
-   
+   S_ext_sample <- rep(NA, nrow(comm$comm))    
+   for (i in 1:nrow(comm$comm)) {
+       if (sum(comm$comm[i, ]) > 4) {
+           S = ChaoSpecies(comm$comm[i,], datatype = "abundance")
+           S_ext_sample[i] <- S$Species_table[5,1]
+       } 
+   }
    # Group based statistics
    
    # abundance distribution pooled in group
@@ -43,8 +47,8 @@ mob_stats <- function(comm, group_var)
    PIE_group   <- sapply(abund_group, diversity, index = "simpson")
    
    # calculate Chao estimator of species richness using JADE
-   S_ext_group <- sapply(abund_group, 
-                         FUN = function(x){ChaoSpecies(x, datatype = "abundance")$Species.Table[5, ]})
+   S_ext_group <- sapply(abund_group, function(x) 
+                         ChaoSpecies(x, datatype = "abundance")$Species_table[5,])
    
    betaPIE_sample <- PIE_group[group_id] - PIE_sample
    

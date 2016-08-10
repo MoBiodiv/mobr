@@ -1,0 +1,25 @@
+Plot,Treatment,Amelanchier arborea,Carya cordiformis,Carya glabra,Carya texana,Carya tomentosa,Cornus florida,Diospyros virginiana,Fraxinus americana,Juglans nigra,Juniperus virginiana,Prunus americana,Prunus serotina,Quercus alba,Quercus marilandica,Quercus rubra,Quercus stellata,Quercus velutina,Sassafras albidum,Sideroxylon lanuginosum,Ulmus rubra
+H17,unburned,0,0,4,32,3,0,0,2,0,1,0,0,8,0,24,2,12,0,3,0
+H18,unburned,0,0,0,24,12,0,2,1,0,0,0,1,8,0,6,14,9,6,0,0
+H24,unburned,0,0,0,7,1,0,0,0,0,0,0,0,10,0,0,8,19,0,0,0
+H25,unburned,0,0,3,7,0,0,0,0,0,0,0,0,2,3,0,16,10,0,0,0
+H28,unburned,0,0,0,0,0,2,0,0,0,0,0,0,11,0,0,0,5,1,0,0
+H29,unburned,0,0,1,1,0,0,0,0,0,0,0,0,5,2,0,0,17,1,0,0
+H30,unburned,1,0,2,0,0,0,0,0,0,4,0,0,4,16,4,16,6,0,0,0
+H31,unburned,1,0,0,0,3,0,2,0,0,5,0,0,2,20,4,21,5,0,0,0
+L2,unburned,1,0,0,3,2,14,0,0,2,0,0,2,6,0,8,0,2,2,0,0
+L10,unburned,0,0,0,5,0,2,0,0,0,5,0,1,0,0,0,11,3,0,0,0
+L11,unburned,0,0,0,5,1,21,0,0,0,0,0,0,10,0,0,8,10,1,0,0
+L3,unburned,2,0,2,2,1,34,1,0,0,2,2,0,5,0,1,17,5,0,0,0
+L4,unburned,1,0,0,32,0,4,0,0,0,1,3,0,3,0,0,17,1,1,0,0
+L5,unburned,2,0,0,1,0,20,0,0,0,1,0,0,18,0,0,0,5,1,0,0
+L8,unburned,0,0,0,0,0,4,1,0,0,24,0,2,9,0,0,12,14,0,0,0
+L9,unburned,0,0,0,5,0,11,0,0,0,0,0,0,8,4,0,1,13,0,0,0
+L17,unburned,0,1,0,6,4,6,0,0,0,2,0,1,2,3,0,18,4,0,0,1
+L18,unburned,0,0,0,18,3,4,0,0,0,1,0,7,4,1,0,14,2,0,0,1
+L19,unburned,0,1,0,3,6,22,0,0,0,0,0,2,7,0,0,8,8,0,0,0
+L23,unburned,0,0,0,0,4,15,0,0,0,1,0,0,13,0,0,2,4,3,0,2
+L25,unburned,0,0,1,21,1,1,0,0,0,0,0,2,1,2,0,17,7,0,0,0
+L26,unburned,0,0,0,7,0,5,0,0,0,1,0,0,2,1,0,18,22,0,0,0
+L28,unburned,0,0,0,7,0,17,1,0,0,0,0,0,9,0,0,8,7,0,0,0
+L29,unburned,0,0,0,13,0,5,0,0,0,0,0,0,12,0,0,2,2,0,0,0
