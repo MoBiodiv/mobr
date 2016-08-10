@@ -50,6 +50,11 @@ plot_9_panels(tst.inv, 'invaded', 'uninvaded',
 
 dev.off()
 
+pdf('./figs/tst.inv.sum.pdf')
+plot(tst.inv, same_scale=T)
+plot_9_panels(tst.inv, 'invaded', 'uninvaded')
+dev.off()
+
 # 2) Morlaix ------------------
 
 dat_dir = paste('./data/', 'morlaix.mat', sep = '')
@@ -92,6 +97,12 @@ plot(tst.mor, par_args='mfrow=c(1,1)', same_scale=T)
 plot_9_panels(tst.mor, 'after', 'before')
 plot_9_panels(tst.mor, 'after', 'before',
               par_args='mfrow=c(1,1)')
+dev.off()
+
+
+pdf('./figs/tst.mor.sum.pdf')
+plot(tst.mor, same_scale=T)
+plot_9_panels(tst.mor, 'after', 'before')
 dev.off()
 
 # 3) Jon's fire data: ---------------------------
@@ -151,7 +162,7 @@ save(tst.fire, file='./results/tst.fire.Rdata')
 
 stats = mob_stats(comm, 'groups')
 
-pdf("./figs/tst.fire2.pdf")
+pdf("./figs/tst.fire.pdf")
 plot_samples(stats$samples)
 plot_groups(stats$groups)
 plot_betaPIE(stats)
@@ -162,9 +173,12 @@ plot(tst.fire, par_args='mfrow=c(1,1)', same_scale=T)
 plot_9_panels(tst.fire, 'burned', 'unburned')
 plot_9_panels(tst.fire, 'burned', 'unburned',
               par_args='mfrow=c(1,1)')
-
 dev.off()
 
+pdf('./figs/tst.fire.sum.pdf')
+plot(tst.fire, same_scale=T)
+plot_9_panels(tst.fire, 'burned', 'unburned')
+dev.off()
 
 # 4) coffee -----------------------------------
 
@@ -210,6 +224,12 @@ plot_9_panels(tst.coffee, 'Shaded', 'Natural')
 plot_9_panels(tst.coffee, 'Shaded', 'Natural', 
               par_args = 'mfrow=c(1,1)')
 dev.off()
+
+pdf('./figs/tst.coffee.sum.pdf')
+plot(tst.coffee, same_scale = T)
+plot_9_panels(tst.coffee, 'Shaded', 'Natural') 
+dev.off()
+
 
 # 5) Cattle_tank -----------------
 
