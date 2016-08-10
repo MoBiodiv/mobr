@@ -36,13 +36,17 @@ save(tst.inv, file='./results/tst.inv.Rdata')
 
 stats <- mob_stats(comm, 'groups')
 
-pdf("tst.inv.pdf", height = 5, width = 10)
+pdf("./figs/tst.inv.pdf")
 plot_samples(stats$samples)
 plot_groups(stats$groups)
 plot_betaPIE(stats)
+plotSADs(comm, 'groups')
 plot_rarefy(tst.inv)
-
 plot(tst.inv)
+dev.off()
+
+pdf('./figs/test.pdf')
+plot_9_panels(tst.inv, 'invaded', 'uninvaded')
 dev.off()
 
 # 2) Morlaix ------------------
