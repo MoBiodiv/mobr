@@ -77,7 +77,8 @@ print.mobr = function(x) {
     print(lapply(x, head))
 }
 
-plot.mobr = function(mobr, group = NULL) {
+plot.mobr = function(mobr, group = NULL, par_args=NULL, 
+                     same_scale=FALSE) {
   # plot rarefation and delta rarefaction curves
   # Input: 
   # mobr object
@@ -87,13 +88,30 @@ plot.mobr = function(mobr, group = NULL) {
   type = mobr$type
   tests = c('indiv', 'N', 'agg')
   names = c('Effect of SAD', 'Effect of N', 'Effect of Aggregation')
-  par(mfrow = c(1, 3))
+  if(!is.null(par_args))
+    eval(parse(text=paste('par(', par_args, ')')))
+  else
+    par(mfrow = c(1, 3))
   xlabs = c('number of individuals', 'number of individuals', 'number of plots')
   if (type == 'discrete'){
-    ylabs = rep('delta-S', 3)
+    ylabs = c(rep('delta-delta-S', 2), 'delta-S')
     if (is.null(group) & length(unique(mobr[[type]][[tests[1]]][, 1])) > 1)
       stop("Error: 'group' has to be specified.")
+    if(mobr$log_scale) {
+      plot_log='x'
+      xmin = 1
+    }
+    else {
+      plot_log=''
+      xmin = 0
+    }
+    if (same_scale)
+      ylim = range(lapply(mobr$discrete, function(x)
+                          lapply(x[ , -(1:2)], function(y)
+                                 as.numeric(as.character(y)))))
     for (i in 1:3){
+      if (i == 3)
+        plot_log=''
       if (is.null(group))
         mobr_group_test = mobr[[type]][[tests[i]]]
       else {
@@ -103,9 +121,12 @@ plot.mobr = function(mobr, group = NULL) {
       mobr_group_test = mobr_group_test[complete.cases(mobr_group_test), ]
       for (icol in 2:ncol(mobr_group_test))
         mobr_group_test[, icol] = as.numeric(as.character(mobr_group_test[, icol]))
+      if (!same_scale)
+        ylim = c(min(mobr_group_test[, 3:ncol(mobr_group_test)], na.rm = T),
+                 max(mobr_group_test[, 3:ncol(mobr_group_test)], na.rm = T))
       plot(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red', 
-            xlab = xlabs[i], ylab = ylabs[i], xlim = c(0, max(mobr_group_test[, 2])), main = names[i],
-            ylim = c(min(mobr_group_test[, 3:ncol(mobr_group_test)], na.rm = T), max(mobr_group_test[, 3:ncol(mobr_group_test)], na.rm = T)))
+            xlab = xlabs[i], ylab = ylabs[i], xlim = c(xmin, max(mobr_group_test[, 2])), main = names[i],
+            ylim = ylim, log=plot_log)
       polygon(c(mobr_group_test[, 2], rev(mobr_group_test[, 2])), 
               c(mobr_group_test[, 4], rev(mobr_group_test[, 6])), col = '#C1CDCD', border = NA)
       lines(mobr_group_test[, 2], mobr_group_test[, 3], lwd = 2, type = 'l', col = 'red')
@@ -516,6 +537,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
     }
     out = list()  
     out$type = type
+    out$log_scale = log_scale
     S = ncol(comm$comm)
     group_sad = aggregate(comm$comm, by=list(groups), sum)
     if (is.null(group_var))
@@ -597,17 +619,17 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
             comp_sad = rbind(ref_sad, level_sad)
 
             null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
+            cat('\nComputing null model for SAD effect\n')
             pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-            cat('effect of SAD')
             for (i in 1:nperm){
               setTxtProgressBar(pb, i)
               comp_sad_lumped = as.numeric(colSums(comp_sad))
               meta_freq = SpecDist(comp_sad_lumped)$probability
-              sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
+              sad_perm = lapply(c(sum(level_sad), sum(ref_sad)), function(x)
                 data.frame(table(sample(1:length(meta_freq), x, replace = T,
                                         prob = meta_freq)))[, 2])
               perm_ind_rare = sapply(sad_perm, function(x)
-                rarefaction(x, 'indiv', ind_sample_size))
+                                    rarefaction(x, 'indiv', ind_sample_size))
               null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
               setTxtProgressBar(pb, i)
             }
@@ -747,7 +769,10 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                                          ind_sample_size)$deltaS)
               ddeltaS_group = N_eff[ , 1] - N_eff[ , 2]
               null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_group))
+              cat('\nComputing null model for N effect\n')
+              pb <- txtProgressBar(min = 0, max = nperm, style = 3)
               for (i in 1:nperm){
+                  setTxtProgressBar(pb, i)
                   # swap plot abu between group 1 and each other group
                   comm_perm = permute_comm(comm_groups, 'swapN', env_groups)  
                   N_eff_perm = sapply(c(ref_group, group), function(x) 
@@ -755,6 +780,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                                                   ref_dens, ind_sample_size)$deltaS)
                   null_N_deltaS_mat[i, ] = N_eff_perm[ , 1] - N_eff_perm[ , 2]
               }
+              close(pb)
               N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x)
                                        quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
               N_group = data.frame(group, ind_sample_size, ddeltaS_group,
@@ -833,7 +859,10 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               impl_S_group = as.numeric(as.character(impl_S_group))
               
               null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
+              cat('\nComputing null model for aggregation effect\n')
+              pb <- txtProgressBar(min = 0, max = nperm, style = 3)
               for (i in 1:nperm){
+                setTxtProgressBar(pb, i)
                 xy_perm = comm$spat[sample(nrow(comm$spat)), ]
                 xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
                 xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
@@ -842,6 +871,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                 null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
                   (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
               }
+              close(pb)
               agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
               agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
                                            ddeltaS_group, t(agg_deltaS_null_CI)))
@@ -987,7 +1017,8 @@ plotSNpie = function(comm_obj, env_var, col = NA) {
   plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
-plot_9_panels = function(mobr, trt_group, ref_group){
+plot_9_panels = function(mobr, trt_group, ref_group,
+                         par_args=NULL, same_scale=FALSE){
   type = mobr$type
   if (type == 'continuous')
     stop("Currently this plot only works for mobr object with type discrete.")
@@ -995,16 +1026,30 @@ plot_9_panels = function(mobr, trt_group, ref_group){
     cols = c('red', 'blue')
     deltaS_col = 'turquoise'
     ddeltaS_col = 'magenta'
-    par(mfrow = c(3, 3))
-    
+    if (!is.null(par_args))
+      eval(parse(text=paste('par(', par_args, ')')))
+    else 
+      par(mfrow = c(3, 3))
+    if (same_scale)
+      ylim = range(lapply(mobr$discrete, function(x)
+                          lapply(x[ , -(1:2)], function(y)
+                                 as.numeric(as.character(y)))))
+    if(mobr$log_scale) {
+      plot_log = 'x'
+      xmin = 1
+    }
+    else {
+      plot_log = ''
+      xmin = 0
+    }
     # Create the three sets of curves
     mobr$sample_rare[, -1] = lapply(mobr$sample_rare[, -1], function(x)
                                     as.numeric(as.character(x)))
     sample_rare_group = mobr$sample_rare[mobr$sample_rare == trt_group, ]
     sample_rare_ref = mobr$sample_rare[mobr$sample_rare == ref_group, ]
     plot(1:nrow(sample_rare_group), sample_rare_group$expl_S, 
-         xlab = 'Number of plots', ylab = 'Richness (S)', 
-         xlim = c(0, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
+         xlab = 'Number of plots', ylab='Richness (S)',
+         xlim = c(xmin, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
          ylim = c(min(sample_rare_ref$expl_S, sample_rare_group$expl_S), 
                   max(sample_rare_ref$expl_S, sample_rare_group$expl_S)), 
          type = 'l', lwd = 2, col = cols[1], cex.lab = 1.5, cex.axis = 1.5, 
@@ -1014,7 +1059,7 @@ plot_9_panels = function(mobr, trt_group, ref_group){
     
     plot(1:nrow(sample_rare_group), sample_rare_group$impl_S, 
          xlab = 'Number of plots', ylab = 'Richness (S)', 
-         xlim = c(0, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
+         xlim = c(xmin, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
          ylim = c(min(sample_rare_ref$impl_S, sample_rare_group$impl_S), 
                   max(sample_rare_ref$impl_S, sample_rare_group$impl_S)), 
          type = 'l', lwd = 2, col = cols[1], cex.lab = 1.5, cex.axis = 1.5, 
@@ -1023,9 +1068,10 @@ plot_9_panels = function(mobr, trt_group, ref_group){
           lwd = 2, col = cols[2])
     
     plot(mobr$indiv_rare$sample, mobr$indiv_rare[[trt_group]], xlab = 'Number of individuals', 
-         ylab = 'Richness (S)', xlim = c(0, max(mobr$indiv_rare$sample)), 
+         ylab = 'Richness(S)', xlim = c(xmin, max(mobr$indiv_rare$sample)), 
          ylim = c(0, max(mobr$indiv_rare[, -1])), type = 'l', lwd = 2, 
-         col = cols[1], cex.lab = 1.5, cex.axis = 1.5, main = 'Individual', cex.main = 2)
+         col = cols[1], cex.lab = 1.5, cex.axis = 1.5, main = 'Individual', cex.main = 2,
+         log=plot_log)
     lines(mobr$indiv_rare$sample, mobr$indiv_rare[[ref_group]], 
           type = 'l', lwd = 2, col = cols[2])
     
@@ -1034,27 +1080,30 @@ plot_9_panels = function(mobr, trt_group, ref_group){
     delta_Sspat = sample_rare_group$expl_S[1:minN] - sample_rare_ref$expl_S[1:minN]
     plot(seq(minN), delta_Sspat, ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
          cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-         xlab = 'Number of plots', ylab = 'delta S')
+         xlab = 'Number of plots', ylab = 'delta S' )
     abline(h = 0, lwd = 2, lty = 2)
     
     delta_Ssample = sample_rare_group$impl_S[1:minN] - sample_rare_ref$impl_S[1:minN]
     plot(seq(minN), delta_Ssample, ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
          cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-         xlab = 'Number of plots', ylab = 'delta S')
+         xlab = 'Number of plots', ylab = 'delta S' )
     abline(h = 0, lwd = 2, lty = 2)
    
     deltaS_Sind = mobr$indiv_rare[[trt_group]] - mobr$indiv_rare[[ref_group]]
     plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
          cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-         xlab = 'Number of individuals', ylab = 'delta S')
+         xlab = 'Number of individuals', ylab = 'delta S',
+         log=plot_log)
     abline(h = 0, lwd = 2, lty = 2)
     
     # Create the plots for the three d-delta S
     mobr$discrete$agg[, -1] = lapply(mobr$discrete$agg[, -1], function(x)
       as.numeric(as.character(x))) 
     ddelta_Sspat = mobr$discrete$agg[which(as.character(mobr$discrete$agg$group) == as.character(trt_group)), ]
+    if (!same_scale)
+      ylim = range(ddelta_Sspat[ , -(1:2)])
     plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
-         ylim = range(ddelta_Sspat[ , -(1:2)]),
+         ylim = ylim, log='',
          cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
          xlab = 'Number of plots', ylab = 'delta-delta S')
     polygon(c(ddelta_Sspat$effort_sample, rev(ddelta_Sspat$effort_sample)), 
@@ -1067,10 +1116,12 @@ plot_9_panels = function(mobr, trt_group, ref_group){
     mobr$discrete$N[, -1] = lapply(mobr$discrete$N[, -1], function(x)
       as.numeric(as.character(x))) 
     ddelta_Ssample = mobr$discrete$N[which(as.character(mobr$discrete$N$group) == as.character(trt_group)), ]
+    if (!same_scale)
+      ylim = range(ddelta_Ssample[ , -(1:2)])
     plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
-         ylim = range(ddelta_Ssample[ , -(1:2)]),
+         ylim = ylim, log=plot_log,
          cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
-         xlab = 'Number of individuals', ylab = 'delta-delta S')
+         xlab = 'Number of plots', ylab = 'delta-delta S')
     polygon(c(ddelta_Ssample$effort_sample, rev(ddelta_Ssample$effort_sample)), 
             c(ddelta_Ssample$ddeltaS_null_low, rev(ddelta_Ssample$ddeltaS_null_high)),
             col = '#C1CDCD', border = NA)
@@ -1081,8 +1132,10 @@ plot_9_panels = function(mobr, trt_group, ref_group){
     mobr$discrete$ind[, -1] = lapply(mobr$discrete$ind[, -1], function(x)
                                      as.numeric(as.character(x))) 
     delta_Sind = mobr$discrete$ind[which(as.character(mobr$discrete$ind$group) == as.character(trt_group)), ]
+    if (!same_scale)
+      ylim = range(delta_Sind[ , -(1:2)])
     plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
-         ylim = range(delta_Sind[ , -(1:2)]),
+         ylim = ylim, log=plot_log,
          cex.axis = 1.5, cex.lab = 1.5, type = 'n',
          xlab = 'Number of individuals', ylab = 'delta S')
     polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
