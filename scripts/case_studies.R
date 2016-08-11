@@ -260,6 +260,7 @@ dat_cattle <- rbind(dat_cattle_low, dat_cattle_high)
 
 ## coordinates:
 dat_cattle_xy = read.csv("./data/Cattle_tank_xy.csv")
+dat_cattle_xy$X = tolower(as.character(dat_cattle_xy$X))
 rownames(dat_cattle) <- paste0(dat_cattle_xy[,2], dat_cattle_xy[,1])
 rownames(dat_cattle_xy) <- rownames(dat_cattle)
 
@@ -284,6 +285,7 @@ plot_samples(stats$samples)
 plot_groups(stats$groups)
 plot_betaPIE(stats)
 plotSADs(comm, 'groups')
+plot_grp_rads(comm, 'groups', log='y')
 plot_rarefy(tst.cattle)
 plot(tst.cattle, same_scale=T)
 plot(tst.cattle, same_scale=T, par_args = 'mfrow=c(1,1)')
