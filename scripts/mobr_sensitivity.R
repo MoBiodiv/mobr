@@ -99,189 +99,67 @@ sim_comm_multi_pars = function(S, N, cv, sigma, sqrt_numplots){
   return(comm_obj)
 }
 
-const_SAD = 0; const_SAD_error = 0
-const_N = 0; const_N_error = 0
-const_agg = 0; const_agg_error = 0
+Niter = 5 # Repeat simulation Niter times
+sqrt_numplots = 4 # Each group divided into 4*4 = 16 plots
+results = data.frame(matrix(0, nrow = 4, ncol = 6))
+row.names(results) = c('const', 'N', 'SAD', 'agg')
+names(results) = c('SADTot', 'SADErr', 'NTot', 'NErr', 'AggTot', 'AggErr')
 
-N_SAD = 0; N_SAD_error = 0
-N_N = 0; N_N_error = 0
-N_agg = 0; N_agg_error = 0
+par_table = data.frame(matrix(c(100, 1000, 1, 0.2, 
+                                100, 1001, 1, 0.2,  
+                                100, 400, 1, 0.2,  
+                                100, 1000, 2, 0.2, 
+                                100, 1000, 1, 1), byrow = T, ncol = 4))
+names(par_table) = c('S', 'N', 'cv', 'sigma')
+row.names(par_table) = c('ref', row.names(results))
 
-SAD_SAD = 0; SAD_SAD_error = 0
-SAD_N = 0; SAD_N_error = 0
-SAD_agg = 0; SAD_agg_error = 0
-
-agg_SAD = 0; agg_SAD_error = 0
-agg_N = 0; agg_N_error = 0
-agg_agg = 0; agg_agg_error = 0
-
-for (i in 1:50){
-  # (Almost) no change
-  comm = sim_comm_multi_pars(100, c(401, 400), 1, 0.2, 4)
-  mobr_const = get_delta_stats(comm, 'N', ref_group = 400, inds = 30, nperm = 100)
-  png(paste('C:\\Users\\Xiao\\Dropbox\\projects\\mobr\\sensitivity\\const\\', 
-            '3curves_', as.character(i), '.png', sep = ''))
-  plot_rarefy(mobr_const)
-  dev.off()
-  
-  png(paste('C:\\Users\\Xiao\\Dropbox\\projects\\mobr\\sensitivity\\N\\', 
-            'Noeffect_', as.character(i), '.png', sep = ''))
-  plot(mobr_const)
-  dev.off()
-  
-  focal_dat = mobr_const$discrete$indiv[complete.cases(mobr_const$discrete$indiv),]
-  for (irow in 2:nrow(focal_dat)){
-    const_SAD = const_SAD + 1
-    if (as.numeric(as.character(focal_dat$deltaS_emp[irow])) < as.numeric(as.character(focal_dat$deltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$deltaS_emp[irow])) > as.numeric(as.character(focal_dat$deltaS_null_high[irow])))
-      const_SAD_error = const_SAD_error + 1
+ref_par = par_table['ref', ]
+for (type in row.names(results)){
+  type_par = par_table[type, ]
+  par_list = c()
+  for (j in 1:length(ref_par)){
+    if (type_par[j] == ref_par[j]) par_list = c(par_list, as.numeric(type_par[j]))
+    else {
+      env_var = names(par_table)[j]
+      par_list = c(par_list, list(c(as.numeric(ref_par[j]),
+                                    as.numeric(type_par[j]))))
+    }
   }
-
-  focal_dat = mobr_const$discrete$N[complete.cases(mobr_const$discrete$N),]
-  for (irow in 2:nrow(focal_dat)){
-    const_N = const_N + 1
-    if (as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) < as.numeric(as.character(focal_dat$ddeltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) > as.numeric(as.character(focal_dat$ddeltaS_null_high[irow])))
-      const_N_error = const_N_error + 1
-  }
+  # "Equivalent" groups are defined by tiny difference in N
+  if (type == 'const') type_mobr = 'N' 
+  else type_mobr = type
   
-  focal_dat = mobr_const$discrete$agg[complete.cases(mobr_const$discrete$agg),]
-  for (irow in 2:nrow(focal_dat)){
-    const_agg = const_agg + 1
-    if (as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) < as.numeric(as.character(focal_dat$ddeltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) > as.numeric(as.character(focal_dat$ddeltaS_null_high[irow])))
-      const_agg_error = const_agg_error + 1
-  }
-  
-  # Changing N 
-  comm = sim_comm_multi_pars(100, c(1000, 400), 1, 0.2, 4)
-  mobr_N = get_delta_stats(comm, 'N', ref_group = 400, inds = 30, nperm = 100)
-  png(paste('C:\\Users\\Xiao\\Dropbox\\projects\\mobr\\sensitivity\\N\\', 
-            '3curvesN_', as.character(i), '.png', sep = ''))
-  plot_rarefy(mobr_N)
-  dev.off()
-  
-  png(paste('C:\\Users\\Xiao\\Dropbox\\projects\\mobr\\sensitivity\\N\\', 
-            'effectN_', as.character(i), '.png', sep = ''))
-  plot(mobr_N)
-  dev.off()
-  
-  focal_dat = mobr_N$discrete$indiv[complete.cases(mobr_N$discrete$indiv),]
-  for (irow in 2:nrow(focal_dat)){
-    N_SAD = N_SAD + 1
-    if (as.numeric(as.character(focal_dat$deltaS_emp[irow])) < as.numeric(as.character(focal_dat$deltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$deltaS_emp[irow])) > as.numeric(as.character(focal_dat$deltaS_null_high[irow])))
-      N_SAD_error = N_SAD_error + 1
-  }
-  
-  focal_dat = mobr_N$discrete$N[complete.cases(mobr_N$discrete$N),]
-  for (irow in 2:nrow(focal_dat)){
-    N_N = N_N + 1
-    if (as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) < as.numeric(as.character(focal_dat$ddeltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) > as.numeric(as.character(focal_dat$ddeltaS_null_high[irow])))
-      N_N_error = N_N_error + 1
-  }
-  
-  focal_dat = mobr_N$discrete$agg[complete.cases(mobr_N$discrete$agg),]
-  for (irow in 2:nrow(focal_dat)){
-    N_agg = N_agg + 1
-    if (as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) < as.numeric(as.character(focal_dat$ddeltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) > as.numeric(as.character(focal_dat$ddeltaS_null_high[irow])))
-      N_agg_error = N_agg_error + 1
-  }
-  
-  # Changing SAD
-  comm = sim_comm_multi_pars(100, 1000, c(1, 2), 0.2, 4)
-  mobr_sad = get_delta_stats(comm, 'cv', ref_group = 1, inds = 30, nperm = 100)
-  png(paste('C:\\Users\\Xiao\\Dropbox\\projects\\mobr\\sensitivity\\SAD\\', 
-            '3curvesSAD_', as.character(i), '.png', sep = ''))
-  plot_rarefy(mobr_sad)
-  dev.off()
-  
-  png(paste('C:\\Users\\Xiao\\Dropbox\\projects\\mobr\\sensitivity\\SAD\\', 
-            'effectSAD_', as.character(i), '.png', sep = ''))
-  plot(mobr_sad)
-  dev.off()
-
-  focal_dat = mobr_sad$discrete$indiv[complete.cases(mobr_sad$discrete$indiv),]
-  for (irow in 2:nrow(focal_dat)){
-    SAD_SAD = SAD_SAD + 1
-    if (as.numeric(as.character(focal_dat$deltaS_emp[irow])) < as.numeric(as.character(focal_dat$deltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$deltaS_emp[irow])) > as.numeric(as.character(focal_dat$deltaS_null_high[irow])))
-      SAD_SAD_error = SAD_SAD_error + 1
-  }
-  
-  focal_dat = mobr_sad$discrete$N[complete.cases(mobr_sad$discrete$N),]
-  for (irow in 2:nrow(focal_dat)){
-    SAD_N = SAD_N + 1
-    if (as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) < as.numeric(as.character(focal_dat$ddeltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) > as.numeric(as.character(focal_dat$ddeltaS_null_high[irow])))
-      SAD_N_error = SAD_N_error + 1
-  }
-  
-  focal_dat = mobr_sad$discrete$agg[complete.cases(mobr_sad$discrete$agg),]
-  for (irow in 2:nrow(focal_dat)){
-    SAD_agg = SAD_agg + 1
-    if (as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) < as.numeric(as.character(focal_dat$ddeltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) > as.numeric(as.character(focal_dat$ddeltaS_null_high[irow])))
-      SAD_agg_error = SAD_agg_error + 1
-  }
-  
-  # Changing aggregation
-  comm = sim_comm_multi_pars(100, 1000, 1, c(0.1, 1), 4)
-  mobr_aggr = get_delta_stats(comm, 'sigma', ref_group = 0.1, inds = 30, nper = 100)
-  png(paste('C:\\Users\\Xiao\\Dropbox\\projects\\mobr\\sensitivity\\aggr\\', 
-            '3curvesaggr_', as.character(i), '.png', sep = ''))
-  plot_rarefy(mobr_aggr)
-  dev.off()
-  
-  png(paste('C:\\Users\\Xiao\\Dropbox\\projects\\mobr\\sensitivity\\aggr\\', 
-            'effectaggr_', as.character(i), '.png', sep = ''))
-  plot(mobr_aggr)
-  dev.off()
-  
-  focal_dat = mobr_aggr$discrete$indiv[complete.cases(mobr_aggr$discrete$indiv),]
-  for (irow in 2:nrow(mobr_aggr$discrete$indiv)){
-    agg_SAD = agg_SAD + 1
-    if (as.numeric(as.character(focal_dat$deltaS_emp[irow])) < as.numeric(as.character(focal_dat$deltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$deltaS_emp[irow])) > as.numeric(as.character(focal_dat$deltaS_null_high[irow])))
-      agg_SAD_error = agg_SAD_error + 1
-  }
-  
-  focal_dat = mobr_aggr$discrete$N[complete.cases(mobr_aggr$discrete$N),]
-  for (irow in 2:nrow(focal_dat)){
-    agg_N = agg_N + 1
-    if (as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) < as.numeric(as.character(focal_dat$ddeltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) > as.numeric(as.character(focal_dat$ddeltaS_null_high[irow])))
-      agg_N_error = agg_N_error + 1
-  }
-  
-  focal_dat = mobr_aggr$discrete$agg[complete.cases(mobr_aggr$discrete$agg),]
-  for (irow in 2:nrow(focal_dat)){
-    agg_agg = agg_agg + 1
-    if (as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) < as.numeric(as.character(focal_dat$ddeltaS_null_low[irow])) |
-        as.numeric(as.character(focal_dat$ddeltaS_emp[irow])) > as.numeric(as.character(focal_dat$ddeltaS_null_high[irow])))
-      agg_agg_error = agg_agg_error + 1
+  for (i in 1:Niter){
+    comm = sim_comm_multi_pars(par_list[[1]], par_list[[2]], par_list[[3]], 
+                               par_list[[4]], sqrt_numplots)
+    mobr = get_delta_stats(comm, env_var, inds = 30, nperm = 100, 
+                           ref_group = as.numeric(ref_par[env_var]))
+    # Optional plotting:
+    # plot_rarefy(mobr)
+    # plot(mobr)
+    
+    effects = c('indiv', 'N', 'agg')
+    for (k in 1:length(effects)){
+      effect = effects[k]
+      focal_dat = mobr$discrete[[effect]]
+      focal_dat = focal_dat[complete.cases(focal_dat), ]
+      if (k == 3) start = 1 # Ignore first row (n = 1) for SAD and N
+      else start = 2
+      for (irow in 2:nrow(focal_dat)){
+        results[type, 2 * k - 1] = results[type, 2 * k - 1] + 1
+        if (as.numeric(as.character(focal_dat[irow, 3])) < as.numeric(as.character(focal_dat[irow, 4])) |
+            as.numeric(as.character(focal_dat[irow, 3])) > as.numeric(as.character(focal_dat[irow, 6])))
+          results[type, 2 * k] = results[type, 2 * k] + 1
+      }
+    }
   }
 }
 
-print(paste("Constant parameters, detected differences in SAD, N, aggregation:",
-            as.character(const_SAD_error / const_SAD), 
-            as.character(const_N_error / const_N),
-            as.character(const_agg_error / const_agg)), sep = '  ')
-
-print(paste("Changing SAD, detected differences in SAD, N, aggregation:",
-            as.character(SAD_SAD_error / SAD_SAD), 
-            as.character(SAD_N_error / SAD_N),
-            as.character(SAD_agg_error / SAD_agg)), sep = '  ')
-
-print(paste("Changing N, detected differences in SAD, N, aggregation:",
-            as.character(N_SAD_error / N_SAD), 
-            as.character(N_N_error / N_N),
-            as.character(N_agg_error / N_agg)), sep = '  ')
-
-print(paste("Changing aggregation, detected differences in SAD, N, aggregation:",
-            as.character(agg_SAD_error / agg_SAD), 
-            as.character(agg_N_error / agg_N),
-            as.character(agg_agg_error / agg_agg)), sep = '  ')
+for (type in row.names(results)){
+  print(paste(type, ", detected differences in SAD, N, aggregation:",
+              as.character(results[type, 2] / results[type, 1]), 
+              as.character(results[type, 4] / results[type, 3]),
+              as.character(results[type, 6] / results[type, 5])), sep = '  ')
+  
+}
 
