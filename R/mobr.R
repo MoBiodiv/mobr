@@ -979,6 +979,32 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
   return(out)
 }
 
+plot_grp_rads = function(comm_obj, env_var, col=NA,
+                         log='') {
+  #plot group pooled rank species abundance distribution
+  par(mfrow = c(1, 1))
+  env_data = comm_obj$env[ , env_var]
+  grps = unique(env_data)
+  if (is.na(col)) 
+    col = rainbow(length(grps))
+  sads = aggregate(comm_obj$comm, by=list(comm_obj$env[ , env_var]), 
+                   sum)
+  grps = as.character(sads[,1])
+  sads = as.matrix(sads[,-1])
+  sads = ifelse(sads == 0, NA, sads)
+  plot(1:10, 1:10, type='n', 
+       xlab='rank', ylab='abundance',
+       log=log, xlim=c(1, ncol(comm_obj$comm)), 
+       ylim=range(sads, na.rm=T), 
+       cex.lab = 1.5, cex.axis = 1.5)
+  for(i in 1:nrow(sads)) 
+    lines(1:sum(!is.na(sads[i, ])), sort(sads[i, ], dec=T),
+          col=col[i], lwd=2)
+  legend('topright', grps, col=col, bty='n', lty=1,
+         lwd=3, cex=2)
+}
+
+
 plotSADs = function(comm_obj, env_var, col = NA) {
   # TO DO: add check to ensure that col is the same length as treatments
   require(scales)
