@@ -109,7 +109,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
       ylim = range(lapply(mobr$discrete, function(x)
                           lapply(x[ , -(1:2)], function(y)
                                  as.numeric(as.character(y)))))
-    for (i in 3:1){
+    for (i in 1:3){
       if (i == 3)
         plot_log=''
       if (is.null(group))
@@ -155,44 +155,45 @@ summary.mobr = function(...) {
    #  print summary anova style table
 }
 
-plot_rarefy = function(mobr, cols=NULL){
+plot_rarefy = function(mobr, col=NULL){
   # Plot the three curves for an mobr project, 
   # separated by groups
   # Output is a 1*3 figure with the three curves (of each group) separated into subplots
-  if (is.null(cols))
-    cols = rainbow(ncol(mobr$indiv_rare) - 1)
+  if (is.null(col[1]))
+    col = rainbow(ncol(mobr$indiv_rare) - 1)
   par(mfrow = c(1, 3), oma=c(0,0,2,0))
-  for (icol in 2:ncol(mobr$indiv_rare)){
-    if (icol == 2)
-      plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
-           col = cols[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
-           main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
-           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
-    else
-      lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = cols[icol - 1])
-  }
-  
   groups = unique(mobr$sample_rare$group)
-  for (i in 1:length(groups)){
-    group = groups[i]
-    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
-    if (i == 1)
-      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i], ylim = c(0, max(as.numeric(as.character(mobr$sample_rare$impl_S)))),
-           main = 'Sample-based Rarefaction')
-    else
-      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = cols[i])
-  }
   
   for (i in 1:length(groups)){
     group = groups[i]
     dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
     if (i == 1)
       plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = cols[i],ylim = c(0, max(as.numeric(as.character(mobr$sample_rare$expl_S)))),
+           xlab = 'N samples', ylab = 'Rarefied S', col = col[i],ylim = c(0, max(as.numeric(as.character(mobr$sample_rare$expl_S)))),
            main = 'Accumulation Curve')
     else
-      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = cols[i])
+      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = col[i])
+  }
+  
+  for (i in 1:length(groups)){
+    group = groups[i]
+    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
+    if (i == 1)
+      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, type = 'l',
+           xlab = 'N samples', ylab = 'Rarefied S', col = col[i], ylim = c(0, max(as.numeric(as.character(mobr$sample_rare$impl_S)))),
+           main = 'Sample-based Rarefaction')
+    else
+      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = col[i])
+  }
+  
+  for (icol in 2:ncol(mobr$indiv_rare)){
+    if (icol == 2)
+      plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
+           col = col[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
+           main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
+           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
+    else
+      lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = col[icol - 1])
   }
 }
 
@@ -767,7 +768,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
               N_eff = sapply(c(ref_group, group), function(x) 
                              effect_of_N(comm_groups[env_groups == x, ], ref_dens,
                                          ind_sample_size)$deltaS)
-              ddeltaS_group = N_eff[ , 1] - N_eff[ , 2]
+              ddeltaS_group = N_eff[ , 2] - N_eff[ , 1]
               null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_group))
               cat('\nComputing null model for N effect\n')
               pb <- txtProgressBar(min = 0, max = nperm, style = 3)
@@ -778,7 +779,7 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
                   N_eff_perm = sapply(c(ref_group, group), function(x) 
                                       effect_of_N(comm_perm[env_groups == x, ],
                                                   ref_dens, ind_sample_size)$deltaS)
-                  null_N_deltaS_mat[i, ] = N_eff_perm[ , 1] - N_eff_perm[ , 2]
+                  null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
               }
               close(pb)
               N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x)
@@ -985,7 +986,7 @@ plot_grp_rads = function(comm_obj, env_var, col=NA,
   par(mfrow = c(1, 1))
   env_data = comm_obj$env[ , env_var]
   grps = unique(env_data)
-  if (is.na(col)) 
+  if (is.na(col[1])) 
     col = rainbow(length(grps))
   sads = aggregate(comm_obj$comm, by=list(comm_obj$env[ , env_var]), 
                    sum)
@@ -1011,7 +1012,7 @@ plotSADs = function(comm_obj, env_var, col = NA) {
   par(mfrow = c(1, 1))
   env_data = comm_obj$env[ , env_var]
   grps = unique(env_data)
-  if (is.na(col)) 
+  if (is.na(col[1])) 
     col = rainbow(length(grps))
   plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
        xlim = c(0.01, 1), ylim = c(0, 1), log = "x")
@@ -1025,7 +1026,7 @@ plotSADs = function(comm_obj, env_var, col = NA) {
       lines(n_cul, s_cul, col = alpha(col_grp, 0.5), lwd = 1, type = "l")
     }
   }
-  legend("bottomright", legend=grps, col = col, lwd = 2)
+  legend("topleft", legend=grps, col = col, lwd = 2, bty='n')
 }
 
 plotSNpie = function(comm_obj, env_var, col = NA) {
@@ -1033,7 +1034,7 @@ plotSNpie = function(comm_obj, env_var, col = NA) {
   require(rgl)
   env_data = comm_obj$env[ , env_var]
   grps = unique(env_data)
-  if (is.na(col)) 
+  if (is.na(col[1])) 
     col = rainbow(length(grps))
   S_list = rowSums(comm_obj$comm > 0)
   N_list = rowSums(comm_obj$comm)
@@ -1069,19 +1070,18 @@ plot_9_panels = function(mobr, trt_group, ref_group,
       xmin = 0
     }
     # Create the three sets of curves
+    plot(mobr$indiv_rare$sample, mobr$indiv_rare[[trt_group]], xlab = 'Number of individuals', 
+         ylab = 'Richness(S)', xlim = c(xmin, max(mobr$indiv_rare$sample)), 
+         ylim = c(0, max(mobr$indiv_rare[, -1])), type = 'l', lwd = 2, 
+         col = cols[1], cex.lab = 1.5, cex.axis = 1.5, main = 'Individual', cex.main = 2,
+         log=plot_log)
+    lines(mobr$indiv_rare$sample, mobr$indiv_rare[[ref_group]], 
+          type = 'l', lwd = 2, col = cols[2])
+
     mobr$sample_rare[, -1] = lapply(mobr$sample_rare[, -1], function(x)
                                     as.numeric(as.character(x)))
     sample_rare_group = mobr$sample_rare[mobr$sample_rare == trt_group, ]
     sample_rare_ref = mobr$sample_rare[mobr$sample_rare == ref_group, ]
-    plot(1:nrow(sample_rare_group), sample_rare_group$expl_S, 
-         xlab = 'Number of plots', ylab='Richness (S)',
-         xlim = c(xmin, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
-         ylim = c(min(sample_rare_ref$expl_S, sample_rare_group$expl_S), 
-                  max(sample_rare_ref$expl_S, sample_rare_group$expl_S)), 
-         type = 'l', lwd = 2, col = cols[1], cex.lab = 1.5, cex.axis = 1.5, 
-         main = 'Spatial', cex.main = 2)
-    lines(1:nrow(sample_rare_ref), sample_rare_ref$expl_S, type = 'l', 
-          lwd = 2, col = cols[2])
     
     plot(1:nrow(sample_rare_group), sample_rare_group$impl_S, 
          xlab = 'Number of plots', ylab = 'Richness (S)', 
@@ -1093,28 +1093,17 @@ plot_9_panels = function(mobr, trt_group, ref_group,
     lines(1:nrow(sample_rare_ref), sample_rare_ref$impl_S, type = 'l', 
           lwd = 2, col = cols[2])
     
-    plot(mobr$indiv_rare$sample, mobr$indiv_rare[[trt_group]], xlab = 'Number of individuals', 
-         ylab = 'Richness(S)', xlim = c(xmin, max(mobr$indiv_rare$sample)), 
-         ylim = c(0, max(mobr$indiv_rare[, -1])), type = 'l', lwd = 2, 
-         col = cols[1], cex.lab = 1.5, cex.axis = 1.5, main = 'Individual', cex.main = 2,
-         log=plot_log)
-    lines(mobr$indiv_rare$sample, mobr$indiv_rare[[ref_group]], 
-          type = 'l', lwd = 2, col = cols[2])
+    plot(1:nrow(sample_rare_group), sample_rare_group$expl_S, 
+         xlab = 'Number of plots', ylab='Richness (S)',
+         xlim = c(xmin, max(nrow(sample_rare_ref), nrow(sample_rare_group))),
+         ylim = c(min(sample_rare_ref$expl_S, sample_rare_group$expl_S), 
+                  max(sample_rare_ref$expl_S, sample_rare_group$expl_S)), 
+         type = 'l', lwd = 2, col = cols[1], cex.lab = 1.5, cex.axis = 1.5, 
+         main = 'Spatial', cex.main = 2)
+    lines(1:nrow(sample_rare_ref), sample_rare_ref$expl_S, type = 'l', 
+          lwd = 2, col = cols[2])
     
     # Create the plots for the three delta-S between groups
-    minN = min(nrow(sample_rare_group), nrow(sample_rare_ref))
-    delta_Sspat = sample_rare_group$expl_S[1:minN] - sample_rare_ref$expl_S[1:minN]
-    plot(seq(minN), delta_Sspat, ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
-         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-         xlab = 'Number of plots', ylab = 'delta S' )
-    abline(h = 0, lwd = 2, lty = 2)
-    
-    delta_Ssample = sample_rare_group$impl_S[1:minN] - sample_rare_ref$impl_S[1:minN]
-    plot(seq(minN), delta_Ssample, ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
-         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-         xlab = 'Number of plots', ylab = 'delta S' )
-    abline(h = 0, lwd = 2, lty = 2)
-   
     deltaS_Sind = mobr$indiv_rare[[trt_group]] - mobr$indiv_rare[[ref_group]]
     plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
          cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
@@ -1122,23 +1111,36 @@ plot_9_panels = function(mobr, trt_group, ref_group,
          log=plot_log)
     abline(h = 0, lwd = 2, lty = 2)
     
+    minN = min(nrow(sample_rare_group), nrow(sample_rare_ref))
+    delta_Ssample = sample_rare_group$impl_S[1:minN] - sample_rare_ref$impl_S[1:minN]
+    plot(seq(minN), delta_Ssample, ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of plots', ylab = 'delta S' )
+    abline(h = 0, lwd = 2, lty = 2)
+
+    delta_Sspat = sample_rare_group$expl_S[1:minN] - sample_rare_ref$expl_S[1:minN]
+    plot(seq(minN), delta_Sspat, ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
+         cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
+         xlab = 'Number of plots', ylab = 'delta S' )
+    abline(h = 0, lwd = 2, lty = 2)
+    
     # Create the plots for the three d-delta S
-    mobr$discrete$agg[, -1] = lapply(mobr$discrete$agg[, -1], function(x)
+    mobr$discrete$ind[, -1] = lapply(mobr$discrete$ind[, -1], function(x)
       as.numeric(as.character(x))) 
-    ddelta_Sspat = mobr$discrete$agg[which(as.character(mobr$discrete$agg$group) == as.character(trt_group)), ]
+    delta_Sind = mobr$discrete$ind[which(as.character(mobr$discrete$ind$group) == as.character(trt_group)), ]
     if (!same_scale)
-      ylim = range(ddelta_Sspat[ , -(1:2)])
-    plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
-         ylim = ylim, log='',
-         cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
-         xlab = 'Number of plots', ylab = 'delta-delta S')
-    polygon(c(ddelta_Sspat$effort_sample, rev(ddelta_Sspat$effort_sample)), 
-            c(ddelta_Sspat$ddeltaS_null_low, rev(ddelta_Sspat$ddeltaS_null_high)),
+      ylim = range(delta_Sind[ , -(1:2)])
+    plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
+         ylim = ylim, log=plot_log,
+         cex.axis = 1.5, cex.lab = 1.5, type = 'n',
+         xlab = 'Number of individuals', ylab = 'delta S')
+    polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
+            c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
             col = '#C1CDCD', border = NA)
     abline(h = 0, lwd = 2, lty = 2)
-    lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
+    lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
           lwd = 2, col = ddeltaS_col)
-    
+        
     mobr$discrete$N[, -1] = lapply(mobr$discrete$N[, -1], function(x)
       as.numeric(as.character(x))) 
     ddelta_Ssample = mobr$discrete$N[which(as.character(mobr$discrete$N$group) == as.character(trt_group)), ]
@@ -1155,21 +1157,20 @@ plot_9_panels = function(mobr, trt_group, ref_group,
     lines(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
           lwd = 2, col = ddeltaS_col)
     
-    mobr$discrete$ind[, -1] = lapply(mobr$discrete$ind[, -1], function(x)
-                                     as.numeric(as.character(x))) 
-    delta_Sind = mobr$discrete$ind[which(as.character(mobr$discrete$ind$group) == as.character(trt_group)), ]
+    mobr$discrete$agg[, -1] = lapply(mobr$discrete$agg[, -1], function(x)
+      as.numeric(as.character(x))) 
+    ddelta_Sspat = mobr$discrete$agg[which(as.character(mobr$discrete$agg$group) == as.character(trt_group)), ]
     if (!same_scale)
-      ylim = range(delta_Sind[ , -(1:2)])
-    plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
-         ylim = ylim, log=plot_log,
-         cex.axis = 1.5, cex.lab = 1.5, type = 'n',
-         xlab = 'Number of individuals', ylab = 'delta S')
-    polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
-            c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
+      ylim = range(ddelta_Sspat[ , -(1:2)])
+    plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
+         ylim = ylim, log='',
+         cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
+         xlab = 'Number of plots', ylab = 'delta-delta S')
+    polygon(c(ddelta_Sspat$effort_sample, rev(ddelta_Sspat$effort_sample)), 
+            c(ddelta_Sspat$ddeltaS_null_low, rev(ddelta_Sspat$ddeltaS_null_high)),
             col = '#C1CDCD', border = NA)
     abline(h = 0, lwd = 2, lty = 2)
-    lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
+    lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
           lwd = 2, col = ddeltaS_col)
-    
   }
 }
