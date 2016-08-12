@@ -99,7 +99,7 @@ sim_comm_multi_pars = function(S, N, cv, sigma, sqrt_numplots){
   return(comm_obj)
 }
 
-Niter = 5 # Repeat simulation Niter times
+Niter = 50 # Repeat simulation Niter times
 sqrt_numplots = 4 # Each group divided into 4*4 = 16 plots
 results = data.frame(matrix(0, nrow = 4, ncol = 6))
 row.names(results) = c('const', 'N', 'SAD', 'agg')
