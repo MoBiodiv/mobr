@@ -56,6 +56,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
     spat_cols = which(names(plot_attr) %in% c('x', 'y'))
     if (length(spat_cols) > 0) {
         out$env = data.frame(plot_attr[ , -spat_cols])
+        colnames(out$env) = colnames(plot_attr)[-spat_cols]
         out$spat = data.frame(plot_attr[ , spat_cols])
     }
     else {
