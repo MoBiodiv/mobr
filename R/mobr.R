@@ -586,44 +586,46 @@ get_plot_dens = function(comm, density_stat){
     return(plot_dens)   
 }
 
-effect_SAD_continuous = function(out, ind_sample_size, ){
-    ind_rare = data.frame(apply(group_sad, 1, function(x) 
-        rarefaction(x, 'indiv', ind_sample_size)))
-    out$indiv_rare = cbind(ind_sample_size, ind_rare)
-    names(out$indiv_rare) = c('sample', as.character(group_levels))
-    
-    if (type == 'continuous'){
-        ind_cor = apply(ind_rare, 1, function(x) 
-            cor(x, as.numeric(group_levels), method=corr))
-        # Null test 
-        sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
-        env_extent = rep(group_levels, times=rowSums(group_sad))
-        null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
-        for (i in 1:nperm){
-            overall_sad_lumped = as.numeric(colSums(group_sad))
-            meta_freq = SpecDist(overall_sad_lumped)$probability
-            sad_perm = sapply(as.numeric(rowSums(group_sad)), function(x)
-                data.frame(table(sample(1:length(meta_freq),
-                                        x, replace = T,
-                                        prob = meta_freq)))[, 2])
-            perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
-                rarefaction(x, 'indiv', ind_sample_size))
-            null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){
-                cor(x, as.numeric(group_levels),
-                    method = corr)})
-        }
-        ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
-            quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
-        out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor,
-                                                t(ind_r_null_CI)))
-        names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low',
-                                        'r_null_median', 'r_null_high')
+# Auxillary function for get_delta_stats()
+# Effect of N when type is "continuous"
+# Direct add attributes to the input "out"
+effect_SAD_continuous = function(out, group_sad, group_levels, nperm){
+    ind_sample_size = out$indiv_rare[, 1]
+    ind_rare = out$indiv_rare[, -1]
+    ind_cor = apply(ind_rare, 1, function(x) 
+        cor(x, as.numeric(group_levels), method=corr))
+    # Null test
+    sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
+    env_extent = rep(group_levels, times=rowSums(group_sad))
+    null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
+    cat('\nComputing null model for SAD effect\n')
+    pb <- txtProgressBar(min = 0, max = nperm, style = 3)
+    for (i in 1:nperm){
+        overall_sad_lumped = as.numeric(colSums(group_sad))
+        meta_freq = SpecDist(overall_sad_lumped)$probability
+        sad_perm = sapply(rowSums(group_sad), function(x)
+            data.frame(table(factor(sample(1:length(meta_freq),x, replace = T,
+                                           prob = meta_freq), 
+                                    levels = 1:length(meta_freq))))[, 2])
+        perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
+            rarefaction(x, 'indiv', ind_sample_size))
+        null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x)
+            cor(x, as.numeric(group_levels), method = corr))
+        setTxtProgressBar(pb, i)
     }
-    
+    close(pb)
+        
+    ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
+        quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+    out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor, 
+                                            t(ind_r_null_CI)))
+    names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low', 
+                                    'r_null_median', 'r_null_high')
+    return(out)
 }
 
 get_delta_stats = function(comm, group_var, ref_group=NULL, 
-                           tests=c('indiv', 'sampl', 'spat'),
+                           tests=c('SAD', 'N', 'agg'),
                            type='discrete', inds=NULL, log_scale=FALSE,
                            min_plot = NULL, density_stat ='mean',
                            corr='spearman', nperm=1000) {
@@ -636,11 +638,11 @@ get_delta_stats = function(comm, group_var, ref_group=NULL,
     groups = as.character(group_data)
     group_plots = data.frame(table(groups)) # Number of plots within each group
     
-    group_sad = aggregate(comm$comm, by=list(groups), sum)
+    group_sad = aggregate(comm$comm, by=list(group_data), sum)
     if (is.null(env_var)){
         group_levels = group_sad[, 1]
     } else {
-        group_levels = as.character(tapply(comm$env[, env_var], list(groups), mean))
+        group_levels = tapply(comm$env[, env_var], list(groups), mean)
     }
     group_sad = group_sad[, -1]
     ind_sample_size = get_delta_ind_sample(group_sad, inds, log_scale)
@@ -656,8 +658,7 @@ get_delta_stats = function(comm, group_var, ref_group=NULL,
     
     if (type == 'continuous'){
         get_delta_continuous_checks(corr, group_data, groups, group_var)
-        # checks for continuous
-        # Effect of SAD
+        out = effect_SAD_continuous(out, group_sad, group_levels, nperm)
         # Effect of N
         # Effect of aggregation
     } else {
