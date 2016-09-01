@@ -587,6 +587,35 @@ get_plot_dens = function(comm, density_stat){
 }
 
 # Auxillary function for get_delta_stats()
+# Obtain the swap curve and/or spatial curve for each group if asked
+# Directly add attributes to the input "out"
+get_sample_curves = function(out, comm, group_levels, approved_tests){
+    if ('N' %in% approved_tests | 'agg' %in% approved_tests){
+        out$sample_rare = data.frame(matrix(0, nrow = 0, ncol = 4), 
+                                     stringsAsFactors = F)
+        for (level in group_levels){
+            comm_level = comm$comm[as.character(group_data) == 
+                                       as.character(level), ]
+            impl_S = avg_perm_rare(comm_level, 'noagg', nperm = 100)
+            sample_rare_level = data.frame(cbind(rep(as.character(level), 
+                                                     length(impl_S)), 
+                                          seq(length(impl_S)), impl_S))
+            if ('agg' %in% approved_tests){
+                xy_level = comm$spat[as.character(group_data) == 
+                                         as.character(group), ]
+                expl_S = rarefy_sample_explicit(comm_level, xy_level)
+                sample_rare_level = cbind(sample_rare_level, expl_S)
+            }
+            out$sample_rare = rbind(out$sample_rare, sample_rare_level)
+        }
+        names(out$sample_rare)[1:3] = c('group', 'sample_plot', 'impl_S')
+        if ('agg' %in% approved_tests)
+            names(out$sample_rare)[4] = 'expl_S'
+    }
+    return(out)
+}
+
+# Auxillary function for get_delta_stats()
 # Effect of SAD when type is "continuous"
 # Directly add attributes to the input "out"
 effect_SAD_continuous = function(out, group_sad, group_levels, nperm){
@@ -702,7 +731,8 @@ get_delta_stats = function(comm, group_var, ref_group=NULL,
         rarefaction(x, 'indiv', ind_sample_size)))
     out$indiv_rare = cbind(ind_sample_size, ind_rare)
     names(out$indiv_rare) = c('sample', as.character(group_levels))
-    
+    out = get_sample_curves(out, comm, group_levels, approved_tests)
+        
     if (type == 'continuous'){
         get_delta_continuous_checks(corr, group_data, groups, group_var)
         if ('SAD' %in% approved_tests)
@@ -717,38 +747,6 @@ get_delta_stats = function(comm, group_var, ref_group=NULL,
         # Effect of aggregation
     }
     
-    
-    # Sample-based spatially-implicit and -explicit rarefaction -----------
-    if ('sampl' %in% approved_tests | 'spat' %in% approved_tests){
-      if ('spat' %in% approved_tests)
-        out$sample_rare = data.frame(group = character(), sample_plot = numeric(), impl_S = numeric(), expl_S = numeric())
-      else
-        out$sample_rare = data.frame(group = character(), sample_plot = numeric(), impl_S = numeric())
-      for (group in group_levels){
-        comm_group = comm$comm[as.character(env_data) == as.character(group), ]
-        #impl_S = as.numeric(rarefaction(comm_group, 'samp'))
-        # replace sample-based rarefaction curve with the new curve
-        #nplots = nrow(comm_group)
-        #group_dens = sum(comm_group) / nplots
-        #samp_effort = round((1:nplots) * group_dens)
-        #S_samp = rarefaction(comm_group, 'indiv', samp_effort)
-        #rescaled_effort = round(1:nplots * ref_dens)
-        #interp_S_samp = pchip(c(1, rescaled_effort),
-        #                      c(1, S_samp), ind_sample_size)
-        impl_S = avg_perm_rare(comm_group, 'noagg', nperm = 100)
-        sample_rare_group = data.frame(cbind(rep(as.character(group), length(impl_S)), seq(length(impl_S)), impl_S))
-        if ('spat' %in% approved_tests){
-          xy_group = comm$spat[as.character(env_data) == as.character(group), ]
-          expl_S = rarefy_sample_explicit(comm_group, xy_group)
-          sample_rare_group = cbind(sample_rare_group, expl_S)
-        }
-        out$sample_rare = rbind(out$sample_rare, sample_rare_group)
-      }
-      if ('spat' %in% approved_tests)
-        names(out$sample_rare) = c('group', 'sample_plot', 'impl_S', 'expl_S')
-      else
-        names(out$sample_rare) = c('group', 'sample_plot', 'impl_S')
-    }
     
     # 2. Sample-based rarefaction (effect of density) vs env_var vs N----------
     if ('sampl' %in% approved_tests){
