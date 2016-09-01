@@ -587,8 +587,8 @@ get_plot_dens = function(comm, density_stat){
 }
 
 # Auxillary function for get_delta_stats()
-# Effect of N when type is "continuous"
-# Direct add attributes to the input "out"
+# Effect of SAD when type is "continuous"
+# Directly add attributes to the input "out"
 effect_SAD_continuous = function(out, group_sad, group_levels, nperm){
     ind_sample_size = out$indiv_rare[, 1]
     ind_rare = out$indiv_rare[, -1]
@@ -597,12 +597,13 @@ effect_SAD_continuous = function(out, group_sad, group_levels, nperm){
     # Null test
     sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
     env_extent = rep(group_levels, times=rowSums(group_sad))
+    overall_sad_lumped = as.numeric(colSums(group_sad))
+    meta_freq = SpecDist(overall_sad_lumped)$probability
     null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
     cat('\nComputing null model for SAD effect\n')
     pb <- txtProgressBar(min = 0, max = nperm, style = 3)
     for (i in 1:nperm){
-        overall_sad_lumped = as.numeric(colSums(group_sad))
-        meta_freq = SpecDist(overall_sad_lumped)$probability
+        # Note: necessary to convert sample to factor, so that zero counts are kept
         sad_perm = sapply(rowSums(group_sad), function(x)
             data.frame(table(factor(sample(1:length(meta_freq),x, replace = T,
                                            prob = meta_freq), 
@@ -621,6 +622,52 @@ effect_SAD_continuous = function(out, group_sad, group_levels, nperm){
                                             t(ind_r_null_CI)))
     names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low', 
                                     'r_null_median', 'r_null_high')
+    return(out)
+}
+
+# Auxillary function for get_delta_stats()
+# Effect of SAD when type is "discrete"
+effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
+    ind_sample_size = out$indiv_rare[, 1]
+    ref_sad = group_sad[which(as.character(group_levels) == 
+                                  as.character(ref_group)), ]
+    out$discrete$indiv = data.frame(matrix(0, nrow = 0, ncol = 6), 
+                                    stringsAsFactors = F)
+    cat('\nComputing null model for SAD effect\n')
+    pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
+                         style = 3)
+    k = 1
+    for (level in group_levels[group_levels != ref_group]){
+        deltaS = out$indiv_rare[, as.character(level)] - 
+            out$indiv_rare[, as.character(ref_group)]
+        level_sad = group_sad[which(as.character(group_levels) == 
+                                        as.character(level)), ]
+        comp_sad_lumped = as.numeric(colSums(rbind(ref_sad, level_sad)))
+        meta_freq = SpecDist(comp_sad_lumped)$probability
+        
+        null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
+        for (i in 1:nperm){
+            sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
+                data.frame(table(factor(sample(1:length(meta_freq),x, replace = T,
+                                               prob = meta_freq), 
+                                        levels = 1:length(meta_freq))))[, 2])
+            perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
+                rarefaction(x, 'indiv', ind_sample_size))
+            null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
+            setTxtProgressBar(pb, k)
+            k = k + 1
+        }
+        ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x)
+            quantile(x, c(0.025, 0.5, 0.975)))
+        ind_level = data.frame(cbind(rep(as.character(level),length(ind_sample_size)),
+                                     ind_sample_size, deltaS, 
+                                     t(ind_deltaS_null_CI)))
+        out$discrete$indiv = rbind(out$discrete$indiv, ind_level)
+    }
+    close(pb)
+    names(out$discrete$indiv) = c('group', 'effort_ind', 'deltaS_emp',
+                                  'deltaS_null_low', 'deltaS_null_median',
+                                  'deltaS_null_high')
     return(out)
 }
 
@@ -658,90 +705,18 @@ get_delta_stats = function(comm, group_var, ref_group=NULL,
     
     if (type == 'continuous'){
         get_delta_continuous_checks(corr, group_data, groups, group_var)
-        out = effect_SAD_continuous(out, group_sad, group_levels, nperm)
+        if ('SAD' %in% approved_tests)
+            out = effect_SAD_continuous(out, group_sad, group_levels, nperm)
         # Effect of N
         # Effect of aggregation
     } else {
-        # checks for discrete
-        # Effect of SAD
+        get_delta_discrete_checks()
+        if ('SAD' %in% approved_tests)
+            out = effect_SAD_discrete(out, group_sad, group_levels, ref_group, nperm)
         # Effect of N
         # Effect of aggregation
     }
-    # 1. Individual-based rarefaction (effect of SAD) vs env_var vs N
-    if ('indiv' %in% approved_tests) {
-      
-      if (type == 'continuous'){
-        ind_cor = apply(ind_rare, 1, function(x) 
-                        cor(x, as.numeric(group_levels), method=corr))
-        # Null test 
-        sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
-        env_extent = rep(group_levels, times=rowSums(group_sad))
-        null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
-        for (i in 1:nperm){
-          overall_sad_lumped = as.numeric(colSums(group_sad))
-          meta_freq = SpecDist(overall_sad_lumped)$probability
-          sad_perm = sapply(as.numeric(rowSums(group_sad)), function(x)
-                            data.frame(table(sample(1:length(meta_freq),
-                                                    x, replace = T,
-                                                    prob = meta_freq)))[, 2])
-          perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
-                                rarefaction(x, 'indiv', ind_sample_size))
-          null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){
-                                      cor(x, as.numeric(group_levels),
-                                          method = corr)})
-        }
-        ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
-                              quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
-        out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor,
-                                                t(ind_r_null_CI)))
-        names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low',
-                                        'r_null_median', 'r_null_high')
-      }
-      else { # discrete case
-        ref_sad = group_sad[which(as.character(group_levels) ==
-                                  as.character(ref_group)), ]
-        out$discrete$indiv = data.frame(sample = numeric(), group = character(),
-                                        deltaS_emp = numeric(),
-                                        deltaS_null_low = numeric(), 
-                                        deltaS_null_median = numeric(),
-                                        deltaS_null_high = numeric(),
-                                        stringsAsFactors = F)
-        for (group in group_levels){
-          if (as.character(group) != as.character(ref_group)){
-            deltaS = out$indiv_rare[, as.character(group)] - out$indiv_rare[, as.character(ref_group)]
-            level_sad = group_sad[which(as.character(group_levels) == as.character(group)), ]
-            comp_sad = rbind(ref_sad, level_sad)
-
-            null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
-            cat('\nComputing null model for SAD effect\n')
-            pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-            for (i in 1:nperm){
-              setTxtProgressBar(pb, i)
-              comp_sad_lumped = as.numeric(colSums(comp_sad))
-              meta_freq = SpecDist(comp_sad_lumped)$probability
-              sad_perm = lapply(c(sum(level_sad), sum(ref_sad)), function(x)
-                data.frame(table(sample(1:length(meta_freq), x, replace = T,
-                                        prob = meta_freq)))[, 2])
-              perm_ind_rare = sapply(sad_perm, function(x)
-                                    rarefaction(x, 'indiv', ind_sample_size))
-              null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
-              setTxtProgressBar(pb, i)
-            }
-            close(pb)
-            ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x)
-                                       quantile(x, c(0.025, 0.5, 0.975)))
-            ind_group = data.frame(cbind(rep(as.character(group),
-                                             length(ind_sample_size)),
-                                         ind_sample_size,  
-                                         deltaS, t(ind_deltaS_null_CI)))
-            out$discrete$indiv = rbind(out$discrete$indiv, ind_group)
-          }
-        }
-        names(out$discrete$indiv) = c('group', 'effort_ind', 'deltaS_emp',
-                                      'deltaS_null_low', 'deltaS_null_median',
-                                      'deltaS_null_high')
-      }
-    }
+    
     
     # Sample-based spatially-implicit and -explicit rarefaction -----------
     if ('sampl' %in% approved_tests | 'spat' %in% approved_tests){
