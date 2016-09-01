@@ -29,12 +29,12 @@ library(RandomFields)
 make_comm_obj = function(comm, plot_attr, binary=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
     out = list()
-    out$tests = list(indiv=T, sampl=T, spat= T)
+    out$tests = list(N=T, SAD=T, agg= T)
     # carry out some basic checks
     if (nrow(comm) < 5) {
         stop("Number of plots in community is less than five therefore only individual rarefaction will be computed")
-        out$tests$samp = FALSE
-        out$tests$spat = FALSE
+        out$tests$N = FALSE
+        out$tests$agg = FALSE
     }
     if (nrow(comm) != nrow(plot_attr))
         stop("Number of plots in community does not equal number of plots in plot attribute table")
@@ -42,8 +42,8 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
         warning("Row names of community and plot attributes tables do not match")
     if (binary)  {
         warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
-        out$tests$indiv = FALSE
-        out$tests$samp = FALSE
+        out$tests$SAD = FALSE
+        out$tests$N = FALSE
     } else {
         if (max(comm) == 1)
             warning("Maximum abundance is 1 which suggests data is binary, change the binary argument to TRUE")
@@ -60,7 +60,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
         out$spat = data.frame(plot_attr[ , spat_cols])
     }
     else {
-        out$tests$spat = FALSE
+        out$tests$agg = FALSE
         out$env = data.frame(plot_attr)
         out$spat = NULL
     }
@@ -499,37 +499,19 @@ samp_ssad = function(comm, groups){
 #'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub',
 #'                                       ref_group = 'None', inds = 20)
 #'  }
+#'  
 
-get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL, 
-                           tests=c('indiv', 'sampl', 'spat'),
-                           type='discrete', inds=NULL, log_scale=FALSE,
-                           min_plot = NULL, density_stat ='mean',
-                           corr='spearman', nperm=1000) {
-    env_data = comm$env[ , env_var]
-    if (is.null(group_var)) 
-        groups = as.character(env_data)
-    else {
-        groups = as.character(unique(comm$env[ , group_var]))
-    }
+# Auxillary function for get_delta_stats()
+# Overall checks for input values
+# Returns a vector of approved tests
+get_delta_overall_checks = function(comm, type, density_stat, tests){
     if (!(type %in% c('continuous', 'discrete')))
-        stop('"type" has to be "discrete" or "continuous".')
-    if (type == 'continuous' & !(corr %in% c('spearman', 'pearson')))
-      stop('"corr" has to be "spearman" or "pearson".')
-    if (type == 'discrete') {
-      if (is.null(ref_group))
-        stop('For a discrete analysis you must specify a ref_group to compare groups to')
-      else if (!(ref_group %in% env_data))
-        stop(paste('Reference group is not present in', env_var))
-    }
-    if ('factor' %in% class(env_data) & type == 'continuous') {
-        group_vals = data.frame(groups=groups, 
-                                values=as.integer(env_data)[match(groups, env_data)])
-        warning(paste(env_var, 'is a factor but will be treated as a continous variable for the analysis which the following values'))
-        print(group_vals)
-    } else if (!('factor' %in% class(env_data)) & type == 'discrete') 
-        warning(paste(env_var, 'is not a factor and each unique value will be treated as a grouping variable'))
+        stop('Type has to be discrete or continuous.')
+    if (!(density_stat %in% c('mean', 'max', 'min')))
+        stop('density_stat has to be set to min, max, or mean.')
+        
     test_status = sapply(tests, function(x) 
-                         eval(parse(text=paste('comm$tests$', x, sep=''))))
+        eval(parse(text = paste('comm$tests$', x, sep = ''))))
     approved_tests = tests[which(test_status == TRUE)]
     if (any(test_status == FALSE)) {
         tests_string = paste(tests[which(tests %in% approved_tests)],
@@ -537,46 +519,155 @@ get_delta_stats = function(comm, env_var, group_var=NULL, ref_group=NULL,
         cat(paste('Based upon the attributes of the community object only the following tests will be performed:',
                   tests_string))
     }
-    out = list()  
-    out$type = type
-    out$log_scale = log_scale
-    S = ncol(comm$comm)
-    group_sad = aggregate(comm$comm, by=list(groups), sum)
-    if (is.null(group_var))
-        group_levels = group_sad[ , 1]
-    else
-        group_levels = tapply(env_data, list(groups), mean)
-    group_sad = group_sad[ , -1]
-    group_minN = min(rowSums(group_sad))
-    group_plots = data.frame(table(groups)) # Number of plots within each group
-    plot_abd = rowSums(comm$comm)
-    if (density_stat == 'mean')
-        indiv_dens = sum(comm$comm) / nrow(comm$comm)
-    else if (density_stat == 'max')
-        indiv_dens = max(rowSums(comm$comm))
-    else if (density_stat == 'min')
-        indiv_dens = min(rowSums(comm$comm))
-    else 
-       stop('The argument ref must be set to mean, min or max')
+    return(approved_tests)
+}
+
+# Auxillary function for get_delta_stats()
+# Returns 
+# Auxillary function for get_delta_stats()
+# Perform checks when type is "discrete"
+get_delta_discrete_checks = function(ref_group, group_data, group_var){
+    if (is.null(ref_group)) {
+        stop('For a discrete analysis you must specify a ref_group to compare groups to')
+    } else if (!(ref_group %in% group_data)) {
+        stop(paste('Reference group is not present in', group_var))
+    }
     
-    if (is.null(inds))
-      ind_sample_size = seq(group_minN)
-    else if (length(inds) > 1)
-      ind_sample_size = inds
-    else {
-      if (log_scale == T)
+    if (!('factor' %in% class(group_data))) 
+        warning(paste(group_var, 'is not a factor and each unique value will be 
+                      treated as a grouping variable'))
+}
+
+# Auxillary function for get_delta_stats()
+# Perform checks when type is "continuous"
+get_delta_continuous_checks = function(corr, group_data, groups, group_var){
+    if (!(corr %in% c('spearman', 'pearson')))
+        stop('corr has to be spearman or pearson.')
+    if ('factor' %in% class(group_data)) {
+        group_vals = data.frame(groups = unique(groups), 
+                                values = as.numeric(group_data)[match(unique(groups), group_data)])
+        warning(paste(group_var, 'is a factor but will be treated as a continous 
+                      variable for the analysis which the following values'))
+        print(group_vals)
+    } 
+}
+
+# Auxillary function for get_delta_stats()
+# Returns a vector of abundances where individual-based rarefaction 
+# will be performed
+get_delta_ind_sample = function(group_sad, inds, log_scale){
+    group_minN = min(rowSums(group_sad))
+    if (is.null(inds)){
+        ind_sample_size = seq(group_minN)
+    } else if (length(inds) > 1) {
+        ind_sample_size = inds
+        if (max(inds) > group_minN)
+            warning('Sample size is higher than abundance of at least one group!')
+    } else if (log_scale == T){
         ind_sample_size = floor(exp(seq(inds) * log(group_minN) / inds))
-      else
+    } else {
         ind_sample_size = floor(seq(inds) * group_minN / inds)
     }
     ind_sample_size = unique(c(1, ind_sample_size)) # Force (1, 1) to be included
+    return(ind_sample_size)
+}
+
+# Auxillary function for get_delta_stats()
+# Returns the "assumed" plot density given 
+# whether min, max or mean is used
+get_plot_dens = function(comm, density_stat){
+    if (density_stat == 'mean') {
+        plot_dens = sum(comm$comm) / nrow(comm$comm)
+    } else if (density_stat == 'max') {
+        plot_dens = max(rowSums(comm$comm))
+    } else {
+        plot_dens = min(rowSums(comm$comm))
+    }
+    return(plot_dens)   
+}
+
+effect_SAD_continuous = function(out, ind_sample_size, ){
+    ind_rare = data.frame(apply(group_sad, 1, function(x) 
+        rarefaction(x, 'indiv', ind_sample_size)))
+    out$indiv_rare = cbind(ind_sample_size, ind_rare)
+    names(out$indiv_rare) = c('sample', as.character(group_levels))
     
+    if (type == 'continuous'){
+        ind_cor = apply(ind_rare, 1, function(x) 
+            cor(x, as.numeric(group_levels), method=corr))
+        # Null test 
+        sp_extent = unlist(apply(group_sad, 1, function(x) rep(1:ncol(group_sad), x)))
+        env_extent = rep(group_levels, times=rowSums(group_sad))
+        null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
+        for (i in 1:nperm){
+            overall_sad_lumped = as.numeric(colSums(group_sad))
+            meta_freq = SpecDist(overall_sad_lumped)$probability
+            sad_perm = sapply(as.numeric(rowSums(group_sad)), function(x)
+                data.frame(table(sample(1:length(meta_freq),
+                                        x, replace = T,
+                                        prob = meta_freq)))[, 2])
+            perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
+                rarefaction(x, 'indiv', ind_sample_size))
+            null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x){
+                cor(x, as.numeric(group_levels),
+                    method = corr)})
+        }
+        ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
+            quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+        out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor,
+                                                t(ind_r_null_CI)))
+        names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low',
+                                        'r_null_median', 'r_null_high')
+    }
+    
+}
+
+get_delta_stats = function(comm, group_var, ref_group=NULL, 
+                           tests=c('indiv', 'sampl', 'spat'),
+                           type='discrete', inds=NULL, log_scale=FALSE,
+                           min_plot = NULL, density_stat ='mean',
+                           corr='spearman', nperm=1000) {
+    
+    approved_tests = get_delta_overall_checks(comm, type, density_stat, tests)
+    
+    S = ncol(comm$comm)
+    plot_abd = rowSums(comm$comm)
+    group_data = comm$env[, group_var]
+    groups = as.character(group_data)
+    group_plots = data.frame(table(groups)) # Number of plots within each group
+    
+    group_sad = aggregate(comm$comm, by=list(groups), sum)
+    if (is.null(env_var)){
+        group_levels = group_sad[, 1]
+    } else {
+        group_levels = as.character(tapply(comm$env[, env_var], list(groups), mean))
+    }
+    group_sad = group_sad[, -1]
+    ind_sample_size = get_delta_ind_sample(group_sad, inds, log_scale)
+    plot_dens = get_plot_dens(comm, density_stat)
+    
+    out = list()  
+    out$type = type
+    out$log_scale = log_scale
+    ind_rare = data.frame(apply(group_sad, 1, function(x) 
+        rarefaction(x, 'indiv', ind_sample_size)))
+    out$indiv_rare = cbind(ind_sample_size, ind_rare)
+    names(out$indiv_rare) = c('sample', as.character(group_levels))
+    
+    if (type == 'continuous'){
+        get_delta_continuous_checks(corr, group_data, groups, group_var)
+        # checks for continuous
+        # Effect of SAD
+        # Effect of N
+        # Effect of aggregation
+    } else {
+        # checks for discrete
+        # Effect of SAD
+        # Effect of N
+        # Effect of aggregation
+    }
     # 1. Individual-based rarefaction (effect of SAD) vs env_var vs N
     if ('indiv' %in% approved_tests) {
-      ind_rare = data.frame(apply(group_sad, 1, function(x) 
-                            rarefaction(x, 'indiv', ind_sample_size)))
-      out$indiv_rare = cbind(ind_sample_size, ind_rare)
-      names(out$indiv_rare) = c('sample', as.character(group_levels))
       
       if (type == 'continuous'){
         ind_cor = apply(ind_rare, 1, function(x) 
