@@ -341,7 +341,7 @@ permute_comm = function(comm, swap, groups=NULL) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
-        Ngroup = Nperm[row_indices, ]
+        Ngroup = Nperm[row_indices]
         plot_ids = 1:nrow(group_comm)
         if (swap == 'noagg') {
             tmp_comm = sapply(sp_abu, function(x) 
@@ -725,12 +725,7 @@ effect_N_continuous = function(out, comm, S, group_levels, env_levels, group_dat
     cat('\nComputing null model for N effect\n')
     pb <- txtProgressBar(min = 0, max = nperm, style = 3)
     for (i in 1:nperm){
-        plot_abd_perm = as.numeric(sample(plot_abd))
-        sp_draws = sapply(1:nrow(comm$comm), function(x)
-            sample(1:S, size = plot_abd_perm[x], replace = T, 
-                   prob = as.numeric(group_sad[which(group_levels == as.character(group_data[x])), ])))
-        comm_perm = t(sapply(1:nrow(comm$comm), function(x)
-            table(c(1:S, sp_draws[[x]])) - 1 ))
+        comm_perm = permute_comm(comm$comm, 'swapN', groups)
         effect_N_perm = data.frame(matrix(NA, ncol = length(group_levels),
                                           nrow = length(ind_sample_size)))
         for (j in 1:length(group_levels)){
@@ -771,50 +766,27 @@ effect_N_discrete = function(out, comm, group_levels, ref_group, groups,
             deltaS_N(comm_levels[plot_levels == x, ], plot_dens_level, 
                      ind_sample_size)$deltaS)
         ddeltaS_level = N_eff[, 2] - N_eff[, 1]
+        null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_level))
         for (i in 1:nperm){
+            # swap plot abu between group 1 and each other group
+            comm_perm = permute_comm(comm_levels, 'swapN', plot_levels)  
+            N_eff_perm = sapply(c(as.character(ref_group), level), function(x) 
+                deltaS_N(comm_perm[plot_levels == x, ], plot_dens_level, 
+                            ind_sample_size)$deltaS)
+            null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
             setTxtProgressBar(pb, k)
             k = k + 1
-            # swap plot abu between group 1 and each other group
-            comm_perm = permute_comm(comm_groups, 'swapN', env_groups)  
-            N_eff_perm = sapply(c(ref_group, group), function(x) 
-                effect_of_N(comm_perm[env_groups == x, ],
-                            ref_dens, ind_sample_size)$deltaS)
-            null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
         }
+        N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x)
+            quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+        N_level = data.frame(level, ind_sample_size, ddeltaS_level,
+                             t(N_deltaS_null_CI))
+        out$discrete$N = rbind(out$discrete$N, N_level)
     }
-    for (group in group_levels) {
-        if (group != ref_group){
-            row_bool = group == groups | ref_group == groups
-            comm_groups = comm$comm[row_bool, ]
-            env_groups = env_data[row_bool]
-
-            N_eff = sapply(c(ref_group, group), function(x) 
-                effect_of_N(comm_groups[env_groups == x, ], ref_dens,
-                            ind_sample_size)$deltaS)
-            ddeltaS_group = N_eff[ , 2] - N_eff[ , 1]
-            null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_group))
-            cat('\nComputing null model for N effect\n')
-            pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-            for (i in 1:nperm){
-                setTxtProgressBar(pb, i)
-                # swap plot abu between group 1 and each other group
-                comm_perm = permute_comm(comm_groups, 'swapN', env_groups)  
-                N_eff_perm = sapply(c(ref_group, group), function(x) 
-                    effect_of_N(comm_perm[env_groups == x, ],
-                                ref_dens, ind_sample_size)$deltaS)
-                null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
-            }
-            close(pb)
-            N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x)
-                quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-            N_group = data.frame(group, ind_sample_size, ddeltaS_group,
-                                 t(N_deltaS_null_CI))
-            out$discrete$N = rbind(out$discrete$N, N_group)
-        }
-    }
+    close(pb)
     names(out$discrete$N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
                               'ddeltaS_null_median', 'ddeltaS_null_high')
-    
+    return(out)
 }
 
 get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL, 
@@ -825,7 +797,6 @@ get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL,
     
     approved_tests = get_delta_overall_checks(comm, type, group_var, env_var, 
                                               density_stat, tests)
-    
     S = ncol(comm$comm)
     plot_abd = rowSums(comm$comm)
     group_data = comm$env[, group_var]
@@ -869,57 +840,11 @@ get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL,
         if ('SAD' %in% approved_tests)
             out = effect_SAD_discrete(out, group_sad, group_levels, ref_group, nperm)
         if ('N' %in% approved_tests)
-            
+            out = effect_N_discrete(out, comm, group_levels, ref_group, groups, 
+                                    density_stat, ind_sample_size, nperm)
         # Effect of aggregation
     }
     
-    
-    # 2. Sample-based rarefaction (effect of density) vs env_var vs N----------
-    if ('sampl' %in% approved_tests){
-      # TODO: Checks?
-     else if (type == 'discrete') {
-          for (group in group_levels) {
-              if (group != ref_group){
-                  row_bool = group == groups | ref_group == groups
-                  comm_groups = comm$comm[row_bool, ]
-                  env_groups = env_data[row_bool]
-              if (density_stat == 'mean')
-                  ref_dens = sum(comm_groups) / nrow(comm_groups)
-              else if (density_stat == 'max')
-                  ref_dens = max(rowSums(comm_groups))
-              else if (density_stat == 'min')
-                  ref_dens = min(rowSums(comm_groups))
-              else 
-                  stop('The argument ref must be set to mean, min or max')
-              
-              N_eff = sapply(c(ref_group, group), function(x) 
-                             effect_of_N(comm_groups[env_groups == x, ], ref_dens,
-                                         ind_sample_size)$deltaS)
-              ddeltaS_group = N_eff[ , 2] - N_eff[ , 1]
-              null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_group))
-              cat('\nComputing null model for N effect\n')
-              pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-              for (i in 1:nperm){
-                  setTxtProgressBar(pb, i)
-                  # swap plot abu between group 1 and each other group
-                  comm_perm = permute_comm(comm_groups, 'swapN', env_groups)  
-                  N_eff_perm = sapply(c(ref_group, group), function(x) 
-                                      effect_of_N(comm_perm[env_groups == x, ],
-                                                  ref_dens, ind_sample_size)$deltaS)
-                  null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
-              }
-              close(pb)
-              N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x)
-                                       quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-              N_group = data.frame(group, ind_sample_size, ddeltaS_group,
-                                   t(N_deltaS_null_CI))
-              out$discrete$N = rbind(out$discrete$N, N_group)
-          }
-        }
-        names(out$discrete$N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
-                                  'ddeltaS_null_median', 'ddeltaS_null_high')
-      }
-    }
     # 3. Sample-based spatially-explicit rarefaction (effect of aggregation) vs env_var vs N
     if ('spat' %in% approved_tests){
       if (!is.null(min_plot))
