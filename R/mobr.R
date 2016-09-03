@@ -341,6 +341,7 @@ permute_comm = function(comm, swap, groups=NULL) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
+        Ngroup = Nperm[row_indices, ]
         plot_ids = 1:nrow(group_comm)
         if (swap == 'noagg') {
             tmp_comm = sapply(sp_abu, function(x) 
@@ -351,7 +352,7 @@ permute_comm = function(comm, swap, groups=NULL) {
         else if (swap == 'swapN') {
             sp_draws = sapply(plot_ids, function(x)
                               sample(rep(1:S, sp_abu),
-                                     size=Nperm[x],
+                                     size=Ngroup[x],
                                      replace = T))
             tmp_comm = t(sapply(plot_ids, function(x)
                          table(c(sp_draws[[x]], 1:S)) - 1 ))
@@ -582,13 +583,13 @@ get_delta_ind_sample = function(group_sad, inds, log_scale){
 # Auxillary function for get_delta_stats()
 # Returns the "assumed" plot density given 
 # whether min, max or mean is used
-get_plot_dens = function(comm, density_stat){
+get_plot_dens = function(site_sp_mat, density_stat){
     if (density_stat == 'mean') {
-        plot_dens = sum(comm$comm) / nrow(comm$comm)
+        plot_dens = sum(site_sp_mat) / nrow(site_sp_mat)
     } else if (density_stat == 'max') {
-        plot_dens = max(rowSums(comm$comm))
+        plot_dens = max(rowSums(site_sp_mat))
     } else {
-        plot_dens = min(rowSums(comm$comm))
+        plot_dens = min(rowSums(site_sp_mat))
     }
     return(plot_dens)   
 }
@@ -753,6 +754,69 @@ effect_N_continuous = function(out, comm, S, group_levels, env_levels, group_dat
     return(out)
 }
 
+# Auxillary function for get_delta_stats()
+# Effect of N when type is "discrete"
+effect_N_discrete = function(out, comm, group_levels, ref_group, groups, 
+                             density_stat, ind_sample_size, nperm){
+    cat('\nComputing null model for N effect\n')
+    pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
+                         style = 3)
+    k = 1
+    for (level in group_levels[group_levels != as.character(ref_group)]){
+        row_bool = level == groups | as.character(ref_group) == groups
+        comm_levels = comm$comm[row_bool, ]
+        plot_dens_level = get_plot_dens(comm_levels, density_stat)
+        plot_levels = groups[row_bool]
+        N_eff = sapply(c(as.character(ref_group), level), function(x)
+            deltaS_N(comm_levels[plot_levels == x, ], plot_dens_level, 
+                     ind_sample_size)$deltaS)
+        ddeltaS_level = N_eff[, 2] - N_eff[, 1]
+        for (i in 1:nperm){
+            setTxtProgressBar(pb, k)
+            k = k + 1
+            # swap plot abu between group 1 and each other group
+            comm_perm = permute_comm(comm_groups, 'swapN', env_groups)  
+            N_eff_perm = sapply(c(ref_group, group), function(x) 
+                effect_of_N(comm_perm[env_groups == x, ],
+                            ref_dens, ind_sample_size)$deltaS)
+            null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
+        }
+    }
+    for (group in group_levels) {
+        if (group != ref_group){
+            row_bool = group == groups | ref_group == groups
+            comm_groups = comm$comm[row_bool, ]
+            env_groups = env_data[row_bool]
+
+            N_eff = sapply(c(ref_group, group), function(x) 
+                effect_of_N(comm_groups[env_groups == x, ], ref_dens,
+                            ind_sample_size)$deltaS)
+            ddeltaS_group = N_eff[ , 2] - N_eff[ , 1]
+            null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_group))
+            cat('\nComputing null model for N effect\n')
+            pb <- txtProgressBar(min = 0, max = nperm, style = 3)
+            for (i in 1:nperm){
+                setTxtProgressBar(pb, i)
+                # swap plot abu between group 1 and each other group
+                comm_perm = permute_comm(comm_groups, 'swapN', env_groups)  
+                N_eff_perm = sapply(c(ref_group, group), function(x) 
+                    effect_of_N(comm_perm[env_groups == x, ],
+                                ref_dens, ind_sample_size)$deltaS)
+                null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
+            }
+            close(pb)
+            N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x)
+                quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+            N_group = data.frame(group, ind_sample_size, ddeltaS_group,
+                                 t(N_deltaS_null_CI))
+            out$discrete$N = rbind(out$discrete$N, N_group)
+        }
+    }
+    names(out$discrete$N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
+                              'ddeltaS_null_median', 'ddeltaS_null_high')
+    
+}
+
 get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL, 
                            tests=c('SAD', 'N', 'agg'),
                            type='discrete', inds=NULL, log_scale=FALSE,
@@ -780,7 +844,7 @@ get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL,
     group_levels = as.character(group_sad[, 1])
     group_sad = group_sad[, -1]
     ind_sample_size = get_delta_ind_sample(group_sad, inds, log_scale)
-    plot_dens = get_plot_dens(comm, density_stat)
+    plot_dens = get_plot_dens(comm$comm, density_stat)
     
     out = list()  
     out$type = type
@@ -804,7 +868,8 @@ get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL,
         get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
         if ('SAD' %in% approved_tests)
             out = effect_SAD_discrete(out, group_sad, group_levels, ref_group, nperm)
-        # Effect of N
+        if ('N' %in% approved_tests)
+            
         # Effect of aggregation
     }
     
