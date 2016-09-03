@@ -704,68 +704,53 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
 
 # Auxillary function for get_delta_stats()
 # Effect of N when type is "continuous"
-effect_N_continuous = function(out, comm, S, group_levels, group_plots, group_data, 
+effect_N_continuous = function(out, comm, S, group_levels, env_levels, group_data, 
                                plot_dens, plot_abd, ind_sample_size, nperm){
+    # TODO: checks?
     effect_N_by_group = data.frame(matrix(NA, ncol = length(group_levels) + 1,
                                           nrow = length(ind_sample_size)))
     effect_N_by_group[, 1] = ind_sample_size
     for (i in 1:length(group_levels)){
         level = group_levels[i]
-        comm_level = comm$comm[which(group_data == level), ]
+        comm_level = comm$comm[which(as.character(group_data) == level), ]
         group_effect_N = deltaS_N(comm_level, plot_dens, ind_sample_size)
         effect_N_by_group[, i + 1] = group_effect_N$deltaS
     }
     effect_N_by_group = effect_N_by_group[complete.cases(effect_N_by_group), ]
-    
     r_emp = apply(effect_N_by_group[ , -1], 1, function(x)
-        cor(x, as.numeric(group_levels), method = corr))
+        cor(x, as.numeric(env_levels), method = corr))
     
-    # Null model -------
     null_N_r_mat = matrix(NA, nperm, length(r_emp))
+    cat('\nComputing null model for N effect\n')
+    pb <- txtProgressBar(min = 0, max = nperm, style = 3)
     for (i in 1:nperm){
         plot_abd_perm = as.numeric(sample(plot_abd))
         sp_draws = sapply(1:nrow(comm$comm), function(x)
             sample(1:S, size = plot_abd_perm[x], replace = T, 
-                   prob = as.numeric(group_sad[which(group_levels)])))
-        ## TODO: clean up this shuffling code so it is easier to read!
-        if (is.null(group_var))
-            sp_draws = sapply(1:nrow(comm$comm), function(x)
-                sample(rep(1:ncol(comm$comm), 
-                           as.numeric(group_sad[which(group_levels == env_data[x]), ])),
-                       size = plot_abd_perm[x], replace = T))
-        else
-            sp_draws = sapply(1:nrow(comm$comm), function(x)
-                sample(rep(1:ncol(comm$comm), 
-                           as.numeric(group_sad[which(names(group_levels) == groups[x]), ])),
-                       size = plot_abd_perm[x], replace = T))
+                   prob = as.numeric(group_sad[which(group_levels == as.character(group_data[x])), ])))
         comm_perm = t(sapply(1:nrow(comm$comm), function(x)
-            table(c(1:ncol(comm$comm), sp_draws[[x]])) - 1 ))
-        effect_N_perm = data.frame(matrix(NA, ncol=length(group_levels)+1,
-                                          nrow=max(group_plots$Freq)))
+            table(c(1:S, sp_draws[[x]])) - 1 ))
+        effect_N_perm = data.frame(matrix(NA, ncol = length(group_levels),
+                                          nrow = length(ind_sample_size)))
         for (j in 1:length(group_levels)){
-            if (is.null(group_var)) {
-                group = group_levels[j]
-                comm_group = comm_perm[which(env_data == group), ]
-            } else {
-                group = names(group_levels)[j]
-                comm_group = comm_perm[which(groups == group), ]
-            }
-            group_N_perm = effect_of_N(comm_group, indiv_dens, ind_sample_size)
-            if (j == 1)
-                effect_N_perm[, j] = group_N_perm$effort[1:nrow(effect_N_perm)]
-            effect_N_perm[, j + 1] = group_N_perm$deltaS[1:nrow(effect_N_perm)]
+            level_perm = group_levels[j]
+            comm_level_perm = comm_perm[which(as.character(group_data) == level_perm), ]
+            group_effect_N_perm = deltaS_N(comm_level_perm, plot_dens, 
+                                           ind_sample_size)
+            effect_N_perm[, j] = group_effect_N_perm$deltaS
         }
         effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
         # If the output is not long enough, fill it with NA's
-        null_N_r_mat[i, ] = apply(effect_N_perm[, -1], 1, function(x)
-            cor(x, as.numeric(group_levels), 
-                method = corr))[1:ncol(null_N_r_mat)]
-        
+        null_N_r_mat[i, ] = apply(effect_N_perm, 1, function(x)
+            cor(x, as.numeric(env_levels), method = corr))[1:ncol(null_N_r_mat)]
+        setTxtProgressBar(pb, i)
     }
-    N_r_null_CI = apply(null_N_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+    close(pb)
+    N_r_null_CI = apply(null_N_r_mat, 2, function(x) 
+        quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
     out$continuous$N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))
     names(out$continuous$N) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
-    
+    return(out)
 }
 
 get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL, 
@@ -811,7 +796,9 @@ get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL,
         if ('SAD' %in% approved_tests)
             out = effect_SAD_continuous(out, group_sad, env_levels, nperm)
         if ('N' %in% approved_tests)
-            
+            out = effect_N_continuous(out, comm, S, group_levels, env_levels, 
+                                      group_data, plot_dens, plot_abd, 
+                                      ind_sample_size, nperm)
         # Effect of aggregation
     } else {
         get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
@@ -825,72 +812,7 @@ get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL,
     # 2. Sample-based rarefaction (effect of density) vs env_var vs N----------
     if ('sampl' %in% approved_tests){
       # TODO: Checks?
-      if (type == 'continuous'){
-        effect_N_by_group = data.frame(matrix(NA, ncol=length(group_levels)+1,
-                                              nrow=max(group_plots$Freq)))
-        for (i in 1:length(group_levels)){
-          if (is.null(group_var)) {
-              group = group_levels[i]
-              comm_group = comm$comm[which(env_data == group), ]
-          } else {
-              group = names(group_levels)[i]
-              comm_group = comm$comm[which(groups == group), ]
-          }
-          group_effect_N = effect_of_N(comm_group, indiv_dens, ind_sample_size, 
-                                       permute=T)
-          if (i == 1)
-            effect_N_by_group[, i] = group_effect_N$effort[1:nrow(effect_N_by_group)]
-          effect_N_by_group[, i + 1] = group_effect_N$deltaS[1:nrow(effect_N_by_group)]
-        }
-        effect_N_by_group = effect_N_by_group[complete.cases(effect_N_by_group), ]
-
-        r_emp = apply(effect_N_by_group[ , -1], 1, function(x)
-                      cor(x, as.numeric(group_levels), method = corr))
-        
-        # Null model -------
-        null_N_r_mat = matrix(NA, nperm, length(r_emp))
-        for (i in 1:nperm){
-          plot_abd_perm = as.numeric(sample(plot_abd))
-          ## TODO: clean up this shuffling code so it is easier to read!
-          if (is.null(group_var))
-              sp_draws = sapply(1:nrow(comm$comm), function(x)
-                                sample(rep(1:ncol(comm$comm), 
-                                       as.numeric(group_sad[which(group_levels == env_data[x]), ])),
-                                       size = plot_abd_perm[x], replace = T))
-          else
-              sp_draws = sapply(1:nrow(comm$comm), function(x)
-                                sample(rep(1:ncol(comm$comm), 
-                                       as.numeric(group_sad[which(names(group_levels) == groups[x]), ])),
-                                       size = plot_abd_perm[x], replace = T))
-          comm_perm = t(sapply(1:nrow(comm$comm), function(x)
-                               table(c(1:ncol(comm$comm), sp_draws[[x]])) - 1 ))
-          effect_N_perm = data.frame(matrix(NA, ncol=length(group_levels)+1,
-                                            nrow=max(group_plots$Freq)))
-          for (j in 1:length(group_levels)){
-              if (is.null(group_var)) {
-                  group = group_levels[j]
-                  comm_group = comm_perm[which(env_data == group), ]
-              } else {
-                  group = names(group_levels)[j]
-                  comm_group = comm_perm[which(groups == group), ]
-              }
-              group_N_perm = effect_of_N(comm_group, indiv_dens, ind_sample_size)
-              if (j == 1)
-                  effect_N_perm[, j] = group_N_perm$effort[1:nrow(effect_N_perm)]
-              effect_N_perm[, j + 1] = group_N_perm$deltaS[1:nrow(effect_N_perm)]
-          }
-          effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
-          # If the output is not long enough, fill it with NA's
-          null_N_r_mat[i, ] = apply(effect_N_perm[, -1], 1, function(x)
-                                    cor(x, as.numeric(group_levels), 
-                                        method = corr))[1:ncol(null_N_r_mat)]
-
-        }
-        N_r_null_CI = apply(null_N_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-        out$continuous$N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))
-        names(out$continuous$N) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
-      }
-      else if (type == 'discrete') {
+     else if (type == 'discrete') {
           for (group in group_levels) {
               if (group != ref_group){
                   row_bool = group == groups | ref_group == groups
