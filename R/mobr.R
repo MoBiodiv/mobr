@@ -429,7 +429,8 @@ samp_ssad = function(comm, groups){
 
 # Auxillary function for get_delta_stats()
 # Overall checks for input values
-get_delta_overall_checks = function(comm, type, group_var, env_var, density_stat){
+get_delta_overall_checks = function(comm, type, group_var, env_var, 
+                                    density_stat, tests){
     if (!(type %in% c('continuous', 'discrete')))
         stop('Type has to be discrete or continuous.')
     if (!(density_stat %in% c('mean', 'max', 'min')))
@@ -440,40 +441,9 @@ get_delta_overall_checks = function(comm, type, group_var, env_var, density_stat
         if (!(env_var %in% names(comm$env)))
             stop('If env_var is defined, it has to be one of the environmental
                  variables in comm.')
-}
-
-# Auxillary function for get_delta_stats()
-# Checks which tests can be performed
-get_delta_check_tests = function(comm, tests, type, min_plot, group_plots, 
-                                 group_levels, ref_group){
     test_status = sapply(tests, function(x) 
         eval(parse(text = paste('comm$tests$', x, sep = ''))))
     approved_tests = tests[which(test_status == TRUE)]
-    # Additional check for aggregation analysis
-    # NOTE: may not be necessary since we are also looking at within-plot aggregation 
-    if ('agg' %in% approved_tests){
-        if (!is.null(min_plots)){
-            groups_keep = as.character(group_plots[which(group_plots$Freq >= 
-                                                             min_plots), 1])
-        } else {groups_keep = group_levels}
-        agg_keep = FALSE
-        if (type == 'discrete'){
-            if (length(groups_keep) == 1){
-                warning('Test for aggregation cannot be conducted with only one 
-                        group left.')
-            } else if (!(ref_group %in% groups_keep)){
-                warning('Test for aggregation cannot be conducted because the 
-                        reference group has been dropped.')
-            } else {agg_keep = TRUE}
-        } else if (length(groups_keep) < 3){
-            warning('Test for aggregation cannot be conducted in the continuous
-                    case with less than three groups left.')
-        } else {agg_keep = TRUE}
-        
-        if (agg_keep == F)
-            approved_tests = approved_tests[approved_tests != 'agg']
-    }
-    
     if (length(approved_tests) < length(tests)) {
         tests_string = paste(approved_tests, collapse=' and ')
         cat(paste('Based upon the attributes of the community object only the 
@@ -818,7 +788,8 @@ get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL,
                            min_plots = NULL, density_stat ='mean',
                            corr='spearman', nperm=1000) {
     
-    get_delta_overall_checks(comm, type, group_var, env_var, density_stat)
+    approved_tests = get_delta_overall_checks(comm, type, group_var, env_var, 
+                                              density_stat, tests)
     
     S = ncol(comm$comm)
     plot_abd = rowSums(comm$comm)
@@ -839,9 +810,7 @@ get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL,
     group_sad = group_sad[, -1]
     ind_sample_size = get_delta_ind_sample(group_sad, inds, log_scale)
     plot_dens = get_plot_dens(comm$comm, density_stat)
-    approved_tests = get_delta_check_tests(comm, tests, type, min_plots, 
-                                           group_plots, group_levels, ref_group)
-    
+
     out = list()  
     out$type = type
     out$log_scale = log_scale
