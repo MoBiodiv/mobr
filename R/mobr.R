@@ -427,80 +427,6 @@ samp_ssad = function(comm, groups){
   return(comm_out)
 }
 
-
-
-#' Conduct the MOBR tests on drivers of biodiversity across scales.
-#' 
-#' There are three tests, on effects of 1. the shape of the SAD, 2.
-#' treatment/group-level density, 3. degree of aggregation. The user can
-#' specificy to conduct one or more of these tests.
-#' 
-#' @param comm "comm" object created by make_comm_obj()
-#' @param env_var a character string specifying the environmental variable to in
-#'   comm$env used for a comparison
-#' @param group_var an optional character string to specify group membership. If
-#'   it is NULL then each unique value of env_var is used as the group variable
-#' @param ref_group a character string used to define the reference group to
-#'   which all other groups are compared with when "type" is discrete. It is not
-#'   needed when "type" is continuous.
-#' @param tests specifies which one or more of the three tests ('indiv',
-#'   'sampl', 'spat') are to be performed. Default is to include all three
-#'   tests.
-#' @param type "discrete" or "continuous". If "discrete", pair-wise comparisons
-#'   are conducted between all other groups and the reference group. If
-#'   "continuous", a correlation analysis is conducted between the response
-#'   variables and env_var.
-#' @param inds effort size at which the individual-based rarefaction curves are
-#'   to be evaluated, and to which the sample-based rarefaction curves are to be
-#'   interpolated. It can take three types of values, a single integer, a vector
-#'   of intergers, and NULL. If inds = NULL (default), the curves are evaluated
-#'   at every possible effort size, from 1 to the total number of individuals
-#'   within the group (slow). If inds is a single integer, it is taken as the
-#'   number of points at which the curves are evaluated; the positions of the
-#'   points are determined by the "log_scale" argument. If inds is a vector of
-#'   integers, it is taken as the exact points at which the curves are
-#'   evaluated.
-#' @param log_scale if "inds" is given a single integer, "log_scale" determines
-#'   the position of the points. If log_scale is TRUE, the points are equally
-#'   spaced on logarithmic scale. If it is FALSE (default), the points are
-#'   equally spaced on arithmetic scale.
-#' @param min_plot minimal number of plots for test 'spat', where plots are
-#'   randomized within groups as null test. If it is given a value, all groups
-#'   with fewer plots than min_plot are removed for this test. If it is NULL
-#'   (default), all groups are kept. Warnings are issued if 1. there is only one
-#'   group left and "type" is discrete, or 2. there are less than three groups
-#'   left and "type" is continuous, or 3. reference group ("ref_group") is
-#'   removed and "type" is discrete. In these three scenarios, the function will
-#'   terminate. A different warning is issued if any of the remaining groups
-#'   have less than five plots (which have less than 120 permutations), but the 
-#'   test will be carried out.
-#' @param density_stat reference density used in converting number of plots to
-#'   numbers of individuals, a step in test "sampl". It can take one of the
-#'   three values: "mean", "max", or "min". If it is "mean", the average
-#'   plot-level abundance across plots (all plots when "type" is "continuous,
-#'   all plots within the two groups for each pair-wise comparison when "type"
-#'   is "discrete") are used. If it is "min" or "max", the minimum/maximul
-#'   plot-level density is used.
-#' @param corr which kind of correlation to use when "type" is "continuous". It
-#'   can take two values, "spearman" or "pearson". "spearman" (default) is
-#'   generally recommended because the relationship between the response and
-#'   "env_var" may not be linear.
-#' @param nperm number of iterations to run for null tests.
-#'   
-#' @return a "mobr" object with attributes...
-#' @export
-#'  @examples
-#'  {
-#'  library(vegan)
-#'  data(mite)
-#'  data(mite.env)
-#'  data(mite.xy)
-#'  mite_comm = make_comm_obj(mite, data.frame(mite.env, mite.xy))
-#'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub',
-#'                                       ref_group = 'None', inds = 20)
-#'  }
-#'  
-
 # Auxillary function for get_delta_stats()
 # Overall checks for input values
 # Returns a vector of approved tests
@@ -516,7 +442,7 @@ get_delta_overall_checks = function(comm, type, group_var, env_var,
         if (!(env_var %in% names(comm$env)))
             stop('If env_var is defined, it has to be one of the environmental
                  variables in comm.')
-        
+    
     test_status = sapply(tests, function(x) 
         eval(parse(text = paste('comm$tests$', x, sep = ''))))
     approved_tests = tests[which(test_status == TRUE)]
@@ -651,7 +577,7 @@ effect_SAD_continuous = function(out, group_sad, env_levels, nperm){
         setTxtProgressBar(pb, i)
     }
     close(pb)
-        
+    
     ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
         quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
     out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor, 
@@ -772,7 +698,7 @@ effect_N_discrete = function(out, comm, group_levels, ref_group, groups,
             comm_perm = permute_comm(comm_levels, 'swapN', plot_levels)  
             N_eff_perm = sapply(c(as.character(ref_group), level), function(x) 
                 deltaS_N(comm_perm[plot_levels == x, ], plot_dens_level, 
-                            ind_sample_size)$deltaS)
+                         ind_sample_size)$deltaS)
             null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
             setTxtProgressBar(pb, k)
             k = k + 1
@@ -789,9 +715,81 @@ effect_N_discrete = function(out, comm, group_levels, ref_group, groups,
     return(out)
 }
 
-get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL, 
-                           tests=c('SAD', 'N', 'agg'),
-                           type='discrete', inds=NULL, log_scale=FALSE,
+
+#' Conduct the MOBR tests on drivers of biodiversity across scales.
+#' 
+#' There are three tests, on effects of 1. the shape of the SAD, 2.
+#' treatment/group-level density, 3. degree of aggregation. The user can
+#' specificy to conduct one or more of these tests.
+#' 
+#' @param comm "comm" object created by make_comm_obj()
+#' @param group_var a character string specifying the environmental variable in
+#'   comm$env used for grouping plots
+#' @param env_var an optional character string specicying a environmental variable
+#'   in comm$env which is used in correlation analysis in the continuous case. 
+#'   It is not needed if "type" is discrete or group_var is used in correlation.
+#' @param ref_group a character string used to define the reference group to
+#'   which all other groups are compared with when "type" is discrete. It is not
+#'   needed when "type" is continuous.
+#' @param tests specifies which one or more of the three tests ('SAD', N', 'agg') 
+#'   are to be performed. Default is to include all three tests.
+#' @param type "discrete" or "continuous". If "discrete", pair-wise comparisons
+#'   are conducted between all other groups and the reference group. If
+#'   "continuous", a correlation analysis is conducted between the response
+#'   variables and group_var or env_var (if defined).
+#' @param inds effort size at which the individual-based rarefaction curves are
+#'   to be evaluated, and to which the sample-based rarefaction curves are to be
+#'   interpolated. It can take three types of values, a single integer, a vector
+#'   of intergers, and NULL. If inds = NULL (default), the curves are evaluated
+#'   at every possible effort size, from 1 to the total number of individuals
+#'   within the group (slow). If inds is a single integer, it is taken as the
+#'   number of points at which the curves are evaluated; the positions of the
+#'   points are determined by the "log_scale" argument. If inds is a vector of
+#'   integers, it is taken as the exact points at which the curves are
+#'   evaluated.
+#' @param log_scale if "inds" is given a single integer, "log_scale" determines
+#'   the position of the points. If log_scale is TRUE, the points are equally
+#'   spaced on logarithmic scale. If it is FALSE (default), the points are
+#'   equally spaced on arithmetic scale.
+#' @param min_plot minimal number of plots for test 'agg', where plots are
+#'   randomized within groups as null test. If it is given a value, all groups
+#'   with fewer plots than min_plot are removed for this test. If it is NULL
+#'   (default), all groups are kept. Warnings are issued if 1. there is only one
+#'   group left and "type" is discrete, or 2. there are less than three groups
+#'   left and "type" is continuous, or 3. reference group ("ref_group") is
+#'   removed and "type" is discrete. In these three scenarios, the function will
+#'   terminate. A different warning is issued if any of the remaining groups
+#'   have less than five plots (which have less than 120 permutations), but the 
+#'   test will be carried out.
+#' @param density_stat reference density used in converting number of plots to
+#'   numbers of individuals, a step in test "N". It can take one of the
+#'   three values: "mean", "max", or "min". If it is "mean", the average
+#'   plot-level abundance across plots (all plots when "type" is "continuous,
+#'   all plots within the two groups for each pair-wise comparison when "type"
+#'   is "discrete") are used. If it is "min" or "max", the minimum/maximul
+#'   plot-level density is used.
+#' @param corr which kind of correlation to use when "type" is "continuous". It
+#'   can take two values, "spearman" or "pearson". "spearman" (default) is
+#'   generally recommended because the relationship between the response and
+#'   "env_var" may not be linear.
+#' @param nperm number of iterations to run for null tests.
+#'   
+#' @return a "mobr" object with attributes...
+#' @export
+#'  @examples
+#'  {
+#'  library(vegan)
+#'  data(mite)
+#'  data(mite.env)
+#'  data(mite.xy)
+#'  mite_comm = make_comm_obj(mite, data.frame(mite.env, mite.xy))
+#'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub',
+#'                                       ref_group = 'None', inds = 20)
+#'  }
+#'  
+get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL, 
+                           tests = c('SAD', 'N', 'agg'),
+                           type='discrete', inds = NULL, log_scale = FALSE,
                            min_plot = NULL, density_stat ='mean',
                            corr='spearman', nperm=1000) {
     
@@ -845,97 +843,97 @@ get_delta_stats = function(comm, group_var, ref_group=NULL, env_var = NULL,
         # Effect of aggregation
     }
     
-    # 3. Sample-based spatially-explicit rarefaction (effect of aggregation) vs env_var vs N
-    if ('spat' %in% approved_tests){
-      if (!is.null(min_plot))
-        group_keep = group_plots[which(group_plots$Freq>=min_plot), 1]
-      else
-        group_keep = group_levels
-      
-      if (length(group_keep) == 1 & type == 'discrete')
-        stop('Error: pair-wise comparison cannot be conducted on one group.')
-      else if (length(group_keep) < 3 & type == 'continuous')
-        stop('Error: correlation analysis cannot be conducted with less than three groups.')
-      else if (!(as.character(ref_group) %in% as.character(group_keep)) & type == 'discrete')
-        stop('Error: reference group does not have enough plots and have been dropped.')
-      else {
-        sample_rare_keep = out$sample_rare[which(out$sample_rare$group %in% as.character(group_keep)), ]
-        sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$expl_S)) - 
-                                  as.numeric(as.character(sample_rare_keep$impl_S))
-        if (min(group_plots$Freq[group_plots[, 1] %in% group_keep]) < 5)
-          warning('Warning: some groups have less than 5 plots. The results of the null model are not very informative.')
-        
-        if (type == 'continuous'){
-          min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% as.character(group_keep))])
-          r_emp = sapply(seq(min_plot_group), function(x)
-            cor(sample_rare_keep$deltaS[which(sample_rare_keep$sample_plot == x)], 
-                as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
-          # Null test
-          null_agg_r_mat = matrix(NA, nperm, min_plot_group)
-          for (i in 1:nperm){
-            deltaS_perm = c()
-            comm_perm = swap_binary_species(comm$comm, groups)
-            for (group in unique(sample_rare_keep$group)){
-              comm_group = comm_perm[as.character(env_data) == as.character(group), ]
-              xy_group = comm$spat[as.character(env_data) == as.character(group), ]
-              expl_S_perm = rarefy_sample_explicit(comm_group, xy_group)
-              deltaS_perm = c(deltaS_perm, as.numeric(expl_S_perm - as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])))
-            }
-            null_agg_r_mat[i, ] = sapply(seq(min_plot_group), function(x)
-              cor(deltaS_perm[which(sample_rare_keep$sample_plot == x)], 
-                  as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
-          }
-          agg_r_null_CI = apply(null_agg_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
-          out$continuous$agg = data.frame(cbind(seq(min_plot_group), r_emp, t(agg_r_null_CI)))
-          names(out$continuous$agg) = c('effort_sample', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
-        }
-        
-        else {
-          ref_sample = sample_rare_keep[which(as.character(sample_rare_keep$group) == as.character(ref_group)), ]
-          out$discrete$agg = data.frame(group = character(), sample_plot = numeric(), ddeltaS_emp = numeric(), 
-                                        ddeltaS_null_low = numeric(), ddeltaS_median = numeric(), 
-                                        ddeltaS_high = numeric())
-          ref_comm = comm$comm[as.character(env_data) == as.character(ref_group), ]
-          xy_ref = comm$spat[as.character(env_data) == as.character(ref_group), ]
-          impl_S_ref = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(ref_group))]
-          impl_S_ref = as.numeric(as.character(impl_S_ref))
-          for (group in unique(group_keep)){
-            if ((as.character(group) != as.character(ref_group))){
-              min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% 
-                                                            c(as.character(group), as.character(ref_group)))])
-              ddeltaS_group = sample_rare_keep$deltaS[sample_rare_keep$group == group][1:min_plot_group] - 
-                sample_rare_keep$deltaS[as.character(sample_rare_keep$group) == as.character(ref_group)][1:min_plot_group]
-              
-              group_for_2 = env_data[which(as.character(env_data) %in% c(as.character(ref_group), as.character(group)))]
-              comm_group = comm$comm[as.character(env_data) == as.character(group), ]
-              impl_S_group = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(group))]
-              impl_S_group = as.numeric(as.character(impl_S_group))
-              
-              null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
-              cat('\nComputing null model for aggregation effect\n')
-              pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-              for (i in 1:nperm){
-                setTxtProgressBar(pb, i)
-                xy_perm = comm$spat[sample(nrow(comm$spat)), ]
-                xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
-                xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
-                expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
-                expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
-                null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
-                  (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
-              }
-              close(pb)
-              agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
-              agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
-                                           ddeltaS_group, t(agg_deltaS_null_CI)))
-              out$discrete$agg = rbind(out$discrete$agg, agg_group)
-            }
-          }
-          names(out$discrete$agg) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
-                                      'ddeltaS_null_median', 'ddeltaS_null_high')
-        }
-      }
-    }
+    # # 3. Sample-based spatially-explicit rarefaction (effect of aggregation) vs env_var vs N
+    # if ('spat' %in% approved_tests){
+    #   if (!is.null(min_plot))
+    #     group_keep = group_plots[which(group_plots$Freq>=min_plot), 1]
+    #   else
+    #     group_keep = group_levels
+    #   
+    #   if (length(group_keep) == 1 & type == 'discrete')
+    #     stop('Error: pair-wise comparison cannot be conducted on one group.')
+    #   else if (length(group_keep) < 3 & type == 'continuous')
+    #     stop('Error: correlation analysis cannot be conducted with less than three groups.')
+    #   else if (!(as.character(ref_group) %in% as.character(group_keep)) & type == 'discrete')
+    #     stop('Error: reference group does not have enough plots and have been dropped.')
+    #   else {
+    #     sample_rare_keep = out$sample_rare[which(out$sample_rare$group %in% as.character(group_keep)), ]
+    #     sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$expl_S)) - 
+    #                               as.numeric(as.character(sample_rare_keep$impl_S))
+    #     if (min(group_plots$Freq[group_plots[, 1] %in% group_keep]) < 5)
+    #       warning('Warning: some groups have less than 5 plots. The results of the null model are not very informative.')
+    #     
+    #     if (type == 'continuous'){
+    #       min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% as.character(group_keep))])
+    #       r_emp = sapply(seq(min_plot_group), function(x)
+    #         cor(sample_rare_keep$deltaS[which(sample_rare_keep$sample_plot == x)], 
+    #             as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
+    #       # Null test
+    #       null_agg_r_mat = matrix(NA, nperm, min_plot_group)
+    #       for (i in 1:nperm){
+    #         deltaS_perm = c()
+    #         comm_perm = swap_binary_species(comm$comm, groups)
+    #         for (group in unique(sample_rare_keep$group)){
+    #           comm_group = comm_perm[as.character(env_data) == as.character(group), ]
+    #           xy_group = comm$spat[as.character(env_data) == as.character(group), ]
+    #           expl_S_perm = rarefy_sample_explicit(comm_group, xy_group)
+    #           deltaS_perm = c(deltaS_perm, as.numeric(expl_S_perm - as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])))
+    #         }
+    #         null_agg_r_mat[i, ] = sapply(seq(min_plot_group), function(x)
+    #           cor(deltaS_perm[which(sample_rare_keep$sample_plot == x)], 
+    #               as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
+    #       }
+    #       agg_r_null_CI = apply(null_agg_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
+    #       out$continuous$agg = data.frame(cbind(seq(min_plot_group), r_emp, t(agg_r_null_CI)))
+    #       names(out$continuous$agg) = c('effort_sample', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+    #     }
+    #     
+    #     else {
+    #       ref_sample = sample_rare_keep[which(as.character(sample_rare_keep$group) == as.character(ref_group)), ]
+    #       out$discrete$agg = data.frame(group = character(), sample_plot = numeric(), ddeltaS_emp = numeric(), 
+    #                                     ddeltaS_null_low = numeric(), ddeltaS_median = numeric(), 
+    #                                     ddeltaS_high = numeric())
+    #       ref_comm = comm$comm[as.character(env_data) == as.character(ref_group), ]
+    #       xy_ref = comm$spat[as.character(env_data) == as.character(ref_group), ]
+    #       impl_S_ref = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(ref_group))]
+    #       impl_S_ref = as.numeric(as.character(impl_S_ref))
+    #       for (group in unique(group_keep)){
+    #         if ((as.character(group) != as.character(ref_group))){
+    #           min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% 
+    #                                                         c(as.character(group), as.character(ref_group)))])
+    #           ddeltaS_group = sample_rare_keep$deltaS[sample_rare_keep$group == group][1:min_plot_group] - 
+    #             sample_rare_keep$deltaS[as.character(sample_rare_keep$group) == as.character(ref_group)][1:min_plot_group]
+    #           
+    #           group_for_2 = env_data[which(as.character(env_data) %in% c(as.character(ref_group), as.character(group)))]
+    #           comm_group = comm$comm[as.character(env_data) == as.character(group), ]
+    #           impl_S_group = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(group))]
+    #           impl_S_group = as.numeric(as.character(impl_S_group))
+    #           
+    #           null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
+    #           cat('\nComputing null model for aggregation effect\n')
+    #           pb <- txtProgressBar(min = 0, max = nperm, style = 3)
+    #           for (i in 1:nperm){
+    #             setTxtProgressBar(pb, i)
+    #             xy_perm = comm$spat[sample(nrow(comm$spat)), ]
+    #             xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
+    #             xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
+    #             expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
+    #             expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
+    #             null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
+    #               (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
+    #           }
+    #           close(pb)
+    #           agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
+    #           agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
+    #                                        ddeltaS_group, t(agg_deltaS_null_CI)))
+    #           out$discrete$agg = rbind(out$discrete$agg, agg_group)
+    #         }
+    #       }
+    #       names(out$discrete$agg) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
+    #                                   'ddeltaS_null_median', 'ddeltaS_null_high')
+    #     }
+    #   }
+    # }
     class(out) = 'mobr'
     return(out)
 }
