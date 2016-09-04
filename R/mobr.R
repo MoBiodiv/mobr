@@ -427,6 +427,16 @@ samp_ssad = function(comm, groups){
   return(comm_out)
 }
 
+# Convert specified columns of a dataframe from factors to numeric
+df_factor_to_numeric = function(dataframe, cols = NULL){
+    if (is.null(cols)) cols = 1:ncol(dataframe)
+    for (col in cols){
+        if ('factor' %in% class(dataframe[, col]))
+            dataframe[, col] = as.numeric(levels(dataframe[, col]))[dataframe[, col]]
+    }
+    return(dataframe)
+}
+
 # Auxillary function for get_delta_stats()
 # Overall checks for input values
 get_delta_overall_checks = function(comm, type, group_var, env_var, 
