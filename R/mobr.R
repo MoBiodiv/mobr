@@ -552,6 +552,7 @@ get_sample_curves = function(out, comm, group_levels, approved_tests){
         if ('agg' %in% approved_tests)
             names(out$sample_rare)[4] = 'expl_S'
     }
+    out$sample_rare = df_factor_to_numeric(out$sample_rare, 2:ncol(out$sample_rare))
     return(out)
 }
 
@@ -589,6 +590,7 @@ effect_SAD_continuous = function(out, group_sad, env_levels, nperm){
                                             t(ind_r_null_CI)))
     names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low', 
                                     'r_null_median', 'r_null_high')
+    out$continuous$indiv = df_factor_to_numeric(out$continuous$indiv)
     return(out)
 }
 
@@ -628,6 +630,8 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
         out$discrete$indiv = rbind(out$discrete$indiv, ind_level)
     }
     close(pb)
+    out$discrete$indiv = df_factor_to_numeric(out$discrete$indiv, 
+                                              2:ncol(out$discrete$indiv))
     names(out$discrete$indiv) = c('group', 'effort_ind', 'deltaS_emp',
                                   'deltaS_null_low', 'deltaS_null_median',
                                   'deltaS_null_high')
@@ -676,7 +680,9 @@ effect_N_continuous = function(out, comm, S, group_levels, env_levels, group_dat
     N_r_null_CI = apply(null_N_r_mat, 2, function(x) 
         quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
     out$continuous$N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))
-    names(out$continuous$N) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
+    out$continuous$N = df_factor_to_numeric(out$continuous$N)
+    names(out$continuous$N) = c('effort_ind', 'r_emp', 'r_null_low', 
+                                'r_null_median', 'r_null_high')
     return(out)
 }
 
@@ -715,11 +721,11 @@ effect_N_discrete = function(out, comm, group_levels, ref_group, groups,
         out$discrete$N = rbind(out$discrete$N, N_level)
     }
     close(pb)
+    out$discrete$N = df_factor_to_numeric(out$discrete$N, 2:ncol(out$discrete$N))
     names(out$discrete$N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
                               'ddeltaS_null_median', 'ddeltaS_null_high')
     return(out)
 }
-
 
 #' Conduct the MOBR tests on drivers of biodiversity across scales.
 #' 
