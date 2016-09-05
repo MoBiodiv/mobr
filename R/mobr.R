@@ -257,8 +257,7 @@ deltaS_N = function(comm_group, ref_dens, inds){
   # using the ref_density (i.e., not the observed density)
   rescaled_effort = round(1:nplots * ref_dens)
   if (max(rescaled_effort) < max(inds))
-    warning('Extrapolating the rarefaction curve because the number of rescaled
-            individuals is smaller than the inds argument')
+    warning('Extrapolating the rarefaction curve because the number of rescaled individuals is smaller than the inds argument')
   interp_S_samp = pchip(c(1, rescaled_effort), c(1, S_samp), inds)
   S_indiv = rarefaction(comm_group, 'indiv', inds)
   deltaS = interp_S_samp - S_indiv
@@ -473,8 +472,7 @@ get_delta_discrete_checks = function(ref_group, group_levels, group_data, env_va
     if (!is.null(env_var))
         warning('Environmental variable is not used in the discrete analysis.')
     if (!('factor' %in% class(group_data))) 
-        warning('Grouping variable is not a factor. A group will be defined for
-                each unique value.')
+        warning('Grouping variable is not a factor. A group will be defined for each unique value.')
 }
 
 # Auxillary function for get_delta_stats()
@@ -485,8 +483,7 @@ get_delta_continuous_checks = function(corr, group_levels, env_levels){
     if ('factor' %in% class(env_levels)) {
         env_vals = data.frame(groups = group_levels, 
                               values = as.numeric(env_levels)[match(group_levels, env_levels)])
-        warning('Variable of interest is a factor but will be treated as a continous 
-                variable for the analysis with the above values')
+        warning('Variable of interest is a factor but will be treated as a continous variable for the analysis with the above values')
         print(env_vals)
     } 
 }
