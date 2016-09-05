@@ -636,7 +636,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
 
 # Auxillary function for get_delta_stats()
 # Effect of N when type is "continuous"
-effect_N_continuous = function(out, comm, S, group_levels, env_levels, group_data, 
+effect_N_continuous = function(comm, S, group_levels, env_levels, group_data, 
                                plot_dens, plot_abd, ind_sample_size, nperm){
     # TODO: checks?
     effect_N_by_group = data.frame(matrix(NA, ncol = length(group_levels) + 1,
@@ -675,17 +675,18 @@ effect_N_continuous = function(out, comm, S, group_levels, env_levels, group_dat
     close(pb)
     N_r_null_CI = apply(null_N_r_mat, 2, function(x) 
         quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-    out$continuous$N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))
-    out$continuous$N = df_factor_to_numeric(out$continuous$N)
-    names(out$continuous$N) = c('effort_ind', 'r_emp', 'r_null_low', 
-                                'r_null_median', 'r_null_high')
-    return(out)
+    out_N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))
+    out_N = df_factor_to_numeric(out_N)
+    names(out_N) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 
+                     'r_null_high')
+    return(out_N)
 }
 
 # Auxillary function for get_delta_stats()
 # Effect of N when type is "discrete"
-effect_N_discrete = function(out, comm, group_levels, ref_group, groups, 
+effect_N_discrete = function(comm, group_levels, ref_group, groups, 
                              density_stat, ind_sample_size, nperm){
+    out_N = NULL
     cat('\nComputing null model for N effect\n')
     pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
                          style = 3)
@@ -714,13 +715,13 @@ effect_N_discrete = function(out, comm, group_levels, ref_group, groups,
             quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
         N_level = data.frame(level, ind_sample_size, ddeltaS_level,
                              t(N_deltaS_null_CI))
-        out$discrete$N = rbind(out$discrete$N, N_level)
+        out_N = rbind(out_N, N_level)
     }
     close(pb)
-    out$discrete$N = df_factor_to_numeric(out$discrete$N, 2:ncol(out$discrete$N))
-    names(out$discrete$N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
-                              'ddeltaS_null_median', 'ddeltaS_null_high')
-    return(out)
+    out_N = df_factor_to_numeric(out_N, 2:ncol(out_N))
+    names(out_N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
+                     'ddeltaS_null_median', 'ddeltaS_null_high')
+    return(out_N)
 }
 
 #' Conduct the MOBR tests on drivers of biodiversity across scales.
@@ -838,17 +839,18 @@ get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL,
         if ('SAD' %in% approved_tests)
             out = effect_SAD_continuous(out, group_sad, env_levels, nperm)
         if ('N' %in% approved_tests)
-            out = effect_N_continuous(out, comm, S, group_levels, env_levels, 
-                                      group_data, plot_dens, plot_abd, 
-                                      ind_sample_size, nperm)
+            out$continuous$N = effect_N_continuous(comm, S, group_levels, env_levels, 
+                                                   group_data, plot_dens, plot_abd, 
+                                                   ind_sample_size, nperm)
         # Effect of aggregation
     } else {
         get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
         if ('SAD' %in% approved_tests)
             out = effect_SAD_discrete(out, group_sad, group_levels, ref_group, nperm)
         if ('N' %in% approved_tests)
-            out = effect_N_discrete(out, comm, group_levels, ref_group, groups, 
-                                    density_stat, ind_sample_size, nperm)
+            out$discrete$N = effect_N_discrete(comm, group_levels, ref_group, 
+                                               groups, density_stat, 
+                                               ind_sample_size, nperm)
         # Effect of aggregation
     }
     
