@@ -528,17 +528,16 @@ get_plot_dens = function(site_sp_mat, density_stat){
 # Auxillary function for get_delta_stats()
 # Obtain the swap curve and/or spatial curve for each group if asked
 # Directly add attributes to the input "out"
-get_sample_curves = function(out, comm, group_levels, approved_tests){
+get_sample_curves = function(comm, group_levels, approved_tests){
     if ('N' %in% approved_tests | 'agg' %in% approved_tests){
-        out$sample_rare = data.frame(matrix(0, nrow = 0, ncol = 4), 
-                                     stringsAsFactors = F)
+        sample_rare = data.frame(matrix(0, nrow = 0, ncol = 4), 
+                                 stringsAsFactors = F)
         for (level in group_levels){
             comm_level = comm$comm[as.character(group_data) == level, ]
             nplots = nrow(comm_level)
             level_dens = sum(comm_level) / nplots
             samp_effort = round((1:nplots) * level_dens)
             impl_S = rarefaction(comm_level, 'indiv', samp_effort)
-            #impl_S = avg_perm_rare(comm_level, 'noagg', nperm = 100)
             sample_rare_level = data.frame(cbind(rep(level, length(impl_S)), 
                                                  seq(length(impl_S)), impl_S))
             if ('agg' %in% approved_tests){
@@ -546,14 +545,14 @@ get_sample_curves = function(out, comm, group_levels, approved_tests){
                 expl_S = rarefy_sample_explicit(comm_level, xy_level)
                 sample_rare_level = cbind(sample_rare_level, expl_S)
             }
-            out$sample_rare = rbind(out$sample_rare, sample_rare_level)
+            sample_rare = rbind(sample_rare, sample_rare_level)
         }
-        names(out$sample_rare)[1:3] = c('group', 'sample_plot', 'impl_S')
+        names(sample_rare)[1:3] = c('group', 'sample_plot', 'impl_S')
         if ('agg' %in% approved_tests)
-            names(out$sample_rare)[4] = 'expl_S'
+            names(sample_rare)[4] = 'expl_S'
     }
-    out$sample_rare = df_factor_to_numeric(out$sample_rare, 2:ncol(out$sample_rare))
-    return(out)
+    sample_rare = df_factor_to_numeric(sample_rare, 2:ncol(sample_rare))
+    return(sample_rare)
 }
 
 # Auxillary function for get_delta_stats()
@@ -834,7 +833,7 @@ get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL,
         rarefaction(x, 'indiv', ind_sample_size)))
     out$indiv_rare = cbind(ind_sample_size, ind_rare)
     names(out$indiv_rare) = c('sample', group_levels)
-    out = get_sample_curves(out, comm, group_levels, approved_tests)
+    out$sample_rare = get_sample_curves(comm, group_levels, approved_tests)
     
     
     if (type == 'continuous'){
