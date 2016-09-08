@@ -525,7 +525,7 @@ get_plot_dens = function(site_sp_mat, density_stat){
 # Auxillary function for get_delta_stats()
 # Obtain the swap curve and/or spatial curve for each group if asked
 # Directly add attributes to the input "out"
-get_sample_curves = function(comm, group_levels, approved_tests){
+get_sample_curves = function(comm, group_levels, group_data, approved_tests){
     if ('N' %in% approved_tests | 'agg' %in% approved_tests){
         sample_rare = data.frame(matrix(0, nrow = 0, ncol = 4), 
                                  stringsAsFactors = F)
@@ -582,11 +582,11 @@ effect_SAD_continuous = function(out, group_sad, env_levels, nperm){
     
     ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
         quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
-    out$continuous$indiv = data.frame(cbind(ind_sample_size, ind_cor, 
+    out$continuous$SAD = data.frame(cbind(ind_sample_size, ind_cor, 
                                             t(ind_r_null_CI)))
-    names(out$continuous$indiv) = c('effort_ind', 'r_emp', 'r_null_low', 
+    names(out$continuous$SAD) = c('effort_ind', 'r_emp', 'r_null_low', 
                                     'r_null_median', 'r_null_high')
-    out$continuous$indiv = df_factor_to_numeric(out$continuous$indiv)
+    out$continuous$SAD = df_factor_to_numeric(out$continuous$SAD)
     return(out)
 }
 
@@ -595,7 +595,7 @@ effect_SAD_continuous = function(out, group_sad, env_levels, nperm){
 effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
     ind_sample_size = out$indiv_rare[, 1]
     ref_sad = group_sad[which(group_levels == as.character(ref_group)), ]
-    out$discrete$indiv = data.frame(matrix(0, nrow = 0, ncol = 6), 
+    out$discrete$SAD = data.frame(matrix(0, nrow = 0, ncol = 6), 
                                     stringsAsFactors = F)
     cat('\nComputing null model for SAD effect\n')
     pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
@@ -623,14 +623,14 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
             quantile(x, c(0.025, 0.5, 0.975)))
         ind_level = data.frame(cbind(rep(level,length(ind_sample_size)),
                                      ind_sample_size, deltaS, t(ind_deltaS_null_CI)))
-        out$discrete$indiv = rbind(out$discrete$indiv, ind_level)
+        out$discrete$SAD = rbind(out$discrete$SAD, ind_level)
     }
     close(pb)
-    out$discrete$indiv = df_factor_to_numeric(out$discrete$indiv, 
-                                              2:ncol(out$discrete$indiv))
-    names(out$discrete$indiv) = c('group', 'effort_ind', 'deltaS_emp',
-                                  'deltaS_null_low', 'deltaS_null_median',
-                                  'deltaS_null_high')
+    out$discrete$SAD = df_factor_to_numeric(out$discrete$SAD, 
+                                            2:ncol(out$discrete$SAD))
+    names(out$discrete$SAD) = c('group', 'effort_ind', 'deltaS_emp',
+                                'deltaS_null_low', 'deltaS_null_median',
+                                'deltaS_null_high')
     return(out)
 }
 
@@ -831,7 +831,8 @@ get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL,
         rarefaction(x, 'indiv', ind_sample_size)))
     out$indiv_rare = cbind(ind_sample_size, ind_rare)
     names(out$indiv_rare) = c('sample', group_levels)
-    out$sample_rare = get_sample_curves(comm, group_levels, approved_tests)
+    out$sample_rare = get_sample_curves(comm, group_levels, group_data, 
+                                        approved_tests)
     
     
     if (type == 'continuous'){
