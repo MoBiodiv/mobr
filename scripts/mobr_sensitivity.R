@@ -99,7 +99,7 @@ sim_comm_multi_pars = function(S, N, cv, sigma, sqrt_numplots){
   return(comm_obj)
 }
 
-Niter = 50 # Repeat simulation Niter times
+Niter = 100 # Repeat simulation Niter times
 sqrt_numplots = 4 # Each group divided into 4*4 = 16 plots
 results = data.frame(matrix(0, nrow = 4, ncol = 6))
 row.names(results) = c('const', 'N', 'SAD', 'agg')
@@ -138,7 +138,7 @@ for (type in row.names(results)){
     # plot_rarefy(mobr)
     # plot(mobr)
     
-    effects = c('indiv', 'N', 'agg')
+    effects = c('SAD', 'N', 'agg')
     for (k in 1:length(effects)){
       effect = effects[k]
       focal_dat = mobr$discrete[[effect]]

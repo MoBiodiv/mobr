@@ -340,7 +340,6 @@ permute_comm = function(comm, swap, groups=NULL) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
-        Ngroup = Nperm[row_indices]
         plot_ids = 1:nrow(group_comm)
         if (swap == 'noagg') {
             tmp_comm = sapply(sp_abu, function(x) 
@@ -349,6 +348,7 @@ permute_comm = function(comm, swap, groups=NULL) {
                               plot_ids)) - 1)
         } 
         else if (swap == 'swapN') {
+            Ngroup = Nperm[row_indices]
             sp_draws = sapply(plot_ids, function(x)
                               sample(rep(1:S, sp_abu),
                                      size=Ngroup[x],
@@ -477,12 +477,12 @@ get_delta_discrete_checks = function(ref_group, group_levels, group_data, env_va
 
 # Auxillary function for get_delta_stats()
 # Perform checks when type is "continuous"
-get_delta_continuous_checks = function(corr, group_levels, env_levels){
+get_delta_continuous_checks = function(corr, group_levels, env_raw){
     if (!(corr %in% c('spearman', 'pearson')))
         stop('corr has to be spearman or pearson.')
-    if ('factor' %in% class(env_levels)) {
+    if ('factor' %in% class(env_raw)) {
         env_vals = data.frame(groups = group_levels, 
-                              values = as.numeric(env_levels)[match(group_levels, env_levels)])
+                              values = as.numeric(env_raw)[match(group_levels, env_raw)])
         warning('Variable of interest is a factor but will be treated as a continous variable for the analysis with the above values')
         print(env_vals)
     } 
@@ -545,21 +545,23 @@ get_sample_curves = function(comm, group_levels, group_data, approved_tests){
             sample_rare = rbind(sample_rare, sample_rare_level)
         }
         names(sample_rare)[1:3] = c('group', 'sample_plot', 'impl_S')
-        if ('agg' %in% approved_tests)
+        sample_rare = df_factor_to_numeric(sample_rare, 2:ncol(sample_rare))
+        if ('agg' %in% approved_tests){
             names(sample_rare)[4] = 'expl_S'
+            sample_rare$deltaS_agg = sample_rare$expl_S - sample_rare$impl_S
+        }
+        return(sample_rare)
     }
-    sample_rare = df_factor_to_numeric(sample_rare, 2:ncol(sample_rare))
-    return(sample_rare)
 }
 
 # Auxillary function for get_delta_stats()
 # Effect of SAD when type is "continuous"
 # Directly add attributes to the input "out"
-effect_SAD_continuous = function(out, group_sad, env_levels, nperm){
+effect_SAD_continuous = function(out, group_sad, env_levels, corr, nperm){
     ind_sample_size = out$indiv_rare[, 1]
     ind_rare = out$indiv_rare[, -1]
     ind_cor = apply(ind_rare, 1, function(x) 
-        cor(x, as.numeric(env_levels), method=corr))
+        cor(x, env_levels, method=corr))
     # Null test
     overall_sad_lumped = as.numeric(colSums(group_sad))
     meta_freq = SpecDist(overall_sad_lumped)$probability
@@ -575,13 +577,13 @@ effect_SAD_continuous = function(out, group_sad, env_levels, nperm){
         perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
             rarefaction(x, 'indiv', ind_sample_size))
         null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x)
-            cor(x, as.numeric(env_levels), method = corr))
+            cor(x, env_levels, method = corr))
         setTxtProgressBar(pb, i)
     }
     close(pb)
     
     ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
-        quantile(x, c(0.025, 0.5, 0.975))) # 95% CI
+        quantile(x, c(0.025, 0.5, 0.975), na.rm = T)) # 95% CI
     out$continuous$SAD = data.frame(cbind(ind_sample_size, ind_cor, 
                                             t(ind_r_null_CI)))
     names(out$continuous$SAD) = c('effort_ind', 'r_emp', 'r_null_low', 
@@ -611,7 +613,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
         for (i in 1:nperm){
             sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
                 data.frame(table(factor(sample(1:length(meta_freq),x, replace = T,
-                                               prob = meta_freq), 
+                                               prob = meta_freq),
                                         levels = 1:length(meta_freq))))[, 2])
             perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
                 rarefaction(x, 'indiv', ind_sample_size))
@@ -620,7 +622,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
             k = k + 1
         }
         ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x)
-            quantile(x, c(0.025, 0.5, 0.975)))
+            quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
         ind_level = data.frame(cbind(rep(level,length(ind_sample_size)),
                                      ind_sample_size, deltaS, t(ind_deltaS_null_CI)))
         out$discrete$SAD = rbind(out$discrete$SAD, ind_level)
@@ -637,7 +639,8 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
 # Auxillary function for get_delta_stats()
 # Effect of N when type is "continuous"
 effect_N_continuous = function(comm, S, group_levels, env_levels, group_data, 
-                               plot_dens, plot_abd, ind_sample_size, nperm){
+                               plot_dens, plot_abd, ind_sample_size, corr, 
+                               nperm){
     # TODO: checks?
     effect_N_by_group = data.frame(matrix(NA, ncol = length(group_levels) + 1,
                                           nrow = length(ind_sample_size)))
@@ -650,13 +653,13 @@ effect_N_continuous = function(comm, S, group_levels, env_levels, group_data,
     }
     effect_N_by_group = effect_N_by_group[complete.cases(effect_N_by_group), ]
     r_emp = apply(effect_N_by_group[ , -1], 1, function(x)
-        cor(x, as.numeric(env_levels), method = corr))
+        cor(x, env_levels, method = corr))
     
     null_N_r_mat = matrix(NA, nperm, length(r_emp))
     cat('\nComputing null model for N effect\n')
     pb <- txtProgressBar(min = 0, max = nperm, style = 3)
     for (i in 1:nperm){
-        comm_perm = permute_comm(comm$comm, 'swapN', groups)
+        comm_perm = permute_comm(comm$comm, 'swapN', group_data)
         effect_N_perm = data.frame(matrix(NA, ncol = length(group_levels),
                                           nrow = length(ind_sample_size)))
         for (j in 1:length(group_levels)){
@@ -669,7 +672,7 @@ effect_N_continuous = function(comm, S, group_levels, env_levels, group_data,
         effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
         # If the output is not long enough, fill it with NA's
         null_N_r_mat[i, ] = apply(effect_N_perm, 1, function(x)
-            cor(x, as.numeric(env_levels), method = corr))[1:ncol(null_N_r_mat)]
+            cor(x, env_levels, method = corr))[1:ncol(null_N_r_mat)]
         setTxtProgressBar(pb, i)
     }
     close(pb)
@@ -722,6 +725,94 @@ effect_N_discrete = function(comm, group_levels, ref_group, groups,
     names(out_N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
                      'ddeltaS_null_median', 'ddeltaS_null_high')
     return(out_N)
+}
+
+# Auxillary function for get_delta_stats()
+# Effect of aggregation when type is "continuous"
+effect_agg_continuous = function(comm, sample_rare, group_plots, group_levels, 
+                                 group_data, env_levels, corr, nperm){
+    min_plot_level = min(group_plots$Freq)
+    r_emp = c()
+    for (iplot in seq(min_plot_level)){
+        deltaS_i = sample_rare$deltaS_agg[sample_rare$sample_plot == iplot]
+        groups_i = as.character(sample_rare$group[sample_rare$sample_plot 
+                                                  == iplot])
+        env_i = env_levels[which(group_levels == groups_i)]
+        r_emp = c(r_emp, cor(deltaS_i, env_i, method = corr))
+    }
+
+    null_agg_r_mat = matrix(NA, nperm, min_plot_level)
+    cat('\nComputing null model for aggregation effect\n')
+    pb <- txtProgressBar(min = 0, max = nperm, style = 3)
+    for (i in 1:nperm){
+        comm_perm = comm
+        comm_perm$comm = permute_comm(comm$comm, 'noagg', group_data)
+        sample_rare_perm = get_sample_curves(comm_perm, group_levels, group_data, 
+                                             c('N', 'agg'))
+        r_perm = c()
+        for (iplot in seq(min_plot_level)){
+            deltaS_i = sample_rare_perm$deltaS_agg[sample_rare_perm$sample_plot 
+                                                   == iplot]
+            groups_i = as.character(sample_rare_perm$group[sample_rare_perm$sample_plot 
+                                                      == iplot])
+            env_i = env_levels[which(group_levels == groups_i)]
+            r_perm = c(r_perm, cor(deltaS_i, env_i, method = corr))
+        }
+        null_agg_r_mat[i, ] = r_perm
+        setTxtProgressBar(pb, i)
+    }
+    close(pb)
+    plot_levels = which(!is.na(r_emp))
+    null_agg_r_mat = null_agg_r_mat[, plot_levels]
+    agg_r_null_CI = apply(null_agg_r_mat, 2, function(x) 
+        quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+    table_agg = data.frame(cbind(plot_levels, r_emp[plot_levels], 
+                                 t(agg_r_null_CI)))
+    names(table_agg) = c('effort_sample', 'r_emp', 'r_null_low', 
+                         'r_null_median', 'r_null_high')
+    return(table_agg)
+}
+
+# Auxillary function for get_delta_stats()
+# Effect of aggregation when type is "discrete"
+effect_agg_discrete = function(comm, sample_rare, ref_group, group_plots, 
+                               group_data, group_levels, nperm){
+    ref_sample = sample_rare[which(sample_rare$group == 
+                                       as.character(ref_group)), ]
+    table_agg = data.frame(matrix(NA, nrow = 0, ncol = 6))
+    cat('\nComputing null model for aggregation effect\n')
+    pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
+                         style = 3)
+    k = 1
+    for (level in group_levels[group_levels != as.character(ref_group)]){
+        min_plot_level = min(group_plots$Freq[which(group_plots$groups %in%
+                                                        c(ref_group, level))])
+        ddeltaS_level = sample_rare$deltaS_agg[sample_rare$group == level][1:min_plot_level] - 
+            sample_rare$deltaS_agg[sample_rare$group == ref_group][1:min_plot_level]
+        
+        null_agg_deltaS_mat = matrix(NA, nperm, min_plot_level)
+        for (i in 1:nperm){
+            comm_perm = comm
+            comm_perm$comm = permute_comm(comm$comm, 'noagg', group_data)
+            sample_rare_perm = get_sample_curves(comm_perm, group_levels, group_data, 
+                                                 c('N', 'agg'))
+            ddeltaS_perm = sample_rare_perm$deltaS_agg[sample_rare_perm$group == level][1:min_plot_level] - 
+                sample_rare_perm$deltaS_agg[sample_rare_perm$group == ref_group][1:min_plot_level]
+            null_agg_deltaS_mat[i, ] = ddeltaS_perm
+            setTxtProgressBar(pb, k)
+            k = k + 1
+        }
+        agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) 
+            quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
+        agg_level = data.frame(cbind(rep(level, min_plot_level), 1:min_plot_level, 
+                                     ddeltaS_level, t(agg_deltaS_null_CI)))
+        table_agg = rbind(table_agg, agg_level)
+    }
+    close(pb)
+    table_agg = df_factor_to_numeric(table_agg, 2:ncol(table_agg))
+    names(table_agg) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
+                         'ddeltaS_null_median', 'ddeltaS_null_high')
+    return(table_agg)
 }
 
 #' Conduct the MOBR tests on drivers of biodiversity across scales.
@@ -815,7 +906,12 @@ get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL,
     # the levels of the environmental factor for each group used for correlation
     # Make sure that the orders match!
     if (is.null(env_var)){
-        env_levels = group_sad[, 1]
+        env_raw = group_sad[, 1]
+        if ('factor' %in% class(env_raw)){
+            env_levels = as.numeric(env_raw)
+        } else {
+            env_levels = env_raw
+        }
     } else {
         env_levels = tapply(comm$env[, env_var], list(group_data), mean)
     }
@@ -834,118 +930,32 @@ get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL,
     out$sample_rare = get_sample_curves(comm, group_levels, group_data, 
                                         approved_tests)
     
-    
     if (type == 'continuous'){
-        get_delta_continuous_checks(corr, group_levels, env_levels)
+        get_delta_continuous_checks(corr, group_levels, env_raw)
         if ('SAD' %in% approved_tests)
-            out = effect_SAD_continuous(out, group_sad, env_levels, nperm)
+            out = effect_SAD_continuous(out, group_sad, env_levels, corr, nperm)
         if ('N' %in% approved_tests)
             out$continuous$N = effect_N_continuous(comm, S, group_levels, env_levels, 
                                                    group_data, plot_dens, plot_abd, 
-                                                   ind_sample_size, nperm)
-        # Effect of aggregation
+                                                   ind_sample_size, corr, nperm)
+        if ('agg' %in% approved_tests)
+            out$continuous$agg = effect_agg_continuous(comm, out$sample_rare, 
+                                                       group_plots, group_levels, 
+                                                       group_data, env_levels, 
+                                                       corr, nperm)
     } else {
         get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
         if ('SAD' %in% approved_tests)
             out = effect_SAD_discrete(out, group_sad, group_levels, ref_group, nperm)
         if ('N' %in% approved_tests)
-            out$discrete$N = effect_N_discrete(comm, group_levels, ref_group, 
-                                               groups, density_stat, 
+            out$discrete$N = effect_N_discrete(comm, group_levels, ref_group,
+                                               groups, density_stat,
                                                ind_sample_size, nperm)
-        # Effect of aggregation
+        if ('agg' %in% approved_tests)
+            out$discrete$agg = effect_agg_discrete(comm, out$sample_rare, ref_group, 
+                                                   group_plots, group_data, 
+                                                   group_levels, nperm)
     }
-    
-    # # 3. Sample-based spatially-explicit rarefaction (effect of aggregation) vs env_var vs N
-    # if ('spat' %in% approved_tests){
-    #   if (!is.null(min_plot))
-    #     group_keep = group_plots[which(group_plots$Freq>=min_plot), 1]
-    #   else
-    #     group_keep = group_levels
-    #   
-    #   if (length(group_keep) == 1 & type == 'discrete')
-    #     stop('Error: pair-wise comparison cannot be conducted on one group.')
-    #   else if (length(group_keep) < 3 & type == 'continuous')
-    #     stop('Error: correlation analysis cannot be conducted with less than three groups.')
-    #   else if (!(as.character(ref_group) %in% as.character(group_keep)) & type == 'discrete')
-    #     stop('Error: reference group does not have enough plots and have been dropped.')
-    #   else {
-    #     sample_rare_keep = out$sample_rare[which(out$sample_rare$group %in% as.character(group_keep)), ]
-    #     sample_rare_keep$deltaS = as.numeric(as.character(sample_rare_keep$expl_S)) - 
-    #                               as.numeric(as.character(sample_rare_keep$impl_S))
-    #     if (min(group_plots$Freq[group_plots[, 1] %in% group_keep]) < 5)
-    #       warning('Warning: some groups have less than 5 plots. The results of the null model are not very informative.')
-    #     
-    #     if (type == 'continuous'){
-    #       min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% as.character(group_keep))])
-    #       r_emp = sapply(seq(min_plot_group), function(x)
-    #         cor(sample_rare_keep$deltaS[which(sample_rare_keep$sample_plot == x)], 
-    #             as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
-    #       # Null test
-    #       null_agg_r_mat = matrix(NA, nperm, min_plot_group)
-    #       for (i in 1:nperm){
-    #         deltaS_perm = c()
-    #         comm_perm = swap_binary_species(comm$comm, groups)
-    #         for (group in unique(sample_rare_keep$group)){
-    #           comm_group = comm_perm[as.character(env_data) == as.character(group), ]
-    #           xy_group = comm$spat[as.character(env_data) == as.character(group), ]
-    #           expl_S_perm = rarefy_sample_explicit(comm_group, xy_group)
-    #           deltaS_perm = c(deltaS_perm, as.numeric(expl_S_perm - as.character(sample_rare_keep$impl_S[sample_rare_keep$group == group])))
-    #         }
-    #         null_agg_r_mat[i, ] = sapply(seq(min_plot_group), function(x)
-    #           cor(deltaS_perm[which(sample_rare_keep$sample_plot == x)], 
-    #               as.numeric(sample_rare_keep$group[which(sample_rare_keep$sample_plot == x)]), method = corr))
-    #       }
-    #       agg_r_null_CI = apply(null_agg_r_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
-    #       out$continuous$agg = data.frame(cbind(seq(min_plot_group), r_emp, t(agg_r_null_CI)))
-    #       names(out$continuous$agg) = c('effort_sample', 'r_emp', 'r_null_low', 'r_null_median', 'r_null_high')
-    #     }
-    #     
-    #     else {
-    #       ref_sample = sample_rare_keep[which(as.character(sample_rare_keep$group) == as.character(ref_group)), ]
-    #       out$discrete$agg = data.frame(group = character(), sample_plot = numeric(), ddeltaS_emp = numeric(), 
-    #                                     ddeltaS_null_low = numeric(), ddeltaS_median = numeric(), 
-    #                                     ddeltaS_high = numeric())
-    #       ref_comm = comm$comm[as.character(env_data) == as.character(ref_group), ]
-    #       xy_ref = comm$spat[as.character(env_data) == as.character(ref_group), ]
-    #       impl_S_ref = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(ref_group))]
-    #       impl_S_ref = as.numeric(as.character(impl_S_ref))
-    #       for (group in unique(group_keep)){
-    #         if ((as.character(group) != as.character(ref_group))){
-    #           min_plot_group = min(group_plots$Freq[which(as.character(group_plots[, 1]) %in% 
-    #                                                         c(as.character(group), as.character(ref_group)))])
-    #           ddeltaS_group = sample_rare_keep$deltaS[sample_rare_keep$group == group][1:min_plot_group] - 
-    #             sample_rare_keep$deltaS[as.character(sample_rare_keep$group) == as.character(ref_group)][1:min_plot_group]
-    #           
-    #           group_for_2 = env_data[which(as.character(env_data) %in% c(as.character(ref_group), as.character(group)))]
-    #           comm_group = comm$comm[as.character(env_data) == as.character(group), ]
-    #           impl_S_group = sample_rare_keep$impl_S[which(as.character(sample_rare_keep$group) == as.character(group))]
-    #           impl_S_group = as.numeric(as.character(impl_S_group))
-    #           
-    #           null_agg_deltaS_mat = matrix(NA, nperm, min_plot_group)
-    #           cat('\nComputing null model for aggregation effect\n')
-    #           pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-    #           for (i in 1:nperm){
-    #             setTxtProgressBar(pb, i)
-    #             xy_perm = comm$spat[sample(nrow(comm$spat)), ]
-    #             xy_perm_group = xy_perm[as.character(env_data) == as.character(group), ]
-    #             xy_perm_ref = xy_perm[as.character(env_data) == as.character(ref_group), ]
-    #             expl_S_perm_group = rarefy_sample_explicit(comm_group, xy_perm_group)
-    #             expl_S_perm_ref = rarefy_sample_explicit(ref_comm, xy_perm_ref)
-    #             null_agg_deltaS_mat[i, ] = expl_S_perm_group[1:min_plot_group] - impl_S_group[1:min_plot_group] - 
-    #               (expl_S_perm_ref[1:min_plot_group] - impl_S_ref[1:min_plot_group])
-    #           }
-    #           close(pb)
-    #           agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) quantile(x, c(0.025, 0.5, 0.975)))
-    #           agg_group = data.frame(cbind(rep(as.character(group), min_plot_group),1:min_plot_group,  
-    #                                        ddeltaS_group, t(agg_deltaS_null_CI)))
-    #           out$discrete$agg = rbind(out$discrete$agg, agg_group)
-    #         }
-    #       }
-    #       names(out$discrete$agg) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
-    #                                   'ddeltaS_null_median', 'ddeltaS_null_high')
-    #     }
-    #   }
-    # }
     class(out) = 'mobr'
     return(out)
 }
