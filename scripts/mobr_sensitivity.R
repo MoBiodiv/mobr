@@ -125,9 +125,6 @@ for (type in row.names(results)){
                                     as.numeric(type_par[j]))))
     }
   }
-  # "Equivalent" groups are defined by tiny difference in N
-  if (type == 'const') type_mobr = 'N' 
-  else type_mobr = type
   
   for (i in 1:Niter){
     comm = sim_comm_multi_pars(par_list[[1]], par_list[[2]], par_list[[3]], 
@@ -145,7 +142,7 @@ for (type in row.names(results)){
       focal_dat = focal_dat[complete.cases(focal_dat), ]
       if (k == 3) start = 1 # Ignore first row (n = 1) for SAD and N
       else start = 2
-      for (irow in 2:nrow(focal_dat)){
+      for (irow in start:nrow(focal_dat)){
         results[type, 2 * k - 1] = results[type, 2 * k - 1] + 1
         if (as.numeric(as.character(focal_dat[irow, 3])) < as.numeric(as.character(focal_dat[irow, 4])) |
             as.numeric(as.character(focal_dat[irow, 3])) > as.numeric(as.character(focal_dat[irow, 6])))
