@@ -32,7 +32,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
     out$tests = list(N=T, SAD=T, agg= T)
     # carry out some basic checks
     if (nrow(comm) < 5) {
-        stop("Number of plots in community is less than five therefore only individual rarefaction will be computed")
+        warning("Number of plots in community is less than five therefore only individual rarefaction will be computed")
         out$tests$N = FALSE
         out$tests$agg = FALSE
     }
