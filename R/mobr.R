@@ -32,7 +32,7 @@ make_comm_obj = function(comm, plot_attr, binary=FALSE) {
     out$tests = list(N=T, SAD=T, agg= T)
     # carry out some basic checks
     if (nrow(comm) < 5) {
-        stop("Number of plots in community is less than five therefore only individual rarefaction will be computed")
+        warning("Number of plots in community is less than five therefore only individual rarefaction will be computed")
         out$tests$N = FALSE
         out$tests$agg = FALSE
     }
@@ -607,7 +607,17 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
         deltaS = out$indiv_rare[, level] - out$indiv_rare[, as.character(ref_group)]
         level_sad = group_sad[which(group_levels == level), ]
         comp_sad_lumped = as.numeric(colSums(rbind(ref_sad, level_sad)))
-        meta_freq = SpecDist(comp_sad_lumped)$probability
+        #meta_freq = SpecDist(comp_sad_lumped)$probability
+        #Test 09/21/16: Use known freq from the metacommunity
+        S.pool = 100
+        mean.abund = 100
+        cv.abund = 2
+        sd.abund <- mean.abund*cv.abund
+        sigma1 <- sqrt(log(sd.abund^2/mean.abund^2 +1))
+        mu1 <- log(mean.abund) - sigma1^2/2
+        abund.pool <- rlnorm(S.pool, meanlog=mu1, sdlog=sigma1)
+        meta_freq <- sort(abund.pool/sum(abund.pool), decreasing = T)
+        
         
         null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
         for (i in 1:nperm){
