@@ -611,7 +611,6 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
         
         null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
         for (i in 1:nperm){
-            set.seed(NULL)
             sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
                 data.frame(table(factor(sample(1:length(meta_freq),x, replace = T,
                                                prob = meta_freq),
