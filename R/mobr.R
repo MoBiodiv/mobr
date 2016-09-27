@@ -200,7 +200,7 @@ plot_rarefy = function(mobr, col=NULL){
 
 rarefaction = function(x, method, effort=NULL) {
     # analytical formulations from Cayuela et al. 2015. Ecological and biogeographic null hypotheses for
-    # comparing rarefaction curves. Ecological Monographs 85:437–454.
+    # comparing rarefaction curves. Ecological Monographs 85:437-454.
     # Appendix A: http://esapubs.org/archive/mono/M085/017/appendix-A.php
     # possible inputs: sad or sp x site
     # community matrix examine input properties to determine if input is
@@ -264,7 +264,6 @@ deltaS_N = function(comm_group, ref_dens, inds){
   out = data.frame(inds = inds, deltaS = deltaS)
   return(out)
 }
-
 
 # Auxillary function: spatially-explicit sample-based rarefaction 
 rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
@@ -363,69 +362,6 @@ permute_comm = function(comm, swap, groups=NULL) {
     return(comm_group_perm)
 }
   
-
-avg_perm_rare = function(comm, swap, groups=NULL, nperm=1000, effort=NULL){
-    S = replicate(nperm, 
-                  rarefaction(permute_comm(comm, swap, groups),
-                              'samp', effort))
-    Savg = apply(S, 1, mean)
-    return(Savg)
-}
-
-swap_binary_species = function(comm, groups){
-  ###ToDO incoperate into permute_comm() function if needed
-  # This function converts the plot by sp matrix into binary,
-  #   then swap the presences among the plots.
-  #   In this way the (overall, across-all-plots) intraspecific 
-  #   aggregation pattern is maintained, and equalized among the 
-  #   treatments
-  # comm is the plot by species matrix
-  # groups is the grouping factor, the same length as nrow(comm)
-  comm_binary = (comm > 0) * 1
-  pa_group = aggregate(comm_binary, by = list(groups), sum)
-  pa_group = (pa_group[, -1] > 0)
-  comm_out = matrix(nrow = nrow(comm_binary), ncol = ncol(comm_binary))
-  
-  for (sp in 1:ncol(comm_binary)){
-    sp_swap = sample(comm_binary[, sp])
-    sp_pa_group = aggregate(sp_swap, by = list(groups), sum)
-    while(any((sp_pa_group[, 2] > 0) != pa_group[, sp])){
-      sp_swap = sample(comm_binary[, sp])
-      sp_pa_group = aggregate(sp_swap, by = list(groups), sum)
-    }
-    comm_out[, sp] = sp_swap
-  }
-  return(comm_out)
-}
-
-# Attempt to maintain some spatial autcorrelation to improve
-# type 1 error of spatial null model
-# Note: function not complete 
-samp_ssad = function(comm, groups){
-  ords = apply(aggregate(comm, list(groups), sum)[ , -1], 1,
-               order, decreasing=TRUE)
-  group_levels = unique(groups)
-  comm_rank = comm
-  #sapply(seq_along(group_levels), function(x)
-  #        comm[groups == group_levels[x], ords[ , x]],
-  #       simplify='array')
-  for(i in seq_along(group_levels)) {
-    row_bool = groups == group_levels[i]
-    comm_rank[row_bool, ] = comm[row_bool, ords[ , i]]
-  }
-  group_sad = aggregate(comm_rank, list(groups), sum)[ , -1]
-  comm_perm = comm_rank
-  for (sp in 1:ncol(comm_rank)){
-    coin = ifelse(runif(1) < 0.5, 1, 2)
-    row_bool = groups == group_levels[coin]
-    if (all(group_sad[ , sp] > 0)) {
-#        comm_perm[row_bool, sp] = sample(
-    }
- 
-  }
-  return(comm_out)
-}
-
 # Convert specified columns of a dataframe from factors to numeric
 df_factor_to_numeric = function(dataframe, cols = NULL){
     if (is.null(cols)) cols = 1:ncol(dataframe)
