@@ -6,6 +6,33 @@ library(MoBspatial)
 source('C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\R\\mobr.R')
 #library(mobr) # This doesn't work at the moment; will have to wait until the mobr package is built
 
+# Generate an SAD from a poisson lognormal distribution with fixed S, N, and parameters
+# This function is copied and modified from the one in MoBspatial for our purpose
+# The set.seed steps ensure that the underlying distribution remains completely 
+#     unchanged when the shape parameters are the same
+SAD.lognorm <- function(S.pool, N.local, mean.abund = 100, cv.abund = 1,
+                        rand.seed = 10)
+{
+    sd.abund <- mean.abund*cv.abund
+    
+    sigma1 <- sqrt(log(sd.abund^2/mean.abund^2 +1))
+    mu1 <- log(mean.abund) - sigma1^2/2
+    
+    set.seed(rand.seed)
+    abund.pool <- rlnorm(S.pool, meanlog=mu1, sdlog=sigma1)
+    relabund.pool <- sort(abund.pool/sum(abund.pool), decreasing = T)
+    set.seed(NULL)
+    abund.local <- table(sample(1:S.pool, N.local, replace = T, prob = relabund.pool))
+    names(abund.local) <- paste("species", names(abund.local), sep = "")
+    
+    return(list(abund = abund.local,
+                mean.theor = N.local/S.pool,
+                sd.theor   = N.local/S.pool * cv.abund,
+                mean.sim   = mean(abund.local),
+                sd.sim     = sd(abund.local))
+    )
+}
+
 
 # Simulate a community using Sim.Thomas.Community() and wrangle it into a list
 #   which can later be combined to create the comm object for mobr.
@@ -105,11 +132,11 @@ results = data.frame(matrix(0, nrow = 4, ncol = 6))
 row.names(results) = c('const', 'N', 'SAD', 'agg')
 names(results) = c('SADTot', 'SADErr', 'NTot', 'NErr', 'AggTot', 'AggErr')
 
-par_table = data.frame(matrix(c(100, 1000, 1, 0.2, 
-                                100, 1001, 1, 0.2,  
-                                100, 400, 1, 0.2,  
-                                100, 1000, 2, 0.2, 
-                                100, 1000, 1, 1), byrow = T, ncol = 4))
+par_table = data.frame(matrix(c(100, 1000, 2, 0.2, 
+                                100, 1001, 2, 0.2,  
+                                100, 400, 2, 0.2,  
+                                100, 1000, 1, 0.2, 
+                                100, 1000, 2, 1), byrow = T, ncol = 4))
 names(par_table) = c('S', 'N', 'cv', 'sigma')
 row.names(par_table) = c('ref', row.names(results))
 
