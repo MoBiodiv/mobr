@@ -87,46 +87,49 @@ sim_comm_single_pars = function(S, N, cv, sigma, sqrt_numplots, rand.seed = 10){
 
 # Combine multiple simulations with different parameters into a comm object
 #   to be passed on for MOBR analysis
-# The inputs should either be a single value (which will be taken as constant across treatments)
-#   or vectors of the same length
+# The inputs should either be a single value (which will be taken as constant 
+#   across treatments) or vectors of the same length
 sim_comm_multi_pars = function(S, N, cv, sigma, sqrt_numplots){
-  # check that the input parameters have the same dimension
-  # If a parameter only has one level, it would be taken as constant
-  #   across all groups
-  lengths = c(length(S), length(N), length(cv), length(sigma), length(sqrt_numplots))
-  max_lengths = max(lengths)
-  for (i in 1:length(lengths)){
-    if (lengths[i] > 1 & lengths[i] < max_lengths)
-      stop("Error: the lengths of the input parameters need to match, or equal to 1.")
-  }
-  comm = data.frame(matrix(NA, nrow = 0, ncol = max(S)))
-  coords = data.frame(matrix(NA, nrow = 0, ncol = 2))
-  names(coords) = c('x', 'y')
-  env = data.frame(matrix(NA, nrow = 0, ncol = 4))
-  
-  for (j in 1:max_lengths){
-    out = sim_comm_single_pars(ifelse(is.na(S[j]), S[1], S[j]),
-                               ifelse(is.na(N[j]), N[1], N[j]),
-                               ifelse(is.na(cv[j]), cv[1], cv[j]),
-                               ifelse(is.na(sigma[j]), sigma[1], sigma[j]),
-                               ifelse(is.na(sqrt_numplots[j]), sqrt_numplots[1], sqrt_numplots[j]))
-    if (ncol(out$comm) < max(S)){
-      comm_extent = data.frame(matrix(0, nrow(out$comm), max(S)))
-      sampl_S = sample(1:max(S), ncol(out$comm))
-      comm_extent[, sampl_S] = out$comm
+    # check that the input parameters have the same dimension
+    # If a parameter only has one level, it would be taken as constant
+    #   across all groups
+    lengths = c(length(S), length(N), length(cv), length(sigma), 
+                length(sqrt_numplots))
+    max_lengths = max(lengths)
+    for (i in 1:length(lengths)){
+        if (lengths[i] > 1 & lengths[i] < max_lengths)
+        stop("Error: the lengths of the input parameters need to match, or equal to 1.")
     }
-    else
-      comm_extent = out$comm
-    comm = rbind(comm, comm_extent)
-    numplots = (ifelse(is.na(sqrt_numplots[j]), sqrt_numplots[1], sqrt_numplots[j])) ** 2
-    coords = rbind(coords, out$coords)
-    env = rbind(env, data.frame(matrix(out$params, nrow = numplots, ncol = length(out$params), byrow = T)))
-  }
-  names(env) = c('S', 'N', 'cv', 'sigma')
-  for (icol in 1:ncol(env))
-    env[, icol] = as.numeric(env[, icol])
-  comm_obj = make_comm_obj(comm, cbind(coords, env))
-  return(comm_obj)
+    comm = data.frame(matrix(NA, nrow = 0, ncol = max(S)))
+    coords = data.frame(matrix(NA, nrow = 0, ncol = 2))
+    names(coords) = c('x', 'y')
+    env = data.frame(matrix(NA, nrow = 0, ncol = 4))
+  
+    for (j in 1:max_lengths){
+        out = sim_comm_single_pars(ifelse(is.na(S[j]), S[1], S[j]),
+                                   ifelse(is.na(N[j]), N[1], N[j]),
+                                   ifelse(is.na(cv[j]), cv[1], cv[j]),
+                                   ifelse(is.na(sigma[j]), sigma[1], sigma[j]),
+                                   ifelse(is.na(sqrt_numplots[j]), sqrt_numplots[1], sqrt_numplots[j]))
+        if (ncol(out$comm) < max(S)){
+            comm_extent = data.frame(matrix(0, nrow(out$comm), max(S)))
+            sampl_S = sample(1:max(S), ncol(out$comm))
+            comm_extent[, sampl_S] = out$comm
+        } else {
+            comm_extent = out$comm
+        }
+        comm = rbind(comm, comm_extent)
+        numplots = (ifelse(is.na(sqrt_numplots[j]), sqrt_numplots[1], 
+                           sqrt_numplots[j])) ** 2
+        coords = rbind(coords, out$coords)
+        env = rbind(env, data.frame(matrix(out$params, nrow = numplots, 
+                                           ncol = length(out$params), byrow = T)))
+    }
+    names(env) = c('S', 'N', 'cv', 'sigma')
+    for (icol in 1:ncol(env))
+        env[, icol] = as.numeric(env[, icol])
+    comm_obj = make_comm_obj(comm, cbind(coords, env))
+    return(comm_obj)
 }
 
 Niter = 100 # Repeat simulation Niter times
