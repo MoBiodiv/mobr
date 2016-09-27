@@ -184,7 +184,7 @@ comp_two_groups = function(ref_pars, comp_pars, sqrt_numplots, Niter){
 
 xmax = 1
 ymax = 1
-Niter = 1 # Repeat simulation Niter times
+Niter = 200 # Repeat simulation Niter times
 sqrt_numplots = 4 # Each group divided into 4*4 = 16 plots
 results = data.frame(matrix(NA, nrow = 0, ncol = 9))
 ref_pars = c(100, 1000, 2, 10) # This is the reference to which all other cases will be compared
@@ -203,7 +203,7 @@ for (i in 1:length(par_list)){
       comp_pars[i + 1] = pars[j]
       out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
       results = rbind(results, out)
-      write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv', row.names = F, quote = F)
+      write.csv(results, '\\scripts\\mobr_sensitivity.csv', row.names = F, quote = F)
    }
 }
 
