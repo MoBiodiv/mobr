@@ -162,7 +162,7 @@ comp_two_groups = function(ref_pars, comp_pars, sqrt_numplots, Niter){
         comm = sim_comm_multi_pars(ref_pars[1], par_list[[1]], par_list[[2]],
                                    par_list[[3]], sqrt_numplots)
         mobr = get_delta_stats(comm, env_var, inds = 30, nperm = 200,
-                               ref_group = ref_group)
+                               ref_group = ref_group, test = c('N'))
 
         effects = c('SAD', 'N', 'agg')
         for (k in 1:length(effects)){
@@ -182,9 +182,7 @@ comp_two_groups = function(ref_pars, comp_pars, sqrt_numplots, Niter){
     return(c(new_par_val, eval_counts))
 }
 
-xmax = 1
-ymax = 1
-Niter = 200 # Repeat simulation Niter times
+Niter = 50 # Repeat simulation Niter times
 sqrt_numplots = 4 # Each group divided into 4*4 = 16 plots
 results = data.frame(matrix(NA, nrow = 0, ncol = 9))
 ref_pars = c(100, 1000, 2, 10) # This is the reference to which all other cases will be compared
@@ -194,6 +192,7 @@ results = rbind(results, out)
 names(results) = c('N', 'cv', 'sigma', 'SADTot', 'SADErr', 'NTot',
                    'NErr', 'AggTot', 'AggErr')
 
+# Scenarios where only one aspect has changed
 par_list = list(N = c(400, 600, 800), SAD = c(0.5, 1, 1.5),
                 agg = c(0.02, 0.05, 0.1))
 for (i in 1:length(par_list)){
@@ -203,8 +202,26 @@ for (i in 1:length(par_list)){
       comp_pars[i + 1] = pars[j]
       out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
       results = rbind(results, out)
-      write.csv(results, '\\scripts\\mobr_sensitivity.csv', row.names = F, quote = F)
+      write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
+                row.names = F, quote = F)
    }
 }
 
+# Scenarios where two aspects have changed simultaneously
+# Using only the intermediate levels from the previous test
+comp_pars_full = c(ref_pars[1], par_list[[1]][2], par_list[[2]][2],
+                  par_list[[3]][2])
+for (i in 2:length(comp_pars_full)){
+   comp_pars = comp_pars_full
+   comp_pars[i] = ref_pars[i]
+   out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
+   results = rbind(results, out)
+   write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
+             row.names = F, quote = F)
+}
 
+# Scenario where all three aspects have changed
+out = comp_two_groups(ref_pars, comp_pars_full, sqrt_numplots, Niter)
+results = rbind(results, out)
+write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
+          row.names = F, quote = F)
