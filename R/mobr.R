@@ -339,25 +339,29 @@ permute_comm = function(comm, swap, groups=NULL) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
+        meta_sad = SpecDist(sp_abu)$probability
         plot_ids = 1:nrow(group_comm)
         if (swap == 'noagg') {
             tmp_comm = sapply(sp_abu, function(x) 
                               table(c(sample(plot_ids, x,
                                              replace=T),
                               plot_ids)) - 1)
-        } 
-        else if (swap == 'swapN') {
+        } else if (swap == 'swapN') {
             Ngroup = Nperm[row_indices]
             sp_draws = sapply(plot_ids, function(x)
-                              sample(rep(1:S, sp_abu),
-                                     size=Ngroup[x],
-                                     replace = T))
+                sample(1:length(meta_sad), size = Ngroup[x], 
+                       replace = T, prob = meta_sad))
             tmp_comm = t(sapply(plot_ids, function(x)
-                         table(c(sp_draws[[x]], 1:S)) - 1 ))
+                         table(c(sp_draws[[x]], 1:length(meta_sad))) - 1 ))
         }
         else 
             stop('The argument swap must be either "noagg" or "swapN"')
-        comm_group_perm[row_indices, ] = tmp_comm
+        # The following lines are necessary because tmp_comm may have more columns than comm_group_perm
+        comm_new = matrix(0, nrow = nrow(comm_group_perm), 
+                          ncol = max(ncol(comm_group_perm), ncol(tmp_comm)))
+        comm_new[, 1:ncol(comm_group_perm)] = comm_group_perm
+        comm_new[row_indices, 1:ncol(tmp_comm)] = tmp_comm
+        comm_group_perm = comm_new
     }  
     return(comm_group_perm)
 }
