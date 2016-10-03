@@ -332,7 +332,7 @@ permute_comm = function(comm, swap, groups=NULL) {
         groups = rep(1, nrow(comm)) 
     group_levels = unique(groups)
     S = ncol(comm)
-    comm_group_perm = matrix(NA, ncol=S, nrow=nrow(comm))
+    comm_group_perm = matrix(0, ncol=S, nrow=nrow(comm))
     if (swap == 'swapN')
         Nperm = sample(rowSums(comm))
     for(i in seq_along(group_levels)) {

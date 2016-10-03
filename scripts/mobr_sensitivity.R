@@ -162,7 +162,7 @@ comp_two_groups = function(ref_pars, comp_pars, sqrt_numplots, Niter){
         comm = sim_comm_multi_pars(ref_pars[1], par_list[[1]], par_list[[2]],
                                    par_list[[3]], sqrt_numplots)
         mobr = get_delta_stats(comm, env_var, inds = 30, nperm = 200,
-                               ref_group = ref_group, test = c('N'))
+                               ref_group = ref_group)
 
         effects = c('SAD', 'N', 'agg')
         for (k in 1:length(effects)){
@@ -193,7 +193,7 @@ names(results) = c('N', 'cv', 'sigma', 'SADTot', 'SADErr', 'NTot',
                    'NErr', 'AggTot', 'AggErr')
 
 # Scenarios where only one aspect has changed
-par_list = list(N = c(400, 600, 800), SAD = c(0.5, 1, 1.5),
+par_list = list(N = c(700, 800, 900), SAD = c(0.5, 1, 1.5),
                 agg = c(0.02, 0.05, 0.1))
 for (i in 1:length(par_list)){
    pars = par_list[[i]]
