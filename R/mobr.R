@@ -87,7 +87,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
   # group: which group to plot. Only required for type = 'discrete' and there are more than one 
   #   pair-wise comparison
   type = mobr$type
-  tests = c('indiv', 'N', 'agg')
+  tests = c('SAD', 'N', 'agg')
   names = c('Effect of SAD', 'Effect of N', 'Effect of Aggregation')
   if(!is.null(par_args))
     eval(parse(text=paste('par(', par_args, ')')))
@@ -95,7 +95,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
     par(mfrow = c(1, 3))
   xlabs = c('number of individuals', 'number of individuals', 'number of plots')
   if (type == 'discrete'){
-    ylabs = c('delta-S', rep('delta-delta-S', 2))
+    ylabs = rep('delta-S', 3)
     if (is.null(group) & length(unique(mobr[[type]][[tests[1]]][, 1])) > 1)
       stop("Error: 'group' has to be specified.")
     if(mobr$log_scale) {
@@ -200,7 +200,7 @@ plot_rarefy = function(mobr, col=NULL){
 
 rarefaction = function(x, method, effort=NULL) {
     # analytical formulations from Cayuela et al. 2015. Ecological and biogeographic null hypotheses for
-    # comparing rarefaction curves. Ecological Monographs 85:437–454.
+    # comparing rarefaction curves. Ecological Monographs 85:437-454.
     # Appendix A: http://esapubs.org/archive/mono/M085/017/appendix-A.php
     # possible inputs: sad or sp x site
     # community matrix examine input properties to determine if input is
@@ -264,7 +264,6 @@ deltaS_N = function(comm_group, ref_dens, inds){
   out = data.frame(inds = inds, deltaS = deltaS)
   return(out)
 }
-
 
 # Auxillary function: spatially-explicit sample-based rarefaction 
 rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
@@ -333,99 +332,40 @@ permute_comm = function(comm, swap, groups=NULL) {
         groups = rep(1, nrow(comm)) 
     group_levels = unique(groups)
     S = ncol(comm)
-    comm_group_perm = matrix(NA, ncol=S, nrow=nrow(comm))
+    comm_group_perm = matrix(0, ncol=S, nrow=nrow(comm))
     if (swap == 'swapN')
         Nperm = sample(rowSums(comm))
     for(i in seq_along(group_levels)) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
+        meta_sad = SpecDist(sp_abu)$probability
         plot_ids = 1:nrow(group_comm)
         if (swap == 'noagg') {
             tmp_comm = sapply(sp_abu, function(x) 
                               table(c(sample(plot_ids, x,
                                              replace=T),
                               plot_ids)) - 1)
-        } 
-        else if (swap == 'swapN') {
+        } else if (swap == 'swapN') {
             Ngroup = Nperm[row_indices]
             sp_draws = sapply(plot_ids, function(x)
-                              sample(rep(1:S, sp_abu),
-                                     size=Ngroup[x],
-                                     replace = T))
+                sample(1:length(meta_sad), size = Ngroup[x], 
+                       replace = T, prob = meta_sad))
             tmp_comm = t(sapply(plot_ids, function(x)
-                         table(c(sp_draws[[x]], 1:S)) - 1 ))
+                         table(c(sp_draws[[x]], 1:length(meta_sad))) - 1 ))
         }
         else 
             stop('The argument swap must be either "noagg" or "swapN"')
-        comm_group_perm[row_indices, ] = tmp_comm
+        # The following lines are necessary because tmp_comm may have more columns than comm_group_perm
+        comm_new = matrix(0, nrow = nrow(comm_group_perm), 
+                          ncol = max(ncol(comm_group_perm), ncol(tmp_comm)))
+        comm_new[, 1:ncol(comm_group_perm)] = comm_group_perm
+        comm_new[row_indices, 1:ncol(tmp_comm)] = tmp_comm
+        comm_group_perm = comm_new
     }  
     return(comm_group_perm)
 }
   
-
-avg_perm_rare = function(comm, swap, groups=NULL, nperm=1000, effort=NULL){
-    S = replicate(nperm, 
-                  rarefaction(permute_comm(comm, swap, groups),
-                              'samp', effort))
-    Savg = apply(S, 1, mean)
-    return(Savg)
-}
-
-swap_binary_species = function(comm, groups){
-  ###ToDO incoperate into permute_comm() function if needed
-  # This function converts the plot by sp matrix into binary,
-  #   then swap the presences among the plots.
-  #   In this way the (overall, across-all-plots) intraspecific 
-  #   aggregation pattern is maintained, and equalized among the 
-  #   treatments
-  # comm is the plot by species matrix
-  # groups is the grouping factor, the same length as nrow(comm)
-  comm_binary = (comm > 0) * 1
-  pa_group = aggregate(comm_binary, by = list(groups), sum)
-  pa_group = (pa_group[, -1] > 0)
-  comm_out = matrix(nrow = nrow(comm_binary), ncol = ncol(comm_binary))
-  
-  for (sp in 1:ncol(comm_binary)){
-    sp_swap = sample(comm_binary[, sp])
-    sp_pa_group = aggregate(sp_swap, by = list(groups), sum)
-    while(any((sp_pa_group[, 2] > 0) != pa_group[, sp])){
-      sp_swap = sample(comm_binary[, sp])
-      sp_pa_group = aggregate(sp_swap, by = list(groups), sum)
-    }
-    comm_out[, sp] = sp_swap
-  }
-  return(comm_out)
-}
-
-# Attempt to maintain some spatial autcorrelation to improve
-# type 1 error of spatial null model
-# Note: function not complete 
-samp_ssad = function(comm, groups){
-  ords = apply(aggregate(comm, list(groups), sum)[ , -1], 1,
-               order, decreasing=TRUE)
-  group_levels = unique(groups)
-  comm_rank = comm
-  #sapply(seq_along(group_levels), function(x)
-  #        comm[groups == group_levels[x], ords[ , x]],
-  #       simplify='array')
-  for(i in seq_along(group_levels)) {
-    row_bool = groups == group_levels[i]
-    comm_rank[row_bool, ] = comm[row_bool, ords[ , i]]
-  }
-  group_sad = aggregate(comm_rank, list(groups), sum)[ , -1]
-  comm_perm = comm_rank
-  for (sp in 1:ncol(comm_rank)){
-    coin = ifelse(runif(1) < 0.5, 1, 2)
-    row_bool = groups == group_levels[coin]
-    if (all(group_sad[ , sp] > 0)) {
-#        comm_perm[row_bool, sp] = sample(
-    }
- 
-  }
-  return(comm_out)
-}
-
 # Convert specified columns of a dataframe from factors to numeric
 df_factor_to_numeric = function(dataframe, cols = NULL){
     if (is.null(cols)) cols = 1:ncol(dataframe)
@@ -1199,7 +1139,7 @@ plot_9_panels = function(mobr, trt_group, ref_group,
     # Create the plots for the three d-delta S
     mobr$discrete$ind[, -1] = lapply(mobr$discrete$ind[, -1], function(x)
       as.numeric(as.character(x))) 
-    delta_Sind = mobr$discrete$ind[which(as.character(mobr$discrete$ind$group) == as.character(trt_group)), ]
+    delta_Sind = mobr$discrete$SAD[which(as.character(mobr$discrete$SAD$group) == as.character(trt_group)), ]
     if (!same_scale)
       ylim = range(delta_Sind[ , -(1:2)])
     plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
