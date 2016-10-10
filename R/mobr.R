@@ -87,7 +87,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
   # group: which group to plot. Only required for type = 'discrete' and there are more than one 
   #   pair-wise comparison
   type = mobr$type
-  tests = c('indiv', 'N', 'agg')
+  tests = c('SAD', 'N', 'agg')
   names = c('Effect of SAD', 'Effect of N', 'Effect of Aggregation')
   if(!is.null(par_args))
     eval(parse(text=paste('par(', par_args, ')')))
@@ -95,7 +95,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
     par(mfrow = c(1, 3))
   xlabs = c('number of individuals', 'number of individuals', 'number of plots')
   if (type == 'discrete'){
-    ylabs = c('delta-S', rep('delta-delta-S', 2))
+    ylabs = rep('delta-S', 3)
     if (is.null(group) & length(unique(mobr[[type]][[tests[1]]][, 1])) > 1)
       stop("Error: 'group' has to be specified.")
     if(mobr$log_scale) {
@@ -1139,7 +1139,7 @@ plot_9_panels = function(mobr, trt_group, ref_group,
     # Create the plots for the three d-delta S
     mobr$discrete$ind[, -1] = lapply(mobr$discrete$ind[, -1], function(x)
       as.numeric(as.character(x))) 
-    delta_Sind = mobr$discrete$ind[which(as.character(mobr$discrete$ind$group) == as.character(trt_group)), ]
+    delta_Sind = mobr$discrete$SAD[which(as.character(mobr$discrete$SAD$group) == as.character(trt_group)), ]
     if (!same_scale)
       ylim = range(delta_Sind[ , -(1:2)])
     plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
