@@ -1,58 +1,51 @@
-library(Jade)
-library(pracma)
-library(RandomFields)
-
 #' Create a community ('comm') object.
 #' 
 #' The 'comm' object will be passed on for analyses of biodiversity across scales.
 #' 
-#'  @param comm plot (rows) by species (columns) matrix. Values can be species abundances
+#' @param x plot (rows) by species (columns) matrix. Values can be species abundances
 #'  or presence/absence (1/0).
-#'  @param plot_attr matrix which includes the environmental attributes and spatial 
+#' @param plot_attr matrix which includes the environmental attributes and spatial 
 #'  coordinates of the plots. Environmental attributes are mandatory, while spatial
 #'  coordinates are not. If spatial coordinates are provided, the column(s) has to have
 #'  names "x" and/or "y". 
-#'  @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
-#'  @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
+#' @param binary whether the plot by species matrix "comm" is in abundances or presence/absence.
+#' @return a "comm" object with four attributes. "comm" is the plot by species matrix. 
 #'  "env" is the environmental attribute matrix, without the spatial coordinates. "spat" 
 #'  contains the spatial coordinates (1-D or 2-D). "tests" specifies whether each of the 
 #'  three tests in the biodiversity analyses is allowed by data.
-#'  @export
-#'  @examples
-#'  {
-#'  library(vegan)
-#'  data(mite)
-#'  data(mite.env)
-#'  data(mite.xy)
-#'  mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
-#'  }
-make_comm_obj = function(comm, plot_attr, binary=FALSE) {
+#' @export
+#' @examples
+#'  data(inv_sp)
+#'  data(inv_plot_attr)
+#'  inv_comm = make_comm_obj(inv_sp, inv_plot_attr)
+#'  
+make_comm_obj = function(x, plot_attr, binary=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
     out = list()
     out$tests = list(N=T, SAD=T, agg= T)
     # carry out some basic checks
-    if (nrow(comm) < 5) {
+    if (nrow(x) < 5) {
         warning("Number of plots in community is less than five therefore only individual rarefaction will be computed")
         out$tests$N = FALSE
         out$tests$agg = FALSE
     }
-    if (nrow(comm) != nrow(plot_attr))
+    if (nrow(x) != nrow(plot_attr))
         stop("Number of plots in community does not equal number of plots in plot attribute table")
-    if (any(row.names(comm) != row.names(plot_attr)))
+    if (any(row.names(x) != row.names(plot_attr)))
         warning("Row names of community and plot attributes tables do not match")
     if (binary)  {
         warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
         out$tests$SAD = FALSE
         out$tests$N = FALSE
     } else {
-        if (max(comm) == 1)
+        if (max(x) == 1)
             warning("Maximum abundance is 1 which suggests data is binary, change the binary argument to TRUE")
     }
-    if (any(colSums(comm) == 0)) {
+    if (any(colSums(x) == 0)) {
         warning("Some species have zero occurrences and will be dropped from the community table")
-        comm = comm[, colSums(comm) != 0]
+        x = x[, colSums(x) != 0]
     }
-    out$comm = data.frame(comm)
+    out$comm = data.frame(x)
     spat_cols = which(names(plot_attr) %in% c('x', 'y'))
     if (length(spat_cols) > 0) {
         out$env = data.frame(plot_attr[ , -spat_cols])
@@ -78,14 +71,30 @@ print.mobr = function(x) {
     print(lapply(x, head))
 }
 
+
+#' Plot mobr curves
+#' 
+#' @param mobr a mobr class object
+#' @param group a string that specifies which group to plot. Only required when
+#'  comparing multiple discrete groups. 
+#' @param par_args optional argument that sets graphical parameters to set
+#' @param same_scale if TRUE then all three plots have the same range on the 
+#'  y-axis.
+#' 
+#' @return plots the effect of the SAD, the number of individuals, and spatial
+#'  aggregation on the difference in species richness
+#' @export
+#' @examples
+#' data(inv_sp)
+#' data(inv_plot_attr)
+#' inv_comm = make_comm_obj(inv_sp, inv_plot_attr)
+#' inv_mobr = get_delta_stats(inv_comm, 'group', ref_group='uninvaded',
+#'                            type='discrete', log_scale=TRUE, nperm=20)
+#' plot(inv_mobr)
+#' plot(inv_mobr, same_scale=T)
 plot.mobr = function(mobr, group = NULL, par_args=NULL, 
                      same_scale=FALSE) {
-  # plot rarefation and delta rarefaction curves
-  # Input: 
-  # mobr object
-  # type: 'discrete' or 'continuous'
-  # group: which group to plot. Only required for type = 'discrete' and there are more than one 
-  #   pair-wise comparison
+
   type = mobr$type
   tests = c('SAD', 'N', 'agg')
   names = c('Effect of SAD', 'Effect of N', 'Effect of Aggregation')
@@ -95,7 +104,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
     par(mfrow = c(1, 3))
   xlabs = c('number of individuals', 'number of individuals', 'number of plots')
   if (type == 'discrete'){
-    ylabs = rep('delta-S', 3)
+    ylabs = c('delta-S', rep('delta-delta-S', 2))
     if (is.null(group) & length(unique(mobr[[type]][[tests[1]]][, 1])) > 1)
       stop("Error: 'group' has to be specified.")
     if(mobr$log_scale) {
@@ -135,7 +144,7 @@ plot.mobr = function(mobr, group = NULL, par_args=NULL,
     }
   }
   else{
-    ylabs = rep('r', 3)
+    ylabs = c('delta-S', rep('delta-delta-S', 2))
     for (i in 1:3){
       mobr_group_test = mobr[[type]][[tests[i]]]
       mobr_group_test = mobr_group_test[complete.cases(mobr_group_test), ]
@@ -156,25 +165,38 @@ summary.mobr = function(...) {
    #  print summary anova style table
 }
 
+#' Plot different types of rarefaction curves 
+#' 
+#' @param mobr a mobr class object
+#' @param col 
+#' 
+#' @return plots the individual-based, sample-based, and spatially-explict 
+#' sample based rarefaction curves
+#' 
+#' @export
+#' @examples
+#' data(inv_sp)
+#' data(inv_plot_attr)
+#' inv_comm = make_comm_obj(inv_sp, inv_plot_attr)
+#' inv_mobr = get_delta_stats(inv_comm, 'group', ref_group='uninvaded',
+#'                            type='discrete', log_scale=TRUE, nperm=2)
+#' plot_rarefy(inv_mobr)
 plot_rarefy = function(mobr, col=NULL){
-  # Plot the three curves for an mobr project, 
-  # separated by groups
-  # Output is a 1*3 figure with the three curves (of each group) separated into subplots
   if (is.null(col[1]))
     col = rainbow(ncol(mobr$indiv_rare) - 1)
   par(mfrow = c(1, 3), oma=c(0,0,2,0))
   groups = unique(mobr$sample_rare$group)
-  
-  for (i in 1:length(groups)){
-    group = groups[i]
-    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
-    if (i == 1)
-      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = col[i],ylim = c(0, max(as.numeric(as.character(mobr$sample_rare$expl_S)))),
-           main = 'Accumulation Curve')
+
+  for (icol in 2:ncol(mobr$indiv_rare)){
+    if (icol == 2)
+      plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
+           col = col[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
+           main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
+           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
     else
-      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = col[i])
-  }
+      lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = col[icol - 1])
+  }  
+
   
   for (i in 1:length(groups)){
     group = groups[i]
@@ -187,16 +209,18 @@ plot_rarefy = function(mobr, col=NULL){
       lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = col[i])
   }
   
-  for (icol in 2:ncol(mobr$indiv_rare)){
-    if (icol == 2)
-      plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
-           col = col[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
-           main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
-           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
+  for (i in 1:length(groups)){
+    group = groups[i]
+    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
+    if (i == 1)
+      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
+           xlab = 'N samples', ylab = 'Rarefied S', col = col[i],ylim = c(0, max(as.numeric(as.character(mobr$sample_rare$expl_S)))),
+           main = 'Accumulation Curve')
     else
-      lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = col[icol - 1])
+      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = col[i])
   }
 }
+
 
 rarefaction = function(x, method, effort=NULL) {
     # analytical formulations from Cayuela et al. 2015. Ecological and biogeographic null hypotheses for
@@ -239,11 +263,17 @@ rarefaction = function(x, method, effort=NULL) {
     return(out)
 }
 
-# Auxillary function: difference between the ind-based rarefaction and the
-# sample-based rarefaction for one group with the evaluation sample size (number
-# of individuals) defined by ref_dens, evaluated at specified points (given by
-# inds) Output: a two-column data frame, with sample size
-# (effort) and deltaS (effect of N)
+#' Difference in S due to N
+#'
+#' @param comm_group the site x species matrix for a specific group
+#' @param ref_dens the reference density 
+#' @param inds the number of individuals to sample over
+#' @description  difference between the ind-based rarefaction and the
+#' sample-based rarefaction for one group with the evaluation sample size (number
+#' of individuals) defined by ref_dens, evaluated at specified points (given by
+#' inds) Output: a two-column data frame, with sample size
+#' (effort) and deltaS (effect of N)
+#' @importFrom pracma pchip
 deltaS_N = function(comm_group, ref_dens, inds){
   nplots = nrow(comm_group)
   group_dens = sum(comm_group) / nplots
@@ -311,7 +341,6 @@ rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
 #'   community matrix are assumed to be members of the same group
 #'   
 #' @return a permuted site-by-species matrix
-#' 
 #' @examples 
 #' S = 3
 #' N = 20
@@ -339,7 +368,7 @@ permute_comm = function(comm, swap, groups=NULL) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
-        meta_sad = SpecDist(sp_abu)$probability
+        meta_sad = Jade::SpecDist(sp_abu)$probability
         plot_ids = 1:nrow(group_comm)
         if (swap == 'noagg') {
             tmp_comm = sapply(sp_abu, function(x) 
@@ -812,20 +841,15 @@ effect_agg_discrete = function(comm, sample_rare, ref_group, group_plots,
 #'   generally recommended because the relationship between the response and
 #'   "env_var" may not be linear.
 #' @param nperm number of iterations to run for null tests.
-#'   
-#' @return a "mobr" object with attributes...
+#' @return a "mobr" object with attributes
+#' @importFrom Jade SpecDist
 #' @export
-#'  @examples
-#'  {
-#'  library(vegan)
-#'  data(mite)
-#'  data(mite.env)
-#'  data(mite.xy)
-#'  mite_comm = make_comm_obj(mite, data.frame(mite.env, mite.xy))
-#'  mite_comm_discrete = get_delta_stats(mite_comm, 'Shrub',
-#'                                       ref_group = 'None', inds = 20)
-#'  }
-#'  
+#' @examples
+#' data(inv_sp)
+#' data(inv_plot_attr)
+#' inv_comm = make_comm_obj(inv_sp, inv_plot_attr)
+#' inv_mobr = get_delta_stats(inv_comm, 'group', ref_group='uninvaded',
+#'                            type='discrete', log_scale=TRUE, nperm=20)
 get_delta_stats = function(comm, group_var, env_var = NULL, ref_group = NULL, 
                            tests = c('SAD', 'N', 'agg'),
                            type='discrete', inds = NULL, log_scale = FALSE,

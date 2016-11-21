@@ -272,7 +272,7 @@ env = dat_cattle_xy$X
 comm = make_comm_obj(comm, data.frame(group=env, x=spat[,1], y=spat[,2]))
 names(comm$env) = 'groups'
 
-tst.cattle = get_delta_stats(comm, 'groups', ref_group='Low',
+tst.cattle = get_delta_stats(comm, 'groups', ref_group='low',
                              type='discrete', log_scale=TRUE, 
                              nperm=100)
 save(tst.cattle, file='./results/tst.cattle.Rdata')
@@ -297,5 +297,75 @@ dev.off()
 pdf('./figs/tst.cattle.sum.pdf')
 plot(tst.cattle, same_scale=T)
 plot_9_panels(tst.cattle, 'high', 'Low')
+dev.off()
+
+# 6) Glade ants ---------------------------
+dat = read.csv('./data/glade_ants/source_files/ants 2011 big restored and natural.csv')
+plot_info = read.csv('./data/glade_ants/filtered_files/glade_plot_info.csv')
+names(dat)
+comm = dat[ , 8:42]
+comm = ifelse(is.na(as.matrix(comm)), 0, as.matrix(comm))
+
+comm = make_comm_obj(comm, data.frame(groups = dat$treatment))
+
+tst.ants = get_delta_stats(comm, 'groups', ref_group='NAT',
+                           type='discrete', log_scale=TRUE, 
+                           nperm=100)
+save(tst.ants, file='./results/tst.ants11.Rdata')
+#load('./results/tst.ants11.Rdata')
+
+stats = mob_stats(comm, 'groups')
+
+pdf("./figs/tst.ants11.pdf")
+plot_samples(stats$samples)
+plot_groups(stats$groups)
+plot_betaPIE(stats)
+plotSADs(comm, 'groups')
+plot_grp_rads(comm, 'groups', log='y')
+plot_rarefy(tst.ants)
+plot(tst.ants, same_scale=T)
+plot(tst.ants, same_scale=T, par_args = 'mfrow=c(1,1)')
+plot_9_panels(tst.ants, 'BR', 'NAT')
+plot_9_panels(tst.ants, 'BR', 'NAT',
+              par_args = 'mfrow=c(1,1)')
+dev.off()
+
+pdf('./figs/tst.ants11.sum.pdf')
+plot(tst.ants, same_scale=T)
+plot_9_panels(tst.ants, 'BR', 'NAT')
+dev.off()
+
+dat = read.csv('./data/glade_ants/source_files/ants 2014 big rest and nat.csv')
+names(dat)
+comm = dat[ , 5:45]
+comm = ifelse(is.na(as.matrix(comm)), 0, as.matrix(comm))
+
+comm = make_comm_obj(comm, data.frame(groups = dat$treatment))
+
+tst.ants = get_delta_stats(comm, 'groups', ref_group='natural',
+                           type='discrete', log_scale=TRUE, 
+                           nperm=100)
+save(tst.ants, file='./results/tst.ants14.Rdata')
+#load('./results/tst.ants14.Rdata')
+
+stats = mob_stats(comm, 'groups')
+
+pdf("./figs/tst.ants14.pdf")
+plot_samples(stats$samples)
+plot_groups(stats$groups)
+plot_betaPIE(stats)
+plotSADs(comm, 'groups')
+plot_grp_rads(comm, 'groups', log='y')
+plot_rarefy(tst.ants)
+plot(tst.ants, same_scale=T)
+plot(tst.ants, same_scale=T, par_args = 'mfrow=c(1,1)')
+plot_9_panels(tst.ants, 'BR', 'NAT')
+plot_9_panels(tst.ants, 'BR', 'NAT',
+              par_args = 'mfrow=c(1,1)')
+dev.off()
+
+pdf('./figs/tst.ants14.sum.pdf')
+plot(tst.ants, same_scale=T)
+plot_9_panels(tst.ants, 'BR', 'NAT')
 dev.off()
 
