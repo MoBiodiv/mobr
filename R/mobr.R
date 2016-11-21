@@ -164,17 +164,17 @@ plot_rarefy = function(mobr, col=NULL){
     col = rainbow(ncol(mobr$indiv_rare) - 1)
   par(mfrow = c(1, 3), oma=c(0,0,2,0))
   groups = unique(mobr$sample_rare$group)
-  
-  for (i in 1:length(groups)){
-    group = groups[i]
-    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
-    if (i == 1)
-      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
-           xlab = 'N samples', ylab = 'Rarefied S', col = col[i],ylim = c(0, max(as.numeric(as.character(mobr$sample_rare$expl_S)))),
-           main = 'Accumulation Curve')
+
+  for (icol in 2:ncol(mobr$indiv_rare)){
+    if (icol == 2)
+      plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
+           col = col[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
+           main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
+           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
     else
-      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = col[i])
-  }
+      lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = col[icol - 1])
+  }  
+
   
   for (i in 1:length(groups)){
     group = groups[i]
@@ -187,15 +187,18 @@ plot_rarefy = function(mobr, col=NULL){
       lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$impl_S)), lwd = 2, col = col[i])
   }
   
-  for (icol in 2:ncol(mobr$indiv_rare)){
-    if (icol == 2)
-      plot(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, type = 'l', 
-           col = col[icol - 1], xlab = 'N individuals', ylab = 'Rarefied S',
-           main = 'Individual-based Rarefaction', xlim = c(0, max(mobr$indiv_rare$sample)),
-           ylim = c(min(mobr$indiv_rare[, -1]), max(mobr$indiv_rare[, -1])))
+  for (i in 1:length(groups)){
+    group = groups[i]
+    dat_group = mobr$sample_rare[mobr$sample_rare$group == group, ]
+    if (i == 1)
+      plot(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, type = 'l',
+           xlab = 'N samples', ylab = 'Rarefied S', col = col[i],ylim = c(0, max(as.numeric(as.character(mobr$sample_rare$expl_S)))),
+           main = 'Accumulation Curve')
     else
-      lines(mobr$indiv_rare$sample, mobr$indiv_rare[, icol], lwd = 2, col = col[icol - 1])
+      lines(as.numeric(as.character(dat_group$sample_plot)), as.numeric(as.character(dat_group$expl_S)), lwd = 2, col = col[i])
   }
+  
+
 }
 
 rarefaction = function(x, method, effort=NULL) {
