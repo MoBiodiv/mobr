@@ -19,14 +19,14 @@ community matrix are assumed to be members of the same group}
 a permuted site-by-species matrix
 }
 \description{
-Two types of permutation can be carried out: 
-1) each individual of each species is reassigned a plot randomly which removes 
-any patterns due to within and between plot spatial aggregation, but maintains
-species group abundance and therefore observed group N,
-2) the total number of individuals in a plot is shuffled and then that many
-individuals are drawn randomly from the group specific species-abundance
-distribution for each plot which provides a mean of removing group differenes
-in the total number of individuals.
+Two types of permutation can be carried out: 1) 'noagg': each individual of
+each species is reassigned a plot randomly which removes any patterns due to
+within and between plot spatial aggregation, but maintains species group
+abundance and therefore observed group N, and 2) 'swapN': the total number of
+individuals in a plot is shuffled and then that many individuals are drawn
+randomly from the group specific species-abundance distribution for each plot
+which provides a means of removing group differenes in the total number of
+individuals.
 }
 \examples{
 S = 3

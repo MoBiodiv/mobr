@@ -365,14 +365,14 @@ deltaS_N = function(comm_group, ref_dens, inds){
 
 #' Permute community matrix within groups
 #' 
-#' Two types of permutation can be carried out: 
-#' 1) each individual of each species is reassigned a plot randomly which removes 
-#' any patterns due to within and between plot spatial aggregation, but maintains
-#' species group abundance and therefore observed group N,
-#' 2) the total number of individuals in a plot is shuffled and then that many
-#' individuals are drawn randomly from the group specific species-abundance
-#' distribution for each plot which provides a mean of removing group differenes
-#' in the total number of individuals. 
+#' Two types of permutation can be carried out: 1) 'noagg': each individual of
+#' each species is reassigned a plot randomly which removes any patterns due to
+#' within and between plot spatial aggregation, but maintains species group
+#' abundance and therefore observed group N, and 2) 'swapN': the total number of
+#' individuals in a plot is shuffled and then that many individuals are drawn
+#' randomly from the group specific species-abundance distribution for each plot
+#' which provides a means of removing group differenes in the total number of
+#' individuals.
 #' 
 #' @param comm a site-by-species matrix
 #' @param swap either 'noagg' or 'swapN' 
@@ -381,6 +381,7 @@ deltaS_N = function(comm_group, ref_dens, inds){
 #'   community matrix are assumed to be members of the same group
 #'   
 #' @return a permuted site-by-species matrix
+#' @export
 #' @examples 
 #' S = 3
 #' N = 20
@@ -425,7 +426,8 @@ permute_comm = function(comm, swap, groups=NULL) {
         }
         else 
             stop('The argument swap must be either "noagg" or "swapN"')
-        # The following lines are necessary because tmp_comm may have more columns than comm_group_perm
+        # The following lines are necessary because tmp_comm may have more
+        # columns than comm_group_perm
         comm_new = matrix(0, nrow = nrow(comm_group_perm), 
                           ncol = max(ncol(comm_group_perm), ncol(tmp_comm)))
         comm_new[, 1:ncol(comm_group_perm)] = comm_group_perm
