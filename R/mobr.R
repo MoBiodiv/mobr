@@ -221,23 +221,63 @@ plot_rarefy = function(mobr, col=NULL){
   }
 }
 
-
-rarefaction = function(x, method, effort=NULL) {
-    # analytical formulations from Cayuela et al. 2015. Ecological and biogeographic null hypotheses for
-    # comparing rarefaction curves. Ecological Monographs 85:437-454.
-    # Appendix A: http://esapubs.org/archive/mono/M085/017/appendix-A.php
-    # possible inputs: sad or sp x site
-    # community matrix examine input properties to determine if input is
-    # compatible with method
-    if (!any(method %in% c('indiv', 'samp')))
+#' Rarefaction Species Richness
+#' 
+#' The expected number of species given a particular number of individuals or
+#' samples under and assumption of random sampling with replacement.
+#' 
+#' @param x community data, a matrix-like object or a vector which should 
+#' either represent a species-abundance distribution or a site x sp matrix
+#' @param method either 'indiv', 'sampl', or 'spat' for individual, sample, or 
+#' sample spatially explicit based rarefaction respectively
+#' @param effort optional argument to specify what number of individuals or 
+#' number of samples depending on 'method' to compute rarefied richness as. If 
+#' not specified all possible values from 1 to the maximum sampling effort are
+#' used
+#' @param xy_coords the spatial coordinates of the samples only required when
+#' using the spatial rarefaction method
+#' 
+#' @details 
+#' The analytical formulas of Cayuela et al. (2015) are used to compute the 
+#' random sampling expectation for the individual and sampled based rarefaction
+#' methods. The spatial explicit rarefaction (Chiarucci et al. 2009) is computed
+#' by sampling each plot in the order of their spatial proximity. If plots have
+#' the same distance from the focal plot then one is chosen randomly to be
+#' sampled first. Each plot in the dataset is treated as a starting point and 
+#' then the mean of these n possible accumulation curves is computed. 
+#' 
+#' @return 
+#' A vector of rarefied species richness values
+#' @author 
+#' Dan McGlinn and Xiao Xiao
+#' @references 
+#' Cayuela, L., N.J. Gotelli, & R.K. Colwell (2015) Ecological and
+#' biogeographic null hypotheses for comparing rarefaction curves.
+#' Ecological Monographs 85:437-454. Appendix A: 
+#' http://esapubs.org/archive/mono/M085/017/appendix-A.php
+#' Chiarucci, A., G. Bacaro, D. Rocchini, C. Ricotta, M. Palmer, & S. Scheiner
+#' (2009) Spatially constrained rarefaction: incorporating the
+#' autocorrelated structure of biological communities into sample-based
+#' rarefaction. Community Ecology 10:209-214. 
+#' @export
+#' @examples 
+#' sad = c(10, 5, 12, 3, 16, 1, 1, 1)
+#' rarefaction(sad, method='indiv')
+#' rarefaction(inv_sp, method='indiv')
+#' rarefaction(inv_sp, method='samp')
+#' rarefaction(inv_sp, method='spat', xy_coords=inv_plot_attr[ , c('x','y')])
+rarefaction = function(x, method, effort=NULL, xy_coords=NULL) {
+    if (!any(method %in% c('indiv', 'samp', 'spat')))
         stop('method must be "indiv" or "samp" for individual or sample based rarefaction, respectively')
-    if (method == 'samp') {
+    if (method == 'samp' | method == 'spat') {
         if (is.null(dim(x)))
-            stop('For sample based rarefaction "x" must be a site x species matrix as the input')
+            stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
         else {
             x = (x > 0) * 1             
-            n = nrow(x) # empty sites are counted as samples 
-            x = colSums(x)
+            # all sites are counted as samples even empty ones
+            n = nrow(x) 
+            if (method == 'samp')
+                x = colSums(x)
         }
     }
     if (method == 'indiv') {
@@ -245,21 +285,48 @@ rarefaction = function(x, method, effort=NULL) {
             x = colSums(x)
         n = sum(x)
     }
-    x = x[x > 0] # drop species with no observations
-    S = length(x)
     if (is.null(effort))
         effort = 1:n
     if (any(effort > n))
         warning('"effort" larger than total number of samples')
-    ldiv = lchoose(n, effort)
-    p = matrix(0, length(effort), S)
-    for (i in seq_along(effort)) {
-        p[i, ] = ifelse(n - x < effort[i], 0, 
-                        exp(lchoose(n - x, effort[i]) - ldiv[i]))
+    if (method == 'spat') {
+        # drop species with no observations  
+        x = x[ , colSums(x) > 0] 
+        row.names(x) = as.character(seq(n))
+        explicit_loop = matrix(0, n, n)
+        pair_dist = as.matrix(dist(xy_coords))
+        for (i in 1:n) {
+            focal_site = row.names(x)[i]
+            dist_to_site = pair_dist[i, ]
+            # Shuffle plots, so that tied grouping is not biased by original order.
+            new_order = sample(1:n)  
+            plots_new = row.names(x)[new_order]
+            dist_new = dist_to_site[new_order]
+            plots_new_ordered = plots_new[order(dist_new)]
+            # Move focal site to the front
+            plots_new_ordered = c(focal_site, 
+                                  plots_new_ordered[plots_new_ordered != focal_site])  
+            comm_ordered = x[match(row.names(x), plots_new_ordered), ]
+            # 1 for absence, 0 for presence
+            comm_bool = as.data.frame((comm_ordered == 0) * 1) 
+            rich = cumprod(comm_bool)
+            explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+        }
+        out = apply(explicit_loop, 1, mean)[effort]
+    } 
+    else {
+        # drop species with no observations  
+        x = x[x > 0] 
+        S = length(x)
+        ldiv = lchoose(n, effort)
+        p = matrix(0, length(effort), S)
+        for (i in seq_along(effort)) {
+            p[i, ] = ifelse(n - x < effort[i], 0, 
+                            exp(lchoose(n - x, effort[i]) - ldiv[i]))
+        }
+        out = rowSums(1 - p)
     }
-    out = rowSums(1 - p)
     names(out) = effort
-    #class(out) = 'rarefaction'
     return(out)
 }
 
@@ -295,33 +362,6 @@ deltaS_N = function(comm_group, ref_dens, inds){
   return(out)
 }
 
-# Auxillary function: spatially-explicit sample-based rarefaction 
-rarefy_sample_explicit = function(comm_one_group, xy_one_group) {
-  #plot_grp = dat_plot[dat_plot$group == group, ] 
-  #sp_grp = dat_sp[dat_plot$group == group, ]
-  row.names(comm_one_group) = as.character(seq(nrow(comm_one_group)))
-  explicit_loop = matrix(0, nrow(comm_one_group), nrow(comm_one_group))
-  pair_dist = as.matrix(dist(xy_one_group))
-  for (i in 1:nrow(comm_one_group)) {
-    focal_site = row.names(comm_one_group)[i]
-    dist_to_site = pair_dist[i, ]
-    # Shuffle plots, so that tied grouping is not biased by original order.
-    new_order = sample(1:nrow(comm_one_group))  
-    plots_new = row.names(comm_one_group)[new_order]
-    dist_new = dist_to_site[new_order]
-    plots_new_ordered = plots_new[order(dist_new)]
-    # Move focal site to the front
-    plots_new_ordered = c(focal_site, 
-                          plots_new_ordered[plots_new_ordered != focal_site])  
-    comm_ordered = comm_one_group[match(row.names(comm_one_group), plots_new_ordered), ]
-    # 1 for absence, 0 for presence
-    comm_bool = as.data.frame((comm_ordered == 0) * 1) 
-    rich = cumprod(comm_bool)
-    explicit_loop[ , i] = as.numeric(ncol(comm_one_group) - rowSums(rich))
-  }
-  explicit_S = apply(explicit_loop, 1, mean)
-  return(explicit_S)
-}
 
 #' Permute community matrix within groups
 #' 
@@ -508,7 +548,7 @@ get_sample_curves = function(comm, group_levels, group_data, approved_tests){
                                                  seq(length(impl_S)), impl_S))
             if ('agg' %in% approved_tests){
                 xy_level = comm$spat[as.character(group_data) == level, ]
-                expl_S = rarefy_sample_explicit(comm_level, xy_level)
+                expl_S = rarefaction(comm_level, 'spat', xy_coords = xy_level)
                 sample_rare_level = cbind(sample_rare_level, expl_S)
             }
             sample_rare = rbind(sample_rare, sample_rare_level)
