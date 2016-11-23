@@ -20,4 +20,5 @@ of individuals) defined by ref_dens, evaluated at specified points (given by
 inds) Output: a two-column data frame, with sample size
 (effort) and deltaS (effect of N)
 }
+\keyword{internal}
 
