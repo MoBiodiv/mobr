@@ -31,7 +31,7 @@ scales.
 \examples{
  data(inv_comm)
  data(inv_plot_attr)
- inv_mob = make_mob_in(inv_comm, inv_plot_attr)
+ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 }
 \author{
 Dan McGlinn and Xiao Xiao

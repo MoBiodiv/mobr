@@ -919,6 +919,7 @@ effect_agg_discrete = function(mob_in, sample_rare, ref_group, group_plots,
 #' @param nperm number of iterations to run for null tests.
 #' @return a "mob_out" object with attributes
 #' @importFrom Jade SpecDist
+#' @author Xiao Xiao and Dan McGlinn
 #' @export
 #' @examples
 #' data(inv_comm)
@@ -996,7 +997,7 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
                                           group_plots, group_data, group_levels,
                                           nperm)
     } else 
-        stop('type must be either "discrete" or "contiguous"')
+        stop('The argument "type" must be either "discrete" or "continuous"')
     class(out) = 'mob_out'
     return(out)
 }
@@ -1093,68 +1094,115 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
   return(out)
 }
 
-plot_grp_rads = function(mob_in, env_var, col=NA,
-                         log='') {
-  #plot group pooled rank species abundance distribution
-  par(mfrow = c(1, 1))
-  env_data = mob_in$env[ , env_var]
-  grps = unique(env_data)
-  if (is.na(col[1])) 
-    col = rainbow(length(grps))
-  sads = aggregate(mob_in$comm, by=list(mob_in$env[ , env_var]), 
-                   sum)
-  grps = as.character(sads[,1])
-  sads = as.matrix(sads[,-1])
-  sads = ifelse(sads == 0, NA, sads)
-  plot(1:10, 1:10, type='n', 
-       xlab='rank', ylab='abundance',
-       log=log, xlim=c(1, ncol(mob_in$comm)), 
-       ylim=range(sads, na.rm=T), 
-       cex.lab = 1.5, cex.axis = 1.5)
-  for(i in 1:nrow(sads)) 
-    lines(1:sum(!is.na(sads[i, ])), sort(sads[i, ], dec=T),
-          col=col[i], lwd=2)
-  legend('topright', grps, col=col, bty='n', lty=1,
-         lwd=3, cex=2)
-}
-
-
-plotSADs = function(mob_in, env_var, col = NA) {
-  # TO DO: add check to ensure that col is the same length as treatments
-  require(scales)
-  par(mfrow = c(1, 1))
-  env_data = mob_in$env[ , env_var]
-  grps = unique(env_data)
-  if (is.na(col[1])) 
-    col = rainbow(length(grps))
-  plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
-       xlim = c(0.01, 1), ylim = c(0, 1), log = "x")
-  for (i in 1:length(grps)) {
-    col_grp = col[i]
-    comm_grp = mob_in$comm[env_data == grps[i], ]
-    for (j in 1:nrow(comm_grp)) {
-      sad_row = as.numeric(sort(comm_grp[j, comm_grp[j, ] != 0]))
-      s_cul = 1:length(sad_row)/length(sad_row)
-      n_cul = sapply(1:length(sad_row), function(x) sum(sad_row[1:x]) / sum(sad_row))
-      lines(n_cul, s_cul, col = alpha(col_grp, 0.5), lwd = 1, type = "l")
+#' Plot distributions of species abundance
+#' 
+#' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
+#' @param env_var a string that specifies the column name in mob_in$env that 
+#'   specifies the grouping variable. 
+#' @param type either 'sad' or 'rad' for species abundance vs rank abundance distribution
+#' @param pooled boolean specifying if abundances should be pooled at the group level or
+#'   not
+#' @param col optional vector of colors.
+#' @param log specify which axes to apply log transformations to.
+#' @importFrom scales alpha
+#' @export
+#' @examples
+#' data(inv_comm)
+#' data(inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' plot_abu(inv_mob_in, 'group', 'sad', pooled=F, log='x')
+#' plot_abu(inv_mob_in, 'group', 'rad', pooled=T, log='x')
+plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
+                    col=NA, log='', leg_loc = 'topleft') {
+    env_data = mob_in$env[ , env_var]
+    grps = unique(env_data)
+    if (is.na(col[1])) 
+        col = rainbow(length(grps))
+    if ('sad' == type) {
+        plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
+             xlim = c(0.01, 1), ylim = c(0.01, 1), log = log)
+        for (i in 1:length(grps)) {
+            col_grp = col[i]
+            comm_grp = mob_in$comm[env_data == grps[i], ]
+            comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
+            if (pooled) {
+                sad_grp = colSums(comm_grp)
+                sad_sort = sort(sad_grp[sad_grp != 0])
+                s_cul = 1:length(sad_sort) / length(sad_sort)
+                n_cul = sapply(1:length(sad_sort), function(x)
+                               sum(sad_sort[1:x]) / sum(sad_sort))
+                lines(n_cul, s_cul, col = col_grp, lwd = 1, type = "l")
+            } else {
+                for (j in 1:nrow(comm_grp)) {
+                    sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0])
+                    s_cul = 1:length(sad_sort) / length(sad_sort)
+                    n_cul = sapply(1:length(sad_sort), function(x)
+                                   sum(sad_sort[1:x]) / sum(sad_sort))
+                    lines(n_cul, s_cul, col = scales::alpha(col_grp, 0.5), lwd = 1,
+                          type = "l")
+                }
+            }
+        }
+    } 
+    if ('rad' == type) {
+        plot(1:10, 1:10, type='n', xlab='rank', ylab='abundance',
+             log=log, xlim=c(1, ncol(mob_in$comm)), 
+             ylim=range(0.01, 1), cex.lab = 1.5, cex.axis = 1.5)
+        for (i in 1:length(grps)) {
+             col_grp = col[i]
+             comm_grp = mob_in$comm[env_data == grps[i], ]
+             comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
+             if (pooled) {
+                sad_grp = colSums(comm_grp)
+                sad_sort = sort(sad_grp[sad_grp != 0], dec=T)
+                lines(sad_sort / sum(sad_sort), col = col_grp, lwd = 1, type = "l")
+             } else {
+                 for (j in 1:nrow(comm_grp)) {
+                     sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0], dec=T)
+                     lines(1:length(sad_sort), sad_sort / sum(sad_sort),
+                           col = scales::alpha(col_grp, 0.5),
+                           lwd = 1, type = "l")
+                 }     
+             }
+        }
     }
-  }
-  legend("topleft", legend=grps, col = col, lwd = 2, bty='n')
+    legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
 }
+    
 
-plotSNpie = function(mob_in, env_var, col = NA) {
-  # TO DO: add check to ensure that col is the same length as treatments
-  require(rgl)
-  env_data = mob_in$env[ , env_var]
-  grps = unique(env_data)
-  if (is.na(col[1])) 
-    col = rainbow(length(grps))
-  S_list = rowSums(mob_in$comm > 0)
-  N_list = rowSums(mob_in$comm)
-  PIE_list = sapply(1:nrow(mob_in$comm), function(x) 
-    N_list[x]/(N_list[x] - 1) * (1 - sum((mob_in$comm[x, ]/N_list[x])^2)))
-  col_list = sapply(env_data, function(x) col[which(grps == x)])
-  plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
+#' Create 3d plot of richness, abundance, and probability of interspecific 
+#' encounter
+#' 
+#' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
+#' @param env_var a string that specifies the column name in mob_in$env that 
+#'   specifies the grouping variable. 
+#' @param col optional vector of colors.
+#' @importFrom rgl plot3d
+#' @export
+#' @examples
+#' \donttest{
+#' data(inv_comm)
+#' data(inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' plot_SNpie(inv_mob_in, 'group')
+#' }
+plot_SNpie = function(mob_in, env_var, col = NA) {
+    # TO DO: add check to ensure that col is the same length as treatments
+    if (!requireNamespace("rgl", quietly = TRUE)) {
+        stop("rgl package needed for this function to work. Please install it.")
+    }
+    env_data = mob_in$env[ , env_var]
+    grps = unique(env_data)
+    if (is.na(col[1])) 
+        col = rainbow(length(grps))
+    S_list = rowSums(mob_in$comm > 0)
+    N_list = rowSums(mob_in$comm)
+    PIE_list = sapply(1:nrow(mob_in$comm), function(x) 
+                      N_list[x]/(N_list[x] - 1) *
+                        (1 - sum((mob_in$comm[x, ] / N_list[x])^2)))
+    col_list = sapply(env_data, function(x) col[which(grps == x)])
+    rgl::plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list,
+                size = 8)
 } 
 
 #' Plot all relevant mob graphical outputs. 
