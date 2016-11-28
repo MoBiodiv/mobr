@@ -64,13 +64,45 @@ make_mob_in = function(comm, plot_attr, coords, binary=FALSE) {
 }
 
 print.mob_in = function(x) {
-    cat('Printing the head of each attribute in the object\n')
-    print(lapply(x, head))
+    cat('Only the first five rows of any matrices are printed\n')
+    cat('\n$tests\n')
+    print(x$tests)
+    cat('\n$comm (only first five species columns)\n')
+    print(x$comm[1:5, 1:5])
+    cat('\n$evn\n')
+    print(head(x$env))
+    cat('\n$spat\n')
+    print(head(x$spat))
 }
 
 print.mob_out = function(x) {
-    cat('Printing the head of each attribute in the object\n')
-    print(lapply(x, head))
+    cat('Only the first five rows of any matrices are printed\n')
+    cat('\n$type\n')
+    print(x$type)
+    cat('\n$log_scale\n')
+    print(x$log_scale)
+    cat('\n$indiv_rare\n')
+    print(head(x$indiv_rare))
+    cat('\n$sample_rare\n')
+    print(head(x$sample_rare))
+    if (x$type == 'discrete') {
+        cat('\n$discrete')
+        cat('\n$discrete$SAD\n')
+        print(head(x$discrete$SAD))
+        cat('\n$discrete$N\n')
+        print(head(x$discrete$N))
+        cat('\n$discrete$agg\n')
+        print(head(x$discrete$agg))
+    }
+    if (x$type == 'continous') {
+        cat('\n$continous')
+        cat('\n$continous$SAD\n')
+        print(head(x$continous$SAD))
+        cat('\n$continous$N\n')
+        print(head(x$continous$N))
+        cat('\n$continous$agg\n')
+        print(head(x$continous$agg))
+    }
 }
 
 
@@ -95,8 +127,8 @@ print.mob_out = function(x) {
 #'                            type='discrete', log_scale=TRUE, nperm=20)
 #' plot(inv_mob_out)
 #' plot(inv_mob_out, same_scale=T)
-plot.mob_out = function(mob_out, group = NULL, par_args=NULL, 
-                     same_scale=FALSE) {
+plot.mob_out = function(mob_out, group=NULL, par_args=NULL, 
+                        same_scale=FALSE) {
 
   type = mob_out$type
   tests = c('SAD', 'N', 'agg')
@@ -1138,6 +1170,7 @@ plotSNpie = function(mob_in, env_var, col = NA) {
   plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list, size = 8)
 } 
 
+#' Plot all relevant mob graphical outputs. 
 plot_9_panels = function(mob_out, trt_group, ref_group,
                          par_args=NULL, same_scale=FALSE){
   type = mob_out$type
