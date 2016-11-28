@@ -20,7 +20,7 @@
 #' @examples
 #'  data(inv_comm)
 #'  data(inv_plot_attr)
-#'  inv_mob = make_mob_in(inv_comm, inv_plot_attr)
+#'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 make_mob_in = function(comm, plot_attr, coords, binary=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
     out = list()
@@ -422,7 +422,6 @@ permute_comm = function(comm, method, groups=NULL) {
         swapN = sample(rowSums(comm))
     for(i in seq_along(group_levels)) {
         row_indices = groups == group_levels[i]
-        Ngroup = swapN[row_indices]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
         plot_ids = 1:nrow(group_comm)
@@ -432,6 +431,7 @@ permute_comm = function(comm, method, groups=NULL) {
                                              replace=T),
                               plot_ids)) - 1)
         } else if (method == 'swapN') {
+            Ngroup = swapN[row_indices]
             meta_sad = Jade::SpecDist(sp_abu)$probability
             sp_draws = sapply(plot_ids, function(x)
                               sample(1:length(meta_sad), size=Ngroup[x], 
