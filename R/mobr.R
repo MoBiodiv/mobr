@@ -85,24 +85,12 @@ print.mob_out = function(x) {
     print(head(x$indiv_rare))
     cat('\n$sample_rare\n')
     print(head(x$sample_rare))
-    if (x$type == 'discrete') {
-        cat('\n$discrete')
-        cat('\n$discrete$SAD\n')
-        print(head(x$discrete$SAD))
-        cat('\n$discrete$N\n')
-        print(head(x$discrete$N))
-        cat('\n$discrete$agg\n')
-        print(head(x$discrete$agg))
-    }
-    if (x$type == 'continous') {
-        cat('\n$continous')
-        cat('\n$continous$SAD\n')
-        print(head(x$continous$SAD))
-        cat('\n$continous$N\n')
-        print(head(x$continous$N))
-        cat('\n$continous$agg\n')
-        print(head(x$continous$agg))
-    }
+    cat('\n$SAD\n')
+    print(head(x$SAD))
+    cat('\n$N\n')
+    print(head(x$N))
+    cat('\n$agg\n')
+    print(head(x$agg))
 }
 
 
@@ -655,8 +643,8 @@ effect_SAD_continuous = function(out, group_sad, env_levels, corr, nperm){
 effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
     ind_sample_size = out$indiv_rare[, 1]
     ref_sad = group_sad[which(group_levels == as.character(ref_group)), ]
-    out$discrete$SAD = data.frame(matrix(0, nrow = 0, ncol = 6), 
-                                    stringsAsFactors = F)
+    out$SAD = data.frame(matrix(0, nrow = 0, ncol = 6), 
+                                stringsAsFactors = F)
     cat('\nComputing null model for SAD effect\n')
     pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
                          style = 3)
@@ -683,14 +671,13 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
             quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
         ind_level = data.frame(cbind(rep(level,length(ind_sample_size)),
                                      ind_sample_size, deltaS, t(ind_deltaS_null_CI)))
-        out$discrete$SAD = rbind(out$discrete$SAD, ind_level)
+        out$SAD = rbind(out$SAD, ind_level)
     }
     close(pb)
-    out$discrete$SAD = df_factor_to_numeric(out$discrete$SAD, 
-                                            2:ncol(out$discrete$SAD))
-    names(out$discrete$SAD) = c('group', 'effort_ind', 'deltaS_emp',
-                                'deltaS_null_low', 'deltaS_null_median',
-                                'deltaS_null_high')
+    out$SAD = df_factor_to_numeric(out$SAD, 2:ncol(out$SAD))
+    names(out$SAD) = c('group', 'effort_ind', 'deltaS_emp',
+                              'deltaS_null_low', 'deltaS_null_median',
+                              'deltaS_null_high')
     return(out)
 }
 
@@ -989,27 +976,27 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
         if ('SAD' %in% approved_tests)
             out = effect_SAD_continuous(out, group_sad, env_levels, corr, nperm)
         if ('N' %in% approved_tests)
-            out$continuous$N = effect_N_continuous(mob_in, S, group_levels, env_levels, 
-                                                   group_data, plot_dens, plot_abd, 
-                                                   ind_sample_size, corr, nperm)
+            out$N = effect_N_continuous(mob_in, S, group_levels, env_levels, 
+                                        group_data, plot_dens, plot_abd, 
+                                        ind_sample_size, corr, nperm)
         if ('agg' %in% approved_tests)
-            out$continuous$agg = effect_agg_continuous(mob_in, out$sample_rare, 
-                                                       group_plots, group_levels, 
-                                                       group_data, env_levels, 
-                                                       corr, nperm)
-    } else {
+            out$agg = effect_agg_continuous(mob_in, out$sample_rare,
+                                            group_plots, group_levels, 
+                                            group_data, env_levels, corr, nperm)
+    } else if (type == 'discrete') {
         get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
         if ('SAD' %in% approved_tests)
-            out = effect_SAD_discrete(out, group_sad, group_levels, ref_group, nperm)
+            out = effect_SAD_discrete(out, group_sad, group_levels, ref_group,
+                                      nperm)
         if ('N' %in% approved_tests)
-            out$discrete$N = effect_N_discrete(mob_in, group_levels, ref_group,
-                                               groups, density_stat,
-                                               ind_sample_size, nperm)
+            out$N = effect_N_discrete(mob_in, group_levels, ref_group, groups,
+                                      density_stat,ind_sample_size, nperm)
         if ('agg' %in% approved_tests)
-            out$discrete$agg = effect_agg_discrete(mob_in, out$sample_rare, ref_group, 
-                                                   group_plots, group_data, 
-                                                   group_levels, nperm)
-    }
+            out$agg = effect_agg_discrete(mob_in, out$sample_rare, ref_group, 
+                                          group_plots, group_data, group_levels,
+                                          nperm)
+    } else 
+        stop('type must be either "discrete" or "contiguous"')
     class(out) = 'mob_out'
     return(out)
 }
