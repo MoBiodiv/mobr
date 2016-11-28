@@ -2,21 +2,21 @@
 % Please edit documentation in R/mobr.R
 \name{get_delta_stats}
 \alias{get_delta_stats}
-\title{Conduct the MOBR tests on drivers of biodiversity across scales.}
+\title{Conduct the MoB tests on drivers of biodiversity across scales.}
 \usage{
-get_delta_stats(comm, group_var, env_var = NULL, ref_group = NULL,
+get_delta_stats(mob_in, group_var, env_var = NULL, ref_group = NULL,
   tests = c("SAD", "N", "agg"), type = "discrete", inds = NULL,
   log_scale = FALSE, min_plots = NULL, density_stat = "mean",
   corr = "spearman", nperm = 1000)
 }
 \arguments{
-\item{comm}{"comm" object created by make_comm_obj()}
+\item{mob_in}{an object of class mob_in created by make_mob_in()}
 
 \item{group_var}{a character string specifying the environmental variable in
-comm$env used for grouping plots}
+mob_in$env used for grouping plots}
 
 \item{env_var}{an optional character string specicying a environmental variable
-in comm$env which is used in correlation analysis in the continuous case. 
+in mob_in$env which is used in correlation analysis in the continuous case. 
 It is not needed if "type" is discrete or group_var is used in correlation.}
 
 \item{ref_group}{a character string used to define the reference group to
@@ -74,7 +74,7 @@ have less than five plots (which have less than 120 permutations), but the
 test will be carried out.}
 }
 \value{
-a "mobr" object with attributes
+a "mob_out" object with attributes
 }
 \description{
 There are three tests, on effects of 1. the shape of the SAD, 2.
@@ -82,10 +82,10 @@ treatment/group-level density, 3. degree of aggregation. The user can
 specificy to conduct one or more of these tests.
 }
 \examples{
-data(inv_sp)
+data(inv_comm)
 data(inv_plot_attr)
-inv_comm = make_comm_obj(inv_sp, inv_plot_attr)
-inv_mobr = get_delta_stats(inv_comm, 'group', ref_group='uninvaded',
+inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                            type='discrete', log_scale=TRUE, nperm=20)
 }
 

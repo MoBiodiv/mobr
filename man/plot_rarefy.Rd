@@ -4,10 +4,10 @@
 \alias{plot_rarefy}
 \title{Plot different types of rarefaction curves}
 \usage{
-plot_rarefy(mobr, col = NULL)
+plot_rarefy(mob_out, col = NULL)
 }
 \arguments{
-\item{mobr}{a mobr class object}
+\item{mob_out}{a mob_out class object}
 
 \item{col}{}
 }
@@ -21,9 +21,12 @@ Plot different types of rarefaction curves
 \examples{
 data(inv_sp)
 data(inv_plot_attr)
-inv_comm = make_comm_obj(inv_sp, inv_plot_attr)
-inv_mobr = get_delta_stats(inv_comm, 'group', ref_group='uninvaded',
+inv_mob_in = make_mob_in(inv_sp, inv_plot_attr)
+inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                            type='discrete', log_scale=TRUE, nperm=2)
-plot_rarefy(inv_mobr)
+plot_rarefy(inv_mob_out)
+}
+\author{
+Xiao Xiao and Dan McGlinn
 }
 

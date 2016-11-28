@@ -4,12 +4,14 @@
 \alias{permute_comm}
 \title{Permute community matrix within groups}
 \usage{
-permute_comm(comm, swap, groups = NULL)
+permute_comm(comm, method, groups = NULL)
 }
 \arguments{
-\item{comm}{a site-by-species matrix}
+\item{comm}{community matrix with plots as rows and species columns.}
 
-\item{swap}{either 'noagg' or 'swapN'}
+\item{method}{either 'noagg' for random shuffling of the individuals without
+mantaining the vector of sample total abundances or 'swapN' for random 
+shuffling of the individuals in which sample abundances are mantained}
 
 \item{groups}{optional argument that is a vector of group ids which specify
 which group each site is associated with. If is NULL then all rows of the

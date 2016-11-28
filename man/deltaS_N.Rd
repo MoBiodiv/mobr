@@ -4,21 +4,31 @@
 \alias{deltaS_N}
 \title{Difference in S due to N}
 \usage{
-deltaS_N(comm_group, ref_dens, inds)
+deltaS_N(comm, ref_dens, inds)
 }
 \arguments{
-\item{comm_group}{the site x species matrix for a specific group}
+\item{comm}{community matrix with plots as rows and species columns.}
 
 \item{ref_dens}{the reference density}
 
 \item{inds}{the number of individuals to sample over}
 }
+\value{
+a two column data.frame containing the number of individuals and the 
+  difference in species richness
+}
 \description{
-difference between the ind-based rarefaction and the
-sample-based rarefaction for one group with the evaluation sample size (number
-of individuals) defined by ref_dens, evaluated at specified points (given by
-inds) Output: a two-column data frame, with sample size
-(effort) and deltaS (effect of N)
+Difference between the individual and sample-based rarefaction 
+  curvesfor one group with the evaluation sample size (number of individuals)
+  defined by ref_dens, evaluated at specified points (given by inds) Output:
+  a two-column data frame, with sample size (effort) and deltaS (effect of N)
+}
+\details{
+Internal function for computing the difference in species richness between 
+individual-based and sample-based rarefaction curves.
+}
+\author{
+Dan McGlinn and Xiao Xiao
 }
 \keyword{internal}
 
