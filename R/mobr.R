@@ -128,7 +128,7 @@ plot.mob_out = function(mob_out, group=NULL, par_args=NULL,
   xlabs = c('number of individuals', 'number of individuals', 'number of plots')
   if (type == 'discrete'){
     ylabs = c('delta-S', rep('delta-delta-S', 2))
-    if (is.null(group) & length(unique(mob_out[[type]][[tests[1]]][, 1])) > 1)
+    if (is.null(group) & length(unique(mob_out[[tests[1]]][, 1])) > 1)
       stop("Error: 'group' has to be specified.")
     if(mob_out$log_scale) {
       plot_log='x'
@@ -146,9 +146,9 @@ plot.mob_out = function(mob_out, group=NULL, par_args=NULL,
       if (i == 3)
         plot_log=''
       if (is.null(group))
-        mob_group_test = mob_out[[type]][[tests[i]]]
+        mob_group_test = mob_out[[tests[i]]]
       else {
-        mob_group_test = mob_out[[type]][[tests[i]]]
+        mob_group_test = mob_out[[tests[i]]]
         mob_group_test = mob_group_test[which(as.character(mob_group_test$group) == as.character(group)), ]
       }
       mob_group_test = mob_group_test[complete.cases(mob_group_test), ]
@@ -169,7 +169,7 @@ plot.mob_out = function(mob_out, group=NULL, par_args=NULL,
   else{
     ylabs = c('delta-S', rep('delta-delta-S', 2))
     for (i in 1:3){
-      mob_group_test = mob[[type]][[tests[i]]]
+      mob_group_test = mob[[tests[i]]]
       mob_group_test = mob_group_test[complete.cases(mob_group_test), ]
       for (icol in 1:ncol(mob_group_test))
         mob_group_test[, icol] = as.numeric(as.character(mob_group_test[, icol]))
@@ -1189,13 +1189,13 @@ plot_9_panels = function(mob_out, trt_group, ref_group,
          ylim = c(0, max(mob_out$indiv_rare[, -1])), type = 'l', lwd = 2, 
          col = cols[1], cex.lab = 1.5, cex.axis = 1.5, main = 'Individual', cex.main = 2,
          log=plot_log)
-    lines(mobr$indiv_rare$sample, mobr$indiv_rare[[ref_group]], 
+    lines(mob_out$indiv_rare$sample, mob_out$indiv_rare[[ref_group]], 
           type = 'l', lwd = 2, col = cols[2])
 
-    mobr$sample_rare[, -1] = lapply(mobr$sample_rare[, -1], function(x)
+    mob_out$sample_rare[, -1] = lapply(mob_out$sample_rare[, -1], function(x)
                                     as.numeric(as.character(x)))
-    sample_rare_group = mobr$sample_rare[mobr$sample_rare == trt_group, ]
-    sample_rare_ref = mobr$sample_rare[mobr$sample_rare == ref_group, ]
+    sample_rare_group = mob_out$sample_rare[mob_out$sample_rare == trt_group, ]
+    sample_rare_ref = mob_out$sample_rare[mob_out$sample_rare == ref_group, ]
     
     plot(1:nrow(sample_rare_group), sample_rare_group$impl_S, 
          xlab = 'Number of plots', ylab = 'Richness (S)', 
@@ -1218,8 +1218,8 @@ plot_9_panels = function(mob_out, trt_group, ref_group,
           lwd = 2, col = cols[2])
     
     # Create the plots for the three delta-S between groups
-    deltaS_Sind = mobr$indiv_rare[[trt_group]] - mobr$indiv_rare[[ref_group]]
-    plot(mobr$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
+    deltaS_Sind = mob_out$indiv_rare[[trt_group]] - mob_out$indiv_rare[[ref_group]]
+    plot(mob_out$indiv_rare$sample, deltaS_Sind, ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
          cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
          xlab = 'Number of individuals', ylab = 'delta S',
          log=plot_log)
@@ -1239,9 +1239,9 @@ plot_9_panels = function(mob_out, trt_group, ref_group,
     abline(h = 0, lwd = 2, lty = 2)
     
     # Create the plots for the three d-delta S
-    mobr$discrete$ind[, -1] = lapply(mobr$discrete$ind[, -1], function(x)
+    mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
       as.numeric(as.character(x))) 
-    delta_Sind = mobr$discrete$SAD[which(as.character(mobr$discrete$SAD$group) == as.character(trt_group)), ]
+    delta_Sind = mob_out$SAD[which(as.character(mob_out$SAD$group) == as.character(trt_group)), ]
     if (!same_scale)
       ylim = range(delta_Sind[ , -(1:2)])
     plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
@@ -1255,9 +1255,9 @@ plot_9_panels = function(mob_out, trt_group, ref_group,
     lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
           lwd = 2, col = ddeltaS_col)
         
-    mobr$discrete$N[, -1] = lapply(mobr$discrete$N[, -1], function(x)
+    mob_out$N[, -1] = lapply(mob_out$N[, -1], function(x)
       as.numeric(as.character(x))) 
-    ddelta_Ssample = mobr$discrete$N[which(as.character(mobr$discrete$N$group) == as.character(trt_group)), ]
+    ddelta_Ssample = mob_out$N[which(as.character(mob_out$N$group) == as.character(trt_group)), ]
     if (!same_scale)
       ylim = range(ddelta_Ssample[ , -(1:2)])
     plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
@@ -1271,9 +1271,9 @@ plot_9_panels = function(mob_out, trt_group, ref_group,
     lines(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
           lwd = 2, col = ddeltaS_col)
     
-    mobr$discrete$agg[, -1] = lapply(mobr$discrete$agg[, -1], function(x)
+    mob_out$agg[, -1] = lapply(mob_out$agg[, -1], function(x)
       as.numeric(as.character(x))) 
-    ddelta_Sspat = mobr$discrete$agg[which(as.character(mobr$discrete$agg$group) == as.character(trt_group)), ]
+    ddelta_Sspat = mob_out$agg[which(as.character(mob_out$agg$group) == as.character(trt_group)), ]
     if (!same_scale)
       ylim = range(ddelta_Sspat[ , -(1:2)])
     plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
