@@ -4,19 +4,23 @@
 \alias{plot.mob_out}
 \title{Plot mob curves}
 \usage{
-\method{plot}{mob_out}(mob_out, group = NULL, par_args = NULL,
-  same_scale = FALSE)
+\method{plot}{mob_out}(mob_out, trt_group, ref_group, same_scale = FALSE,
+  display = "all", par_args = NULL)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
 
-\item{group}{a string that specifies which group to plot. Only required when
-comparing multiple discrete groups.}
+\item{trt_group}{a string that specifies the name of the treatment group}
 
-\item{par_args}{optional argument that sets graphical parameters to set}
+\item{ref_group}{a string that specifies the name of the reference group}
 
 \item{same_scale}{if TRUE then all three plots have the same range on the 
 y-axis.}
+
+\item{display}{argument specifies what graphics to display can be either
+'all', 'rarefaction', 'delta S', or 'd-delta S'}
+
+\item{par_args}{optional argument that sets graphical parameters to set}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial
@@ -30,11 +34,12 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                           type='discrete', log_scale=TRUE, nperm=20)
-plot(inv_mob_out)
-plot(inv_mob_out, same_scale=T)
+                              type='discrete', log_scale=TRUE, nperm=2)
+plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
+plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
+plot(inv_mob_out, 'invaded', 'uninvaded', display='d-delta S')
 }
 \author{
-Xiao Xiao
+Xiao Xiao and Dan McGlinn
 }
 

@@ -4,12 +4,14 @@
 \alias{plot_rarefy}
 \title{Plot different types of rarefaction curves}
 \usage{
-plot_rarefy(mob_out, col = NULL)
+plot_rarefy(mob_out, col = NULL, leg_loc = "topleft")
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
 
-\item{col}{}
+\item{col}{optional vector of colors to use}
+
+\item{leg_loc}{string that specifies location of the legend}
 }
 \value{
 plots the individual-based, sample-based, and spatially-explict 
@@ -19,9 +21,9 @@ sample based rarefaction curves
 Plot different types of rarefaction curves
 }
 \examples{
-data(inv_sp)
+data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_sp, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                            type='discrete', log_scale=TRUE, nperm=2)
 plot_rarefy(inv_mob_out)
