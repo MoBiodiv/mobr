@@ -1,9 +1,9 @@
-#' MOBR: measurement of biodiversity across scales
+#' mobr: measurement of biodiversity across scales
 #' 
 #' @section About:
 #' 
 #' BLAH
 #' 
-#' @name MOBR
+#' @name mobr
 #' @docType package
 NULL

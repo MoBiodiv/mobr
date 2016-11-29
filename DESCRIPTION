@@ -4,13 +4,18 @@ Version: 0.1
 Authors@R: c(person("Xiao", "Xiao", email="xiao@weecology.org", 
                     role = c("aut", "cre")),
              person("Daniel", "McGlinn", email="danmcglinn@gmail.com", 
-                    role = c("aut", "cre")))
+                    role = c("aut")))
 Date: 2015
 Description: This package is designed to help measure biodiversity and its
     changes across scales.
-Depends: R (>= 3.0.2)
-Imports: 
-    pracma
-    rareNMtests
-License: MIT 
+Depends:
+    R (>= 3.0.2),
+    pracma,
+    Jade
+Suggests: 
+    rgl,
+    scales
+Remotes: JohnsonHsieh/Jade
+License: MIT
 LazyData: true
+RoxygenNote: 5.0.1
