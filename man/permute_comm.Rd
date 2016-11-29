@@ -4,12 +4,14 @@
 \alias{permute_comm}
 \title{Permute community matrix within groups}
 \usage{
-permute_comm(comm, swap, groups = NULL)
+permute_comm(comm, method, groups = NULL)
 }
 \arguments{
-\item{comm}{a site-by-species matrix}
+\item{comm}{community matrix with plots as rows and species columns.}
 
-\item{swap}{either 'noagg' or 'swapN'}
+\item{method}{either 'noagg' for random shuffling of the individuals without
+mantaining the vector of sample total abundances or 'swapN' for random 
+shuffling of the individuals in which sample abundances are mantained}
 
 \item{groups}{optional argument that is a vector of group ids which specify
 which group each site is associated with. If is NULL then all rows of the
@@ -19,14 +21,16 @@ community matrix are assumed to be members of the same group}
 a permuted site-by-species matrix
 }
 \description{
-Two types of permutation can be carried out: 
-1) each individual of each species is reassigned a plot randomly which removes 
-any patterns due to within and between plot spatial aggregation, but maintains
-species group abundance and therefore observed group N,
-2) the total number of individuals in a plot is shuffled and then that many
-individuals are drawn randomly from the group specific species-abundance
-distribution for each plot which provides a mean of removing group differenes
-in the total number of individuals.
+Two types of permutation can be carried out: 1) 'noagg': each individual of
+each species is reassigned a plot randomly which removes any patterns due to
+within and between plot spatial aggregation, but maintains species group
+abundance and therefore observed group N, and 2) 'swapN': the total number of
+individuals in a plot is shuffled and then that many individuals are drawn
+randomly from the group specific species-abundance distribution for each plot
+which provides a means of removing group differenes in the total number of
+individuals in a given sample. Note: The 'noagg' algorithim fixes the total number
+of individuals for a given species within a group and the 'swapN' algorithim does
+not.
 }
 \examples{
 S = 3
