@@ -4,7 +4,7 @@
 \alias{make_mob_in}
 \title{Create the 'mob_in' object.}
 \usage{
-make_mob_in(comm, plot_attr, coords, binary = FALSE)
+make_mob_in(comm, plot_attr, binary = FALSE)
 }
 \arguments{
 \item{comm}{community matrix with plots as rows and species columns.}

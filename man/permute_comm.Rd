@@ -28,7 +28,9 @@ abundance and therefore observed group N, and 2) 'swapN': the total number of
 individuals in a plot is shuffled and then that many individuals are drawn
 randomly from the group specific species-abundance distribution for each plot
 which provides a means of removing group differenes in the total number of
-individuals.
+individuals in a given sample. Note: The 'noagg' algorithim fixes the total number
+of individuals for a given species within a group and the 'swapN' algorithim does
+not.
 }
 \examples{
 S = 3

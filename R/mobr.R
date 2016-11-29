@@ -21,7 +21,7 @@
 #'  data(inv_comm)
 #'  data(inv_plot_attr)
 #'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-make_mob_in = function(comm, plot_attr, coords, binary=FALSE) {
+make_mob_in = function(comm, plot_attr, binary=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
     out = list()
     out$tests = list(N=T, SAD=T, agg=T)
@@ -149,7 +149,7 @@ summary.mob_out = function(...) {
 #' rarefaction(inv_comm, method='spat', xy_coords=inv_plot_attr[ , c('x','y')])
 rarefaction = function(x, method, effort=NULL, xy_coords=NULL) {
     if (!any(method %in% c('indiv', 'samp', 'spat')))
-        stop('method must be "indiv" or "samp" for individual or sample based rarefaction, respectively')
+        stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
     if (method == 'samp' | method == 'spat') {
         if (is.null(dim(x)))
             stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
@@ -259,7 +259,9 @@ deltaS_N = function(comm, ref_dens, inds){
 #' individuals in a plot is shuffled and then that many individuals are drawn
 #' randomly from the group specific species-abundance distribution for each plot
 #' which provides a means of removing group differenes in the total number of
-#' individuals.
+#' individuals in a given sample. Note: The 'noagg' algorithim fixes the total number
+#' of individuals for a given species within a group and the 'swapN' algorithim does
+#' not. 
 #' 
 #' @param comm community matrix with plots as rows and species columns.
 #' @param method either 'noagg' for random shuffling of the individuals without
@@ -980,6 +982,8 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
     grps = unique(env_data)
     if (is.na(col[1])) 
         col = rainbow(length(grps))
+    else if (length(col) != length(grps))
+      stop('Length of col vector must match the number of unique groups')
     if ('sad' == type) {
         plot(1, type = "n", xlab = "% abundance (log scale)", ylab = "% species", 
              xlim = c(0.01, 1), ylim = c(0.01, 1), log = log)
