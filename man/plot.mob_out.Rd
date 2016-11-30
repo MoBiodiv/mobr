@@ -5,7 +5,7 @@
 \title{Plot mob curves}
 \usage{
 \method{plot}{mob_out}(mob_out, trt_group, ref_group, same_scale = FALSE,
-  display = "all", par_args = NULL)
+  display = c("rarefaction", "delta S", "d-delta S"), par_args = NULL)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -18,7 +18,7 @@
 y-axis.}
 
 \item{display}{argument specifies what graphics to display can be either
-'all', 'rarefaction', 'delta S', or 'd-delta S'}
+'rarefaction', 'delta S', or 'd-delta S' defaults to all three options.}
 
 \item{par_args}{optional argument that sets graphical parameters to set}
 }

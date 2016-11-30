@@ -1,6 +1,9 @@
 library(R.matlab)
-source('./R/mobr.R')
-source('./R/mobr_boxplots.R')
+library(mobr)
+
+dat = list()
+## load case studies and add them to the list dat
+
 # 1) invasion data -------------------------
 dat_dir = paste('./data/', 'joninvade.mat', sep = '')
 
@@ -21,39 +24,7 @@ comm = t(dat_matlab$comary)
 spat = dat_plot[,3:4]
 env = dat_plot[,2]
 
-## make community matrix:
-comm = make_comm_obj(comm, data.frame(group=env, x=spat[,1], y=spat[,2]))
-
-names(comm$env) = 'groups'
-
-
-tst.inv = get_delta_stats(comm, 'groups', ref_group='uninvaded',
-                          type='discrete', log_scale=TRUE,
-                          nperm=100)
-
-save(tst.inv, file='./results/tst.inv.Rdata')
-#load('./results/tst.inv.Rdata')
-
-stats <- mob_stats(comm, 'groups')
-
-pdf("./figs/tst.inv.pdf")
-plot_samples(stats$samples)
-plot_groups(stats$groups)
-plot_betaPIE(stats)
-plotSADs(comm, 'groups')
-plot_rarefy(tst.inv)
-plot(tst.inv, same_scale=T)
-plot(tst.inv, par_args='mfrow=c(1,1)', same_scale=T)
-plot_9_panels(tst.inv, 'invaded', 'uninvaded')
-plot_9_panels(tst.inv, 'invaded', 'uninvaded',
-              par_args='mfrow=c(1,1)')
-
-dev.off()
-
-pdf('./figs/tst.inv.sum.pdf')
-plot(tst.inv, same_scale=T)
-plot_9_panels(tst.inv, 'invaded', 'uninvaded')
-dev.off()
+dat$inv = make_mob_in(comm, data.frame(groups=env, x=spat[,1], y=spat[,2]))
 
 # 2) Morlaix ------------------
 
@@ -75,168 +46,58 @@ comm = t(dat_matlab$ab[, c(1:3, 6:8)])
 env = dat_plot[,2]
 
 ## make community matrix:
-comm = make_comm_obj(comm, data.frame(group=env))
-names(comm$env) = 'groups'
-
-tst.mor = get_delta_stats(comm, 'groups', ref_group='before',
-                          type='discrete', log_scale=TRUE,
-                          nperm=100)
-save(tst.mor, file='./results/tst.mor.Rdata')
-#load('./results/tst.mor.Rdata')
-
-stats <- mob_stats(comm, 'groups')
-
-pdf("./figs/tst.mor.pdf")
-plot_samples(stats$samples)
-plot_groups(stats$groups)
-plot_betaPIE(stats)
-plotSADs(comm, 'groups')
-plot_rarefy(tst.mor)
-plot(tst.mor, same_scale=T)
-plot(tst.mor, par_args='mfrow=c(1,1)', same_scale=T)
-plot_9_panels(tst.mor, 'after', 'before')
-plot_9_panels(tst.mor, 'after', 'before',
-              par_args='mfrow=c(1,1)')
-dev.off()
-
-
-pdf('./figs/tst.mor.sum.pdf')
-plot(tst.mor, same_scale=T)
-plot_9_panels(tst.mor, 'after', 'before')
-dev.off()
+dat$mor = make_mob_in(comm, data.frame(groups=env))
 
 # 3) Jon's fire data: ---------------------------
 
-dat_unburned = read.csv("./data/fire_data_unburned.csv")
-head(dat_unburned)
-colnames(dat_unburned)
-dim(dat_unburned)
+unburned = read.csv("./data/fire_data_unburned.csv")
+burned = read.csv("./data/fire_data_burned.csv")
 
-dat_burned = read.csv("./data/fire_data_burned.csv")
-head(dat_burned)
-colnames(dat_burned)
-dim(dat_burned)
-
-names(dat_burned)[2] <- "Treatment"
-dat_unburned$Plot <- toupper(dat_unburned$Plot)
-dat_burned$Plot <- tolower(dat_burned$Plot)
+names(burned)[2] <- "Treatment"
+unburned$Plot <- toupper(unburned$Plot)
+burned$Plot <- tolower(burned$Plot)
 
 # rbind rows
 
-library(dplyr)
-
-dat.all <- bind_rows(dat_unburned, dat_burned)
-str(dat.all)
-names(dat.all)
-
-dat.all[is.na(dat.all)] <- 0
-dat.all$Treatment <- as.character(dat.all$Treatment)
-dat.all$Treatment[25:48] <- "burned"
+fire <- dplyr::bind_rows(unburned, burned)
+fire[is.na(fire)] <- 0
+fire$Treatment <- as.character(fire$Treatment)
+fire$Treatment[25:48] <- "burned"
 
 ## get coordinates:
-dat_burned_xy= read.csv("./data/Fire_lat_longs.csv")
-names(dat_burned_xy)[1] <- "Plot"
+burned_xy= read.csv("./data/Fire_lat_longs.csv")
+names(burned_xy)[1] <- "Plot"
 
 # change first letter into capital
-dat_burned_xy$Plot <- tolower(as.character(dat_burned_xy$Plot))
+burned_xy$Plot <- tolower(as.character(burned_xy$Plot))
 
-dat.all$Plot = tolower(dat.all$Plot)
+fire$Plot = tolower(fire$Plot)
 
-dat = merge(dat.all, dat_burned_xy, by='Plot', all=T)
+fire = merge(fire, burned_xy, by='Plot', all=T)
 
-comm = dat[ , 3:23]
-spat = dat[ , 24:25]
-env = dat$Treatment
+comm = fire[ , 3:23]
+spat = fire[ , 24:25]
+env = fire$Treatment
 
 ## make community matrix:
-comm = make_comm_obj(comm, data.frame(group=env, x=spat[,2],
-                                      y=spat[,1]))
-
-names(comm$env) = 'groups'
-
-tst.fire = get_delta_stats(comm, 'groups', ref_group='unburned',
-                           type='discrete', log_scale=TRUE,
-                           nperm=100)
-save(tst.fire, file='./results/tst.fire.Rdata')
-#load('./results/tst.fire.Rdata')
-
-stats = mob_stats(comm, 'groups')
-
-pdf("./figs/tst.fire.pdf")
-plot_samples(stats$samples)
-plot_groups(stats$groups)
-plot_betaPIE(stats)
-plotSADs(comm, 'groups')
-plot_rarefy(tst.fire)
-plot(tst.fire, same_scale=T)
-plot(tst.fire, par_args='mfrow=c(1,1)', same_scale=T)
-plot_9_panels(tst.fire, 'burned', 'unburned')
-plot_9_panels(tst.fire, 'burned', 'unburned',
-              par_args='mfrow=c(1,1)')
-dev.off()
-
-pdf('./figs/tst.fire.sum.pdf')
-plot(tst.fire, same_scale=T)
-plot_9_panels(tst.fire, 'burned', 'unburned')
-dev.off()
+dat$fire = make_mob_in(comm, data.frame(groups=env, x=spat[ , 2], y=spat[ , 1]))
 
 # 4) coffee -----------------------------------
 
 dat_coffee = read.csv("./data/coffee_comm.csv")
-head(dat_coffee)
-colnames(dat_coffee)
-dim(dat_coffee)
-
 dat_xy = read.csv("./data/coffee_xy.csv")
 dat_xy$Treatment <- rep(c("Natural", "Shaded"), each = 3)
-head(dat_xy)
-colnames(dat_xy)
-dim(dat_xy)
-
 
 comm = dat_coffee[, -1]
 spat = dat_xy[,2:3]
 env = dat_xy$Treatment
 
 ## make community matrix:
-comm = make_comm_obj(comm, data.frame(group=env, x=spat[,1], y=spat[,2]))
-
-names(comm$env) = 'groups'
-
-tst.coffee = get_delta_stats(comm, 'groups', ref_group='Natural', 
-                             type='discrete', log_scale=TRUE,
-                             nperm=1000)
-
-save(tst.coffee, file='./results/tst.coffee.Rdata')
-#load('./results/tst.coffee.Rdata')
-
-stats = mob_stats(comm, 'groups')
-  
-pdf("./figs/tst.coffee.pdf")
-plot_samples(stats$samples)
-plot_groups(stats$groups)
-plot_betaPIE(stats)
-plotSADs(comm, 'groups')
-plot_rarefy(tst.coffee)
-plot(tst.coffee, same_scale = T)
-plot(tst.coffee, par_args = 'mfrow=c(1,1)', same_scale = T)
-plot_9_panels(tst.coffee, 'Shaded', 'Natural') 
-plot_9_panels(tst.coffee, 'Shaded', 'Natural', 
-              par_args = 'mfrow=c(1,1)')
-dev.off()
-
-pdf('./figs/tst.coffee.sum.pdf')
-plot(tst.coffee, same_scale = T)
-plot_9_panels(tst.coffee, 'Shaded', 'Natural') 
-dev.off()
-
+dat$coffee = make_mob_in(comm, data.frame(groups=env, x=spat[,1], y=spat[,2]))
 
 # 5) Cattle_tank -----------------
 
 dat_cattle_high = read.csv("./data/Cattle_tank_high.csv")
-head(dat_cattle_high)
-colnames(dat_cattle_high)
-dim(dat_cattle_high)
 dat_cattle_high[is.na(dat_cattle_high)] <- 0
 
 rownames(dat_cattle_high) <- dat_cattle_high[,1]
@@ -245,16 +106,11 @@ dat_cattle_high <- t(dat_cattle_high)
 
 
 dat_cattle_low = read.csv("./data/Cattle_tank_low.csv")
-head(dat_cattle_low)
-colnames(dat_cattle_low)
-dim(dat_cattle_low)
 dat_cattle_low[is.na(dat_cattle_low)] <- 0
 
 rownames(dat_cattle_low) <- dat_cattle_low[,1]
 dat_cattle_low <- dat_cattle_low[,-1]
 dat_cattle_low <- t(dat_cattle_low)
-
-identical(colnames(dat_cattle_low), colnames(dat_cattle_high))
 
 dat_cattle <- rbind(dat_cattle_low, dat_cattle_high)
 
@@ -269,103 +125,47 @@ spat = dat_cattle_xy[,3:4]
 env = dat_cattle_xy$X
 
 ## make community matrix:
-comm = make_comm_obj(comm, data.frame(group=env, x=spat[,1], y=spat[,2]))
-names(comm$env) = 'groups'
+dat$cattle = make_mob_in(comm, data.frame(groups=env, x=spat[,1], y=spat[,2]))
 
-tst.cattle = get_delta_stats(comm, 'groups', ref_group='low',
-                             type='discrete', log_scale=TRUE, 
-                             nperm=100)
-save(tst.cattle, file='./results/tst.cattle.Rdata')
-#load('./results/tst.cattle.Rdata')
-
-stats = mob_stats(comm, 'groups')
-
-pdf("./figs/tst.cattle.pdf")
-plot_samples(stats$samples)
-plot_groups(stats$groups)
-plot_betaPIE(stats)
-plotSADs(comm, 'groups')
-plot_grp_rads(comm, 'groups', log='y')
-plot_rarefy(tst.cattle)
-plot(tst.cattle, same_scale=T)
-plot(tst.cattle, same_scale=T, par_args = 'mfrow=c(1,1)')
-plot_9_panels(tst.cattle, 'high', 'Low')
-plot_9_panels(tst.cattle, 'high', 'Low',
-              par_args = 'mfrow=c(1,1)')
-dev.off()
-
-pdf('./figs/tst.cattle.sum.pdf')
-plot(tst.cattle, same_scale=T)
-plot_9_panels(tst.cattle, 'high', 'Low')
-dev.off()
-
-# 6) Glade ants ---------------------------
-dat = read.csv('./data/glade_ants/source_files/ants 2011 big restored and natural.csv')
+# 6) Glade ants 2011 ---------------------------
+ants = read.csv('./data/glade_ants/source_files/ants 2011 big restored and natural.csv')
 plot_info = read.csv('./data/glade_ants/filtered_files/glade_plot_info.csv')
-names(dat)
-comm = dat[ , 8:42]
+comm = ants[ , 8:42]
 comm = ifelse(is.na(as.matrix(comm)), 0, as.matrix(comm))
 
-comm = make_comm_obj(comm, data.frame(groups = dat$treatment))
+dat$ants11 = make_mob_in(comm, data.frame(groups = ants$treatment))
 
-tst.ants = get_delta_stats(comm, 'groups', ref_group='NAT',
-                           type='discrete', log_scale=TRUE, 
-                           nperm=100)
-save(tst.ants, file='./results/tst.ants11.Rdata')
-#load('./results/tst.ants11.Rdata')
+# 6) Glade ants 2014 ---------------------------
 
-stats = mob_stats(comm, 'groups')
-
-pdf("./figs/tst.ants11.pdf")
-plot_samples(stats$samples)
-plot_groups(stats$groups)
-plot_betaPIE(stats)
-plotSADs(comm, 'groups')
-plot_grp_rads(comm, 'groups', log='y')
-plot_rarefy(tst.ants)
-plot(tst.ants, same_scale=T)
-plot(tst.ants, same_scale=T, par_args = 'mfrow=c(1,1)')
-plot_9_panels(tst.ants, 'BR', 'NAT')
-plot_9_panels(tst.ants, 'BR', 'NAT',
-              par_args = 'mfrow=c(1,1)')
-dev.off()
-
-pdf('./figs/tst.ants11.sum.pdf')
-plot(tst.ants, same_scale=T)
-plot_9_panels(tst.ants, 'BR', 'NAT')
-dev.off()
-
-dat = read.csv('./data/glade_ants/source_files/ants 2014 big rest and nat.csv')
-names(dat)
-comm = dat[ , 5:45]
+ants = read.csv('./data/glade_ants/source_files/ants 2014 big rest and nat.csv')
+comm = ants[ , 5:45]
 comm = ifelse(is.na(as.matrix(comm)), 0, as.matrix(comm))
 
-comm = make_comm_obj(comm, data.frame(groups = dat$treatment))
+dat$ants14 = make_mob_in(comm, data.frame(groups = ants$treatment))
 
-tst.ants = get_delta_stats(comm, 'groups', ref_group='natural',
-                           type='discrete', log_scale=TRUE, 
-                           nperm=100)
-save(tst.ants, file='./results/tst.ants14.Rdata')
-#load('./results/tst.ants14.Rdata')
 
-stats = mob_stats(comm, 'groups')
+## data analysis --------------------------------------------------------------
 
-pdf("./figs/tst.ants14.pdf")
-plot_samples(stats$samples)
-plot_groups(stats$groups)
-plot_betaPIE(stats)
-plotSADs(comm, 'groups')
-plot_grp_rads(comm, 'groups', log='y')
-plot_rarefy(tst.ants)
-plot(tst.ants, same_scale=T)
-plot(tst.ants, same_scale=T, par_args = 'mfrow=c(1,1)')
-plot_9_panels(tst.ants, 'BR', 'NAT')
-plot_9_panels(tst.ants, 'BR', 'NAT',
-              par_args = 'mfrow=c(1,1)')
-dev.off()
+ref_groups = c('uninvaded', 'before', 'unburned', 'Natural', 'low', 'NAT', 
+               'natural')
+trt_groups = c('invaded', 'after', 'burned', 'Shaded', 'high', 'BR', 'restored')
 
-pdf('./figs/tst.ants14.sum.pdf')
-plot(tst.ants, same_scale=T)
-plot_9_panels(tst.ants, 'BR', 'NAT')
-dev.off()
 
+tst = vector('list', length(dat))
+names(tst) = names(dat)
+for(i in seq_along(dat)) {
+    cat(paste('Analysis of', names(dat)[i], 'dataset'))
+    tst[[i]] =  get_delta_stats(dat[[i]], 'groups', ref_group = ref_groups[i], 
+                                type='discrete', log_scale=TRUE, nperm=100)
+    stats = mob_stats(dat[[i]], 'groups')
+    pdf(paste('./figs/', names(tst)[i], '_results.pdf', sep=''))
+        plot_samples(stats$samples)
+        plot_groups(stats$groups)
+        plot_betaPIE(stats)
+        plot_abu(mob_in, 'groups', 'rad', pooled=T, log = 'x')
+        plot_abu(mob_in, 'groups', 'sad', log='x')
+        plot(tst[[i]], trt_groups[i], ref_groups[i], same_scale=T) 
+    dev.off()
+}
+
+save(tst, file='./results/case_study_results.Rdata')

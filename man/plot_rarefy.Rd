@@ -4,12 +4,15 @@
 \alias{plot_rarefy}
 \title{Plot different types of rarefaction curves}
 \usage{
-plot_rarefy(mob_out, col = NULL, leg_loc = "topleft")
+plot_rarefy(mob_out, col = NULL, rare_type = c("SAD", "N", "agg"),
+  leg_loc = "topleft", par_args = NULL)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
 
 \item{col}{optional vector of colors to use}
+
+\item{rare_type}{either 'SAD', 'N', or 'agg', defaults to all three types}
 
 \item{leg_loc}{string that specifies location of the legend}
 }
