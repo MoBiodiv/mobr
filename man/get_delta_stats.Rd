@@ -52,7 +52,7 @@ numbers of individuals, a step in test "N". It can take one of the
 three values: "mean", "max", or "min". If it is "mean", the average
 plot-level abundance across plots (all plots when "type" is "continuous,
 all plots within the two groups for each pair-wise comparison when "type"
-is "discrete") are used. If it is "min" or "max", the minimum/maximul
+is "discrete") are used. If it is "min" or "max", the minimum/maximum
 plot-level density is used.}
 
 \item{corr}{which kind of correlation to use when "type" is "continuous". It
