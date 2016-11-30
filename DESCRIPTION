@@ -12,11 +12,13 @@ Description: This package is designed to help measure biodiversity and its
 Depends:
     R (>= 3.0.2),
     pracma,
-    Jade
-Suggests: 
+    Jade,
     rgl,
-    scales
-Remotes: JohnsonHsieh/Jade
+    scales,
+    vegan
+Remotes: 
+    JohnsonHsieh/Jade,
+    AnneChao/SpadeR
 License: MIT
 LazyData: true
 RoxygenNote: 5.0.1
