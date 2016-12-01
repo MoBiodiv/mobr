@@ -162,8 +162,8 @@ for(i in seq_along(dat)) {
         plot_samples(stats$samples)
         plot_groups(stats$groups)
         plot_betaPIE(stats)
-        plot_abu(mob_in, 'groups', 'rad', pooled=T, log = 'x')
-        plot_abu(mob_in, 'groups', 'sad', log='x')
+        plot_abu(dat[[i]], 'groups', 'rad', pooled=T, log = 'x')
+        plot_abu(dat[[i]], 'groups', 'sad', log='x')
         plot(tst[[i]], trt_groups[i], ref_groups[i], same_scale=T) 
     dev.off()
 }
