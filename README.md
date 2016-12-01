@@ -3,6 +3,24 @@
 This reposititory hosts an R package that is being developed for 
 estimating biodiversity and the components of its change.
 
+# How to install mobr
+```r
+library(devtools)
+install_github('MoBiodiv/mobr')
+library(mobr)
+```
+# Examples
+```r
+library(mobr)
+data(inv_comm)
+data(inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+                              type='discrete', log_scale=TRUE, nperm=2)
+plot(inv_mob_out, 'invaded', 'uninvaded')
+```
+
+
 ## How to contribute to this project
 1) Fork the repo to your local GitHub account
 
