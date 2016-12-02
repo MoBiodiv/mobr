@@ -572,8 +572,8 @@ effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data,
             level_perm = group_levels[j]
             comm_level_perm = comm_perm[which(as.character(group_data) == level_perm), ]
             group_effect_N_perm = deltaS_N(comm_level_perm, plot_dens, 
-                                           ind_sample_size)
-            effect_N_perm[, j] = group_effect_N_perm$deltaS
+                                           ind_sample_size[ind_sample_size <= sum(comm_level_perm)])
+            effect_N_perm[, j] = group_effect_N_perm$deltaS[1:nrow(effect_N_perm)]
         }
         effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
         # If the output is not long enough, fill it with NA's
