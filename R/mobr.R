@@ -614,10 +614,12 @@ effect_N_discrete = function(mob_in, group_levels, ref_group, groups,
         for (i in 1:nperm){
             # swap plot abu between group 1 and each other group
             comm_perm = permute_comm(comm_levels, 'swapN', plot_levels)  
+            min_N = min(sum(comm_perm[plot_levels == as.character(ref_group), ]), 
+                        sum(comm_perm[plot_levels == level, ]))
             N_eff_perm = sapply(c(as.character(ref_group), level), function(x) 
                 deltaS_N(comm_perm[plot_levels == x, ], plot_dens_level, 
-                         ind_sample_size)$deltaS)
-            null_N_deltaS_mat[i, ] = N_eff_perm[ , 2] - N_eff_perm[ , 1]
+                         ind_sample_size[ind_sample_size <= min_N])$deltaS)
+            null_N_deltaS_mat[i, ] = (N_eff_perm[ , 2] - N_eff_perm[ , 1])[1:ncol(null_N_deltaS_mat)]
             setTxtProgressBar(pb, k)
             k = k + 1
         }
