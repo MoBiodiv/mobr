@@ -240,9 +240,8 @@ deltaS_N = function(comm, ref_dens, inds){
     # rescale and interpolate this plot based S to individual based 
     # using the ref_density (i.e., not the observed density)
     rescaled_effort = round(1:nplots * ref_dens)
-    if (max(rescaled_effort) < max(inds))
-        warning('Extrapolating the rarefaction curve because the number of rescaled individuals is smaller than the inds argument')
-    interp_S_samp = pchip(c(1, rescaled_effort), c(1, S_samp), inds)
+    # No extrapolation of the rescaled rarefaction curve, only interpolation
+    interp_S_samp = pchip(c(1, rescaled_effort), c(1, S_samp), inds[inds <= max(rescaled_effort)])[1:length(inds)]
     S_indiv = rarefaction(comm, 'indiv', inds)
     deltaS = interp_S_samp - S_indiv
     out = data.frame(inds = inds, deltaS = deltaS)
