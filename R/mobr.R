@@ -241,7 +241,9 @@ deltaS_N = function(comm, ref_dens, inds){
     # using the ref_density (i.e., not the observed density)
     rescaled_effort = round(1:nplots * ref_dens)
     # No extrapolation of the rescaled rarefaction curve, only interpolation
-    interp_S_samp = pchip(c(1, rescaled_effort), c(1, S_samp), inds[inds <= max(rescaled_effort)])[1:length(inds)]
+    interp_S_samp = pchip(c(1, rescaled_effort), c(1, S_samp), inds[inds <= max(rescaled_effort)])
+    # Ensure that interp_S_samp has the right length (filled with NA's if needed)
+    interp_S_samp = interp_S_samp[1:length(inds)]
     S_indiv = rarefaction(comm, 'indiv', inds)
     deltaS = interp_S_samp - S_indiv
     out = data.frame(inds = inds, deltaS = deltaS)
@@ -572,6 +574,7 @@ effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data,
             comm_level_perm = comm_perm[which(as.character(group_data) == level_perm), ]
             group_effect_N_perm = deltaS_N(comm_level_perm, plot_dens, 
                                            ind_sample_size[ind_sample_size <= sum(comm_level_perm)])
+            # Ensure the column has the right length (filled with NA's if needed)
             effect_N_perm[, j] = group_effect_N_perm$deltaS[1:nrow(effect_N_perm)]
         }
         effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
@@ -618,7 +621,9 @@ effect_N_discrete = function(mob_in, group_levels, ref_group, groups,
             N_eff_perm = sapply(c(as.character(ref_group), level), function(x) 
                 deltaS_N(comm_perm[plot_levels == x, ], plot_dens_level, 
                          ind_sample_size[ind_sample_size <= min_N])$deltaS)
-            null_N_deltaS_mat[i, ] = (N_eff_perm[ , 2] - N_eff_perm[ , 1])[1:ncol(null_N_deltaS_mat)]
+            ddeltaS_perm = N_eff_perm[ , 2] - N_eff_perm[ , 1]
+            # Ensure the row has the right length (filled with NA's if needed)
+            null_N_deltaS_mat[i, ] = ddeltaS_perm[1:ncol(null_N_deltaS_mat)]
             setTxtProgressBar(pb, k)
             k = k + 1
         }
