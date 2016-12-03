@@ -1166,10 +1166,10 @@ plot_rarefy = function(mob_out, col=NULL, rare_type=c('SAD', 'N', 'agg'),
 #'                               type='discrete', log_scale=TRUE, nperm=2)
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
-#' plot(inv_mob_out, 'invaded', 'uninvaded', display='d-delta S')
+#' plot(inv_mob_out, 'invaded', 'uninvaded', display='partitioned change in S')
 plot.mob_out = function(mob_out, trt_group, ref_group,
                         same_scale=FALSE, 
-                        display=c('rarefaction', 'delta S', 'd-delta S'),
+                        display=c('rarefaction', 'delta S', 'partitioned change in S'),
                         par_args=NULL) {
     type = mob_out$type
     if (type == 'continuous')
@@ -1228,7 +1228,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
             abline(h = 0, lwd = 2, lty = 2)
         }
     }
-    if ('d-delta S' %in% display) {
+    if ('partitioned change in S' %in% display) {
         # Create the plots for the three d-delta S
         if ('SAD' %in% mob_out$tests) {
 
@@ -1240,7 +1240,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
         plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
              ylim = ylim, log=plot_log,
              cex.axis = 1.5, cex.lab = 1.5, type = 'n',
-             xlab = 'Number of individuals', ylab = 'SAD effect')
+             xlab = 'Number of individuals', ylab = 'Change in S due to SAD')
         polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
                 c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
                 col = '#C1CDCD', border = NA)
@@ -1257,7 +1257,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
             plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
                  ylim = ylim, log=plot_log,
                  cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
-                 xlab = 'Number of individuals', ylab = 'Density effect')
+                 xlab = 'Number of individuals', ylab = 'Change in S due to density')
             polygon(c(ddelta_Ssample$effort_sample, rev(ddelta_Ssample$effort_sample)), 
                     c(ddelta_Ssample$ddeltaS_null_low, rev(ddelta_Ssample$ddeltaS_null_high)),
                     col = '#C1CDCD', border = NA)
@@ -1274,7 +1274,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
             plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
                  ylim = ylim, log='',
                  cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
-                 xlab = 'Number of plots', ylab = 'Aggregation effect')
+                 xlab = 'Number of plots', ylab = 'Change in S due to aggregation')
             polygon(c(ddelta_Sspat$effort_sample, rev(ddelta_Sspat$effort_sample)), 
                     c(ddelta_Sspat$ddeltaS_null_low, rev(ddelta_Sspat$ddeltaS_null_high)),
                     col = '#C1CDCD', border = NA)
