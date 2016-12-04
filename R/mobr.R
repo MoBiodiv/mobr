@@ -1166,7 +1166,7 @@ plot_rarefy = function(mob_out, col=NULL, rare_type=c('SAD', 'N', 'agg'),
 #'                               type='discrete', log_scale=TRUE, nperm=2)
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
-#' plot(inv_mob_out, 'invaded', 'uninvaded', display='partitioned change in S')
+#' plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
 plot.mob_out = function(mob_out, trt_group, ref_group,
                         same_scale=FALSE, 
                         display=c('rarefaction', 'delta S', 'partitioned change in S'),
@@ -1228,7 +1228,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
             abline(h = 0, lwd = 2, lty = 2)
         }
     }
-    if ('partitioned change in S' %in% display) {
+    if ('ddelta S' %in% display) {
         # Create the plots for the three d-delta S
         if ('SAD' %in% mob_out$tests) {
 
