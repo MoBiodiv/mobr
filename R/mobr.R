@@ -1169,7 +1169,7 @@ plot_rarefy = function(mob_out, col=NULL, rare_type=c('SAD', 'N', 'agg'),
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
 plot.mob_out = function(mob_out, trt_group, ref_group,
                         same_scale=FALSE, 
-                        display=c('rarefaction', 'delta S', 'partitioned change in S'),
+                        display=c('rarefaction', 'delta S', 'ddelta S'),
                         par_args=NULL) {
     type = mob_out$type
     if (type == 'continuous')
