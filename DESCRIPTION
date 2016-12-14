@@ -16,9 +16,12 @@ Depends:
     rgl,
     scales,
     vegan
-Remotes: 
+Remotes:
     JohnsonHsieh/Jade,
     AnneChao/SpadeR
 License: MIT
 LazyData: true
 RoxygenNote: 5.0.1
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr
