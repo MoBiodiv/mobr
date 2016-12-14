@@ -63,6 +63,9 @@ make_mob_in = function(comm, plot_attr, binary=FALSE) {
     return(out)
 }
 
+#' Print a shortened verison of the mob_in object
+#' @keywords internal
+#' @export
 print.mob_in = function(x) {
     cat('Only the first five rows of any matrices are printed\n')
     cat('\n$tests\n')
@@ -75,6 +78,9 @@ print.mob_in = function(x) {
     print(head(x$spat))
 }
 
+#' Print a shortened version of the mob_out object
+#' @keywords internal
+#' @export
 print.mob_out = function(x) {
     cat('Only the first five rows of any matrices are printed\n')
     cat('\n$type\n')
@@ -1084,7 +1090,7 @@ plot_SNpie = function(mob_in, env_var, col = NA) {
 #' @param col optional vector of colors to use
 #' @param rare_type either 'SAD', 'N', or 'agg', defaults to all three types
 #' @param leg_loc string that specifies location of the legend
-#' @inheritParams plot.mobr
+#' @inheritParams plot.mob_out
 #' @return plots the individual-based, sample-based, and spatially-explict 
 #' sample based rarefaction curves
 #' @author Xiao Xiao and Dan McGlinn

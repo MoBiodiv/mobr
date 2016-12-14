@@ -5,7 +5,7 @@
 \title{Plot mob curves}
 \usage{
 \method{plot}{mob_out}(mob_out, trt_group, ref_group, same_scale = FALSE,
-  display = c("rarefaction", "delta S", "d-delta S"), par_args = NULL)
+  display = c("rarefaction", "delta S", "ddelta S"), par_args = NULL)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -37,7 +37,7 @@ inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                               type='discrete', log_scale=TRUE, nperm=2)
 plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
 plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
-plot(inv_mob_out, 'invaded', 'uninvaded', display='d-delta S')
+plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
 }
 \author{
 Xiao Xiao and Dan McGlinn
