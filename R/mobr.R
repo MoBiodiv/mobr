@@ -1156,7 +1156,7 @@ plot_rarefy = function(mob_out, col=NULL, rare_type=c('SAD', 'N', 'agg'),
 #' @param trt_group a string that specifies the name of the treatment group  
 #' @param ref_group a string that specifies the name of the reference group
 #' @param display argument specifies what graphics to display can be either
-#'  'rarefaction', 'delta S', or 'd-delta S' defaults to all three options.
+#'  'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.
 #' @param same_scale if TRUE then all three plots have the same range on the 
 #'  y-axis. 
 #' @param par_args optional argument that sets graphical parameters to set
@@ -1235,7 +1235,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
         }
     }
     if ('ddelta S' %in% display) {
-        # Create the plots for the three d-delta S
+        # Create the plots for the three ddelta S
         if ('SAD' %in% mob_out$tests) {
 
         mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)

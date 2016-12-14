@@ -18,7 +18,7 @@
 y-axis.}
 
 \item{display}{argument specifies what graphics to display can be either
-'rarefaction', 'delta S', or 'd-delta S' defaults to all three options.}
+'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
 
 \item{par_args}{optional argument that sets graphical parameters to set}
 }
