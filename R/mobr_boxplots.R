@@ -47,7 +47,7 @@ calc_PIE = function(x) {
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' mob_stats(inv_mob_in)
 mob_stats = function(mob_in, group_var) {
-   group_id  = mob_in$env[, group_var]
+   group_id  = factor(mob_in$env[, group_var])
    
    # Sample based statistics
    N_sample = rowSums(mob_in$comm)      # individuals in each sample
@@ -118,10 +118,10 @@ mob_stats = function(mob_in, group_var) {
 plot_samples = function(sample_stats, tukey = F, col=NULL)
 {
    # create local diversity boxplots ------------------------------
-   op = par(mfcol = c(2,4), las = 1, font.main = 1)
+   op = par(mfcol = c(2,3), las = 1, font.main = 1)
    
-   if (is.null(col))
-     col = 
+   #if (is.null(col))
+   #  col = 
    
    # raw species richness
    par(fig = c(0.32, 0.68, 0.5, 1))
@@ -130,13 +130,13 @@ plot_samples = function(sample_stats, tukey = F, col=NULL)
    boxplot(S ~ group, data = sample_stats, ylab = "No. of species", notch = T, main = title)
    
    # number of individuals
-   par(fig = c(0, 0.25, 0, 0.5), new = T)
+   par(fig = c(0, 0.33, 0, 0.5), new = T)
    test = kruskal.test(N ~ group, data = sample_stats)
    title = paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
    boxplot(N ~ group, data = sample_stats, ylab = "No. of individuals", notch = T, main = title) 
    
    # number of species rarefied
-   par(fig = c(0.25, 0.5, 0, 0.5), new = T)
+   par(fig = c(0.33, 0.66, 0, 0.5), new = T)
    test = kruskal.test(S_rare ~ group, data = sample_stats)
    title = paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
    ylabel = paste("No. of species (n = ",min(sample_stats$N),")",sep = "")
@@ -150,7 +150,7 @@ plot_samples = function(sample_stats, tukey = F, col=NULL)
    #boxplot(S_ext ~ group, data = sample_stats, ylab = ylabel , notch = T, main = title)
    
    # PIE
-   par(fig = c(0.75, 1, 0, 0.5), new = T)
+   par(fig = c(0.66, 1, 0, 0.5), new = T)
    test = kruskal.test(PIE ~ group, data = sample_stats)
    title = paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
    boxplot(PIE ~ group, data = sample_stats, ylab = "PIE", notch = T, main = title)
@@ -165,11 +165,11 @@ plot_samples = function(sample_stats, tukey = F, col=NULL)
       plot(TukeyHSD(aov(S ~ group, data = sample_stats)))
       legend("topright",c("No. of species"), cex = 1, bty = "n")
       
-      par(fig = c(0, 0.25, 0, 0.5), new = T)
+      par(fig = c(0, 0.33, 0, 0.5), new = T)
       plot(TukeyHSD(aov(N ~ group, data = sample_stats)))
       legend("topright",c("No. of individuals"), cex = 1, bty = "n")
       
-      par(fig = c(0.25, 0.5, 0, 0.5), new = T)
+      par(fig = c(0.33, 0.66, 0, 0.5), new = T)
       plot(TukeyHSD(aov(S_rare ~ group, data = sample_stats)))
       legend("topright", paste("Species (n = ", min(sample_stats$N),")",sep = ""),
              cex = 1, bty = "n")
@@ -178,7 +178,7 @@ plot_samples = function(sample_stats, tukey = F, col=NULL)
       #plot(TukeyHSD(aov(S_ext ~ group, data = sample_stats)))
       #legend("topright",c("Species extrapolated"), cex = 1, bty = "n")
       
-      par(fig = c(0.75, 1, 0, 0.5), new = T)
+      par(fig = c(0.66, 1, 0, 0.5), new = T)
       plot(TukeyHSD(aov(PIE ~ group,  data = sample_stats)))
       legend("topright",c("PIE"), cex = 1, bty = "n")
       
@@ -193,26 +193,42 @@ plot_samples = function(sample_stats, tukey = F, col=NULL)
 #' @export
 plot_groups = function(group_stats)
 {
-   op = par(mfrow = c(1,3), las = 1, font.main = 1)
+   op = par(mfrow = c(2,2), las = 1, font.main = 1)
    
-   minS = min(group_stats[, -(1:2)])
-   maxS = max(group_stats[, -(1:2)])
+   minS = min(group_stats[,c("S", "S_rare")])
+   maxS = max(group_stats[,c("S", "S_rare")])
+   
+   minN = min(group_stats[,c("N")])
+   maxN = max(group_stats[,c("N")])
+   
+   minPIE = min(group_stats[,c("PIE")])
+   maxPIE = max(group_stats[,c("PIE")])
    
    ngroups = nrow(group_stats)
    
-   plot(S ~ group, data = group_stats, boxwex = 0, ylim = c(0.95*minS, 1.05*maxS),
-        ylab = "", main = "Species")
+   plot(S ~ group, data = group_stats, boxwex = 0, ylim = c(0.9*minS, 1.1*maxS),
+        ylab = "", main = "Observed species richness")
    points(S ~ group, data = group_stats, pch = 19, cex = 1.5)
-   points((1:ngroups)-0.2, group_stats$S_rare, pch = 3, cex = 1.5 )
+   #points((1:ngroups)-0.2, group_stats$S_rare, pch = 3, cex = 1.5 )
 #   plotrix::plotCI((1:ngroups)+0.2, group_stats$S_ext_mean, pch = 1, cex = 1.5,
 #          li = group_stats$S_ext_CIlow, ui = group_stats$S_ext_CIup, add = T)
-   legend("top",c("Observed S", "Rarefied S", "Extrapolated S"), pch = c(19,3,1), cex = 1)
+   #legend("top",c("Observed S", "Rarefied S", "Extrapolated S"), pch = c(19,3,1), cex = 1)
    
-   plot(N ~ group, data = group_stats, boxwex = 0, ylab = "", main = "Individuals")
-   points(N ~ group, data =group_stats, pch = 19)
+   plot(S_rare ~ group, data = group_stats, boxwex = 0, ylim = c(0.9*minS, 1.1*maxS),
+        ylab = "", main = "Rarefied species richness")
+   points(S_rare ~ group, data = group_stats, pch = 19, cex = 1.5)
+   #points((1:ngroups)-0.2, group_stats$S_rare, pch = 3, cex = 1.5 )
+   #   plotrix::plotCI((1:ngroups)+0.2, group_stats$S_ext_mean, pch = 1, cex = 1.5,
+   #          li = group_stats$S_ext_CIlow, ui = group_stats$S_ext_CIup, add = T)
+   #legend("top",c("Observed S", "Rarefied S", "Extrapolated S"), pch = c(19,3,1), cex = 1)
    
-   plot(PIE ~ group, data = group_stats, boxwex = 0, ylab = "", main = "PIE")
-   points(PIE ~ group, data =group_stats, pch = 19)
+   plot(N ~ group, data = group_stats, boxwex = 0, ylab = "", ylim = c(0.9*minN, 1.1*maxN),
+        main = "Individuals")
+   points(N ~ group, data =group_stats, pch = 19, cex = 1.5)
+   
+   plot(PIE ~ group, data = group_stats, boxwex = 0, ylab = "", ylim = c(0.9*minPIE, 1.1*maxPIE),
+        main = "PIE")
+   points(PIE ~ group, data =group_stats, pch = 19, cex = 1.5)
    
    par(op)
 }

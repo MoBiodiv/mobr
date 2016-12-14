@@ -1,0 +1,160 @@
+---
+title: "Analysis of scale-dependent biodiversity changes with mobr"
+author: "Felix May"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Analysis of scale-dependent biodiversity changes with mobr}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Installing `mobr`
+
+The package `mobr` is currently available on GitHub and you can freely download 
+the source code there.
+
+[mobr on GitHub](https://github.com/MoBiodiv/mobr)
+
+However, when you just want to use the package it is more easy to install the 
+package directly from GitHub using the package `devtools`.
+
+```{r, eval = F}
+library(devtools)
+install_github'MoBiodiv/mobr')
+```
+
+# Data structure required by `mobr
+
+To work with `mobr` you need two matrix-like data tables:
+
+1. Species abundance data in a community matrix
+2. Attibures of the sampling plots
+
+The community matrix includes counts (= numbers of individuals) for all species
+in all sampling plots. The rows represent plots and the columns species.
+
+The table with the plot attributes can include for instance spatial coordinates
+of plots, experimental treatments and/or environmental variables.
+
+Throughout this vignette we use an example of a study on the effects of an
+invasive on biodiversity.
+
+**More Infos on the example data sets!!!**
+
+This data set is included in `mobr`and available after
+
+```{r, message=FALSE}
+library(mobr)
+data(inv_comm) # Community matrix
+data(inv_plot_attr) # Plot attributes
+```
+
+```{r}
+str(inv_comm)
+head(inv_plot_attr)
+```
+
+The plot attributes include the information if a plot is located in invaded or
+uninvaded sites as well as the spatial xy coordinates of a plot.
+
+## Preparing data
+
+In order to analyse the data with `mobr` the two data tables have to be combined
+into on single object
+
+```{r}
+inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr)
+```
+
+# Exploratory data analysis
+
+The package `mobr`offers functions for exploratory data analysis and visualization.
+The function `mob_stats` calculates the following biodiversity indices for every plot
+and for every groups defined by one grouping variable (e.g. experimental treatment)
+defined by the user.
+
+* Number of individuals
+* Observed species richness
+* Rarefied species richness
+* Hurlberts PIE (= Probability of Interspecific Encounter) (Hurlbert 1971)
+
+```{r}
+inv_stats <- mob_stats(inv_mob_in, group_var = "group")
+```
+
+There are also functions for plotting the biodiversity indices for the sampling
+plot level and for the group level
+
+**Although these functions need revision - I know**
+
+```{r, fig.width = 7, fig.height = 5}
+plot_samples(inv_stats$samples)
+```
+
+** This plot indicates we need to do something about plots without individuals!!!**
+
+
+```{r, fig.width = 7, fig.height = 7}
+plot_groups(inv_stats$groups)
+```
+
+In random samples PIE does not depend on the sampling effort and samplin scale.
+However, if there is aggregation of conspecific individuals in space than the PIE
+from a sampling plot will be lower than the PIE from pooled samples. Therefire a 
+comparison of plot-base vs. group-based PIE provides and estimate of aggregation
+or clumping respectively.
+
+```{r, fig.width = 7, fig.height = 4}
+plot_betaPIE(inv_stats)
+```
+
+# Full analysis
+
+The complete analysis using `mobr` aims at disentangling the consequences of three
+biodiversity components on observed changes in species richness
+
+1. Species abundance distribution
+2. Number of individuals
+3. Aggregation (clumping) of conspecific individuals
+
+
+```{r, include=FALSE}
+inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+                              type='discrete', log_scale=TRUE, nperm=100)
+```
+
+```{r, eval=FALSE}
+inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+                              type='discrete', log_scale=TRUE, nperm=100)
+```
+
+
+```{r, fig.width=8, fig.height=8}
+plot(inv_mob_out, 'invaded', 'uninvaded')
+```
+
+Here will be of course text explaining the figure. But I guess there will be 
+changes to the figure, so I will wait until the final figure layout is clear. 
+Here are my wishes.
+
+1. In the top left panel do nto truncate the curves at the group with
+less individuals. I suggest to show all data, because onyl then it gets really
+clear that one group includes more individuals
+
+2. Bottom row, middle penal. Without further explanation it is nto clear how the
+difference between two curves with the no. of plots as x-axis (middle row,
+left and middle panel) switches a no. of individuals x-axis. I think the x-axis
+of the bottom row middle panel should be different from no. of individuals.
+Something like "Expected no. of individuals" or "scaled no. of individuals"
+
+
+
+
+# References
+
+1.Gotelli, N.J. & Colwell, R.K. (2001). Quantifying biodiversity: procedures and pitfalls in the measurement and comparison of species richness. Ecology letters, 4, 379–391
+
+2.Hurlbert, S.H. (1971). The Nonconcept of Species Diversity: A Critique and Alternative Parameters. Ecology, 52, 577–586
+
+
