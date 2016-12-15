@@ -300,30 +300,28 @@ permute_comm = function(comm, method, groups=NULL) {
         groups = rep(1, nrow(comm)) 
     group_levels = unique(groups)
     S = ncol(comm)
+    N = rowSums(comm)
     comm_group_perm = matrix(0, ncol=S, nrow=nrow(comm))
     if (method == 'swapN')
-        swapN = sample(rowSums(comm))
+        swapN = sample(N)
     for(i in seq_along(group_levels)) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
+        meta_sad = Jade::SpecDist(sp_abu)$probability
         plot_ids = 1:nrow(group_comm)
         if (method == 'noagg') {
-            tmp_comm = sapply(sp_abu, function(x) 
-                              table(c(sample(plot_ids, x,
-                                             replace=T),
-                              plot_ids)) - 1)
+            Ngroup = N[row_indices]
         } else if (method == 'swapN') {
             Ngroup = swapN[row_indices]
-            meta_sad = Jade::SpecDist(sp_abu)$probability
-            sp_draws = sapply(plot_ids, function(x)
-                              sample(1:length(meta_sad), size=Ngroup[x], 
-                              replace=T, prob=meta_sad))
-            tmp_comm = t(sapply(plot_ids, function(x)
-                         table(c(sp_draws[[x]], 1:length(meta_sad))) - 1 ))
         }
         else 
             stop('The argument swap must be either "noagg" or "swapN"')
+        sp_draws = sapply(plot_ids, function(x)
+            sample(1:length(meta_sad), size=Ngroup[x], 
+                   replace=T, prob=meta_sad))
+        tmp_comm = t(sapply(plot_ids, function(x)
+            table(c(sp_draws[[x]], 1:length(meta_sad))) - 1 ))
         # The following lines are necessary because tmp_comm may have more
         # columns than comm_group_perm
         comm_new = matrix(0, nrow = nrow(comm_group_perm), 
