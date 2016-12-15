@@ -15,6 +15,8 @@ plot_rarefy(mob_out, col = NULL, rare_type = c("SAD", "N", "agg"),
 \item{rare_type}{either 'SAD', 'N', or 'agg', defaults to all three types}
 
 \item{leg_loc}{string that specifies location of the legend}
+
+\item{par_args}{optional argument that sets graphical parameters to set}
 }
 \value{
 plots the individual-based, sample-based, and spatially-explict 

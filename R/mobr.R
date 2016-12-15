@@ -63,6 +63,9 @@ make_mob_in = function(comm, plot_attr, binary=FALSE) {
     return(out)
 }
 
+#' Print a shortened verison of the mob_in object
+#' @keywords internal
+#' @export
 print.mob_in = function(x) {
     cat('Only the first five rows of any matrices are printed\n')
     cat('\n$tests\n')
@@ -75,6 +78,9 @@ print.mob_in = function(x) {
     print(head(x$spat))
 }
 
+#' Print a shortened version of the mob_out object
+#' @keywords internal
+#' @export
 print.mob_out = function(x) {
     cat('Only the first five rows of any matrices are printed\n')
     cat('\n$type\n')
@@ -1084,7 +1090,7 @@ plot_SNpie = function(mob_in, env_var, col = NA) {
 #' @param col optional vector of colors to use
 #' @param rare_type either 'SAD', 'N', or 'agg', defaults to all three types
 #' @param leg_loc string that specifies location of the legend
-#' @inheritParams plot.mobr
+#' @inheritParams plot.mob_out
 #' @return plots the individual-based, sample-based, and spatially-explict 
 #' sample based rarefaction curves
 #' @author Xiao Xiao and Dan McGlinn
@@ -1150,7 +1156,7 @@ plot_rarefy = function(mob_out, col=NULL, rare_type=c('SAD', 'N', 'agg'),
 #' @param trt_group a string that specifies the name of the treatment group  
 #' @param ref_group a string that specifies the name of the reference group
 #' @param display argument specifies what graphics to display can be either
-#'  'rarefaction', 'delta S', or 'd-delta S' defaults to all three options.
+#'  'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.
 #' @param same_scale if TRUE then all three plots have the same range on the 
 #'  y-axis. 
 #' @param par_args optional argument that sets graphical parameters to set
@@ -1229,7 +1235,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
         }
     }
     if ('ddelta S' %in% display) {
-        # Create the plots for the three d-delta S
+        # Create the plots for the three ddelta S
         if ('SAD' %in% mob_out$tests) {
 
         mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
