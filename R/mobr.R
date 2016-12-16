@@ -47,6 +47,11 @@ make_mob_in = function(comm, plot_attr, binary=FALSE) {
         warning("Some species have zero occurrences and will be dropped from the community table")
         comm = comm[, colSums(comm) != 0]
     }
+    if (any(rowSums(comm) == 0)) {
+       warning("Some plots have zero individuals and will be dropped from the community and plot attribute table")
+       plot_attr = plot_attr[rowSums(comm) != 0, ]
+       comm = comm[rowSums(comm) != 0, ]
+    }
     out$comm = data.frame(comm)
     spat_cols = which(names(plot_attr) %in% c('x', 'y'))
     if (length(spat_cols) > 0) {
