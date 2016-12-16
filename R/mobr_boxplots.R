@@ -46,66 +46,118 @@ calc_PIE = function(x) {
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' mob_stats(inv_mob_in)
-mob_stats = function(mob_in, group_var) {
+mob_stats = function(mob_in, group_var, plot = T) {
    group_id  = factor(mob_in$env[, group_var])
    
-   # Sample based statistics
+   # Sample-based statistics
    N_sample = rowSums(mob_in$comm)      # individuals in each sample
    S_sample = rowSums(mob_in$comm > 0) # species in each sample
    
-   # rarefied species richness
-   Nmin_sample = min(N_sample)              # lowest number of individuals in sample
-   S_rare_sample = apply(mob_in$comm, MARGIN = 1,
-                          FUN=function(x){rarefaction(as.numeric(x), method = "indiv", effort = Nmin_sample)})
+   N_min_sample = min(N_sample)
+   if (N_min_sample < 2){
+      warning("The lowest individual number in sampling plots is smaller than 2.
+               In this case there is no meaningful comparison of rarefied richness.")
+   }
    
-   PIE_sample = calc_PIE(mob_in$comm)
+   S_rare_sample = apply(mob_in$comm, MARGIN = 1, FUN = rarefaction,
+                         method = "indiv", effort = N_min)
    
-   # extrapolated species richness - iChao1 estimator for each sample
-   S_ext_sample = rep(NA, nrow(mob_in$comm))    
-   #for (i in 1:nrow(mob_in$comm)) {
-   #    if (sum(mob_in$comm[i, ]) > 4) {
-   #        S = SpadeR::ChaoSpecies(mob_in$comm[i,], datatype = "abundance")
-   #        S_ext_sample[i] = S$Species_table[5,1]
-   #    } 
-   #}
-   # Group based statistics
+   PIE_sample = diversity(mob_in$comm, index = "simpson")
+   ENS_PIE_sample = diversity(mob_in$comm, index = "invsimpson")
+   
+   # bias corrected Chao estimator
+   S_asymp_sample = estimateR(mob_in$comm)["S.chao1",]
    
    # abundance distribution pooled in group
-   abund_group = by(mob_in$comm, group_id, function(x) colSums(x) )
+   abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")[ ,-1]
    
-   N_group     = sapply(abund_group, sum)
-   S_group     = sapply(abund_group, function(x) sum(x > 0))
+   # Group-based statistics
+   N_group = rowSums(abund_group)      
+   S_group = rowSums(abund_group > 0) 
    
-   Nmin_group = min(N_group) 
-   S_rare_group = sapply(abund_group, function(x)
-                         rarefaction(as.numeric(x), method = "indiv",
-                                     effort = Nmin_group))
+   N_min_group = min(N_group)
+   if (N_min_group < 2){
+      warning("The lowest individual number in groups is smaller than 2. 
+               In this case there is no meaningful comparison of rarefied richness.")
+   }
    
-   PIE_group   = sapply(abund_group, calc_PIE)
+   S_rare_group = apply(abund_group, MARGIN = 1, FUN = rarefaction,
+                        method = "indiv", effort = N_min_group)
    
-   # calculate Chao estimator of species richness using JADE
-   S_ext_group = NA
-   #S_ext_group = sapply(abund_group, function(x) 
-   #                      ChaoSpecies(x, datatype = "abundance")$Species_table[5,])
+   PIE_group = diversity(abund_group, index = "simpson")
+   ENS_PIE_group = diversity(abund_group, index = "invsimpson")
+   
+   # bias corrected Chao estimator
+   S_asymp_group = estimateR(abund_group)["S.chao1",]
+   
+   #beta PIE
    betaPIE_sample = PIE_group[group_id] - PIE_sample
    
-   stats_samples = data.frame(group   = group_id,
-                               N       = N_sample,
-                               S       = S_sample,
-                               S_rare  = S_rare_sample,
-#                               S_ext   = S_ext_sample,
-                               PIE     = PIE_sample,
-                               betaPIE = betaPIE_sample
-                               )
+   if (plot == T){
+      #windows(10,6)
+      op = par(mfcol = c(3,5), las = 1, font.main = 1)
+      
+      # PIE
+      par(fig = c(0.2, 0.4, 0.66, 1))
+      boxplot(PIE_sample ~ group_id, main = "PIE")
+      
+      par(fig = c(0.4, 0.6, 0.66, 1), new = T)
+      boxplot(betaPIE_sample ~ group_id, main = "beta-PIE")
+      
+      par(fig = c(0.6, 0.8, 0.66, 1), new = T)
+      boxplot(PIE_group ~ levels(group_id), main = "PIE", boxwex = 0)
+      points(PIE_group, pch =19)
+      
+      # S observed samples
+      par(fig = c(0, 0.2, 0.33, 0.66), new = T)
+      boxplot(S_sample ~ group_id, main = "S obs")
+      
+      # N samples
+      par(fig = c(0.2, 0.4, 0.33, 0.66), new = T)
+      boxplot(N_sample ~ group_id, main = "N")
+      
+      # N groups
+      par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
+      boxplot(N_group ~ levels(group_id), main = "N", boxwex = 0)
+      points(N_group, pch = 19)
+      
+      # S groups
+      par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
+      boxplot(S_group ~ levels(group_id), main = "S obs", boxwex = 0)
+      points(S_group, pch = 19)
+      
+      # S asymptotic
+      par(fig = c(0.2, 0.4, 0, 0.33), new = T)
+      boxplot(S_asymp_sample ~ group_id, main = "asymptotic S")
+      
+      par(fig = c(0.6, 0.8, 0, 0.33), new = T)
+      boxplot(S_asymp_group ~ levels(group_id), main = "asymptotic S", boxwex = 0)
+      points(S_asymp_group, pch =19)
+      
+      
+      
+      
+      
+   }
    
-   stats_groups = data.frame(group  = factor(levels(group_id), levels = levels(group_id), ordered = is.ordered(group_id)),
-                              N      = N_group,
-                              S      = S_group,
-                              S_rare = S_rare_group,
-#                              S_ext_mean  = S_ext_group[1,],
-#                              S_ext_CIlow = S_ext_group[3,],
-#                              S_ext_CIup  = S_ext_group[4,],
-                              PIE    = PIE_group)
+   stats_samples = data.frame(group   = group_id,
+                              N       = N_sample,
+                              S       = S_sample,
+                              S_rare  = S_rare_sample,
+                              S_asymp = S_asymp_sample,
+                              PIE     = PIE_sample,
+                              ENS_PIE = ENS_PIE_sample,
+                              betaPIE = betaPIE_sample
+                              )
+   
+   stats_groups = data.frame(group  = factor(levels(group_id), ordered = is.ordered(group_id)),
+                             N      = N_group,
+                             S      = S_group,
+                             S_rare = S_rare_group,
+                             S_asymp = S_asymp_group,
+                             PIE    = PIE_group,
+                             ENS_PIE = ENS_PIE_group
+                             )
    
    return(list(samples = stats_samples,
                groups  = stats_groups))
