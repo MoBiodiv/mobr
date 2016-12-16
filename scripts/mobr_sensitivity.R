@@ -1,11 +1,7 @@
 # Sensitivity test for Mobr functions
 # using Felix May's MoBspatial package
-.libPaths(c(.libPaths(), "C:/Users/Xiao/Documents/R/win-library/3.2"))
-
 library(MoBspatial)
-source('C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\R\\mobr.R')
-#library(mobr) # This doesn't work at the moment; will have to wait until the mobr package is built
-
+library(mobr)
 # Generate an SAD from a poisson lognormal distribution with fixed S, N, and parameters
 # This function is copied and modified from the one in MoBspatial for our purpose
 # The set.seed steps ensure that the underlying distribution remains completely
@@ -127,7 +123,7 @@ sim_comm_multi_pars = function(S, N, cv, sigma, sqrt_numplots){
     names(env) = c('S', 'N', 'cv', 'sigma')
     for (icol in 1:ncol(env))
         env[, icol] = as.numeric(env[, icol])
-    comm_obj = make_comm_obj(comm, cbind(coords, env))
+    comm_obj = make_mob_in(comm, cbind(coords, env))
     return(comm_obj)
 }
 
@@ -182,7 +178,7 @@ comp_two_groups = function(ref_pars, comp_pars, sqrt_numplots, Niter){
     return(c(new_par_val, eval_counts))
 }
 
-Niter = 50 # Repeat simulation Niter times
+Niter = 500 # Repeat simulation Niter times
 sqrt_numplots = 4 # Each group divided into 4*4 = 16 plots
 results = data.frame(matrix(NA, nrow = 0, ncol = 9))
 ref_pars = c(100, 1000, 2, 10) # This is the reference to which all other cases will be compared
@@ -202,8 +198,6 @@ for (i in 1:length(par_list)){
       comp_pars[i + 1] = pars[j]
       out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
       results = rbind(results, out)
-      write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
-                row.names = F, quote = F)
    }
 }
 
@@ -216,12 +210,11 @@ for (i in 2:length(comp_pars_full)){
    comp_pars[i] = ref_pars[i]
    out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
    results = rbind(results, out)
-   write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
-             row.names = F, quote = F)
 }
 
 # Scenario where all three aspects have changed
 out = comp_two_groups(ref_pars, comp_pars_full, sqrt_numplots, Niter)
 results = rbind(results, out)
+
 write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
           row.names = F, quote = F)
