@@ -247,7 +247,7 @@ deltaS_N = function(comm, ref_dens, inds){
     # using the ref_density (i.e., not the observed density)
     rescaled_effort = round(1:nplots * ref_dens)
     # No extrapolation of the rescaled rarefaction curve, only interpolation
-    interp_S_samp = pchip(c(1, rescaled_effort), c(1, S_samp), inds[inds <= max(rescaled_effort)])
+    interp_S_samp = pracma::pchip(c(1, rescaled_effort), c(1, S_samp), inds[inds <= max(rescaled_effort)])
     # Ensure that interp_S_samp has the right length (filled with NA's if needed)
     interp_S_samp = interp_S_samp[1:length(inds)]
     S_indiv = rarefaction(comm, 'indiv', inds)
@@ -840,6 +840,7 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
     out$type = type
     out$tests = approved_tests
     out$log_scale = log_scale
+    out$density_stat = list(density_stat = density_stat, plot_dens = plot_dens)
     ind_rare = data.frame(apply(group_sad, 1, function(x) 
         rarefaction(x, 'indiv', ind_sample_size)))
     out$indiv_rare = cbind(ind_sample_size, ind_rare)
@@ -904,7 +905,7 @@ table_effect_on_S = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
   }
   for (row in c(1, 4)) {
     deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
-    out_row = pchip(xi=(0:length(deltaS)) * avg_dens, yi=c(0, deltaS), 
+    out_row = pracma::pchip(xi=(0:length(deltaS)) * avg_dens, yi=c(0, deltaS), 
                     x=10^(1:min(max_level, floor(log10(length(deltaS) * avg_dens)))))
     out[row, 1:length(out_row)] = out_row
   }
@@ -1243,6 +1244,9 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     }
     if ('ddelta S' %in% display) {
         # Create the plots for the three ddelta S
+         ylim_ddelta = range(lapply(mob_out[tests], function(x)
+                              lapply(x[ , -(1:2)], function(y)
+                                     as.numeric(as.character(y)))))
         if ('SAD' %in% mob_out$tests) {
             mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
                                        as.numeric(as.character(x))) 
@@ -1301,6 +1305,66 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     }
  
 }
+
+
+#' Plot stacked area curves for richness effects
+#' @param stretch boolean whether or not to rescale individuals
+#'  such the maximum number of individuals is at the scale of 
+#'  the maximum number of samples
+#' @parma common_scale boolean
+#' @inheritParams plot.mob_out
+#' @importFrom pracma pchip
+#' @export
+#' @examples 
+#' data(inv_comm)
+#' data(inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+#'                               type='discrete', log_scale=TRUE, nperm=2)
+#' plot_stack(inv_mob_out, 'invaded')
+plot_stack = function(mob_out, trt_group, stretch=TRUE,
+                      common_scale=FALSE) {
+    tests = mob_out$tests
+    SAD = data.frame(type='SAD', 
+                    mob_out$SAD[mob_out$SAD$group == trt_group, 
+                                c('effort_ind', 'deltaS_emp')])
+    N = data.frame(type='N', 
+                   mob_out$N[mob_out$N$group == trt_group,
+                             c('effort_sample', 'ddeltaS_emp')])
+    agg = data.frame(type='agg',
+                     mob_out$agg[mob_out$agg$group == trt_group,
+                                 c('effort_sample', 'ddeltaS_emp')])
+    names(SAD) = names(N) = names(agg) =  c('type', 'effort', 'effect')
+    if (stretch) {
+        virt_effort = seq(min(SAD$effort), max(SAD$effort),
+                          length.out = length(agg$effort))
+        effort = agg$effort
+    } else {
+        N_plots = max(agg$effort)
+        N_indiv = max(SAD$effort)
+        plot_dens = mob_out$density_stat$plot_dens
+        effort = min(agg$effort):round(N_indiv / N_plots)
+        virt_effort = effort * plot_dens
+    }
+    SAD_interp = pracma::pchip(SAD$effort, SAD$effect, virt_effort)
+    N_interp = pracma::pchip(N$effort, N$effect, virt_effort)
+    SAD = data.frame(type='SAD', effort, effect=SAD_interp)
+    N = data.frame(type='N', effort=effort, effect=N_interp)
+    dat = rbind(SAD, N, agg)
+    dat$abs_effect = abs(dat$effect)
+    if (common_scale)
+        dat = subset(dat , effort <= max(dat$effort[dat$type == 'SAD']))
+    if (stretch)
+        ggplot2::ggplot(dat, aes(x=effort, y=abs_effect, fill=type)) + 
+                 geom_area() + xlab('Number of Samples') + 
+                 ylab('abs(difference in richness)')
+    else
+        ggplot2::ggplot(dat[order(dat$type, decreasing=T),],
+                        aes(x=effort, y=abs_effect, fill=type)) + 
+                 geom_area() + xlab('Number of Samples') + 
+                 ylab('abs(difference in richness)')
+}
+  
 
 #' Plot the relationship between the number of plots and the number of
 #' inviduals
