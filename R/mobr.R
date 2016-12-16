@@ -1087,6 +1087,8 @@ plot_SNpie = function(mob_in, env_var, col = NA) {
 #' @param mob_out a mob_out class object
 #' @param trt_group a string that specifies the name of the treatment group  
 #' @param ref_group a string that specifies the name of the reference group
+#' @param same_scale a boolean if TRUE then the y-axis of the rarefaction and 
+#'  ddelta S plots are scaled identically accross the tested effects
 #' @param display argument specifies what graphics to display can be either
 #'  'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.
 #' @param same_scale if TRUE then all three plots have the same range on the 
@@ -1105,11 +1107,11 @@ plot_SNpie = function(mob_in, env_var, col = NA) {
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
-plot.mob_out = function(mob_out, trt_group, ref_group,
-                        same_scale=FALSE, 
+plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE, 
                         display=c('rarefaction', 'delta S', 'ddelta S'),
                         par_args=NULL) {
     type = mob_out$type
+    tests = mob_out$tests
     if (type == 'continuous')
         stop("Currently this plot only works for mob_out object with type discrete.")
     cols = c('red', 'blue')
@@ -1117,18 +1119,24 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
     ddeltaS_col = 'magenta'
     if (is.null(par_args)) {
         par_args = paste('mfrow = c(', length(display), ',',
-                         length(mob_out$tests), ')',  sep='')
+                         length(tests), ')',  sep='')
     } 
     eval(parse(text=paste('par(', par_args, ')')))
-    if (same_scale)
-        ylim = range(lapply(mob_out[c('SAD', 'N', 'agg')], function(x)
-                            lapply(x[ , -(1:2)], function(y)
-                                   as.numeric(as.character(y)))))
+    if (same_scale) {
+        # not currently implemented for the delta S plots
+        if ('rarefaction' %in% display)
+            ylim_rare = range(list(mob_out$indiv_rare[ , -1],
+                                   mob_out$sample_rare[, c('impl_S', 'expl_S')]))
+        if ('ddelta S' %in% display)
+            ylim_ddelta = range(lapply(mob_out[tests], function(x)
+                                       lapply(x[ , -(1:2)], function(y)
+                                              as.numeric(as.character(y)))))
+        
+    }
     if (mob_out$log_scale) {
         plot_log = 'x'
         xmin = 1
-    }
-    else {
+    } else {
         plot_log = ''
         xmin = 0
     }
@@ -1139,6 +1147,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
     if ('rarefaction' %in% display) {
         groups = c(trt_group, ref_group)
         if ('SAD' %in% mob_out$tests) {
+            if (!same_scale)
+                ylim_rare = range(mob_out$indiv_rare[, -1])
             for (icol in 2:ncol(mob_out$indiv_rare)){
                 if (icol == 2)
                     plot(mob_out$indiv_rare$sample, mob_out$indiv_rare[, icol],
@@ -1146,7 +1156,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
                          xlab = 'Number of individuals', ylab = 'Richness (S)',
                          main = 'Individual', 
                          xlim = c(xmin, max(mob_out$indiv_rare$sample)),
-                         ylim = range(mob_out$indiv_rare[, -1]),
+                         ylim = ylim_rare,
                          cex.axis = 1.5, cex.lab = 1.5, log=plot_log)
                else
                     lines(mob_out$indiv_rare$sample, 
@@ -1156,6 +1166,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
             legend('topleft', as.character(groups), col=cols, lty=1, lwd=2, bty='n')
         }
         if ('N' %in% mob_out$tests) {
+            if (!same_scale)
+                ylim_rare = c(0, max(mob_out$sample_rare$impl_S))
             for (i in 1:length(groups)){
                 group = groups[i]
                 dat_group = mob_out$sample_rare[mob_out$sample_rare$group == group, ]
@@ -1164,7 +1176,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
                          lwd = 2, type = 'l', xlab = 'Number of plots',
                          ylab = 'Richness (S)', col = cols[i], 
                          xlim = c(xmin, max(dat_group$sample_plot)),
-                         ylim = c(0, max(mob_out$sample_rare$impl_S)),
+                         ylim = ylim_rare,
                          main = 'Sample', cex.axis = 1.5, cex.lab = 1.5,
                          log=plot_log)
                else
@@ -1173,6 +1185,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
             }
         }
         if ('agg' %in% mob_out$tests) {
+            if (!same_scale)
+                ylim_rare = c(0, max(mob_out$sample_rare$expl_S))
             for (i in 1:length(groups)){
                 group = groups[i]
                 dat_group = mob_out$sample_rare[mob_out$sample_rare$group == group, ]
@@ -1181,7 +1195,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
                          type = 'l', xlab = 'Number of plots',
                          ylab = 'Richness (S)', col = cols[i],
                          xlim = c(xmin, max(dat_group$sample_plot)),
-                         ylim = c(0, max(mob_out$sample_rare$expl_S)),
+                         ylim = ylim_rare,
                          main = 'Spatial', cex.axis = 1.5, cex.lab = 1.5,
                          log=plot_log)
                 else
@@ -1230,22 +1244,21 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
     if ('ddelta S' %in% display) {
         # Create the plots for the three ddelta S
         if ('SAD' %in% mob_out$tests) {
-
-        mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
-                                   as.numeric(as.character(x))) 
-        delta_Sind = mob_out$SAD[which(as.character(mob_out$SAD$group) == as.character(trt_group)), ]
-        if (!same_scale)
-            ylim = range(delta_Sind[ , -(1:2)])
-        plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
-             ylim = ylim, log=plot_log,
-             cex.axis = 1.5, cex.lab = 1.5, type = 'n',
-             xlab = 'Number of individuals', ylab = 'Change in S due to SAD')
-        polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
-                c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
-                col = '#C1CDCD', border = NA)
-        abline(h = 0, lwd = 2, lty = 2)
-        lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
-              lwd = 2, col = ddeltaS_col)
+            mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
+                                       as.numeric(as.character(x))) 
+            delta_Sind = mob_out$SAD[which(as.character(mob_out$SAD$group) == as.character(trt_group)), ]
+            if (!same_scale)
+                ylim = range(delta_Sind[ , -(1:2)])
+            plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
+                 ylim = ylim_ddelta, log=plot_log,
+                 cex.axis = 1.5, cex.lab = 1.5, type = 'n',
+                 xlab = 'Number of individuals', ylab = 'Change in S due to SAD')
+            polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
+                    c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
+                    col = '#C1CDCD', border = NA)
+            abline(h = 0, lwd = 2, lty = 2)
+            lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
+                  lwd = 2, col = ddeltaS_col)
         }
         if ('N' %in% mob_out$tests) {
             mob_out$N[, -1] = lapply(mob_out$N[, -1], function(x)
@@ -1254,7 +1267,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
             if (!same_scale)
                 ylim = range(ddelta_Ssample[ , -(1:2)])
             plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
-                 ylim = ylim, log=plot_log,
+                 ylim = ylim_ddelta, log=plot_log,
                  cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
                  xlab = 'Number of individuals', ylab = 'Change in S due to density')
             polygon(c(ddelta_Ssample$effort_sample, 
@@ -1273,7 +1286,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group,
             if (!same_scale)
                 ylim = range(ddelta_Sspat[ , -(1:2)])
             plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
-                 ylim = ylim, log='',
+                 ylim = ylim_ddelta, log='',
                  cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
                  xlab = 'Number of plots', ylab = 'Change in S due to aggregation')
             polygon(c(ddelta_Sspat$effort_sample,
