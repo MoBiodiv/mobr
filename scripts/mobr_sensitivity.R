@@ -163,7 +163,7 @@ comp_two_groups = function(ref_pars, comp_pars, sqrt_numplots, Niter){
         effects = c('SAD', 'N', 'agg')
         for (k in 1:length(effects)){
             effect = effects[k]
-            focal_dat = mobr$discrete[[effect]]
+            focal_dat = mobr[[effect]]
             focal_dat = focal_dat[complete.cases(focal_dat), ]
             if (k == 3) start = 1 # Ignore first row (n = 1) for SAD and N
             else start = 2
