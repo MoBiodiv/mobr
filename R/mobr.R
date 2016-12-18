@@ -1308,10 +1308,13 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 
 
 #' Plot stacked area curves for richness effects
+#' @param prop boolean if TRUE then propotions are used rather than
+#'   raw values
 #' @param stretch boolean whether or not to rescale individuals
 #'  such the maximum number of individuals is at the scale of 
 #'  the maximum number of samples
-#' @parma common_scale boolean
+#' @param common_scale boolean
+#' @param cols colors to use for the areas
 #' @inheritParams plot.mob_out
 #' @importFrom pracma pchip
 #' @export
@@ -1321,9 +1324,11 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                               type='discrete', log_scale=TRUE, nperm=2)
-#' plot_stack(inv_mob_out, 'invaded')
-plot_stack = function(mob_out, trt_group, stretch=TRUE,
-                      common_scale=FALSE) {
+#' stack_effects(inv_mob_out, 'invaded')
+#' stack_effects(inv_mob_out, 'invaded', prop=TRUE)
+stack_effects = function(mob_out, trt_group, prop=FALSE,
+                         stretch=TRUE, common_scale=FALSE, 
+                         cols=c('orange', 'skyblue1', 'firebrick1')) {
     tests = mob_out$tests
     SAD = data.frame(type='SAD', 
                     mob_out$SAD[mob_out$SAD$group == trt_group, 
@@ -1352,19 +1357,33 @@ plot_stack = function(mob_out, trt_group, stretch=TRUE,
     N = data.frame(type='N', effort=effort, effect=N_interp)
     dat = rbind(SAD, N, agg)
     dat$abs_effect = abs(dat$effect)
+    if (prop) {
+        props = unlist(tapply(dat$abs_effect, dat$effort,
+                              function(x) x / sum(x)))
+        dat = data.frame(type = rep(c('SAD', 'N', 'agg'), 
+                                    times=length(effort)),
+                          effort = rep(effort, each=3),
+                          abs_effect = props)
+        ylim = c(0, 1)
+    } else {
+        ylim = NULL
+    }
     if (common_scale)
         dat = subset(dat , effort <= max(dat$effort[dat$type == 'SAD']))
-    if (stretch)
-        ggplot2::ggplot(dat, aes(x=effort, y=abs_effect, fill=type)) + 
-                 geom_area() + xlab('Number of Samples') + 
-                 ylab('abs(difference in richness)')
-    else
-        ggplot2::ggplot(dat[order(dat$type, decreasing=T),],
-                        aes(x=effort, y=abs_effect, fill=type)) + 
-                 geom_area() + xlab('Number of Samples') + 
-                 ylab('abs(difference in richness)')
+    plotStacked(unique(dat$effort),
+                data.frame(dat$abs_effect[dat$type == 'SAD'],
+                           dat$abs_effect[dat$type == 'N'],
+                           dat$abs_effect[dat$type == 'agg']),
+                xlab = 'Number of Samples',
+                ylab = 'abs(difference in richness)',
+                col = cols, border=NA,
+                frame.plot=F, ylim=ylim)
+    ticks = axTicks(side=3)
+    n_indices = round(seq(1, length(virt_effort), 
+                          length.out=length(ticks)))
+    axis(side=3, at=effort[n_indices], 
+         labels=round(virt_effort[n_indices]))
 }
-  
 
 #' Plot the relationship between the number of plots and the number of
 #' inviduals
@@ -1386,4 +1405,74 @@ plot_N = function(comm, nperm=1000) {
     plot(N_sum, xlab='Number of plots', ylab='Number of Individuals')
     abline(a=0, b=plot_dens, col='red')
     legend('topleft', 'Expected line', lty=1, bty='n', col='red')
+}
+
+#' @title Stacked plot by Marc Taylor (@marchtaylor on gitHub)
+#' @description \code{plotStacked} makes a stacked plot where each \code{y} 
+#' series is plotted on top of each other using filled polygons.
+#' @param x A vector of values
+#' @param y A matrix of data series (columns) corresponding to x
+#' @param order.method Method of ordering y plotting order. One of the 
+#'   following: \code{c("as.is", "max", "first")}. \code{"as.is"} - plot in 
+#'   order of y column. \code{"max"} - plot in order of when each y series 
+#'   reaches maximum value. \code{"first"} - plot in order of when each y series
+#'   first value > 0.
+#' @param col Fill colors for polygons corresponding to y columns (will recycle).
+#' @param border Border colors for polygons corresponding to y columns (will recycle) (see ?polygon for details)
+#' @param lwd Border line width for polygons corresponding to y columns (will recycle)
+#' @param xlab x-axis labels
+#' @param ylab y-axis labels
+#' @param ylim y-axis limits. If \code{ylim=NULL}, defaults to \code{c(0, 1.2*max(apply(y,1,sum)}.
+#' @param ... Other plot arguments
+#' 
+#' @importFrom graphics plot polygon par
+#' @importFrom grDevices rainbow 
+#' @keywords internal
+plotStacked <- function(
+	x, y, 
+	order.method="as.is",
+	ylab="", xlab="", 
+	border = NULL, lwd=1, 
+	col=rainbow(length(y[1,])),
+	ylim=NULL,
+	...
+){
+
+	if(sum(y < 0) > 0) stop("y cannot contain negative numbers")
+
+	if(is.null(border)) border <- par("fg")
+	border <- as.vector(matrix(border, nrow=ncol(y), ncol=1))
+	col <- as.vector(matrix(col, nrow=ncol(y), ncol=1))
+	lwd <- as.vector(matrix(lwd, nrow=ncol(y), ncol=1))
+
+  if(is.null(ylim)) ylim=c(0, 1.2*max(apply(y,1,sum)))
+  
+	if(order.method == "max") {
+		ord <- order(apply(y, 2, which.max))
+		y <- y[, ord]
+		col <- col[ord]
+		border <- border[ord]
+	}
+
+	if(order.method == "first") {
+		ord <- order(apply(y, 2, function(x) min(which(x>0))))
+		y <- y[, ord]
+		col <- col[ord]
+		border <- border[ord]
+	}
+
+	top.old <- x*0
+	polys <- vector(mode="list", ncol(y))
+	for(i in seq(polys)){
+		top.new <- top.old + y[,i]
+		polys[[i]] <- list(x=c(x, rev(x)), y=c(top.old, rev(top.new)))
+		top.old <- top.new
+	}
+
+	if(is.null(ylim)) ylim <- range(sapply(polys, function(x) range(x$y, na.rm=TRUE)), na.rm=TRUE)
+	plot(x,y[,1], ylab=ylab, xlab=xlab, ylim=ylim, t="n", ...)
+	for(i in seq(polys)){
+		polygon(polys[[i]], border=border[i], col=col[i], lwd=lwd[i])
+	}
+
 }
