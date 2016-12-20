@@ -46,29 +46,45 @@ calc_PIE = function(x) {
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' mob_stats(inv_mob_in)
-mob_stats = function(mob_in, group_var, plot = T, nperm = 1000) {
+mob_stats = function(mob_in, group_var, plot = T, n_min = 10, nperm = 100) {
    
    group_id  = factor(mob_in$env[, group_var])
    
    # Sample-based statistics
    N_sample = rowSums(mob_in$comm)      # individuals in each sample
-   S_sample = rowSums(mob_in$comm > 0) # species in each sample
+   S_sample = rowSums(mob_in$comm > 0)  # species in each sample
    
-   N_min_sample = min(N_sample)
-   if (N_min_sample < 2){
-      warning("The lowest individual number in sampling plots is smaller than 2.
-               In this case there is no meaningful comparison of rarefied richness.")
+   # rarefied richness
+   N_min_sample = max(n_min, min(N_sample))
+   plots_low_n = N_sample < n_min
+   
+   if (sum(plots_low_n) > 0){
+      warning(paste("There are",sum(plots_low_n),"plots with less then", n_min,"individuals.
+These are removed for the calculation of rarefied richness."))
    }
+
+   S_rare_sample = rep(NA, nrow(mob_in$comm))
+   S_rare_sample[!plots_low_n] = apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
+                                       FUN = rarefaction, method = "indiv",
+                                       effort = N_min_sample)
    
-   S_rare_sample = apply(mob_in$comm, MARGIN = 1, FUN = rarefaction,
-                         method = "indiv", effort = N_min_sample)
+   # Probability of Interspecific Encounter
+   plots_n0 = N_sample == 0
+   
+   if (sum(plots_n0) > 0){
+      warning(paste("There are",sum(plots_n0), "plots without any individuals.
+These are removed for the calculation of PIE."))
+   }
    
    PIE_sample = diversity(mob_in$comm, index = "simpson")
    ENS_PIE_sample = diversity(mob_in$comm, index = "invsimpson")
+   PIE_sample[plots_n0] = NA
+   ENS_PIE_sample[plots_n0] = NA
    
    # bias corrected Chao estimator
    S_asymp_sample = estimateR(mob_in$comm)["S.chao1",]
-   
+ 
+   # ---------------------------------------------------------------------------
    # abundance distribution pooled in group
    abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")[ ,-1]
    
@@ -76,17 +92,31 @@ mob_stats = function(mob_in, group_var, plot = T, nperm = 1000) {
    N_group = rowSums(abund_group)      
    S_group = rowSums(abund_group > 0) 
    
-   N_min_group = min(N_group)
-   if (N_min_group < 2){
-      warning("The lowest individual number in groups is smaller than 2. 
-               In this case there is no meaningful comparison of rarefied richness.")
+   N_min_group = max(n_min, min(N_group))
+   groups_low_n = N_group < n_min
+   
+   if (sum(groups_low_n) > 0){
+      warning(paste("There are",sum(plots_low_n),"groups with less then", n_min,"individuals.
+These are removed for the calculation of rarefied richness."))
    }
    
-   S_rare_group = apply(abund_group, MARGIN = 1, FUN = rarefaction,
-                        method = "indiv", effort = N_min_group)
+   S_rare_group = rep(NA, length(N_group))
+   S_rare_group[!groups_low_n] = apply(abund_group[!groups_low_n], MARGIN = 1,
+                                       FUN = rarefaction, method = "indiv",
+                                       effort = N_min_group)
+   
+   # Probability of Interspecific Encounter
+   groups_n0 = N_group == 0
+   
+   if (sum(groups_n0) > 0){
+      warning(paste("There are",sum(groups_n0), "groups without any individuals.
+                    These are removed for the calculation of PIE."))
+   }
    
    PIE_group = diversity(abund_group, index = "simpson")
    ENS_PIE_group = diversity(abund_group, index = "invsimpson")
+   PIE_group[groups_n0] = NA
+   ENS_PIE_group[groups_n0] = NA
    
    # bias corrected Chao estimator
    S_asymp_group = estimateR(abund_group)["S.chao1",]
