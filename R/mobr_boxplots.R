@@ -46,28 +46,45 @@ calc_PIE = function(x) {
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' mob_stats(inv_mob_in)
-mob_stats = function(mob_in, group_var, plot = T) {
+mob_stats = function(mob_in, group_var, plot = T, n_min = 10, nperm = 100) {
+   
    group_id  = factor(mob_in$env[, group_var])
    
    # Sample-based statistics
    N_sample = rowSums(mob_in$comm)      # individuals in each sample
-   S_sample = rowSums(mob_in$comm > 0) # species in each sample
+   S_sample = rowSums(mob_in$comm > 0)  # species in each sample
    
-   N_min_sample = min(N_sample)
-   if (N_min_sample < 2){
-      warning("The lowest individual number in sampling plots is smaller than 2.
-               In this case there is no meaningful comparison of rarefied richness.")
+   # rarefied richness
+   N_min_sample = max(n_min, min(N_sample))
+   plots_low_n = N_sample < n_min
+   
+   if (sum(plots_low_n) > 0){
+      warning(paste("There are",sum(plots_low_n),"plots with less then", n_min,"individuals.
+These are removed for the calculation of rarefied richness."))
    }
+
+   S_rare_sample = rep(NA, nrow(mob_in$comm))
+   S_rare_sample[!plots_low_n] = apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
+                                       FUN = rarefaction, method = "indiv",
+                                       effort = N_min_sample)
    
-   S_rare_sample = apply(mob_in$comm, MARGIN = 1, FUN = rarefaction,
-                         method = "indiv", effort = N_min)
+   # Probability of Interspecific Encounter
+   plots_n0 = N_sample == 0
+   
+   if (sum(plots_n0) > 0){
+      warning(paste("There are",sum(plots_n0), "plots without any individuals.
+These are removed for the calculation of PIE."))
+   }
    
    PIE_sample = diversity(mob_in$comm, index = "simpson")
    ENS_PIE_sample = diversity(mob_in$comm, index = "invsimpson")
+   PIE_sample[plots_n0] = NA
+   ENS_PIE_sample[plots_n0] = NA
    
    # bias corrected Chao estimator
    S_asymp_sample = estimateR(mob_in$comm)["S.chao1",]
-   
+ 
+   # ---------------------------------------------------------------------------
    # abundance distribution pooled in group
    abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")[ ,-1]
    
@@ -75,17 +92,31 @@ mob_stats = function(mob_in, group_var, plot = T) {
    N_group = rowSums(abund_group)      
    S_group = rowSums(abund_group > 0) 
    
-   N_min_group = min(N_group)
-   if (N_min_group < 2){
-      warning("The lowest individual number in groups is smaller than 2. 
-               In this case there is no meaningful comparison of rarefied richness.")
+   N_min_group = max(n_min, min(N_group))
+   groups_low_n = N_group < n_min
+   
+   if (sum(groups_low_n) > 0){
+      warning(paste("There are",sum(plots_low_n),"groups with less then", n_min,"individuals.
+These are removed for the calculation of rarefied richness."))
    }
    
-   S_rare_group = apply(abund_group, MARGIN = 1, FUN = rarefaction,
-                        method = "indiv", effort = N_min_group)
+   S_rare_group = rep(NA, length(N_group))
+   S_rare_group[!groups_low_n] = apply(abund_group[!groups_low_n], MARGIN = 1,
+                                       FUN = rarefaction, method = "indiv",
+                                       effort = N_min_group)
+   
+   # Probability of Interspecific Encounter
+   groups_n0 = N_group == 0
+   
+   if (sum(groups_n0) > 0){
+      warning(paste("There are",sum(groups_n0), "groups without any individuals.
+                    These are removed for the calculation of PIE."))
+   }
    
    PIE_group = diversity(abund_group, index = "simpson")
    ENS_PIE_group = diversity(abund_group, index = "invsimpson")
+   PIE_group[groups_n0] = NA
+   ENS_PIE_group[groups_n0] = NA
    
    # bias corrected Chao estimator
    S_asymp_group = estimateR(abund_group)["S.chao1",]
@@ -93,16 +124,56 @@ mob_stats = function(mob_in, group_var, plot = T) {
    #beta PIE
    betaPIE_sample = PIE_group[group_id] - PIE_sample
    
+   # permutation test for differences among samples
+   F_obs <- data.frame(S       = anova(lm(S_sample ~ group_id))$F[1],
+                       N       = anova(lm(N_sample ~ group_id))$F[1],
+                       S_rare  = anova(lm(S_rare_sample ~ group_id))$F[1],
+                       PIE     = anova(lm(PIE_sample ~ group_id))$F[1],
+                       ENS_PIE = anova(lm(ENS_PIE_sample ~ group_id))$F[1],
+                       S_asymp = anova(lm(S_asymp_sample ~ group_id))$F[1],
+                       betaPIE = anova(lm(betaPIE_sample ~ group_id))$F[1]
+                      )
+   
+   F_rand <- data.frame(S       = numeric(nperm),
+                        N       = numeric(nperm),
+                        S_rare  = numeric(nperm),
+                        PIE     = numeric(nperm),
+                        ENS_PIE = numeric(nperm),
+                        S_asymp = numeric(nperm),
+                        betaPIE = numeric(nperm)
+                        )
+   
+   for (i in 1:nperm){
+      group_id_rand     = sample(group_id)
+      F_rand$S[i]       = anova(lm(S_sample ~ group_id_rand))$F[1]
+      F_rand$N[i]       = anova(lm(N_sample ~ group_id_rand))$F[1]
+      F_rand$S_rare[i]  = anova(lm(S_rare_sample ~ group_id_rand))$F[1]
+      F_rand$PIE[i]     = anova(lm(PIE_sample ~ group_id_rand))$F[1]
+      F_rand$ENS_PIE[i] = anova(lm(ENS_PIE_sample ~ group_id_rand))$F[1]
+      F_rand$S_asymp[i] = anova(lm(S_asymp_sample ~ group_id_rand))$F[1]
+      F_rand$betaPIE[i] = anova(lm(betaPIE_sample ~ group_id_rand))$F[1]
+   }
+   
+   p_S       = sum(F_obs$S       < F_rand$S)/nperm
+   p_N       = sum(F_obs$N       < F_rand$N)/nperm
+   p_S_rare  = sum(F_obs$S_rare  < F_rand$S_rare)/nperm
+   p_PIE     = sum(F_obs$PIE     < F_rand$PIE)/nperm
+   p_ENS_PIE = sum(F_obs$ENS_PIE < F_rand$ENS_PIE)/nperm
+   p_S_asymp = sum(F_obs$S_asymp < F_rand$S_asymp)/nperm
+   p_betaPIE = sum(F_obs$betaPIE < F_rand$betaPIE)/nperm
+   
    if (plot == T){
       #windows(10,6)
       op = par(mfcol = c(3,5), las = 1, font.main = 1)
       
       # PIE
       par(fig = c(0.2, 0.4, 0.66, 1))
-      boxplot(PIE_sample ~ group_id, main = "PIE")
+      panel_title = paste("PIE (p = ", p_PIE,")", sep = "")
+      boxplot(PIE_sample ~ group_id, main = panel_title)
       
       par(fig = c(0.4, 0.6, 0.66, 1), new = T)
-      boxplot(betaPIE_sample ~ group_id, main = "beta-PIE")
+      panel_title = paste("beta PIE (p = ", p_betaPIE,")", sep = "")
+      boxplot(betaPIE_sample ~ group_id, main = panel_title)
       
       par(fig = c(0.6, 0.8, 0.66, 1), new = T)
       boxplot(PIE_group ~ levels(group_id), main = "PIE", boxwex = 0)
@@ -110,11 +181,13 @@ mob_stats = function(mob_in, group_var, plot = T) {
       
       # S observed samples
       par(fig = c(0, 0.2, 0.33, 0.66), new = T)
-      boxplot(S_sample ~ group_id, main = "S obs")
+      panel_title = paste("S (p = ", p_S,")", sep = "")
+      boxplot(S_sample ~ group_id, main = panel_title)
       
       # N samples
       par(fig = c(0.2, 0.4, 0.33, 0.66), new = T)
-      boxplot(N_sample ~ group_id, main = "N")
+      panel_title = paste("N (p = ", p_N,")", sep = "")
+      boxplot(N_sample ~ group_id, main = panel_title)
       
       # N groups
       par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
@@ -128,16 +201,12 @@ mob_stats = function(mob_in, group_var, plot = T) {
       
       # S asymptotic
       par(fig = c(0.2, 0.4, 0, 0.33), new = T)
-      boxplot(S_asymp_sample ~ group_id, main = "asymptotic S")
+      panel_title = paste("S asymp (p = ", p_S_asymp,")", sep = "")
+      boxplot(S_asymp_sample ~ group_id, main = panel_title)
       
       par(fig = c(0.6, 0.8, 0, 0.33), new = T)
       boxplot(S_asymp_group ~ levels(group_id), main = "asymptotic S", boxwex = 0)
       points(S_asymp_group, pch =19)
-      
-      
-      
-      
-      
    }
    
    stats_samples = data.frame(group   = group_id,
