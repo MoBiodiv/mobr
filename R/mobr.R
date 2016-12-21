@@ -217,6 +217,36 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL) {
     return(out)
 }
 
+#' Compute average nearest neighbor distance
+#' 
+#' This function computes the average distance of the next
+#' nearest sample for a given set of coordinates. This method
+#' of sampling is used  by the function \code{rarefaction}
+#' when building the spatial accumulation curves
+#' 
+#' @param xy_coords a matrix with n-dimenstional coordinates
+#' @return a vector of average distances for each sequential number
+#'   of accumulated nearest samples. 
+#' @export
+#' @examples 
+#' # transect spatial arragnement
+#' transect = 1:100
+#' avg_nn_dist(transect)
+#' grid = expand.grid(1:10, 1:10)
+#' avg_nn_dist(grid)
+#' par(mfrow=c(1,2)) 
+#' plot(avg_ord_dist(transect), type='o', main='transect',
+#'      xlab='# of samples', ylab='average distance')
+#' # 2-D grid spatial arrangement
+#' plot(avg_ord_dist(grid), type='o', main='grid',
+#'      xlab='# of samples', ylab='average distance')
+avg_nn_dist = function(xy_coords) {
+    pair_dist = as.matrix(dist(xy_coords))
+    sort_dist = apply(pair_dist, 1, sort)
+    avg_dist = apply(sort_dist, 1, mean)
+    return(avg_dist)
+}
+
 #' Difference in S due to N
 #' 
 #' Internal function for computing the difference in species richness between 
