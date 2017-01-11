@@ -179,21 +179,17 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL) {
     if (method == 'spat') {
         # drop species with no observations  
         x = x[ , colSums(x) > 0] 
-        row.names(x) = as.character(seq(n))
         explicit_loop = matrix(0, n, n)
         pair_dist = as.matrix(dist(xy_coords))
         for (i in 1:n) {
-            focal_site = row.names(x)[i]
             dist_to_site = pair_dist[i, ]
             # Shuffle plots, so that tied grouping is not biased by original order.
             new_order = sample(1:n)  
-            plots_new = row.names(x)[new_order]
             dist_new = dist_to_site[new_order]
-            plots_new_ordered = plots_new[order(dist_new)]
+            new_order = new_order[order(dist_new)]
             # Move focal site to the front
-            plots_new_ordered = c(focal_site, 
-                                  plots_new_ordered[plots_new_ordered != focal_site])  
-            comm_ordered = x[match(row.names(x), plots_new_ordered), ]
+            new_order = c(i, new_order[new_order != i])
+            comm_ordered = x[new_order, ]
             # 1 for absence, 0 for presence
             comm_bool = as.data.frame((comm_ordered == 0) * 1) 
             rich = cumprod(comm_bool)
