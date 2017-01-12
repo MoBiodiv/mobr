@@ -3,6 +3,7 @@
 S3method(plot,mob_out)
 S3method(print,mob_in)
 S3method(print,mob_out)
+export(avg_nn_dist)
 export(get_delta_stats)
 export(make_mob_in)
 export(mob_stats)
