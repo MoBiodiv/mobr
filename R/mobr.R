@@ -1151,9 +1151,14 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     eval(parse(text=paste('par(', par_args, ')')))
     if (same_scale) {
         # not currently implemented for the delta S plots
-        if ('rarefaction' %in% display)
+        if ('rarefaction' %in% display) {
+            if ('agg' %in% tests) 
+                S_cols = c('impl_S', 'expl_S')
+            else
+                S_cols = 'impl_S'
             ylim_rare = range(list(mob_out$indiv_rare[ , -1],
-                                   mob_out$sample_rare[, c('impl_S', 'expl_S')]))
+                                   mob_out$sample_rare[ , S_cols]))
+        }
         if ('ddelta S' %in% display)
             ylim_ddelta = range(lapply(mob_out[tests], function(x)
                                        lapply(x[ , -(1:2)], function(y)
