@@ -19,7 +19,7 @@ a two column data.frame containing the number of individuals and the
 }
 \description{
 Difference between the individual and sample-based rarefaction 
-  curvesfor one group with the evaluation sample size (number of individuals)
+  curves for one group with the evaluation sample size (number of individuals)
   defined by ref_dens, evaluated at specified points (given by inds) Output:
   a two-column data frame, with sample size (effort) and deltaS (effect of N)
 }

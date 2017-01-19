@@ -129,7 +129,7 @@ dat$cattle = make_mob_in(comm, data.frame(groups=env, x=spat[,1], y=spat[,2]))
 
 # 6) Glade ants 2011 ---------------------------
 ants = read.csv('./data/glade_ants/source_files/ants 2011 big restored and natural.csv')
-plot_info = read.csv('./data/glade_ants/filtered_files/glade_plot_info.csv')
+plot_info = read.csv('./data/glade_ants/filtered_data/ant_plot_attr.csv')
 comm = ants[ , 8:42]
 comm = ifelse(is.na(as.matrix(comm)), 0, as.matrix(comm))
 
@@ -155,10 +155,11 @@ tst = vector('list', length(dat))
 names(tst) = names(dat)
 for(i in seq_along(dat)) {
     cat(paste('Analysis of', names(dat)[i], 'dataset'))
+    
     tst[[i]] =  get_delta_stats(dat[[i]], 'groups', ref_group = ref_groups[i], 
                                 type='discrete', log_scale=TRUE, nperm=100)
-    stats = mob_stats(dat[[i]], 'groups')
     pdf(paste('./figs/', names(tst)[i], '_results.pdf', sep=''))
+        stats = mob_stats(dat[[i]], 'groups')
         plot_samples(stats$samples)
         plot_groups(stats$groups)
         plot_betaPIE(stats)

@@ -252,7 +252,7 @@ avg_nn_dist = function(xy_coords) {
 #' @param ref_dens the reference density
 #' @param inds the number of individuals to sample over
 #' @description  Difference between the individual and sample-based rarefaction 
-#'   curvesfor one group with the evaluation sample size (number of individuals)
+#'   curves for one group with the evaluation sample size (number of individuals)
 #'   defined by ref_dens, evaluated at specified points (given by inds) Output:
 #'   a two-column data frame, with sample size (effort) and deltaS (effect of N)
 #' @return a two column data.frame containing the number of individuals and the 
@@ -265,7 +265,7 @@ deltaS_N = function(comm, ref_dens, inds){
     group_dens = sum(comm) / nplots
     # calcualte the number of individuals sampled
     # as each of the nplots are collected
-    samp_effort = round((1:nplots) * group_dens)
+    samp_effort = round(1:nplots * group_dens)
     # use individual based rarefaction evaluated at the 
     # number of individuals sampled for each plot
     S_samp = rarefaction(comm, 'indiv', samp_effort)
@@ -273,7 +273,8 @@ deltaS_N = function(comm, ref_dens, inds){
     # using the ref_density (i.e., not the observed density)
     rescaled_effort = round(1:nplots * ref_dens)
     # No extrapolation of the rescaled rarefaction curve, only interpolation
-    interp_S_samp = pracma::pchip(c(1, rescaled_effort), c(1, S_samp), inds[inds <= max(rescaled_effort)])
+    interp_S_samp = pracma::pchip(c(1, rescaled_effort), c(1, S_samp),
+                                  inds[inds <= max(rescaled_effort)])
     # Ensure that interp_S_samp has the right length (filled with NA's if needed)
     interp_S_samp = interp_S_samp[1:length(inds)]
     S_indiv = rarefaction(comm, 'indiv', inds)
@@ -1151,9 +1152,14 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     eval(parse(text=paste('par(', par_args, ')')))
     if (same_scale) {
         # not currently implemented for the delta S plots
-        if ('rarefaction' %in% display)
+        if ('rarefaction' %in% display) {
+            if ('agg' %in% tests) 
+                S_cols = c('impl_S', 'expl_S')
+            else
+                S_cols = 'impl_S'
             ylim_rare = range(list(mob_out$indiv_rare[ , -1],
-                                   mob_out$sample_rare[, c('impl_S', 'expl_S')]))
+                                   mob_out$sample_rare[ , S_cols]))
+        }
         if ('ddelta S' %in% display)
             ylim_ddelta = range(lapply(mob_out[tests], function(x)
                                        lapply(x[ , -(1:2)], function(y)

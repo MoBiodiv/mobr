@@ -4,13 +4,15 @@
 \alias{mob_stats}
 \title{Calculate sample based and group based biodiversity statistics}
 \usage{
-mob_stats(mob_in, group_var)
+mob_stats(mob_in, group_var, plot = T, n_min = 10, nperm = 100)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
 
 \item{group_var}{a string that specifies which field in mob_in$env the data
 should be grouped by}
+
+\item{nperm}{number of iterations to run for null tests.}
 }
 \description{
 Calculate sample based and group based biodiversity statistics
