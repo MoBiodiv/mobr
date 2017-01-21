@@ -263,26 +263,29 @@ avg_nn_dist = function(xy_coords) {
 deltaS_N = function(comm, ref_dens, inds){
     nplots = nrow(comm)
     group_dens = sum(comm) / nplots
-    # calcualte the number of individuals sampled
-    # as each of the nplots are collected
-    samp_effort = round(1:nplots * group_dens)
-    # use individual based rarefaction evaluated at the 
-    # number of individuals sampled for each plot
-    S_samp = rarefaction(comm, 'indiv', samp_effort)
-    # rescale and interpolate this plot based S to individual based 
-    # using the ref_density (i.e., not the observed density)
-    rescaled_effort = round(1:nplots * ref_dens)
+    # assign sampling effort such that if the density has higher
+    # than the ref_density that the sampling effort goes high 
+    # enough so that when it is eventually rescaled (i.e., shrunk)
+    # it has spanned a large enough domain to be compared across inds
+    # Note: the effort increment is one individual but for datasets
+    # with lots of individuals (hundreds of thousands) this will be 
+    # slow. 
+    if (group_dens > ref_dens)
+        effort = 1:(ref_dens * nplots)
+    else
+        effort = 1:max(inds)
+    # use individual based rarefaction to generate richness values
+    S_samp = rarefaction(comm, 'indiv', effort)
+    # rescale the effort to reflect what it would be if no treatment
+    # differences in density
+    rescale_effort = effort * (ref_dens / group_dens)
     # No extrapolation of the rescaled rarefaction curve, only interpolation
-    interp_S_samp = pracma::pchip(c(1, rescaled_effort), c(1, S_samp),
-                                  inds[inds <= max(rescaled_effort)])
-    # Ensure that interp_S_samp has the right length (filled with NA's if needed)
-    interp_S_samp = interp_S_samp[1:length(inds)]
+    interp_S_samp = pracma::pchip(rescale_effort, S_samp, inds)    
     S_indiv = rarefaction(comm, 'indiv', inds)
     deltaS = interp_S_samp - S_indiv
     out = data.frame(inds = inds, deltaS = deltaS)
     return(out)
 }
-
 
 #' Permute community matrix within groups
 #' 
