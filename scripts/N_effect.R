@@ -87,9 +87,9 @@ S_ns = rarefaction(comm, 'indiv', samp_effort)   # indiv-based raref plot scale
 S_ind = rarefaction(comm, 'indiv', inds)         # indiv-based raref ind scale
 
 # consider situation in which trt of focus is high density
-ref_dens_hi = group_dens - 1
+ref_dens_hi = group_dens - 6
 # consider situtaion in which trt of focus is low density
-ref_dens_lo = group_dens + 1
+ref_dens_lo = group_dens + 6
 rescaled_effort_hi = round(1:nplots * ref_dens_hi)
 rescaled_effort_lo = round(1:nplots * ref_dens_lo)
 interp_S_hi_den = pracma::pchip(c(1, rescaled_effort_hi), c(1, S_ns), inds)
@@ -137,4 +137,62 @@ lines(S_ind, col='darkred')
 lines(inds, interp_S, col='red', lty=2, lwd=2)
 lines(samp_effort, S_samp, col='blue')
 lines(samp_effort, S_nsp, col='pink')
+
+## ---------- data imported from case_studies.R        
+i = 1
+comm = dat[[i]]$comm
+trt = dat[[i]]$env$groups
+comm_un = comm[trt == 'uninvaded', ]
+comm_in = comm[trt == 'invaded', ]
+ref_dens = sum(comm) / nrow(comm)
+inds = 1:min(sum(comm_un), sum(comm_in))
+
+N_un = deltaS_N(comm_un, ref_dens, inds)
+N_in = deltaS_N(comm_in, ref_dens, inds)
+
+par(mfrow=c(1,3))
+plot(N_un)
+plot(N_in)
+plot(N_in$inds, N_in$deltaS - N_un$deltaS)
+
+comm = comm_un
+
+deltaS_N = function(comm, ref_dens, inds){
+    nplots = nrow(comm)
+    group_dens = sum(comm) / nplots
+    # assign sampling effort such that if the density has higher
+    # than the ref_density that the sampling effort goes high 
+    # enough so that when it is eventually rescaled (i.e., shrunk)
+    # it has spanned a large enough domain to be compared across inds
+    # Note: the effort increment is one individual but for datasets
+    # with lots of individuals (hundreds of thousands) this will be 
+    # slow. 
+    if (group_dens > ref_dens)
+        effort = 1:(ref_dens * nplots)
+    else
+        effort = 1:max(inds)
+    # use individual based rarefaction to generate richness values
+    S_samp = rarefaction(comm, 'indiv', effort)
+    # rescale the effort to reflect what it would be if no treatment
+    # differences in density
+    rescale_effort = effort * (ref_dens / group_dens)
+    # need to enforce one individual one species rule
+    # S_samp = c(1, S_samp[rescale_effort > 1])
+    #  rescale_effort = c(1, rescale_effort[rescale_effort > 1])
+    # No extrapolation of the rescaled rarefaction curve, only interpolation
+    interp_S_samp = pracma::pchip(rescale_effort, S_samp, inds)    
+    # Ensure that interp_S_samp has the right length (filled with NA's if needed)
+    interp_S_samp = interp_S_samp[1:length(inds)]
+    S_indiv = rarefaction(comm, 'indiv', inds)
+    deltaS = interp_S_samp - S_indiv
+    out = data.frame(inds = inds, deltaS = deltaS)
+    return(out)
+}
+
+
+plot(inds, S_indiv, ylim=c(0, 65))
+points(inds, interp_S_samp, col='red', lwd=2, type='o')
+points(rescale_effort, S_samp, col='blue', pch=19)
+
+
 
