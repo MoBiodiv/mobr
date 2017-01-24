@@ -243,6 +243,29 @@ avg_nn_dist = function(xy_coords) {
     return(avg_dist)
 }
 
+# Analytical solution for rescaling rarefaction curve
+# Auxillary function for detalS_N
+# ratio is the rescaling factor, e.g., mean_density/treatment_density
+rescale_rarefaction = function(comm, ratio, effort){
+    if (!is.null(dim(comm)))
+        x = colSums(comm)
+    n = sum(x)
+    x = x[x > 0] 
+    S = length(x)
+    effort = effort[effort/ratio <= n]
+    ldiv = lgamma(n - effort/ratio + 1) - lgamma(n + 1)
+    p = matrix(0, length(effort), S)
+    for (i in seq_along(effort)) {
+        for (j in 1:S){
+            p[i, j] = ifelse(n - x[j] < effort[i]/ratio, 0, 
+                            exp(lgamma(n - x[j] + 1) - lgamma(n - x[j] - effort[i]/ratio + 1)
+                                + ldiv[i]))
+        }
+    }
+    out = rowSums(1 - p)
+    return(out)
+}
+
 #' Difference in S due to N
 #' 
 #' Internal function for computing the difference in species richness between 
@@ -263,18 +286,8 @@ avg_nn_dist = function(xy_coords) {
 deltaS_N = function(comm, ref_dens, inds){
     nplots = nrow(comm)
     group_dens = sum(comm) / nplots
-    # calcualte the number of individuals sampled
-    # as each of the nplots are collected
-    samp_effort = round(1:nplots * group_dens)
-    # use individual based rarefaction evaluated at the 
-    # number of individuals sampled for each plot
-    S_samp = rarefaction(comm, 'indiv', samp_effort)
-    # rescale and interpolate this plot based S to individual based 
-    # using the ref_density (i.e., not the observed density)
-    rescaled_effort = round(1:nplots * ref_dens)
-    # No extrapolation of the rescaled rarefaction curve, only interpolation
-    interp_S_samp = pracma::pchip(c(1, rescaled_effort), c(1, S_samp),
-                                  inds[inds <= max(rescaled_effort)])
+    ratio = ref_dens / group_dens
+    interp_S_samp = rescale_rarefaction(comm, ratio, inds)
     # Ensure that interp_S_samp has the right length (filled with NA's if needed)
     interp_S_samp = interp_S_samp[1:length(inds)]
     S_indiv = rarefaction(comm, 'indiv', inds)
