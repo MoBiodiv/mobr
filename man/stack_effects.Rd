@@ -5,7 +5,7 @@
 \title{Plot stacked area curves for richness effects}
 \usage{
 stack_effects(mob_out, trt_group, prop = FALSE, stretch = TRUE,
-  common_scale = FALSE, label_indv = TRUE, cols = c("#1AB2FF", "#FFBF80",
+  common_scale = FALSE, label_indiv = TRUE, cols = c("#1AB2FF", "#FFBF80",
   "#A6EDFF"))
 }
 \arguments{
@@ -22,10 +22,10 @@ the maximum number of samples}
 
 \item{common_scale}{boolean}
 
-\item{cols}{colors to use for the areas}
-
 \item{label_indiv}{boolean if TRUE then the top axis is 
 labeled with numbers of individuals}
+
+\item{cols}{colors to use for the areas}
 }
 \description{
 Plot stacked area curves for richness effects
