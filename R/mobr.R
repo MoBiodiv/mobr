@@ -227,10 +227,11 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, dens_ratio=1) {
                 p[i, ] = ifelse(n - x < effort[i], 0, 
                                 exp(lchoose(n - x, effort[i]) - ldiv[i]))
             } else {
-                p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
-                                exp(lgamma(n - x + 1) -
-                                    lgamma(n - x - effort[i] / dens_ratio + 1) + 
-                                    ldiv[i]))
+                 p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
+                                 exp(suppressWarnings(lgamma(n - x + 1)) -
+                                     suppressWarnings(lgamma(n - x - effort[i] /
+                                                             dens_ratio + 1)) +
+                                     ldiv[i]))
             }
         }
         out = rowSums(1 - p)
