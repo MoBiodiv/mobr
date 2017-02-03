@@ -293,7 +293,6 @@ deltaS_N = function(comm, ref_dens, inds){
     group_dens = sum(comm) / nplots
     dens_ratio = ref_dens / group_dens
     S_rescaled = rarefaction(comm, 'indiv', inds, dens_ratio=dens_ratio)
-    effort = effort[effort/dens_ratio <= n]
     S_raw = rarefaction(comm, 'indiv', inds)
     deltaS = S_rescaled - S_raw
     out = data.frame(inds = inds, deltaS = deltaS)
