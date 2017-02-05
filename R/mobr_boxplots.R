@@ -38,6 +38,11 @@ calc_PIE = function(x) {
 #' @inheritParams get_delta_stats
 #' @param group_var a string that specifies which field in mob_in$env the data
 #'   should be grouped by
+#' @param n_min the minimum number of individuals a plot must have to be included
+#' in the estimate of rarefied richness
+#' @param nperm the number of permutations to use for testing for treatment effects
+#' @return a list of class \code{mob_stats} that contains p-values,
+#'  sample-scale (i.e., plot) statistics, and treatment scale statistics
 #' @importFrom SpadeR ChaoSpecies
 #' @author Felix May and Dan McGlinn
 #' @export
@@ -45,9 +50,11 @@ calc_PIE = function(x) {
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' mob_stats(inv_mob_in)
-mob_stats = function(mob_in, group_var, plot = T, n_min = 10, nperm = 100) {
-   
+#' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
+#' plot(inv_stats, multipanel=TRUE)
+get_mob_stats = function(mob_in, group_var, n_min = 10, nperm = 1000) {
+   if (nperm < 1) 
+       stop('Set nperm to a value greater than 1') 
    group_id  = factor(mob_in$env[, group_var])
    
    # Sample-based statistics
@@ -161,54 +168,13 @@ These are removed for the calculation of rarefied richness."))
    p_ENS_PIE = sum(F_obs$ENS_PIE < F_rand$ENS_PIE)/nperm
    p_S_asymp = sum(F_obs$S_asymp < F_rand$S_asymp)/nperm
    p_betaPIE = sum(F_obs$betaPIE < F_rand$betaPIE)/nperm
-   
-   if (plot == T){
-      #windows(10,6)
-      op = par(mfcol = c(3,5), las = 1, font.main = 1)
-      
-      # PIE
-      par(fig = c(0.2, 0.4, 0.66, 1))
-      panel_title = paste("PIE (p = ", p_PIE,")", sep = "")
-      boxplot(PIE_sample ~ group_id, main = panel_title)
-      
-      par(fig = c(0.4, 0.6, 0.66, 1), new = T)
-      panel_title = paste("beta PIE (p = ", p_betaPIE,")", sep = "")
-      boxplot(betaPIE_sample ~ group_id, main = panel_title)
-      
-      par(fig = c(0.6, 0.8, 0.66, 1), new = T)
-      boxplot(PIE_group ~ levels(group_id), main = "PIE", boxwex = 0)
-      points(PIE_group, pch =19)
-      
-      # S observed samples
-      par(fig = c(0, 0.2, 0.33, 0.66), new = T)
-      panel_title = paste("S (p = ", p_S,")", sep = "")
-      boxplot(S_sample ~ group_id, main = panel_title)
-      
-      # N samples
-      par(fig = c(0.2, 0.4, 0.33, 0.66), new = T)
-      panel_title = paste("N (p = ", p_N,")", sep = "")
-      boxplot(N_sample ~ group_id, main = panel_title)
-      
-      # N groups
-      par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
-      boxplot(N_group ~ levels(group_id), main = "N", boxwex = 0)
-      points(N_group, pch = 19)
-      
-      # S groups
-      par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-      boxplot(S_group ~ levels(group_id), main = "S obs", boxwex = 0)
-      points(S_group, pch = 19)
-      
-      # S asymptotic
-      par(fig = c(0.2, 0.4, 0, 0.33), new = T)
-      panel_title = paste("S asymp (p = ", p_S_asymp,")", sep = "")
-      boxplot(S_asymp_sample ~ group_id, main = panel_title)
-      
-      par(fig = c(0.6, 0.8, 0, 0.33), new = T)
-      boxplot(S_asymp_group ~ levels(group_id), main = "asymptotic S", boxwex = 0)
-      points(S_asymp_group, pch =19)
-   }
-   
+   stats_pvalues = data.frame(S       = p_S,
+                              N       = p_N,
+                              S_rare  = p_S_rare,
+                              ENS_PIE = p_ENS_PIE,
+                              S_asymp = p_S_asymp,
+                              betaPIE = p_betaPIE)
+
    stats_samples = data.frame(group   = group_id,
                               N       = N_sample,
                               S       = S_sample,
@@ -227,141 +193,169 @@ These are removed for the calculation of rarefied richness."))
                              PIE    = PIE_group,
                              ENS_PIE = ENS_PIE_group
                              )
-   
-   return(list(samples = stats_samples,
-               groups  = stats_groups))
+   out = list(pvalues = stats_pvalues,
+              samples = stats_samples,
+              groups  = stats_groups)
+   class(out) = 'mob_stats'
+   return(out)
    
 }
 
-#' Boxplots for sample based comparisons
+#' Plot the scale agnostic statistics for a MoB analysis
+#' 
+#' Plots a \code{mob_stats} object which is produced by the 
+#' function \code{get_mob_stats}. The p value for each statistic
+#' is displayed in the plot title if applicable.
+#' 
+#' The user may specify which results to plot or simply to plot 
+#' all the results. Note however that the rarefied species richness
+#' results are not plotted by all
+#' @param mob_stats a \code{mob_stats} object that has the samples and 
+#' treatment level statistics
+#' @param display eith a single character value of a vector of character
+#' values. If set to \code{all} then plots of PIE, beta PIE, S, N, and asymptic
+#' S will be produced, but not a plot of rarefied S. 
+#' @param multipanel a boolean if TRUE then a pretty multipanel plot is produced 
+#' setting this argument to TRUE only makes sense when displaying all the 
+#' results (i.e., \code{display = 'all'})
+#' @param ... additional graphical arguments to be supplied to the boxplot and
+#' points functions
+#' @author Felix May and Dan McGlinn 
+#' @export
+#' @examples 
+#' data(inv_comm)
+#' data(inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
+#' plot(inv_stats, multipanel=TRUE)
+#' # with colors
+#' plot(inv_stats, multipanel=TRUE, col=c('red', 'blue'))
+#' # only display PIE results
+#' par(mfrow=c(1,3))
+#' plot(inv_stats, 'PIE', col=c('red', 'blue'))
+plot.mob_stats = function(mob_stats, 
+                          display=c('all', 'PIE', 'beta PIE',
+                                    'N', 'S', 'S rare', 'S asymp'),
+                          multipanel=FALSE, ...) {
+      if (multipanel) {
+          if ('all' %in% display) {
+              display = c('PIE', 'N', 'S', 'S asymp')
+              op = par(mfcol = c(3,5), las = 1, font.main = 1,
+                       mar = c(2, 2, 3, 2) + 0.1)
+          }
+          else
+              warning('The multipanel plots settings only make sense when display is set to "all"')
+      } else if ('all' %in% display)
+          display = c('PIE', 'N', 'S', 'S asymp')
+      # PIE
+      if ('PIE' %in% display) {
+          if (multipanel)
+              par(fig = c(0.2, 0.4, 0.66, 1))
+          panel_title = paste("PIE (p = ", mob_stats$pvalues$ENS_PIE,")\nplot scale",
+                              sep = "")
+          boxplot(PIE ~ group, data=mob_stats$samples,
+                  main = panel_title, ...)
+          if (multipanel)
+              par(fig = c(0.4, 0.6, 0.66, 1), new = T)
+          panel_title = paste("beta PIE (p = ", mob_stats$pvalues$betaPIE,")\nbetween scales",
+                              sep = "")
+          boxplot(betaPIE ~ group, data=mob_stats$samples,
+                  main = panel_title, ...)
+          if (multipanel)
+              par(fig = c(0.6, 0.8, 0.66, 1), new = T)
+          boxplot(PIE ~ levels(group), data=mob_stats$groups,
+                  main = "PIE\ntreatment scale", boxwex = 0)
+          points(mob_stats$groups$PIE, pch = 19, ...)
+      }
+      if ('S' %in% display) {
+          if (multipanel)
+              par(fig = c(0, 0.2, 0.33, 0.66), new = T)
+
+          # S observed samples
+          panel_title = paste("S (p = ", mob_stats$pvalues$S,")\n plot scale",
+                              sep = "")
+          boxplot(S ~ group, data=mob_stats$samples,
+                  main = panel_title, ...)
+          
+          # S groups
+          if (multipanel)
+              par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
+          boxplot(S ~ levels(group), data=mob_stats$groups,
+                  main = "S\ntreatment scale", boxwex = 0)
+          points(mob_stats$groups$S, pch = 19, ...)
+
+      }
+      if ('S rare' %in% display) {
+          if (multipanel)
+              par(fig = c(0, 0.2, 0.33, 0.66), new = T)
+
+          # S rareified samples
+          panel_title = paste("S rarefied (p = ", mob_stats$pvalues$S_rare,
+                              ")\n plot scale", sep = "")
+          boxplot(S_rare ~ group, data=mob_stats$samples,
+                  main = panel_title, ...)
+          
+          # S groups
+          if (multipanel)
+              par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
+          boxplot(S_rare ~ levels(group), data=mob_stats$groups,
+                  main = "S rarefied\ntreatment scale", boxwex = 0)
+          points(mob_stats$groups$S_rare, pch = 19, ...)
+
+      }
+      if ('N' %in% display) {
+          if (multipanel)
+              par(fig = c(0.2, 0.4, 0.33, 0.66), new = T)
+          # N samples
+          panel_title = paste("N (p = ", mob_stats$pvalues$N,")\n plot scale",
+                              sep = "")
+          boxplot(N ~ group, data=mob_stats$samples, 
+                  main = panel_title, ...)
+      
+          # N groups
+          if (multipanel)
+              par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
+          boxplot(N ~ levels(group), data=mob_stats$groups,
+                  main = "N\ntreatment scale", boxwex = 0)
+          points(mob_stats$groups$N, pch = 19, ...)
+      }
+      if ('S asymp' %in% display) {
+          if (multipanel)
+              par(fig = c(0.2, 0.4, 0, 0.33), new = T)
+          # S asymptotic
+          panel_title = paste("S asympotic (p = ", mob_stats$pvalues$S_asymp,
+                              ")\n plot scale", sep = "")
+          boxplot(S_asymp ~ group, data=mob_stats$samples,
+                  main = panel_title, ...)
+          
+          if (multipanel)
+              par(fig = c(0.6, 0.8, 0, 0.33), new = T)
+          boxplot(S_asymp ~ levels(group), data=mob_stats$groups,
+                  main = "S asympotic\ntreatment scale", boxwex = 0)
+          points(mob_stats$groups$S_asymp, pch = 19, ...)
+      }
+      if (multipanel)
+          par(op)
+}
+
+
+#' Additional plotting function for betaPIE statistics 
+#' @inheritParams plot.mob_stats
 #' @author Felix May and Dan McGlinn
 #' @export
-plot_samples = function(sample_stats, tukey = F, col=NULL)
-{
-   # create local diversity boxplots ------------------------------
-   op = par(mfcol = c(2,3), las = 1, font.main = 1)
-   
-   #if (is.null(col))
-   #  col = 
-   
-   # raw species richness
-   par(fig = c(0.32, 0.68, 0.5, 1))
-   test = kruskal.test(S ~ group, data = sample_stats)
-   title = paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   boxplot(S ~ group, data = sample_stats, ylab = "No. of species", notch = T, main = title)
-   
-   # number of individuals
-   par(fig = c(0, 0.33, 0, 0.5), new = T)
-   test = kruskal.test(N ~ group, data = sample_stats)
-   title = paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   boxplot(N ~ group, data = sample_stats, ylab = "No. of individuals", notch = T, main = title) 
-   
-   # number of species rarefied
-   par(fig = c(0.33, 0.66, 0, 0.5), new = T)
-   test = kruskal.test(S_rare ~ group, data = sample_stats)
-   title = paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   ylabel = paste("No. of species (n = ",min(sample_stats$N),")",sep = "")
-   boxplot(S_rare ~ group, data = sample_stats, ylab = ylabel , notch = T, main = title)
-   
-   # number of species extrapolated
-   #par(fig = c(0.5, 0.75, 0, 0.5), new = T)
-   #test = kruskal.test(S_ext ~ group, data = sample_stats)
-   #title = paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   #ylabel = "No. of species extrapolated"
-   #boxplot(S_ext ~ group, data = sample_stats, ylab = ylabel , notch = T, main = title)
-   
-   # PIE
-   par(fig = c(0.66, 1, 0, 0.5), new = T)
-   test = kruskal.test(PIE ~ group, data = sample_stats)
-   title = paste("Kruskal-Test: p = ", round(test$p.value, digits = 3), sep = "")
-   boxplot(PIE ~ group, data = sample_stats, ylab = "PIE", notch = T, main = title)
-   
-   par(op)
-   
-   if (tukey == T){
-      # create Tukey plot ------------------------------
-      op = par(mfcol = c(2,4), las = 0, font.main = 1)
-      
-      par(fig = c(0.375, 0.625, 0.5, 1))
-      plot(TukeyHSD(aov(S ~ group, data = sample_stats)))
-      legend("topright",c("No. of species"), cex = 1, bty = "n")
-      
-      par(fig = c(0, 0.33, 0, 0.5), new = T)
-      plot(TukeyHSD(aov(N ~ group, data = sample_stats)))
-      legend("topright",c("No. of individuals"), cex = 1, bty = "n")
-      
-      par(fig = c(0.33, 0.66, 0, 0.5), new = T)
-      plot(TukeyHSD(aov(S_rare ~ group, data = sample_stats)))
-      legend("topright", paste("Species (n = ", min(sample_stats$N),")",sep = ""),
-             cex = 1, bty = "n")
-      
-      #par(fig = c(0.5, 0.75, 0, 0.5), new = T)
-      #plot(TukeyHSD(aov(S_ext ~ group, data = sample_stats)))
-      #legend("topright",c("Species extrapolated"), cex = 1, bty = "n")
-      
-      par(fig = c(0.66, 1, 0, 0.5), new = T)
-      plot(TukeyHSD(aov(PIE ~ group,  data = sample_stats)))
-      legend("topright",c("PIE"), cex = 1, bty = "n")
-      
-      par(op)
-   }
-   
-}
-
-
-#' Plot for group-based comparisons
-#' @importFrom plotrix plotCI
-#' @export
-plot_groups = function(group_stats)
-{
-   op = par(mfrow = c(2,2), las = 1, font.main = 1)
-   
-   minS = min(group_stats[,c("S", "S_rare")])
-   maxS = max(group_stats[,c("S", "S_rare")])
-   
-   minN = min(group_stats[,c("N")])
-   maxN = max(group_stats[,c("N")])
-   
-   minPIE = min(group_stats[,c("PIE")])
-   maxPIE = max(group_stats[,c("PIE")])
-   
-   ngroups = nrow(group_stats)
-   
-   plot(S ~ group, data = group_stats, boxwex = 0, ylim = c(0.9*minS, 1.1*maxS),
-        ylab = "", main = "Observed species richness")
-   points(S ~ group, data = group_stats, pch = 19, cex = 1.5)
-   #points((1:ngroups)-0.2, group_stats$S_rare, pch = 3, cex = 1.5 )
-#   plotrix::plotCI((1:ngroups)+0.2, group_stats$S_ext_mean, pch = 1, cex = 1.5,
-#          li = group_stats$S_ext_CIlow, ui = group_stats$S_ext_CIup, add = T)
-   #legend("top",c("Observed S", "Rarefied S", "Extrapolated S"), pch = c(19,3,1), cex = 1)
-   
-   plot(S_rare ~ group, data = group_stats, boxwex = 0, ylim = c(0.9*minS, 1.1*maxS),
-        ylab = "", main = "Rarefied species richness")
-   points(S_rare ~ group, data = group_stats, pch = 19, cex = 1.5)
-   #points((1:ngroups)-0.2, group_stats$S_rare, pch = 3, cex = 1.5 )
-   #   plotrix::plotCI((1:ngroups)+0.2, group_stats$S_ext_mean, pch = 1, cex = 1.5,
-   #          li = group_stats$S_ext_CIlow, ui = group_stats$S_ext_CIup, add = T)
-   #legend("top",c("Observed S", "Rarefied S", "Extrapolated S"), pch = c(19,3,1), cex = 1)
-   
-   plot(N ~ group, data = group_stats, boxwex = 0, ylab = "", ylim = c(0.9*minN, 1.1*maxN),
-        main = "Individuals")
-   points(N ~ group, data =group_stats, pch = 19, cex = 1.5)
-   
-   plot(PIE ~ group, data = group_stats, boxwex = 0, ylab = "", ylim = c(0.9*minPIE, 1.1*maxPIE),
-        main = "PIE")
-   points(PIE ~ group, data =group_stats, pch = 19, cex = 1.5)
-   
-   par(op)
-}
-
-#' Plot for betaPIE
-#' @export
+#' @examples 
+#' data(inv_comm)
+#' data(inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
+#' plot_betaPIE(inv_stats)
 plot_betaPIE = function(mob_stats)
 {
    ngroups = nrow(mob_stats$groups)
    
    op = par(mfrow = c(1,2), las = 1, font.main = 1)
-   pie_range = range(c(mob_stats$samples$PIE, mob_stats$groups$PIE))
+   pie_range = range(c(mob_stats$samples$PIE, mob_stats$groups$PIE),
+                     na.rm=T)
    boxplot(PIE ~ group, data = mob_stats$sample, ylim = pie_range, ylab = "PIE",
            notch = T, main = "Sample and group PIE")
    points((1:ngroups)+0.1, mob_stats$groups$PIE, pch = 23, bg = "grey", cex = 1.5)
@@ -370,15 +364,3 @@ plot_betaPIE = function(mob_stats)
            ylab = " betaPIE", notch = T, main = "Group PIE - sample PIE")
    par(op)
 }
-   
-# # Example 
-# library(vegan)
-# data(mite)
-# data(mite.env)
-# data(mite.xy)
-# mite_comm = make_comm_obj(mite, cbind(mite.env, mite.xy))
-# 
-# mite_stats = mob_stats(mite_comm, "Topo")
-# plot_samples(mite_stats$samples, tukey = T)
-# plot_groups(mite_stats$groups)
-# plot_betaPIE(mite_stats)
