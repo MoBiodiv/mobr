@@ -150,7 +150,15 @@ These are removed for the calculation of rarefied richness."))
                         betaPIE = numeric(nperm)
                         )
    
-   for (i in 1:nperm){
+   F_rand$S[1] = F_obs$S
+   F_rand$N[1] = F_obs$N
+   F_rand$S_rare[1] = F_obs$S_rare
+   F_rand$PIE[1] = F_obs$PIE
+   F_rand$ENS_PIE[1] = F_obs$ENS_PIE
+   F_rand$S_asymp[1] = F_obs$S_asymp
+   F_rand$betaPIE[1] = F_obs$betaPIE
+   
+   for (i in 2:nperm){
       group_id_rand     = sample(group_id)
       F_rand$S[i]       = anova(lm(S_sample ~ group_id_rand))$F[1]
       F_rand$N[i]       = anova(lm(N_sample ~ group_id_rand))$F[1]
@@ -161,13 +169,13 @@ These are removed for the calculation of rarefied richness."))
       F_rand$betaPIE[i] = anova(lm(betaPIE_sample ~ group_id_rand))$F[1]
    }
    
-   p_S       = sum(F_obs$S       < F_rand$S)/nperm
-   p_N       = sum(F_obs$N       < F_rand$N)/nperm
-   p_S_rare  = sum(F_obs$S_rare  < F_rand$S_rare)/nperm
-   p_PIE     = sum(F_obs$PIE     < F_rand$PIE)/nperm
-   p_ENS_PIE = sum(F_obs$ENS_PIE < F_rand$ENS_PIE)/nperm
-   p_S_asymp = sum(F_obs$S_asymp < F_rand$S_asymp)/nperm
-   p_betaPIE = sum(F_obs$betaPIE < F_rand$betaPIE)/nperm
+   p_S       = sum(F_obs$S       <= F_rand$S) / nperm
+   p_N       = sum(F_obs$N       <= F_rand$N) / nperm
+   p_S_rare  = sum(F_obs$S_rare  <= F_rand$S_rare) / nperm
+   p_PIE     = sum(F_obs$PIE     <= F_rand$PIE) / nperm
+   p_ENS_PIE = sum(F_obs$ENS_PIE <= F_rand$ENS_PIE) / nperm
+   p_S_asymp = sum(F_obs$S_asymp <= F_rand$S_asymp) / nperm
+   p_betaPIE = sum(F_obs$betaPIE <= F_rand$betaPIE) / nperm
    stats_pvalues = data.frame(S       = p_S,
                               N       = p_N,
                               S_rare  = p_S_rare,
