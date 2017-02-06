@@ -160,7 +160,7 @@ summary.mob_out = function(...) {
 #' # however the curve is either shrunk when density is higher than 
 #' # the reference value (i.e., dens_ratio < 1)
 #' rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=0.5)
-#' # the curve is stretch when density is lower than the 
+#' # the curve is stretched when density is lower than the 
 #' # reference value (i.e., dens_ratio > 1)
 #' rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=1.5)
 #' # sample based rarefaction under random sampling
