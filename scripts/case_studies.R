@@ -143,12 +143,81 @@ comm = ifelse(is.na(as.matrix(comm)), 0, as.matrix(comm))
 
 dat$ants14 = make_mob_in(comm, data.frame(groups = ants$treatment))
 
+# 7) Portal plants 1989-2002 ----------------------
+# species data
+plant = read.csv('./data/PortalData/Plants/Portal_plant_1981_2015.csv')
+
+# subset to 1989-present
+plant = subset(plant, year >= 1989)
+table(plant$year)
+
+# drop any species name with unk in it
+plant$species = as.character(plant$species)
+plant = subset(plant, !grepl('unk', species))
+# dropping names with sp is more complex b/c of "Sida_spin"
+sort(unique(plant$species))
+
+# site data
+utms = read.csv('./data/PortalData/SiteandMethods/Portal_UTMCoords.csv')
+utms = subset(utms, type == 'quadrat')
+utms = utms[ , c('plot', 'number', 'east', 'north')]
+names(utms) = c('plot', 'quadrat', 'east', 'north')
+# fill in two missing sites these are guesses!!
+utms = rbind(utms, data.frame(plot=c(1,24),
+                              quadrat=c(77, 17),
+                              east=c(max(utms[utms$plot==1, 'east']),
+                                     max(utms[utms$plot==24, 'east'])),
+                              north=c(min(utms[utms$plot==1, 'north']),
+                                      max(utms[utms$plot==24, 'north']))))
+
+
+sites = read.csv('./data/PortalData/SiteandMethods/Portal_plots.csv')
+#trts = read.csv('./data/PortalData/SiteandMethods/Portal_plot_treatments.csv')
+names(sites) = c('year', 'plot', 'treatment')
+
+sites = subset(sites, year >= 1989 & year< 2005)
+trt = with(sites, tapply(plot, list(plot, yr, treatment), length))
+
+dim(trt)
+dimnames(trt)
+trt[1, , ]
+trt[9, , ]
+apply(trt, c(1, 3), sum, na.rm=T)
+# the above shows that each site in this range 1989 to 2004 had the same 
+# treatment for the entire 16 year time span
+# one can go out to 26 years of sampling but two plots are then dropped
+
+# subset species data to this range
+plant = subset(plant, year >= 1989 & year< 2005)
+plant = merge(plant, sites)
+plant$id = with(plant, paste(plot, quadrat, year, season, sep='_'))
+head(plant)
+plant$species
+plant_comm = tapply(plant$abundance, list(plant$id, plant$species), sum)
+plant_comm = ifelse(is.na(plant_comm), 0, plant_comm)
+plant_comm[1:5, 1:5]
+
+id = row.names(plant_comm)
+plant_attr = as.data.frame(t(sapply(id, function(x) unlist(strsplit(x, '_')))))
+names(plant_attr) = c('plot', 'quadrat', 'year', 'season')
+plant_attr = merge(plant_attr, sites, all.x=T, all.y=F)
+plant_attr = merge(plant_attr, utms, all.x=T, all.y=F)
+names(plant_attr) = c('plot', 'quadrat', 'year', 'season', 'groups',
+                      'x', 'y')
+row.names(plant_attr) = row.names(plant_comm)
+
+true = with(plant_attr, season == 'summer' & year == 2004)
+dat$portal_sum = make_mob_in(plant_comm[true, ], plant_attr[true, ])
+true = with(plant_attr, season == 'winter' & year == 2004)
+dat$portal_win = make_mob_in(plant_comm[true, ], plant_attr[true, ])
+
 
 ## data analysis --------------------------------------------------------------
 
 ref_groups = c('uninvaded', 'before', 'unburned', 'Natural', 'low', 'NAT', 
-               'natural')
-trt_groups = c('invaded', 'after', 'burned', 'Shaded', 'high', 'BR', 'restored')
+               'natural', 'control', 'control')
+trt_groups = c('invaded', 'after', 'burned', 'Shaded', 'high', 'BR', 'restored',
+               'removal', 'removal')
 
 
 tst = vector('list', length(dat))
@@ -157,7 +226,7 @@ for(i in seq_along(dat)) {
     cat(paste('Analysis of', names(dat)[i], 'dataset'))
     
     tst[[i]] =  get_delta_stats(dat[[i]], 'groups', ref_group = ref_groups[i], 
-                                type='discrete', log_scale=TRUE, nperm=100)
+                                type='discrete', log_scale=TRUE, nperm=20)
     pdf(paste('./figs/', names(tst)[i], '_results.pdf', sep=''))
         stats = mob_stats(dat[[i]], 'groups')
         plot_samples(stats$samples)
@@ -165,7 +234,7 @@ for(i in seq_along(dat)) {
         plot_betaPIE(stats)
         plot_abu(dat[[i]], 'groups', 'rad', pooled=T, log = 'x')
         plot_abu(dat[[i]], 'groups', 'sad', log='x')
-        plot(tst[[i]], trt_groups[i], ref_groups[i], same_scale=T) 
+        plot.mob_out(tst[[i]], trt_groups[i], ref_groups[i], same_scale=T) 
     dev.off()
 }
 
