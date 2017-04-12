@@ -10,6 +10,9 @@
 #'   column(s) has to have names "x" and/or "y".
 #' @param binary whether the plot by species matrix "comm" is in abundances or 
 #'   presence/absence.
+#' @param latlong whether the coordinates are in latitude-longitude. If TRUE, it
+#'   is assumed that column "x" is longitude and column "y" is latitude, both in 
+#'   radians.
 #' @return a "mob_in" object with four attributes. "comm" is the plot by species 
 #'   matrix. "env" is the environmental attribute matrix, without the spatial 
 #'   coordinates. "spat" contains the spatial coordinates (1-D or 2-D). "tests" 
@@ -21,7 +24,7 @@
 #'  data(inv_comm)
 #'  data(inv_plot_attr)
 #'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-make_mob_in = function(comm, plot_attr, binary=FALSE) {
+make_mob_in = function(comm, plot_attr, binary=FALSE, latlong=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
     out = list()
     out$tests = list(N=T, SAD=T, agg=T)
@@ -33,6 +36,9 @@ make_mob_in = function(comm, plot_attr, binary=FALSE) {
     }
     if (nrow(comm) != nrow(plot_attr))
         stop("Number of plots in community does not equal number of plots in plot attribute table")
+    spat_cols = which(names(plot_attr) %in% c('x', 'y'))
+    if (length(spat_cols) == 1 & latlong == TRUE)
+        stop("Both latitude and longitude have to be specified")
     if (any(row.names(comm) != row.names(plot_attr)))
         warning("Row names of community and plot attributes tables do not match")
     if (binary)  {
@@ -48,7 +54,6 @@ make_mob_in = function(comm, plot_attr, binary=FALSE) {
         comm = comm[, colSums(comm) != 0]
     }
     out$comm = data.frame(comm)
-    spat_cols = which(names(plot_attr) %in% c('x', 'y'))
     if (length(spat_cols) > 0) {
         out$env = data.frame(plot_attr[ , -spat_cols])
         colnames(out$env) = colnames(plot_attr)[-spat_cols]
@@ -59,6 +64,7 @@ make_mob_in = function(comm, plot_attr, binary=FALSE) {
         out$env = data.frame(plot_attr)
         out$spat = NULL
     }
+    out$latlong = latlong
     class(out) = 'mob_in'
     return(out)
 }
@@ -103,6 +109,23 @@ summary.mob_out = function(...) {
    #  print summary anova style table
 }
 
+#' Internal function for distance matrix assuming inputs are lat and long 
+#'   on a sphere
+#' 
+#' @param long a vector of longitudes
+#' @param lat a vector of latitudes, the same length of long
+#' @description  Distance matrix between points on the unit (r = 1) sphere.
+#' @return a numeric value
+#' @author Xiao Xiao
+#' @keywords internal
+sphere_dist = function(long, lat){
+    delta_long = as.matrix(dist(as.matrix(long)))
+    delta_lat = as.matrix(dist(as.matrix(lat)))
+    hav = sin(delta_lat / 2)^2 + cos(lat) %*% t(cos(lat)) * 
+        sin(delta_long / 2)^2
+    dist = 2 * asin(sqrt(hav))
+    return(dist)
+}
 
 #' Rarefaction Species Richness
 #' 
@@ -167,7 +190,8 @@ summary.mob_out = function(...) {
 #' rarefaction(inv_comm, method='samp')
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
 #' rarefaction(inv_comm, method='spat', xy_coords=inv_plot_attr[ , c('x','y')])
-rarefaction = function(x, method, effort=NULL, xy_coords=NULL, dens_ratio=1) {
+rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE, 
+                       dens_ratio=1) {
     if (!any(method %in% c('indiv', 'samp', 'spat')))
         stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
     if (method == 'samp' | method == 'spat') {
@@ -194,7 +218,13 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, dens_ratio=1) {
         # drop species with no observations  
         x = x[ , colSums(x) > 0] 
         explicit_loop = matrix(0, n, n)
-        pair_dist = as.matrix(dist(xy_coords))
+        if (!latlong){
+            pair_dist = as.matrix(dist(xy_coords))
+        } else {
+            # Compute distance on sphere if xy are longitudes and latitudes
+            # Assume x is longitude and y is latitude
+            pair_dist = sphere_dist(xy_coords$x, xy_coords$y)
+        }
         for (i in 1:n) {
             dist_to_site = pair_dist[i, ]
             # Shuffle plots, so that tied grouping is not biased by original order.
@@ -491,7 +521,8 @@ get_sample_curves = function(mob_in, group_levels, group_data, approved_tests){
                                                  seq(length(impl_S)), impl_S))
             if ('agg' %in% approved_tests){
                 xy_level = mob_in$spat[as.character(group_data) == level, ]
-                expl_S = rarefaction(comm_level, 'spat', xy_coords = xy_level)
+                expl_S = rarefaction(comm_level, 'spat', xy_coords = xy_level, 
+                                     latlong = mob_in$latlong)
                 sample_rare_level = cbind(sample_rare_level, expl_S)
             }
             sample_rare = rbind(sample_rare, sample_rare_level)
