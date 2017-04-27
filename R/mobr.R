@@ -597,10 +597,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm,
     ref_sad = group_sad[which(group_levels == as.character(ref_group)), ]
     out$SAD = data.frame(matrix(0, nrow = 0, ncol = 6), 
                                 stringsAsFactors = F)
-    if (overall_p)
-        out$overall_p$SAD = data.frame(matrix(0, nrow = 0, ncol = 2), 
-                                       stringsAsFactors = F)
-    
+
     cat('\nComputing null model for SAD effect\n')
     pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
                          style = 3)
@@ -631,7 +628,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm,
         if (overall_p){
             p_level = get_overall_p(out$indiv_rare[, 'sample'], 
                                     deltaS, null_ind_deltaS_mat)
-            out$overall_p$SAD = rbind(out$overall_p$SAD, c(level, p_level))
+            out$overall_p$SAD[out$overall_p$group == level] = p_level
         }
     }
     close(pb)
@@ -639,8 +636,6 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm,
     names(out$SAD) = c('group', 'effort_ind', 'deltaS_emp',
                               'deltaS_null_low', 'deltaS_null_median',
                               'deltaS_null_high')
-    if (overall_p)
-        names(out$overall_p$SAD) = c('group', 'p-value')
     return(out)
 }
 
@@ -701,6 +696,9 @@ effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data,
 effect_N_discrete = function(mob_in, group_levels, ref_group, groups, 
                              density_stat, ind_sample_size, nperm){
     out_N = NULL
+    if (overall_p)
+        overallp_N = data.frame(matrix(0, nrow = 0, ncol = 2), 
+                                stringsAsFactors = F)
     cat('\nComputing null model for N effect\n')
     pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
                          style = 3)
@@ -734,6 +732,10 @@ effect_N_discrete = function(mob_in, group_levels, ref_group, groups,
         N_level = data.frame(level, ind_sample_size, ddeltaS_level,
                              t(N_deltaS_null_CI))
         out_N = rbind(out_N, N_level)
+        if (overall_p){
+            p_level = get_overall_p(ind_sample_size, ddeltaS_level, 
+                                    null_N_deltaS_mat)
+        }
     }
     close(pb)
     out_N = df_factor_to_numeric(out_N, 2:ncol(out_N))
@@ -963,8 +965,10 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
         if (overall_p) {
             warning('Caution: Overall p-values depend on scales of measurement yet do not explicitly 
 reflect significance at any particular scale. Be careful in interpretation.')
-            out$overall_p = as.data.frame(matrix(NA, 0, 1 + length(approved_tests)))
+            out$overall_p = as.data.frame(matrix(NA, length(group_levels) - 1, 
+                                                 1 + length(approved_tests)))
             names(out$overall_p) = c('group', approved_tests)
+            out$overall_p$group = group_levels[group_levels != ref_group]
         }
         if ('SAD' %in% approved_tests)
             out = effect_SAD_discrete(out, group_sad, group_levels, ref_group,
