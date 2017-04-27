@@ -503,6 +503,18 @@ get_plot_dens = function(comm, density_stat){
     return(plot_dens)   
 }
 
+#' Auxillary function for effect_ functions
+#' Compute an overall p-value for one factor in the discrete case
+#' p-value is based on mean squared difference from zero summed across the scales
+#' @keywords internal
+get_overall_p = function(effort, deltaS_emp, deltaS_null){
+    delta_effort = (c(effort, 0) - c(0, effort))[1:length(effort)]
+    dev_emp = sum(deltaS_emp^2 * delta_effort)
+    dev_null = as.numeric((deltaS_null^2) %*% delta_effort)
+    overall_p = length(which(dev_null > dev_emp)) / length(dev_null)
+    return(overall_p)
+}
+
 #' Auxillary function for get_delta_stats()
 #' Obtain the swap curve and/or spatial curve for each group if asked
 #' Directly add attributes to the input "out"
@@ -579,11 +591,16 @@ effect_SAD_continuous = function(out, group_sad, env_levels, corr, nperm){
 #' Auxillary function for get_delta_stats()
 #' Effect of SAD when type is "discrete"
 #' @keywords internal
-effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
+effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm, 
+                               overall_p){
     ind_sample_size = out$indiv_rare[, 1]
     ref_sad = group_sad[which(group_levels == as.character(ref_group)), ]
     out$SAD = data.frame(matrix(0, nrow = 0, ncol = 6), 
                                 stringsAsFactors = F)
+    if (overall_p)
+        out$overall_p$SAD = data.frame(matrix(0, nrow = 0, ncol = 2), 
+                                       stringsAsFactors = F)
+    
     cat('\nComputing null model for SAD effect\n')
     pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
                          style = 3)
@@ -611,12 +628,19 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm){
         ind_level = data.frame(cbind(rep(level,length(ind_sample_size)),
                                      ind_sample_size, deltaS, t(ind_deltaS_null_CI)))
         out$SAD = rbind(out$SAD, ind_level)
+        if (overall_p){
+            p_level = get_overall_p(out$indiv_rare[, 'sample'], 
+                                    deltaS, null_ind_deltaS_mat)
+            out$overall_p$SAD = rbind(out$overall_p$SAD, c(level, p_level))
+        }
     }
     close(pb)
     out$SAD = df_factor_to_numeric(out$SAD, 2:ncol(out$SAD))
     names(out$SAD) = c('group', 'effort_ind', 'deltaS_emp',
                               'deltaS_null_low', 'deltaS_null_median',
                               'deltaS_null_high')
+    if (overall_p)
+        names(out$overall_p$SAD) = c('group', 'p-value')
     return(out)
 }
 
@@ -817,7 +841,7 @@ effect_agg_discrete = function(mob_in, sample_rare, ref_group, group_plots,
 #' @param mob_in an object of class mob_in created by make_mob_in()
 #' @param group_var a character string specifying the environmental variable in
 #'   mob_in$env used for grouping plots
-#' @param env_var an optional character string specicying a environmental variable
+#' @param env_var an optional character string specifying a environmental variable
 #'   in mob_in$env which is used in correlation analysis in the continuous case. 
 #'   It is not needed if "type" is discrete or group_var is used in correlation.
 #' @param ref_group a character string used to define the reference group to
@@ -880,7 +904,7 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
                            tests = c('SAD', 'N', 'agg'),
                            type='discrete', inds = NULL, log_scale = FALSE,
                            min_plots = NULL, density_stat ='mean',
-                           corr='spearman', nperm=1000) {
+                           corr='spearman', nperm=1000, overall_p = FALSE) {
     
     approved_tests = get_delta_overall_checks(mob_in, type, group_var, env_var, 
                                               density_stat, tests)
@@ -936,6 +960,12 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
                                             group_data, env_levels, corr, nperm)
     } else if (type == 'discrete') {
         get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
+        if (overall_p) {
+            warning('Caution: Overall p-values depend on scales of measurement yet do not explicitly 
+reflect significance at any particular scale. Be careful in interpretation.')
+            out$overall_p = as.data.frame(matrix(NA, 0, 1 + length(approved_tests)))
+            names(out$overall_p) = c('group', approved_tests)
+        }
         if ('SAD' %in% approved_tests)
             out = effect_SAD_discrete(out, group_sad, group_levels, ref_group,
                                       nperm)
