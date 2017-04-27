@@ -693,8 +693,8 @@ effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data,
 #' Auxillary function for get_delta_stats()
 #' Effect of N when type is "discrete" 
 #' @keywords internal
-effect_N_discrete = function(mob_in, group_levels, ref_group, groups, 
-                             density_stat, ind_sample_size, nperm){
+effect_N_discrete = function(out, mob_in, group_levels, ref_group, groups, 
+                             density_stat, ind_sample_size, nperm, overall_p){
     out_N = NULL
     if (overall_p)
         overallp_N = data.frame(matrix(0, nrow = 0, ncol = 2), 
@@ -735,13 +735,15 @@ effect_N_discrete = function(mob_in, group_levels, ref_group, groups,
         if (overall_p){
             p_level = get_overall_p(ind_sample_size, ddeltaS_level, 
                                     null_N_deltaS_mat)
+            out$overall_p$N[out$overall_p$group == level] = p_level
         }
     }
     close(pb)
     out_N = df_factor_to_numeric(out_N, 2:ncol(out_N))
     names(out_N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
                      'ddeltaS_null_median', 'ddeltaS_null_high')
-    return(out_N)
+    out$N = out_N
+    return(out)
 }
 
 #' Auxillary function for get_delta_stats()
@@ -953,7 +955,7 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
         if ('SAD' %in% approved_tests)
             out = effect_SAD_continuous(out, group_sad, env_levels, corr, nperm)
         if ('N' %in% approved_tests)
-            out$N = effect_N_continuous(mob_in, S, group_levels, env_levels, 
+            out = effect_N_continuous(out, mob_in, S, group_levels, env_levels, 
                                         group_data, plot_dens, plot_abd, 
                                         ind_sample_size, corr, nperm)
         if ('agg' %in% approved_tests)
@@ -972,10 +974,10 @@ reflect significance at any particular scale. Be careful in interpretation.')
         }
         if ('SAD' %in% approved_tests)
             out = effect_SAD_discrete(out, group_sad, group_levels, ref_group,
-                                      nperm)
+                                      nperm, overall_p)
         if ('N' %in% approved_tests)
-            out$N = effect_N_discrete(mob_in, group_levels, ref_group, groups,
-                                      density_stat,ind_sample_size, nperm)
+            out = effect_N_discrete(out, mob_in, group_levels, ref_group, groups,
+                                      density_stat,ind_sample_size, nperm, overall_p)
         if ('agg' %in% approved_tests)
             out$agg = effect_agg_discrete(mob_in, out$sample_rare, ref_group, 
                                           group_plots, group_data, group_levels,
