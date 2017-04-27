@@ -796,8 +796,9 @@ effect_agg_continuous = function(mob_in, sample_rare, group_plots, group_levels,
 #' Auxillary function for get_delta_stats()
 #' Effect of aggregation when type is "discrete"
 #' @keywords internal
-effect_agg_discrete = function(mob_in, sample_rare, ref_group, group_plots, 
-                               group_data, group_levels, nperm){
+effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data, 
+                               group_levels, nperm, overall_p){
+    sample_rare = out$sample_rare
     ref_sample = sample_rare[which(sample_rare$group == 
                                        as.character(ref_group)), ]
     table_agg = data.frame(matrix(NA, nrow = 0, ncol = 6))
@@ -828,12 +829,18 @@ effect_agg_discrete = function(mob_in, sample_rare, ref_group, group_plots,
         agg_level = data.frame(cbind(rep(level, min_plot_level), 1:min_plot_level, 
                                      ddeltaS_level, t(agg_deltaS_null_CI)))
         table_agg = rbind(table_agg, agg_level)
+        if (overall_p){
+            p_level = get_overall_p(1:min_plot_level, ddeltaS_level, 
+                                    null_agg_deltaS_mat)
+            out$overall_p$agg[out$overall_p$group == level] = p_level
+        }
     }
     close(pb)
     table_agg = df_factor_to_numeric(table_agg, 2:ncol(table_agg))
     names(table_agg) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
                          'ddeltaS_null_median', 'ddeltaS_null_high')
-    return(table_agg)
+    out$agg = table_agg
+    return(out)
 }
 
 #' Conduct the MoB tests on drivers of biodiversity across scales.
@@ -977,11 +984,10 @@ reflect significance at any particular scale. Be careful in interpretation.')
                                       nperm, overall_p)
         if ('N' %in% approved_tests)
             out = effect_N_discrete(out, mob_in, group_levels, ref_group, groups,
-                                      density_stat,ind_sample_size, nperm, overall_p)
+                                    density_stat,ind_sample_size, nperm, overall_p)
         if ('agg' %in% approved_tests)
-            out$agg = effect_agg_discrete(mob_in, out$sample_rare, ref_group, 
-                                          group_plots, group_data, group_levels,
-                                          nperm)
+            out = effect_agg_discrete(out, mob_in, ref_group, group_plots, 
+                                      group_data, group_levels, nperm, overall_p)
     } else 
         stop('The argument "type" must be either "discrete" or "continuous"')
     class(out) = 'mob_out'
