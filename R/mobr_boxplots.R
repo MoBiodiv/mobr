@@ -43,7 +43,6 @@ calc_PIE = function(x) {
 #' @param nperm the number of permutations to use for testing for treatment effects
 #' @return a list of class \code{mob_stats} that contains p-values,
 #'  sample-scale (i.e., plot) statistics, and treatment scale statistics
-#' @importFrom SpadeR ChaoSpecies
 #' @author Felix May and Dan McGlinn
 #' @export
 #' @examples 
@@ -66,8 +65,7 @@ get_mob_stats = function(mob_in, group_var, n_min = 10, nperm = 1000) {
    plots_low_n = N_sample < n_min
    
    if (sum(plots_low_n) > 0){
-      warning(paste("There are",sum(plots_low_n),"plots with less then", n_min,"individuals.
-These are removed for the calculation of rarefied richness."))
+      warning(paste("There are",sum(plots_low_n),"plots with less then", n_min,"individuals. These plots are removed for the calculation of rarefied richness."))
    }
 
    S_rare_sample = rep(NA, nrow(mob_in$comm))
@@ -78,7 +76,11 @@ These are removed for the calculation of rarefied richness."))
    # Probability of Interspecific Encounter
    plots_n0 = N_sample == 0
    
-   if (sum(plots_n0) > 0){
+   if (sum(plots_n0) == 1){
+      warning(paste("There is",sum(plots_n0), "plot without any individuals. This is removed for the calculation of PIE."))
+   }
+   
+   if (sum(plots_n0) > 1){
       warning(paste("There are",sum(plots_n0), "plots without any individuals.
 These are removed for the calculation of PIE."))
    }
@@ -89,8 +91,16 @@ These are removed for the calculation of PIE."))
    ENS_PIE_sample[plots_n0] = NA
    
    # bias corrected Chao estimator
-   S_asymp_sample = estimateR(mob_in$comm)["S.chao1",]
- 
+   S_asymp_sample = try(vegan::estimateR(mob_in$comm))
+   if (class(S_asymp_sample) == "try_error"){
+      warning("The Chao richness estimator cannot be calculated for all samples.")
+      S_asymp_sample <- rep(NA, nrow(mob_in$comm))
+   } else {
+      if (is.matrix(S_asymp_sample)) S_asymp_sample = S_asymp_sample["S.chao1",]
+      else                           S_asymp_sample = S_asymp_sample["S.chao1"]
+      S_asymp_sample[!is.finite(S_asymp_sample)] <- NA
+   }
+   
    # ---------------------------------------------------------------------------
    # abundance distribution pooled in group
    abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")[ ,-1]
@@ -102,7 +112,12 @@ These are removed for the calculation of PIE."))
    N_min_group = max(n_min, min(N_group))
    groups_low_n = N_group < n_min
    
-   if (sum(groups_low_n) > 0){
+   if (sum(groups_low_n) == 1){
+      warning(paste("There is",sum(plots_low_n),"group with less then", n_min,"individuals.
+These are removed for the calculation of rarefied richness."))
+   }
+   
+   if (sum(groups_low_n) > 1){
       warning(paste("There are",sum(plots_low_n),"groups with less then", n_min,"individuals.
 These are removed for the calculation of rarefied richness."))
    }
@@ -127,6 +142,17 @@ These are removed for the calculation of rarefied richness."))
    
    # bias corrected Chao estimator
    S_asymp_group = estimateR(abund_group)["S.chao1",]
+   
+   # bias corrected Chao estimator
+   S_asymp_group = try(vegan::estimateR(abund_group))
+   if (class(S_asymp_group) == "try_error"){
+      warning("The Chao richness estimator cannot be calculated for all groups.")
+      S_asymp_group <- rep(NA, nrow(abund_group))
+   } else {
+      if (is.matrix(S_asymp_group)) S_asymp_group = S_asymp_group["S.chao1",]
+      else                          S_asymp_group = S_asymp_group["S.chao1"]
+      S_asymp_group[!is.finite(S_asymp_group)] <- NA
+   }
    
    #beta PIE
    betaPIE_sample = PIE_group[group_id] - PIE_sample
@@ -322,17 +348,26 @@ plot.mob_stats = function(mob_stats,
       if ('S asymp' %in% display) {
           if (multipanel)
               par(fig = c(0.2, 0.4, 0, 0.33), new = T)
-          # S asymptotic
-          panel_title = paste("S asympotic (p = ", mob_stats$pvalues$S_asymp,
-                              ")\n plot scale", sep = "")
-          boxplot(S_asymp ~ group, data=mob_stats$samples,
-                  main = panel_title, ...)
+           # S asymptotic
+          if (all(is.na(mob_stats$samples$S_asymp))){
+              warning("Cannot plot asymptotic richness for the samples")
+          } else {
+              panel_title = paste("S asympotic (p = ", mob_stats$pvalues$S_asymp,
+                                  ")\n plot scale", sep = "")
+              boxplot(S_asymp ~ group, data=mob_stats$samples,
+                      main = panel_title, ...)
+          }
           
           if (multipanel)
               par(fig = c(0.6, 0.8, 0, 0.33), new = T)
-          boxplot(S_asymp ~ levels(group), data=mob_stats$groups,
-                  main = "S asympotic\ntreatment scale", boxwex = 0)
-          points(mob_stats$groups$S_asymp, pch = 19, ...)
+          if (all(is.na(mob_stats$groups$S_asymp))){
+              warning("Cannot plot asymptotic richness for the groups")
+          } else {
+              boxplot(S_asymp ~ levels(group), data=mob_stats$groups,
+                      main = "S asympotic\ntreatment scale", boxwex = 0)
+              points(mob_stats$groups$S_asymp, pch = 19, ...)
+          }
+          
       }
       if (multipanel)
           par(op)
