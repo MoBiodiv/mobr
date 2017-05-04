@@ -220,21 +220,28 @@ trt_groups = c('invaded', 'after', 'burned', 'Shaded', 'high', 'BR', 'restored',
                'removal', 'removal')
 
 
-tst = vector('list', length(dat))
-names(tst) = names(dat)
+tst = stats = vector('list', length(dat))
+names(tst) = names(stats) = names(dat)
+
 for(i in seq_along(dat)) {
     cat(paste('Analysis of', names(dat)[i], 'dataset'))
     
     tst[[i]] =  get_delta_stats(dat[[i]], 'groups', ref_group = ref_groups[i], 
-                                type='discrete', log_scale=TRUE, nperm=20)
+                                type='discrete', log_scale=TRUE, nperm=200)
+    stats[[i]] = get_mob_stats(dat[[i]], 'groups', nperm=200)
+
     pdf(paste('./figs/', names(tst)[i], '_results.pdf', sep=''))
-        stats = mob_stats(dat[[i]], 'groups')
-        plot_samples(stats$samples)
-        plot_groups(stats$groups)
+        plot(stats[[i]], multipanel = F, col=c('red', 'blue')) 
+        boxplot(stats[[i]]$samples$S_rare ~ group, data=stats[[i]]$samples,
+                col=c('red', 'blue'))
+        plot_samples(stats[[i]]$samples)
         plot_betaPIE(stats)
         plot_abu(dat[[i]], 'groups', 'rad', pooled=T, log = 'x')
         plot_abu(dat[[i]], 'groups', 'sad', log='x')
-        plot.mob_out(tst[[i]], trt_groups[i], ref_groups[i], same_scale=T) 
+        plot(tst[[i]], trt_groups[i], ref_groups[i], same_scale=T)
+        par(mfrow=c(1,1))
+        stack_effects(tst[[i]], trt_groups[i])
+        stack_effects(tst[[i]], trt_groups[i], prop=TRUE)
     dev.off()
 }
 
