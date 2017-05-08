@@ -72,13 +72,6 @@ get_mob_stats = function(mob_in, group_var, n_min = 10, nperm = 1000) {
    S_rare_sample[!plots_low_n] = apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
                                        FUN = rarefaction, method = "indiv",
                                        effort = N_min_sample)
-   # If all plots within a treatment are removed, skip analysis on S_rare_sample
-   if (length(unique(group_id[!is.na(S_rare_sample)])) < 2) {
-       keep_rare_sample = FALSE
-       warning("All plots from one or more treatments have low abundances, analysis for plot-level rarefied richness is skipped.")
-   } else {
-       keep_rare_sample = TRUE
-   }
    
    # Probability of Interspecific Encounter
    plots_n0 = N_sample == 0
@@ -167,8 +160,7 @@ These are removed for the calculation of rarefied richness."))
    # permutation test for differences among samples
    F_obs <- data.frame(S       = anova(lm(S_sample ~ group_id))$F[1],
                        N       = anova(lm(N_sample ~ group_id))$F[1],
-                       S_rare  = ifelse(!keep_rare_sample, NA, 
-                                        anova(lm(S_rare_sample ~ group_id))$F[1]),
+                       S_rare  = anova(lm(S_rare_sample ~ group_id))$F[1],
                        PIE     = anova(lm(PIE_sample ~ group_id))$F[1],
                        ENS_PIE = anova(lm(ENS_PIE_sample ~ group_id))$F[1],
                        S_asymp = anova(lm(S_asymp_sample ~ group_id))$F[1],
@@ -188,8 +180,7 @@ These are removed for the calculation of rarefied richness."))
       group_id_rand     = sample(group_id)
       F_rand$S[i]       = anova(lm(S_sample ~ group_id_rand))$F[1]
       F_rand$N[i]       = anova(lm(N_sample ~ group_id_rand))$F[1]
-      F_rand$S_rare[i]  = ifelse(!keep_rare_sample, NA, 
-                                 anova(lm(S_rare_sample ~ group_id_rand))$F[1])
+      F_rand$S_rare[i]  = anova(lm(S_rare_sample ~ group_id_rand))$F[1]
       F_rand$PIE[i]     = anova(lm(PIE_sample ~ group_id_rand))$F[1]
       F_rand$ENS_PIE[i] = anova(lm(ENS_PIE_sample ~ group_id_rand))$F[1]
       F_rand$S_asymp[i] = anova(lm(S_asymp_sample ~ group_id_rand))$F[1]
@@ -198,8 +189,7 @@ These are removed for the calculation of rarefied richness."))
    
    p_S       = sum(F_obs$S       <= F_rand$S) / nperm
    p_N       = sum(F_obs$N       <= F_rand$N) / nperm
-   p_S_rare  = ifelse(!keep_rare_sample, NA, 
-                      sum(F_obs$S_rare  <= F_rand$S_rare) / nperm)
+   p_S_rare  = sum(F_obs$S_rare  <= F_rand$S_rare) / nperm
    p_PIE     = sum(F_obs$PIE     <= F_rand$PIE) / nperm
    p_ENS_PIE = sum(F_obs$ENS_PIE <= F_rand$ENS_PIE) / nperm
    p_S_asymp = sum(F_obs$S_asymp <= F_rand$S_asymp) / nperm
