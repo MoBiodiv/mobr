@@ -1231,7 +1231,9 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     tests = mob_out$tests
     if (type == 'continuous')
         stop("Currently this plot only works for mob_out object with type discrete.")
-    cols = c('red', 'blue')
+    cols = list()
+    cols$trt = 'red'
+    cols$ref = 'blue'
     deltaS_col = 'turquoise'
     ddeltaS_col = 'magenta'
     if (is.null(par_args)) {
@@ -1271,21 +1273,15 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
         if ('SAD' %in% mob_out$tests) {
             if (!same_scale)
                 ylim_rare = range(mob_out$indiv_rare[, -1])
-            for (icol in 2:ncol(mob_out$indiv_rare)){
-                if (icol == 2)
-                    plot(mob_out$indiv_rare$sample, mob_out$indiv_rare[, icol],
-                         lwd = 2, type = 'l', col = cols[icol - 1], 
-                         xlab = 'Number of individuals', ylab = 'Richness (S)',
-                         main = 'Individual', 
-                         xlim = c(xmin, max(mob_out$indiv_rare$sample)),
-                         ylim = ylim_rare,
-                         cex.axis = 1.5, cex.lab = 1.5, log=plot_log)
-               else
-                    lines(mob_out$indiv_rare$sample, 
-                          mob_out$indiv_rare[, icol], lwd = 2,
-                          col = cols[icol - 1])
-            }     
-            legend('topleft', as.character(groups), col=cols, lty=1, lwd=2, bty='n')
+            plot(mob_out$indiv_rare$sample, mob_out$indiv_rare[, trt_group], 
+                 lwd = 2, type = 'l', col = cols$trt, xlab = 'Number of individuals', 
+                 ylab = 'Richness (S)', main = 'Individual', 
+                 xlim = c(xmin, max(mob_out$indiv_rare$sample)), ylim = ylim_rare, 
+                 cex.axis = 1.5, cex.lab = 1.5, log=plot_log)
+            lines(mob_out$indiv_rare$sample, mob_out$indiv_rare[, ref_group], 
+                  lwd = 2, col = cols$ref)
+            legend('topleft', as.character(groups), col=as.character(unlist(cols)), 
+                   lty=1, lwd=2, bty='n')
         }
         if ('N' %in% mob_out$tests) {
             if (!same_scale)
@@ -1296,14 +1292,14 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                 if (i == 1)
                     plot(dat_group$sample_plot, dat_group$impl_S,
                          lwd = 2, type = 'l', xlab = 'Number of plots',
-                         ylab = 'Richness (S)', col = cols[i], 
+                         ylab = 'Richness (S)', col = cols$trt, 
                          xlim = c(xmin, max(dat_group$sample_plot)),
                          ylim = ylim_rare,
                          main = 'Sample', cex.axis = 1.5, cex.lab = 1.5,
                          log=plot_log)
                else
                    lines(dat_group$sample_plot, dat_group$impl_S,
-                         lwd = 2, col = cols[i])
+                         lwd = 2, col = cols$ref)
             }
         }
         if ('agg' %in% mob_out$tests) {
@@ -1315,14 +1311,14 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                 if (i == 1)
                     plot(dat_group$sample_plot, dat_group$expl_S, lwd = 2,
                          type = 'l', xlab = 'Number of plots',
-                         ylab = 'Richness (S)', col = cols[i],
+                         ylab = 'Richness (S)', col = cols$trt,
                          xlim = c(xmin, max(dat_group$sample_plot)),
                          ylim = ylim_rare,
                          main = 'Spatial', cex.axis = 1.5, cex.lab = 1.5,
                          log=plot_log)
                 else
                     lines(dat_group$sample_plot, dat_group$expl_S,
-                          lwd = 2, col = cols[i])
+                          lwd = 2, col = cols$ref)
             }
         }
     }    
