@@ -84,15 +84,16 @@ repl_boot_samples <- function(comm_dat, n_rare, n_perm = 100)
    return(repl_biodiv)
 }
 
-# get confidence interval from bootstrap samples
-get_CI <- function(x, level = 0.95)
+# get mean and confidence interval from bootstrap samples
+get_mean_CI <- function(x, level = 0.95)
 {
    alpha <- 1 - level
    p <- c(alpha/2, 1 - alpha/2)
+   mean_val <- rowMeans(x)
    CI_tab <- apply(x, MARGIN = 1, quantile, probs = p)
-   CI_vec <- c(CI_tab[1,], CI_tab[2,])
-   names(CI_vec) <- paste(rep(colnames(CI_tab), 2),
-                          rep(c("low", "up"), each = ncol(CI_tab)), sep = "_")
+   CI_vec <- c(mean_val, CI_tab[1,], CI_tab[2,])
+   names(CI_vec) <- paste(rep(colnames(CI_tab), 3),
+                          rep(c("mean","low", "up"), each = ncol(CI_tab)), sep = "_")
    return(CI_vec)
 }
 
@@ -253,38 +254,43 @@ These are removed for the calculation of rarefied richness."))
    boot_samples <- by(mob_in$comm, INDICES = group_id, FUN = repl_boot_samples,
                       n_rare = N_min_group)
    
-   boot_CI <- sapply(boot_samples, get_CI)
+   boot_CI <- sapply(boot_samples, get_mean_CI)
    group_dat <- as.data.frame(t(rbind(group_stats, boot_CI)))
-   group_dat <- group_dat[,c("N_obs","N_low","N_up",
-                             "S_obs","S_low","S_up",
-                             "S_rare_obs","S_rare_low","S_rare_up",
-                             "S_asymp_obs","S_asymp_low","S_asymp_up",
-                             "PIE_obs","PIE_low","PIE_up",
-                             "ENS_PIE_obs","ENS_PIE_low","ENS_PIE_up")]
+   group_dat <- group_dat[,c("N_obs","N_mean","N_low","N_up",
+                             "S_obs","S_mean","S_low","S_up",
+                             "S_rare_obs","S_rare_mean","S_rare_low","S_rare_up",
+                             "S_asymp_obs","S_asymp_mean","S_asymp_low","S_asymp_up",
+                             "PIE_obs","PIE_mean","PIE_low","PIE_up",
+                             "ENS_PIE_obs","ENS_PIE_mean","ENS_PIE_low","ENS_PIE_up")]
    group <- factor(levels(group_id))
    group_dat <- cbind(group, group_dat)
    rownames(group_dat) <- NULL
    
-   #beta PIE
-   betaPIE_sample = group_dat$PIE_obs[group_id] - PIE_sample
+   #beta diversities
+   beta_S       = group_dat$S_obs[group_id] / S_sample
+   beta_ENS_PIE = group_dat$ENS_PIE_obs[group_id] / ENS_PIE_sample
+   beta_S[!is.finite(beta_S)] <- NA
+   beta_ENS_PIE[!is.finite(beta_ENS_PIE)] <- NA
    
    # permutation test for differences among samples
-   F_obs <- data.frame(S       = anova(lm(S_sample ~ group_id))$F[1],
-                       N       = anova(lm(N_sample ~ group_id))$F[1],
-                       S_rare  = anova(lm(S_rare_sample ~ group_id))$F[1],
-                       S_asymp = anova(lm(S_asymp_sample ~ group_id))$F[1],
-                       PIE     = anova(lm(PIE_sample ~ group_id))$F[1],
-                       ENS_PIE = anova(lm(ENS_PIE_sample ~ group_id))$F[1],
-                       betaPIE = anova(lm(betaPIE_sample ~ group_id))$F[1]
+   F_obs <- data.frame(S             = anova(lm(S_sample ~ group_id))$F[1],
+                       N             = anova(lm(N_sample ~ group_id))$F[1],
+                       S_rare        = anova(lm(S_rare_sample ~ group_id))$F[1],
+                       S_asymp       = anova(lm(S_asymp_sample ~ group_id))$F[1],
+                       PIE           = anova(lm(PIE_sample ~ group_id))$F[1],
+                       ENS_PIE       = anova(lm(ENS_PIE_sample ~ group_id))$F[1],
+                       beta_S        = anova(lm(beta_S ~ group_id))$F[1],
+                       beta_ENS_PIE  = anova(lm(beta_S ~ group_id))$F[1]
                       )
    
-   F_rand <- data.frame(S       = numeric(nperm),
-                        N       = numeric(nperm),
-                        S_rare  = numeric(nperm),
-                        S_asymp = numeric(nperm),
-                        PIE     = numeric(nperm),
-                        ENS_PIE = numeric(nperm),
-                        betaPIE = numeric(nperm)
+   F_rand <- data.frame(S             = numeric(nperm),
+                        N             = numeric(nperm),
+                        S_rare        = numeric(nperm),
+                        S_asymp       = numeric(nperm),
+                        PIE           = numeric(nperm),
+                        ENS_PIE       = numeric(nperm),
+                        beta_S        = numeric(nperm),
+                        beta_ENS_PIE  = numeric(nperm)
                         )
    
    for (i in 1:nperm){
@@ -295,7 +301,8 @@ These are removed for the calculation of rarefied richness."))
       F_rand$S_asymp[i] = anova(lm(S_asymp_sample ~ group_id_rand))$F[1]
       F_rand$PIE[i]     = anova(lm(PIE_sample ~ group_id_rand))$F[1]
       F_rand$ENS_PIE[i] = anova(lm(ENS_PIE_sample ~ group_id_rand))$F[1]
-      F_rand$betaPIE[i] = anova(lm(betaPIE_sample ~ group_id_rand))$F[1]
+      F_rand$beta_S[i]  = anova(lm(beta_S ~ group_id_rand))$F[1]
+      F_rand$beta_ENS_PIE[i]  = anova(lm(beta_ENS_PIE ~ group_id_rand))$F[1]
    }
    
    p_S       = sum(F_obs$S       <= F_rand$S) / nperm
@@ -304,14 +311,18 @@ These are removed for the calculation of rarefied richness."))
    p_S_asymp = sum(F_obs$S_asymp <= F_rand$S_asymp) / nperm
    p_PIE     = sum(F_obs$PIE     <= F_rand$PIE) / nperm
    p_ENS_PIE = sum(F_obs$ENS_PIE <= F_rand$ENS_PIE) / nperm
-   p_betaPIE = sum(F_obs$betaPIE <= F_rand$betaPIE) / nperm
+   p_beta_S  = sum(F_obs$beta_S <= F_rand$beta_S) / nperm
+   p_beta_ENS_PIE  = sum(F_obs$beta_ENS_PIE <= F_rand$beta_ENS_PIE) / nperm
    
    stats_pvalues = data.frame(S       = p_S,
                               N       = p_N,
                               S_rare  = p_S_rare,
                               S_asymp = p_S_asymp,
+                              PIE     = p_PIE,
                               ENS_PIE = p_ENS_PIE,
-                              betaPIE = p_betaPIE)
+                              beta_S  = p_beta_S,
+                              beta_ENS_PIE  = p_beta_ENS_PIE
+                              )
 
    stats_samples = data.frame(group   = group_id,
                               N       = N_sample,
@@ -320,7 +331,8 @@ These are removed for the calculation of rarefied richness."))
                               S_asymp = S_asymp_sample,
                               PIE     = PIE_sample,
                               ENS_PIE = ENS_PIE_sample,
-                              betaPIE = betaPIE_sample
+                              beta_S  = beta_S,
+                              beta_ENS_PIE  = beta_ENS_PIE
                               )
    
    stats_groups = group_dat
@@ -366,8 +378,8 @@ These are removed for the calculation of rarefied richness."))
 #' par(mfrow=c(1,3))
 #' plot(inv_stats, 'PIE', col=c('red', 'blue'))
 plot.mob_stats = function(mob_stats, 
-                          display=c('all', 'PIE', 'beta PIE',
-                                    'N', 'S', 'S rare', 'S asymp'),
+                          display=c('all','N', 'S', 'S rare', 'S asymp',
+                                    'PIE', 'ENS PIE'),
                           multipanel=FALSE, ...) {
       if (multipanel) {
           if ('all' %in% display) {
@@ -383,28 +395,57 @@ plot.mob_stats = function(mob_stats,
       if ('PIE' %in% display) {
           if (multipanel)
               par(fig = c(0.2, 0.4, 0.66, 1))
-          panel_title = paste("PIE (p = ", mob_stats$pvalues$ENS_PIE,")\nplot scale",
+          else
+             par(mfrow = c(1,2))
+          panel_title = paste("PIE (p = ", mob_stats$pvalues$PIE,")\nplot scale",
                               sep = "")
           boxplot(PIE ~ group, data=mob_stats$samples,
                   main = panel_title, ...)
-          if (multipanel)
-              par(fig = c(0.4, 0.6, 0.66, 1), new = T)
-          panel_title = paste("beta PIE (p = ", mob_stats$pvalues$betaPIE,")\nbetween scales",
-                              sep = "")
-          boxplot(betaPIE ~ group, data=mob_stats$samples,
-                  main = panel_title, ...)
+          
           if (multipanel)
               par(fig = c(0.6, 0.8, 0.66, 1), new = T)
-          y_limits <- with(mob_stats$groups, range(c(PIE_low, PIE_obs, PIE_up)))
+          y_limits <- with(mob_stats$groups, range(c(PIE_mean, PIE_low, PIE_obs, PIE_up)))
           boxplot(PIE_obs ~ group, data=mob_stats$groups,
                   main = "PIE\ntreatment scale", boxwex = 0, ylim = y_limits)
-          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$PIE_obs,
+          points(PIE_obs ~ group, data = mob_stats$groups, pch = 19)
+          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$PIE_mean,
                  li = mob_stats$groups$PIE_low, ui = mob_stats$groups$PIE_up,
-                 add = T, pch = 19, ...)
+                 add = T, pch = 1, ...)
       }
+      
+      # ENS PIE
+      if ('ENS PIE' %in% display) {
+         if (multipanel)
+            par(fig = c(0.2, 0.4, 0.66, 1))
+         else
+            par(mfrow = c(1,3))
+         panel_title = paste("ENS PIE (p = ", mob_stats$pvalues$ENS_PIE,")\nplot scale",
+                             sep = "")
+         boxplot(ENS_PIE ~ group, data=mob_stats$samples,
+                 main = panel_title, ...)
+         
+         # beta ENS PIE
+         panel_title = paste("beta ENS PIE (p = ", mob_stats$pvalues$beta_ENS_PIE,")\n between scales",
+                             sep = "")
+         boxplot(beta_ENS_PIE ~ group, data=mob_stats$samples,
+                 main = panel_title, ...)
+         
+         if (multipanel)
+            par(fig = c(0.6, 0.8, 0.66, 1), new = T)
+         y_limits <- with(mob_stats$groups, range(c(ENS_PIE_mean, ENS_PIE_low, ENS_PIE_obs, ENS_PIE_up)))
+         boxplot(ENS_PIE_obs ~ group, data=mob_stats$groups,
+                 main = "ENS_PIE\ntreatment scale", boxwex = 0, ylim = y_limits)
+         points(ENS_PIE_obs ~ group, data = mob_stats$groups, pch = 19)
+         plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$ENS_PIE_mean,
+                li = mob_stats$groups$ENS_PIE_low, ui = mob_stats$groups$ENS_PIE_up,
+                add = T, pch = 1, ...)
+      }
+      
       if ('S' %in% display) {
           if (multipanel)
               par(fig = c(0, 0.2, 0.33, 0.66), new = T)
+          else
+              par(mfrow = c(1,3))
 
           # S observed samples
           panel_title = paste("S (p = ", mob_stats$pvalues$S,")\n plot scale",
@@ -412,22 +453,31 @@ plot.mob_stats = function(mob_stats,
           boxplot(S ~ group, data=mob_stats$samples,
                   main = panel_title, ...)
           
+          # S beta
+          panel_title = paste("beta S (p = ", mob_stats$pvalues$beta_S,")\n between scales",
+                              sep = "")
+          boxplot(beta_S ~ group, data=mob_stats$samples,
+                  main = panel_title, ...)
+          
           # S groups
           if (multipanel)
               par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-          y_limits <- with(mob_stats$groups, range(c(S_low, S_obs, S_up)))
+          y_limits <- with(mob_stats$groups, range(c(S_mean, S_low, S_obs, S_up)))
           boxplot(S_obs ~ levels(group), data=mob_stats$groups,
                   main = "S\ntreatment scale", boxwex = 0, ylim = y_limits)
-          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_obs,
+          points(S_obs ~ group, data = mob_stats$groups, pch = 19)
+          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_mean,
                  li = mob_stats$groups$S_low, ui = mob_stats$groups$S_up,
-                 add = T, pch = 19, ...)
+                 add = T, pch = 1, ...)
 
       }
       if ('S rare' %in% display) {
           if (multipanel)
               par(fig = c(0, 0.2, 0.33, 0.66), new = T)
+          else
+              par(mfrow = c(1,2))
 
-          # S rareified samples
+          # S rarefied samples
           panel_title = paste("S rarefied (p = ", mob_stats$pvalues$S_rare,
                               ")\n plot scale", sep = "")
           boxplot(S_rare ~ group, data=mob_stats$samples,
@@ -436,17 +486,20 @@ plot.mob_stats = function(mob_stats,
           # S groups
           if (multipanel)
               par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-          y_limits <- with(mob_stats$groups, range(c(S_rare_low, S_rare_obs, S_rare_up)))
-          boxplot(S_rare_obs ~ levels(group), data=mob_stats$groups,
+          y_limits <- with(mob_stats$groups, range(c(S_rare_mean, S_rare_low, S_rare_obs, S_rare_up)))
+          boxplot(S_rare_mean ~ levels(group), data=mob_stats$groups,
                   main = "S rarefied\ntreatment scale", boxwex = 0, ylim = y_limits)
-          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_rare_obs,
+          points(S_rare_obs ~ group, data = mob_stats$groups, pch = 19)
+          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_rare_mean,
                  li = mob_stats$groups$S_rare_low, ui = mob_stats$groups$S_rare_up,
-                 add = T, pch = 19, ...)
+                 add = T, pch = 1, ...)
 
       }
       if ('N' %in% display) {
           if (multipanel)
               par(fig = c(0.2, 0.4, 0.33, 0.66), new = T)
+          else
+              par(mfrow = c(1,2))
           # N samples
           panel_title = paste("N (p = ", mob_stats$pvalues$N,")\n plot scale",
                               sep = "")
@@ -456,16 +509,19 @@ plot.mob_stats = function(mob_stats,
           # N groups
           if (multipanel)
               par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
-          y_limits <- with(mob_stats$groups, range(c(N_low, N_obs, N_up)))
-          boxplot(N_obs ~ levels(group), data=mob_stats$groups,
+          y_limits <- with(mob_stats$groups, range(c(N_mean, N_low, N_obs, N_up)))
+          boxplot(N_mean ~ levels(group), data=mob_stats$groups,
                   main = "N\ntreatment scale", boxwex = 0, ylim = y_limits)
-          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$N_obs,
+          points(N_obs ~ group, data = mob_stats$groups, pch = 19)
+          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$N_mean,
                  li = mob_stats$groups$N_low, ui = mob_stats$groups$N_up,
-                 add = T, pch = 19, ...)
+                 add = T, pch = 1, ...)
       }
       if ('S asymp' %in% display) {
           if (multipanel)
               par(fig = c(0.2, 0.4, 0, 0.33), new = T)
+          else
+              par(mfrow = c(1,2))
            # S asymptotic
           if (all(is.na(mob_stats$samples$S_asymp))){
               warning("Cannot plot asymptotic richness for the samples")
@@ -481,12 +537,13 @@ plot.mob_stats = function(mob_stats,
           if (all(is.na(mob_stats$groups$S_asymp_obs))){
               warning("Cannot plot asymptotic richness for the groups")
           } else {
-             y_limits <- with(mob_stats$groups, range(c(S_asymp_low, S_asymp_obs, S_asymp_up))) 
+             y_limits <- with(mob_stats$groups, range(c(S_asymp_mean, S_asymp_low, S_asymp_obs, S_asymp_up))) 
              boxplot(S_asymp_obs ~ levels(group), data=mob_stats$groups,
                       main = "S asympotic\ntreatment scale", boxwex = 0, ylim = y_limits)
-             plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_asymp_obs,
+             points(S_asymp_obs ~ group, data = mob_stats$groups, pch = 19)
+             plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_asymp_mean,
                     li = mob_stats$groups$S_asymp_low, ui = mob_stats$groups$S_asymp_up,
-                    add = T, pch = 19, ...)
+                    add = T, pch = 1, ...)
           }
           
       }
