@@ -15,7 +15,8 @@ Depends:
     Jade,
     rgl,
     scales,
-    vegan
+    vegan,
+    plotrix
 Remotes:
     JohnsonHsieh/Jade,
     AnneChao/SpadeR

@@ -33,6 +33,130 @@ calc_PIE = function(x) {
     return(H)
 }
 
+# Calculate biodiversity indices of single group
+
+calc_biodiv_single_group <- function(abund_vec, n_rare){
+   
+   abund_vec <- abund_vec[abund_vec > 0]
+   
+   out_vec <- c("N"       = NA,
+                "S"       = NA,
+                "S_rare"  = NA,
+                "S_asymp" = NA,
+                "PIE"     = NA,
+                "ENS_PIE" = NA
+                )
+
+   if (length(abund_vec) > 0){
+      out_vec["N"] <- sum(abund_vec)
+      out_vec["S"] <- length(abund_vec)
+      if (!is.na(n_rare))
+         out_vec["S_rare"] <- rarefaction(abund_vec, method = "indiv", effort = n_rare)
+      out_vec["PIE"] <- diversity(abund_vec, index = "simpson")
+      out_vec["ENS_PIE"] <- diversity(abund_vec, index = "invsimpson")
+      
+      S_asymp <- try(vegan::estimateR(abund_vec))
+      if (class(S_asymp) == "try_error"){
+         warning("The Chao richness estimator cannot be calculated for all groups.")
+      } else {
+         out_vec["S_asymp"] = S_asymp["S.chao1"]
+      }
+   }
+   
+   return(out_vec)
+}
+
+# generate a single bootstrap sample of group-level biodiversity indices
+boot_sample_group <- function(comm_dat, n_rare)
+{
+   n_sample <- nrow(comm_dat)
+   sample_rows <- sample(1:n_sample, size = n_sample, replace = T)
+   abund <- colSums(comm_dat[sample_rows, ])
+   out <- calc_biodiv_single_group(abund, n_rare = n_rare)
+   
+   return(out)
+}
+
+# replicated bootstrap samples of group-level indices
+repl_boot_samples <- function(comm_dat, n_rare, n_perm = 100)
+{
+   repl_biodiv <- replicate(n_perm, boot_sample_group(comm_dat, n_rare = n_rare))
+   return(repl_biodiv)
+}
+
+# get confidence interval from bootstrap samples
+get_CI <- function(x, level = 0.95)
+{
+   alpha <- 1 - level
+   p <- c(alpha/2, 1 - alpha/2)
+   CI_tab <- apply(x, MARGIN = 1, quantile, probs = p)
+   CI_vec <- c(CI_tab[1,], CI_tab[2,])
+   names(CI_vec) <- paste(rep(colnames(CI_tab), 2),
+                          rep(c("low", "up"), each = ncol(CI_tab)), sep = "_")
+   return(CI_vec)
+}
+
+
+
+# # Calculate group-level biodiversity indices
+# # http://www.uni-kiel.de/psychologie/rexrepos/posts/resamplingBootStrat.html
+# 
+# calc_group_indices <- function(comm_dat, idx, n_min = 10){
+#    
+#    group = comm_dat[idx,1]
+#    abund_dat = comm_dat[idx,-1]
+#    
+#    abund_group = aggregate(abund_dat, by = list(group), FUN = "sum")[ ,-1]
+#    
+#    # Group-based statistics
+#    N_group = rowSums(abund_group)      
+#    S_group = rowSums(abund_group > 0) 
+#    
+#    N_min_group = max(n_min, min(N_group))
+#    groups_low_n = N_group < n_min
+#    
+#    S_rare_group = rep(NA, length(N_group))
+#    S_rare_group[!groups_low_n] = apply(abund_group[!groups_low_n], MARGIN = 1,
+#                                        FUN = rarefaction, method = "indiv",
+#                                        effort = N_min_group)
+# 
+#    # Probability of Interspecific Encounter
+#    groups_n0 = N_group == 0
+#    
+#    
+#    PIE_group = diversity(abund_group, index = "simpson")
+#    ENS_PIE_group = diversity(abund_group, index = "invsimpson")
+#    PIE_group[groups_n0] = NA
+#    ENS_PIE_group[groups_n0] = NA
+#    
+#    # bias corrected Chao estimator
+#    S_asymp_group = estimateR(abund_group)["S.chao1",]
+#    
+#    # bias corrected Chao estimator
+#    S_asymp_group = try(vegan::estimateR(abund_group))
+#    if (class(S_asymp_group) == "try_error"){
+#       warning("The Chao richness estimator cannot be calculated for all groups.")
+#       S_asymp_group <- rep(NA, nrow(abund_group))
+#    } else {
+#       if (is.matrix(S_asymp_group)) S_asymp_group = S_asymp_group["S.chao1",]
+#       else                          S_asymp_group = S_asymp_group["S.chao1"]
+#       S_asymp_group[!is.finite(S_asymp_group)] <- NA
+#    }
+#    
+#    out_vec <- c(N_group,
+#                 S_group,
+#                 S_rare_group,
+#                 PIE_group,
+#                 ENS_PIE_group,
+#                 S_asymp_group)
+#    names(out_vec) <- paste(rep(c("N","S","S_rare","PIE","ENS_PIE","S_asymp"),
+#                                 each = length(unique(group))),
+#                            unique(group))
+#    out_vec
+# }
+
+# dat1 <- comm_dat
+# boot1 <- boot(dat1, statistic = calc_group_indices, strata = group_var, R = 100, n_min = 10)
 
 #' Calculate sample based and group based biodiversity statistics
 #' @inheritParams get_delta_stats
@@ -103,13 +227,12 @@ These are removed for the calculation of PIE."))
    
    # ---------------------------------------------------------------------------
    # abundance distribution pooled in group
-   abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")[ ,-1]
+   abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
    
    # Group-based statistics
-   N_group = rowSums(abund_group)      
-   S_group = rowSums(abund_group > 0) 
-   
-   N_min_group = max(n_min, min(N_group))
+   N_group = rowSums(abund_group[ ,-1])      
+
+   N_min_group = max(n_min, floor(min(N_group)/2))
    groups_low_n = N_group < n_min
    
    if (sum(groups_low_n) == 1){
@@ -122,57 +245,45 @@ These are removed for the calculation of rarefied richness."))
 These are removed for the calculation of rarefied richness."))
    }
    
-   S_rare_group = rep(NA, length(N_group))
-   S_rare_group[!groups_low_n] = apply(abund_group[!groups_low_n], MARGIN = 1,
-                                       FUN = rarefaction, method = "indiv",
-                                       effort = N_min_group)
+   group_stats <- apply(abund_group[ ,-1], MARGIN = 1,
+                        FUN = calc_biodiv_single_group, n_rare = N_min_group)
+   row.names(group_stats) <- paste(row.names(group_stats), "_obs", sep = "")
+  
+   # bootstrap replicates
+   boot_samples <- by(mob_in$comm, INDICES = group_id, FUN = repl_boot_samples,
+                      n_rare = N_min_group)
    
-   # Probability of Interspecific Encounter
-   groups_n0 = N_group == 0
-   
-   if (sum(groups_n0) > 0){
-      warning(paste("There are",sum(groups_n0), "groups without any individuals.
-                    These are removed for the calculation of PIE."))
-   }
-   
-   PIE_group = diversity(abund_group, index = "simpson")
-   ENS_PIE_group = diversity(abund_group, index = "invsimpson")
-   PIE_group[groups_n0] = NA
-   ENS_PIE_group[groups_n0] = NA
-   
-   # bias corrected Chao estimator
-   S_asymp_group = estimateR(abund_group)["S.chao1",]
-   
-   # bias corrected Chao estimator
-   S_asymp_group = try(vegan::estimateR(abund_group))
-   if (class(S_asymp_group) == "try_error"){
-      warning("The Chao richness estimator cannot be calculated for all groups.")
-      S_asymp_group <- rep(NA, nrow(abund_group))
-   } else {
-      if (is.matrix(S_asymp_group)) S_asymp_group = S_asymp_group["S.chao1",]
-      else                          S_asymp_group = S_asymp_group["S.chao1"]
-      S_asymp_group[!is.finite(S_asymp_group)] <- NA
-   }
+   boot_CI <- sapply(boot_samples, get_CI)
+   group_dat <- as.data.frame(t(rbind(group_stats, boot_CI)))
+   group_dat <- group_dat[,c("N_obs","N_low","N_up",
+                             "S_obs","S_low","S_up",
+                             "S_rare_obs","S_rare_low","S_rare_up",
+                             "S_asymp_obs","S_asymp_low","S_asymp_up",
+                             "PIE_obs","PIE_low","PIE_up",
+                             "ENS_PIE_obs","ENS_PIE_low","ENS_PIE_up")]
+   group <- factor(levels(group_id))
+   group_dat <- cbind(group, group_dat)
+   rownames(group_dat) <- NULL
    
    #beta PIE
-   betaPIE_sample = PIE_group[group_id] - PIE_sample
+   betaPIE_sample = group_dat$PIE_obs[group_id] - PIE_sample
    
    # permutation test for differences among samples
    F_obs <- data.frame(S       = anova(lm(S_sample ~ group_id))$F[1],
                        N       = anova(lm(N_sample ~ group_id))$F[1],
                        S_rare  = anova(lm(S_rare_sample ~ group_id))$F[1],
+                       S_asymp = anova(lm(S_asymp_sample ~ group_id))$F[1],
                        PIE     = anova(lm(PIE_sample ~ group_id))$F[1],
                        ENS_PIE = anova(lm(ENS_PIE_sample ~ group_id))$F[1],
-                       S_asymp = anova(lm(S_asymp_sample ~ group_id))$F[1],
                        betaPIE = anova(lm(betaPIE_sample ~ group_id))$F[1]
                       )
    
    F_rand <- data.frame(S       = numeric(nperm),
                         N       = numeric(nperm),
                         S_rare  = numeric(nperm),
+                        S_asymp = numeric(nperm),
                         PIE     = numeric(nperm),
                         ENS_PIE = numeric(nperm),
-                        S_asymp = numeric(nperm),
                         betaPIE = numeric(nperm)
                         )
    
@@ -181,24 +292,25 @@ These are removed for the calculation of rarefied richness."))
       F_rand$S[i]       = anova(lm(S_sample ~ group_id_rand))$F[1]
       F_rand$N[i]       = anova(lm(N_sample ~ group_id_rand))$F[1]
       F_rand$S_rare[i]  = anova(lm(S_rare_sample ~ group_id_rand))$F[1]
+      F_rand$S_asymp[i] = anova(lm(S_asymp_sample ~ group_id_rand))$F[1]
       F_rand$PIE[i]     = anova(lm(PIE_sample ~ group_id_rand))$F[1]
       F_rand$ENS_PIE[i] = anova(lm(ENS_PIE_sample ~ group_id_rand))$F[1]
-      F_rand$S_asymp[i] = anova(lm(S_asymp_sample ~ group_id_rand))$F[1]
       F_rand$betaPIE[i] = anova(lm(betaPIE_sample ~ group_id_rand))$F[1]
    }
    
    p_S       = sum(F_obs$S       <= F_rand$S) / nperm
    p_N       = sum(F_obs$N       <= F_rand$N) / nperm
    p_S_rare  = sum(F_obs$S_rare  <= F_rand$S_rare) / nperm
+   p_S_asymp = sum(F_obs$S_asymp <= F_rand$S_asymp) / nperm
    p_PIE     = sum(F_obs$PIE     <= F_rand$PIE) / nperm
    p_ENS_PIE = sum(F_obs$ENS_PIE <= F_rand$ENS_PIE) / nperm
-   p_S_asymp = sum(F_obs$S_asymp <= F_rand$S_asymp) / nperm
    p_betaPIE = sum(F_obs$betaPIE <= F_rand$betaPIE) / nperm
+   
    stats_pvalues = data.frame(S       = p_S,
                               N       = p_N,
                               S_rare  = p_S_rare,
-                              ENS_PIE = p_ENS_PIE,
                               S_asymp = p_S_asymp,
+                              ENS_PIE = p_ENS_PIE,
                               betaPIE = p_betaPIE)
 
    stats_samples = data.frame(group   = group_id,
@@ -211,14 +323,8 @@ These are removed for the calculation of rarefied richness."))
                               betaPIE = betaPIE_sample
                               )
    
-   stats_groups = data.frame(group  = factor(levels(group_id), ordered = is.ordered(group_id)),
-                             N      = N_group,
-                             S      = S_group,
-                             S_rare = S_rare_group,
-                             S_asymp = S_asymp_group,
-                             PIE    = PIE_group,
-                             ENS_PIE = ENS_PIE_group
-                             )
+   stats_groups = group_dat
+   
    out = list(pvalues = stats_pvalues,
               samples = stats_samples,
               groups  = stats_groups)
@@ -289,9 +395,12 @@ plot.mob_stats = function(mob_stats,
                   main = panel_title, ...)
           if (multipanel)
               par(fig = c(0.6, 0.8, 0.66, 1), new = T)
-          boxplot(PIE ~ levels(group), data=mob_stats$groups,
-                  main = "PIE\ntreatment scale", boxwex = 0)
-          points(mob_stats$groups$PIE, pch = 19, ...)
+          y_limits <- with(mob_stats$groups, range(c(PIE_low, PIE_obs, PIE_up)))
+          boxplot(PIE_obs ~ group, data=mob_stats$groups,
+                  main = "PIE\ntreatment scale", boxwex = 0, ylim = y_limits)
+          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$PIE_obs,
+                 li = mob_stats$groups$PIE_low, ui = mob_stats$groups$PIE_up,
+                 add = T, pch = 19, ...)
       }
       if ('S' %in% display) {
           if (multipanel)
@@ -306,9 +415,12 @@ plot.mob_stats = function(mob_stats,
           # S groups
           if (multipanel)
               par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-          boxplot(S ~ levels(group), data=mob_stats$groups,
-                  main = "S\ntreatment scale", boxwex = 0)
-          points(mob_stats$groups$S, pch = 19, ...)
+          y_limits <- with(mob_stats$groups, range(c(S_low, S_obs, S_up)))
+          boxplot(S_obs ~ levels(group), data=mob_stats$groups,
+                  main = "S\ntreatment scale", boxwex = 0, ylim = y_limits)
+          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_obs,
+                 li = mob_stats$groups$S_low, ui = mob_stats$groups$S_up,
+                 add = T, pch = 19, ...)
 
       }
       if ('S rare' %in% display) {
@@ -324,9 +436,12 @@ plot.mob_stats = function(mob_stats,
           # S groups
           if (multipanel)
               par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-          boxplot(S_rare ~ levels(group), data=mob_stats$groups,
-                  main = "S rarefied\ntreatment scale", boxwex = 0)
-          points(mob_stats$groups$S_rare, pch = 19, ...)
+          y_limits <- with(mob_stats$groups, range(c(S_rare_low, S_rare_obs, S_rare_up)))
+          boxplot(S_rare_obs ~ levels(group), data=mob_stats$groups,
+                  main = "S rarefied\ntreatment scale", boxwex = 0, ylim = y_limits)
+          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_rare_obs,
+                 li = mob_stats$groups$S_rare_low, ui = mob_stats$groups$S_rare_up,
+                 add = T, pch = 19, ...)
 
       }
       if ('N' %in% display) {
@@ -341,9 +456,12 @@ plot.mob_stats = function(mob_stats,
           # N groups
           if (multipanel)
               par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
-          boxplot(N ~ levels(group), data=mob_stats$groups,
-                  main = "N\ntreatment scale", boxwex = 0)
-          points(mob_stats$groups$N, pch = 19, ...)
+          y_limits <- with(mob_stats$groups, range(c(N_low, N_obs, N_up)))
+          boxplot(N_obs ~ levels(group), data=mob_stats$groups,
+                  main = "N\ntreatment scale", boxwex = 0, ylim = y_limits)
+          plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$N_obs,
+                 li = mob_stats$groups$N_low, ui = mob_stats$groups$N_up,
+                 add = T, pch = 19, ...)
       }
       if ('S asymp' %in% display) {
           if (multipanel)
@@ -360,12 +478,15 @@ plot.mob_stats = function(mob_stats,
           
           if (multipanel)
               par(fig = c(0.6, 0.8, 0, 0.33), new = T)
-          if (all(is.na(mob_stats$groups$S_asymp))){
+          if (all(is.na(mob_stats$groups$S_asymp_obs))){
               warning("Cannot plot asymptotic richness for the groups")
           } else {
-              boxplot(S_asymp ~ levels(group), data=mob_stats$groups,
-                      main = "S asympotic\ntreatment scale", boxwex = 0)
-              points(mob_stats$groups$S_asymp, pch = 19, ...)
+             y_limits <- with(mob_stats$groups, range(c(S_asymp_low, S_asymp_obs, S_asymp_up))) 
+             boxplot(S_asymp_obs ~ levels(group), data=mob_stats$groups,
+                      main = "S asympotic\ntreatment scale", boxwex = 0, ylim = y_limits)
+             plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$S_asymp_obs,
+                    li = mob_stats$groups$S_asymp_low, ui = mob_stats$groups$S_asymp_up,
+                    add = T, pch = 19, ...)
           }
           
       }
