@@ -37,10 +37,10 @@ calc_PIE = function(x) {
     }
     x = x * x
     if (length(dim(x)) > 1) 
-        H = total/(total - 1) * apply(x, 1, sum, na.rm = TRUE)
+        H = apply(x, 1, sum, na.rm = TRUE)
     else 
         H = sum(x, na.rm = TRUE)
-        H = total/(total - 1)* (1 - H)
+    H = total/(total - 1)* (1 - H)
     if (any(is.na(total))) 
         is.na(H) = is.na(total)
     H[!is.finite(H)] <- NA
