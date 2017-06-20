@@ -112,65 +112,7 @@ get_CI <- function(x, level = 0.95)
 
 
 
-# # Calculate group-level biodiversity indices
-# # http://www.uni-kiel.de/psychologie/rexrepos/posts/resamplingBootStrat.html
-# 
-# calc_group_indices <- function(comm_dat, idx, n_min = 10){
-#    
-#    group = comm_dat[idx,1]
-#    abund_dat = comm_dat[idx,-1]
-#    
-#    abund_group = aggregate(abund_dat, by = list(group), FUN = "sum")[ ,-1]
-#    
-#    # Group-based statistics
-#    N_group = rowSums(abund_group)      
-#    S_group = rowSums(abund_group > 0) 
-#    
-#    N_min_group = max(n_min, min(N_group))
-#    groups_low_n = N_group < n_min
-#    
-#    S_rare_group = rep(NA, length(N_group))
-#    S_rare_group[!groups_low_n] = apply(abund_group[!groups_low_n], MARGIN = 1,
-#                                        FUN = rarefaction, method = "indiv",
-#                                        effort = N_min_group)
-# 
-#    # Probability of Interspecific Encounter
-#    groups_n0 = N_group == 0
-#    
-#    
-#    PIE_group = diversity(abund_group, index = "simpson")
-#    ENS_PIE_group = diversity(abund_group, index = "invsimpson")
-#    PIE_group[groups_n0] = NA
-#    ENS_PIE_group[groups_n0] = NA
-#    
-#    # bias corrected Chao estimator
-#    S_asymp_group = estimateR(abund_group)["S.chao1",]
-#    
-#    # bias corrected Chao estimator
-#    S_asymp_group = try(vegan::estimateR(abund_group))
-#    if (class(S_asymp_group) == "try_error"){
-#       warning("The Chao richness estimator cannot be calculated for all groups.")
-#       S_asymp_group <- rep(NA, nrow(abund_group))
-#    } else {
-#       if (is.matrix(S_asymp_group)) S_asymp_group = S_asymp_group["S.chao1",]
-#       else                          S_asymp_group = S_asymp_group["S.chao1"]
-#       S_asymp_group[!is.finite(S_asymp_group)] <- NA
-#    }
-#    
-#    out_vec <- c(N_group,
-#                 S_group,
-#                 S_rare_group,
-#                 PIE_group,
-#                 ENS_PIE_group,
-#                 S_asymp_group)
-#    names(out_vec) <- paste(rep(c("N","S","S_rare","PIE","ENS_PIE","S_asymp"),
-#                                 each = length(unique(group))),
-#                            unique(group))
-#    out_vec
-# }
 
-# dat1 <- comm_dat
-# boot1 <- boot(dat1, statistic = calc_group_indices, strata = group_var, R = 100, n_min = 10)
 
 #' Calculate sample based and group based biodiversity statistics
 #' @inheritParams get_delta_stats
