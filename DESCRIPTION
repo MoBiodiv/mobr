@@ -11,15 +11,15 @@ Description: This package is designed to help measure biodiversity and its
     changes across scales.
 Depends:
     R (>= 3.0.2),
-    pracma,
     Jade,
-    rgl,
+    pracma,
     scales,
     vegan,
     plotrix
+Suggests:
+    rgl
 Remotes:
     JohnsonHsieh/Jade,
-    AnneChao/SpadeR
 License: MIT
 LazyData: true
 RoxygenNote: 5.0.1
