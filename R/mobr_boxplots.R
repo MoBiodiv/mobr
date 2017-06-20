@@ -2,11 +2,24 @@
 #' 
 #' PIE is also known as Simpson's evenness index and this function is 
 #' a reduced form of the function vegan::diversity(). Jari Oksanen and Bob O'Hara
-#' are the original authors of the function vegan::diversity()
+#' are the original authors of the function vegan::diversity().
+#' 
+#' In this function the formulate of Hurlbert (1971) is used to calculate PIE:
+#' 
+#' PIE = N/(N-1)*(1 - p_i^2),
+#' 
+#' where N is the total number of individuals and p_i is the relative abundance
+#' of species i. 
+#' 
 #' 
 #' @inheritParams rarefaction
 #' @author Dan McGlinn
 #' @keywords internal
+#' 
+#' @references 
+#' Hurlbert, S. H. 1971. The Nonconcept of Species Diversity: A Critique and Alternative Parameters. - Ecology 52: 577–586.
+
+#' 
 #' @examples 
 #' data(inv_comm)
 #' calc_PIE(inv_comm)
@@ -24,12 +37,13 @@ calc_PIE = function(x) {
     }
     x = x * x
     if (length(dim(x)) > 1) 
-        H = apply(x, 1, sum, na.rm = TRUE)
+        H = total/(total - 1) * apply(x, 1, sum, na.rm = TRUE)
     else 
         H = sum(x, na.rm = TRUE)
-        H = 1 - H
+        H = total/(total - 1)* (1 - H)
     if (any(is.na(total))) 
         is.na(H) = is.na(total)
+    H[!is.finite(H)] <- NA
     return(H)
 }
 
@@ -52,8 +66,8 @@ calc_biodiv_single_group <- function(abund_vec, n_rare){
       out_vec["S"] <- length(abund_vec)
       if (!is.na(n_rare))
          out_vec["S_rare"] <- rarefaction(abund_vec, method = "indiv", effort = n_rare)
-      out_vec["PIE"] <- diversity(abund_vec, index = "simpson")
-      out_vec["ENS_PIE"] <- diversity(abund_vec, index = "invsimpson")
+      out_vec["PIE"] <- calc_PIE(abund_vec)
+      out_vec["ENS_PIE"] <- 1/(1 - out_vec["PIE"])
       
       S_asymp <- try(vegan::estimateR(abund_vec))
       if (class(S_asymp) == "try_error"){
@@ -209,8 +223,8 @@ get_mob_stats = function(mob_in, group_var, n_min = 10, nperm = 1000) {
 These are removed for the calculation of PIE."))
    }
    
-   PIE_sample = diversity(mob_in$comm, index = "simpson")
-   ENS_PIE_sample = diversity(mob_in$comm, index = "invsimpson")
+   PIE_sample = calc_PIE(mob_in$comm)
+   ENS_PIE_sample = 1/(1 - PIE_sample)
    PIE_sample[plots_n0] = NA
    ENS_PIE_sample[plots_n0] = NA
    
