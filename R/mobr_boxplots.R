@@ -66,9 +66,10 @@ calc_biodiv_single_group <- function(abund_vec, n_rare){
       out_vec["S"] <- length(abund_vec)
       if (!is.na(n_rare))
          out_vec["S_rare"] <- rarefaction(abund_vec, method = "indiv", effort = n_rare)
-      out_vec["PIE"] <- calc_PIE(abund_vec)
-      out_vec["ENS_PIE"] <- 1/(1 - out_vec["PIE"])
-      
+      if (sum(abund_vec) > 1){
+         out_vec["PIE"] <- calc_PIE(abund_vec)
+         out_vec["ENS_PIE"] <- 1/(1 - out_vec["PIE"])
+      }
       S_asymp <- try(vegan::estimateR(abund_vec))
       if (class(S_asymp) == "try_error"){
          warning("The Chao richness estimator cannot be calculated for all groups.")
@@ -155,21 +156,24 @@ get_mob_stats = function(mob_in, group_var, n_min = 10, nperm = 1000) {
                                        effort = N_min_sample)
    
    # Probability of Interspecific Encounter
-   plots_n0 = N_sample == 0
+   plots_n01 = N_sample <= 1 # Hurlbert's PIE can only be calculated for two or more individuals
    
-   if (sum(plots_n0) == 1){
-      warning(paste("There is",sum(plots_n0), "plot without any individuals. This is removed for the calculation of PIE."))
+   if (sum(plots_n01) == 1){
+      warning(paste("There is",sum(plots_n01), "plot with less than two individuals.
+This is removed for the calculation of PIE."))
    }
    
-   if (sum(plots_n0) > 1){
-      warning(paste("There are",sum(plots_n0), "plots without any individuals.
+   if (sum(plots_n01) > 1){
+      warning(paste("There are",sum(plots_n01), "plots with less than two individuals.
 These are removed for the calculation of PIE."))
    }
    
    PIE_sample = calc_PIE(mob_in$comm)
    ENS_PIE_sample = 1/(1 - PIE_sample)
-   PIE_sample[plots_n0] = NA
-   ENS_PIE_sample[plots_n0] = NA
+   ENS_PIE_sample[!is.finite(ENS_PIE_sample)] <- NA
+   
+   PIE_sample[plots_n01] = NA
+   ENS_PIE_sample[plots_n01] = NA
    
    # bias corrected Chao estimator
    S_asymp_sample = try(vegan::estimateR(mob_in$comm))
