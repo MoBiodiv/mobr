@@ -14,7 +14,8 @@ Depends:
     Jade,
     pracma,
     scales,
-    vegan
+    vegan,
+    plotrix
 Suggests:
     rgl
 Remotes:
