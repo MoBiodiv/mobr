@@ -133,7 +133,7 @@ get_mean_CI <- function(x, level = 0.95)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
 #' plot(inv_stats, multipanel=TRUE)
-get_mob_stats = function(mob_in, group_var, n_min = 10, nperm = 1000) {
+get_mob_stats = function(mob_in, group_var, n_min = 5, nperm = 100) {
    if (nperm < 1) 
        stop('Set nperm to a value greater than 1') 
    group_id  = factor(mob_in$env[, group_var])
@@ -143,17 +143,23 @@ get_mob_stats = function(mob_in, group_var, n_min = 10, nperm = 1000) {
    S_sample = rowSums(mob_in$comm > 0)  # species in each sample
    
    # rarefied richness
-   N_min_sample = max(n_min, min(N_sample))
+   N_min_sample = min(N_sample)
+   rarefy_levels = c(n_min, floor(N_min_sample)/2, N_min_sample)
+   rarefy_levels[rarefy_levels < n_min] <- n_min
    plots_low_n = N_sample < n_min
    
    if (sum(plots_low_n) > 0){
       warning(paste("There are",sum(plots_low_n),"plots with less then", n_min,"individuals. These plots are removed for the calculation of rarefied richness."))
    }
 
-   S_rare_sample = rep(NA, nrow(mob_in$comm))
-   S_rare_sample[!plots_low_n] = apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
-                                       FUN = rarefaction, method = "indiv",
-                                       effort = N_min_sample)
+   S_rare = data.frame(S_rare1 = rep(NA, nrow(mob_in$comm)),
+                       S_rare2 = rep(NA, nrow(mob_in$comm)),
+                       S_rare3 = rep(NA, nrow(mob_in$comm)))
+   
+   S_rare[!plots_low_n,] <-  t(apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
+                                      FUN = rarefaction, method = "indiv",
+                                      effort = rarefy_levels))
+
    
    # Probability of Interspecific Encounter
    plots_n01 = N_sample <= 1 # Hurlbert's PIE can only be calculated for two or more individuals
@@ -297,7 +303,8 @@ These are removed for the calculation of rarefied richness."))
    
    stats_groups = group_dat
    
-   out = list(pvalues = stats_pvalues,
+   out = list(n_rarefy = rarefy_levels,
+              pvalues = stats_pvalues,
               samples = stats_samples,
               groups  = stats_groups)
    class(out) = 'mob_stats'
