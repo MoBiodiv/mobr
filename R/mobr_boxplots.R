@@ -241,7 +241,9 @@ These are removed for the calculation of rarefied richness."))
    # permutation test for differences among samples
    F_obs <- data.frame(S             = anova(lm(S_sample ~ group_id))$F[1],
                        N             = anova(lm(N_sample ~ group_id))$F[1],
-                       S_rare        = anova(lm(S_rare_sample ~ group_id))$F[1],
+                       S_rare1       = anova(lm(S_rare$S_rare1 ~ group_id))$F[1],
+                       S_rare2       = anova(lm(S_rare$S_rare2 ~ group_id))$F[1],
+                       S_rare3       = anova(lm(S_rare$S_rare3 ~ group_id))$F[1],
                        S_asymp       = anova(lm(S_asymp_sample ~ group_id))$F[1],
                        PIE           = anova(lm(PIE_sample ~ group_id))$F[1],
                        ENS_PIE       = anova(lm(ENS_PIE_sample ~ group_id))$F[1],
@@ -251,7 +253,9 @@ These are removed for the calculation of rarefied richness."))
    
    F_rand <- data.frame(S             = numeric(nperm),
                         N             = numeric(nperm),
-                        S_rare        = numeric(nperm),
+                        S_rare1       = numeric(nperm),
+                        S_rare2       = numeric(nperm),
+                        S_rare3       = numeric(nperm),
                         S_asymp       = numeric(nperm),
                         PIE           = numeric(nperm),
                         ENS_PIE       = numeric(nperm),
@@ -263,7 +267,9 @@ These are removed for the calculation of rarefied richness."))
       group_id_rand     = sample(group_id)
       F_rand$S[i]       = anova(lm(S_sample ~ group_id_rand))$F[1]
       F_rand$N[i]       = anova(lm(N_sample ~ group_id_rand))$F[1]
-      F_rand$S_rare[i]  = anova(lm(S_rare_sample ~ group_id_rand))$F[1]
+      F_rand$S_rare1[i] = anova(lm(S_rare$S_rare1 ~ group_id_rand))$F[1]
+      F_rand$S_rare2[i] = anova(lm(S_rare$S_rare2 ~ group_id_rand))$F[1]
+      F_rand$S_rare3[i] = anova(lm(S_rare$S_rare3 ~ group_id_rand))$F[1]
       F_rand$S_asymp[i] = anova(lm(S_asymp_sample ~ group_id_rand))$F[1]
       F_rand$PIE[i]     = anova(lm(PIE_sample ~ group_id_rand))$F[1]
       F_rand$ENS_PIE[i] = anova(lm(ENS_PIE_sample ~ group_id_rand))$F[1]
@@ -273,7 +279,9 @@ These are removed for the calculation of rarefied richness."))
    
    p_S       = sum(F_obs$S       <= F_rand$S) / nperm
    p_N       = sum(F_obs$N       <= F_rand$N) / nperm
-   p_S_rare  = sum(F_obs$S_rare  <= F_rand$S_rare) / nperm
+   p_S_rare1 = sum(F_obs$S_rare1 <= F_rand$S_rare1) / nperm
+   p_S_rare2 = sum(F_obs$S_rare2 <= F_rand$S_rare2) / nperm
+   p_S_rare3 = sum(F_obs$S_rare3 <= F_rand$S_rare3) / nperm
    p_S_asymp = sum(F_obs$S_asymp <= F_rand$S_asymp) / nperm
    p_PIE     = sum(F_obs$PIE     <= F_rand$PIE) / nperm
    p_ENS_PIE = sum(F_obs$ENS_PIE <= F_rand$ENS_PIE) / nperm
@@ -282,7 +290,9 @@ These are removed for the calculation of rarefied richness."))
    
    stats_pvalues = data.frame(S       = p_S,
                               N       = p_N,
-                              S_rare  = p_S_rare,
+                              S_rare1 = p_S_rare1,
+                              S_rare2 = p_S_rare2,
+                              S_rare3 = p_S_rare3,
                               S_asymp = p_S_asymp,
                               PIE     = p_PIE,
                               ENS_PIE = p_ENS_PIE,
@@ -293,7 +303,9 @@ These are removed for the calculation of rarefied richness."))
    stats_samples = data.frame(group   = group_id,
                               N       = N_sample,
                               S       = S_sample,
-                              S_rare  = S_rare_sample,
+                              S_rare1 = S_rare$S_rare1,
+                              S_rare2 = S_rare$S_rare2,
+                              S_rare3 = S_rare$S_rare3,
                               S_asymp = S_asymp_sample,
                               PIE     = PIE_sample,
                               ENS_PIE = ENS_PIE_sample,
