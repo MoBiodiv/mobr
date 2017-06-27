@@ -161,7 +161,7 @@ get_mob_stats = function(mob_in, group_var, ref_group = NULL, n_min = 5, nperm =
    
    # rarefied richness
    N_min_sample = min(N_sample)
-   rarefy_samples = c(n_min, floor(N_min_sample)/2, N_min_sample)
+   rarefy_samples = c(n_min, floor(N_min_sample/2), N_min_sample)
    rarefy_samples[rarefy_samples < n_min] <- n_min
    plots_low_n = N_sample < n_min
    
@@ -216,7 +216,7 @@ These are removed for the calculation of PIE."))
    N_group = rowSums(abund_group[ ,-1])      
 
    N_min_group = min(N_group)
-   rarefy_groups = c(n_min, floor(N_min_group)/2, N_min_group)
+   rarefy_groups = c(n_min, floor(N_min_group/2), N_min_group)
    rarefy_groups[rarefy_groups < n_min] <- n_min
    
    groups_low_n = N_group < n_min
