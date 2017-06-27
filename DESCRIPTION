@@ -15,7 +15,8 @@ Depends:
     pracma,
     scales,
     vegan,
-    plotrix
+    plotrix,
+    iNEXT
 Suggests:
     rgl
 Remotes:

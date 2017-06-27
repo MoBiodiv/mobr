@@ -55,7 +55,9 @@ calc_biodiv_single_group <- function(abund_vec, n_rare){
    
    out_vec <- c("N"       = NA,
                 "S"       = NA,
-                "S_rare"  = NA,
+                "S_rare1"  = NA,
+                "S_rare2"  = NA,
+                "S_rare3"  = NA,
                 "S_asymp" = NA,
                 "PIE"     = NA,
                 "ENS_PIE" = NA
@@ -64,8 +66,12 @@ calc_biodiv_single_group <- function(abund_vec, n_rare){
    if (length(abund_vec) > 0){
       out_vec["N"] <- sum(abund_vec)
       out_vec["S"] <- length(abund_vec)
-      if (!is.na(n_rare))
-         out_vec["S_rare"] <- rarefaction(abund_vec, method = "indiv", effort = n_rare)
+      
+      inext1 <- iNEXT::iNEXT(abund_vec, q = 0, datatype = "abundance", size = n_rare, se = F)
+      out_vec["S_rare1"] <- inext1$iNextEst$qD[1] 
+      out_vec["S_rare2"] <- inext1$iNextEst$qD[2] 
+      out_vec["S_rare3"] <- inext1$iNextEst$qD[3] 
+      
       if (sum(abund_vec) > 1){
          out_vec["PIE"] <- calc_PIE(abund_vec)
          out_vec["ENS_PIE"] <- 1/(1 - out_vec["PIE"])
@@ -113,9 +119,6 @@ get_mean_CI <- function(x, level = 0.95)
 }
 
 
-
-
-
 #' Calculate sample based and group based biodiversity statistics
 #' @inheritParams get_delta_stats
 #' @param group_var a string that specifies which field in mob_in$env the data
@@ -133,7 +136,7 @@ get_mean_CI <- function(x, level = 0.95)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
 #' plot(inv_stats, multipanel=TRUE)
-get_mob_stats = function(mob_in, group_var, n_min = 5, nperm = 100) {
+get_mob_stats = function(mob_in, group_var, ref_group = NULL, n_min = 5, nperm = 100) {
    if (nperm < 1) 
        stop('Set nperm to a value greater than 1') 
    group_id  = factor(mob_in$env[, group_var])
@@ -144,8 +147,8 @@ get_mob_stats = function(mob_in, group_var, n_min = 5, nperm = 100) {
    
    # rarefied richness
    N_min_sample = min(N_sample)
-   rarefy_levels = c(n_min, floor(N_min_sample)/2, N_min_sample)
-   rarefy_levels[rarefy_levels < n_min] <- n_min
+   rarefy_samples = c(n_min, floor(N_min_sample)/2, N_min_sample)
+   rarefy_samples[rarefy_levels < n_min] <- n_min
    plots_low_n = N_sample < n_min
    
    if (sum(plots_low_n) > 0){
@@ -199,7 +202,10 @@ These are removed for the calculation of PIE."))
    # Group-based statistics
    N_group = rowSums(abund_group[ ,-1])      
 
-   N_min_group = max(n_min, floor(min(N_group)/2))
+   N_min_group = min(N_group)
+   rarefy_groups = c(n_min, floor(N_min_group)/2, N_min_group)
+   rarefy_groups[rarefy_groups < n_min] <- n_min
+   
    groups_low_n = N_group < n_min
    
    if (sum(groups_low_n) == 1){
@@ -213,18 +219,20 @@ These are removed for the calculation of rarefied richness."))
    }
    
    group_stats <- apply(abund_group[ ,-1], MARGIN = 1,
-                        FUN = calc_biodiv_single_group, n_rare = N_min_group)
+                        FUN = calc_biodiv_single_group, n_rare = rarefy_groups)
    row.names(group_stats) <- paste(row.names(group_stats), "_obs", sep = "")
   
    # bootstrap replicates
    boot_samples <- by(mob_in$comm, INDICES = group_id, FUN = repl_boot_samples,
-                      n_rare = N_min_group)
+                      n_rare = rarefy_groups)
    
    boot_CI <- sapply(boot_samples, get_mean_CI)
    group_dat <- as.data.frame(t(rbind(group_stats, boot_CI)))
    group_dat <- group_dat[,c("N_obs","N_mean","N_low","N_up",
                              "S_obs","S_mean","S_low","S_up",
-                             "S_rare_obs","S_rare_mean","S_rare_low","S_rare_up",
+                             "S_rare1_obs","S_rare1_mean","S_rare1_low","S_rare1_up",
+                             "S_rare2_obs","S_rare2_mean","S_rare2_low","S_rare2_up",
+                             "S_rare3_obs","S_rare3_mean","S_rare3_low","S_rare3_up",
                              "S_asymp_obs","S_asymp_mean","S_asymp_low","S_asymp_up",
                              "PIE_obs","PIE_mean","PIE_low","PIE_up",
                              "ENS_PIE_obs","ENS_PIE_mean","ENS_PIE_low","ENS_PIE_up")]
@@ -315,7 +323,8 @@ These are removed for the calculation of rarefied richness."))
    
    stats_groups = group_dat
    
-   out = list(n_rarefy = rarefy_levels,
+   out = list(n_rarefy_samples = rarefy_samples,
+              n_rarefy_groups = rarefy_groups,
               pvalues = stats_pvalues,
               samples = stats_samples,
               groups  = stats_groups)
