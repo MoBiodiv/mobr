@@ -231,11 +231,7 @@ for(i in seq_along(dat)) {
     stats[[i]] = get_mob_stats(dat[[i]], 'groups', nperm=200)
 
     pdf(paste('./figs/', names(tst)[i], '_results.pdf', sep=''))
-        plot(stats[[i]], multipanel = F, col=c('red', 'blue')) 
-        boxplot(stats[[i]]$samples$S_rare ~ group, data=stats[[i]]$samples,
-                col=c('red', 'blue'))
-        plot_samples(stats[[i]]$samples)
-        plot_betaPIE(stats)
+        plot(stats[[i]], multipanel = T, col=c('red', 'blue')) 
         plot_abu(dat[[i]], 'groups', 'rad', pooled=T, log = 'x')
         plot_abu(dat[[i]], 'groups', 'sad', log='x')
         plot(tst[[i]], trt_groups[i], ref_groups[i], same_scale=T)
@@ -246,3 +242,150 @@ for(i in seq_along(dat)) {
 }
 
 save(tst, file='./results/case_study_results.Rdata')
+
+
+## Gentry continous example ------------------------------------
+load('./data/gentry.Rdata')
+names(gentry)
+lapply(gentry, head)
+# record filtering ----------
+# remove NA count
+gentry$counts = gentry$counts[!is.na(gentry$counts$count), ]
+# remove if no line recorded
+gentry$counts = gentry$counts[!is.na(gentry$counts$line), ]
+# remove if line is recorded as 0 or 11
+gentry$counts = gentry$counts[gentry$counts$line != 0 & 
+                              gentry$counts$line != 11, ]
+# kraft et al (2011) removed Poaceae and ferns
+# drop psuedo species
+nrow(gentry$counts)
+sum(gentry$counts$count)
+nrow(gentry$stems)
+sum(gentry$stems$stem > 0)
+
+# 
+summary(gentry$counts$count)
+comm_local = with(gentry$counts, 
+              tapply(count, list(site_code, line, species_id), sum))
+comm_local = ifelse(is.na(comm_local), 0, comm_local)
+
+# remove sites that did not sample all 10 lines
+true = apply(apply(comm_local, 1:2, sum) > 0, 1, sum) == 10
+comm_local = comm_local[true, , ]
+
+stat_local = apply(comm_local, 1:2, function(x)
+                   c(sum(x), sum(x > 0), diversity(x, index='simpson'),
+                     rarefaction(x, 'indiv', effort=5),
+                     rarefaction(x, 'indiv', effort=10),
+                     rarefaction(x, 'indiv', effort=20),
+                     rarefaction(x, 'indiv', effort=40),
+                     rarefaction(x, 'indiv', effort=80)))
+#dimnames(stat_local)[[1]] = c('N_local', 'S_local', 'PIE_local', 'rare_local')
+
+comm_region = apply(comm_local, c(1, 3), sum)
+
+stat_region = apply(comm_region, 1, function(x)
+                    c(sum(x), sum(x > 0), diversity(x, index='simpson'),
+                      rarefaction(x, 'indiv', effort=43)))
+dimnames(stat_region)[[1]] = c('N_region', 'S_region', 'PIE_region', 'rare_region')
+stat_region = data.frame(site=colnames(stat_region), 
+                         t(stat_region))
+rownames(stat_region) = NULL
+head(stat_region)
+
+stat_local  = apply(stat_local, 1, function(x)
+                    reshape2::melt(x))
+stat_local = data.frame(stat_local[[1]], 
+                        S_local = stat_local[[2]][ , 3],
+                        PIE_local = stat_local[[3]][ , 3], 
+                        rare_5 = stat_local[[4]][ , 3],
+                        rare_10 = stat_local[[5]][ , 3],
+                        rare_20 = stat_local[[6]][ , 3],
+                        rare_40 = stat_local[[7]][ , 3],
+                        rare_80 = stat_local[[8]][ , 3])
+
+names(stat_local) = c('site', 'line', 'N_local', 'S_local', 'PIE_local',
+                      'rare_5', 'rare_10', 'rare_20', 'rare_40', 'rare_80')
+head(stat_local)
+
+gentry_div = merge(stat_local, stat_region)
+gentry_div = merge(gentry_div, gentry$sites, 
+                   by.x='site', by.y='abbreviation',
+                   all.x=T, all.y=F)
+#gentry_div2 = aggregate(gentry_div, by=list(gentry_div$line), mean)
+
+pdf('./figs/gentry_panels.pdf', height=7*2)
+par(mfrow=c(4,2))
+#S
+plot(S_local ~ abs(lat), data=gentry_div, ylim=c(1, 300), 
+     col='pink', ylab='S')
+points(S_region ~ abs(lat), data=gentry_div, col='dodgerblue')
+with(gentry_div, lines(lowess(abs(lat), S_local), col='red'))
+with(gentry_div, lines(lowess(abs(lat), S_region), col='blue'))
+#logS
+plot(log10(S_local) ~ abs(lat), data=gentry_div, ylim=c(0, 3), 
+     col='pink', ylab='log10 S')
+points(log10(S_region) ~ abs(lat), data=gentry_div, col='dodgerblue')
+with(gentry_div, lines(lowess(abs(lat), log10(S_local)), col='red'))
+with(gentry_div, lines(lowess(abs(lat), log10(S_region)), col='blue'))
+#rare
+plot(rare_5 ~ abs(lat), data=gentry_div, ylim=c(1, 300),
+     col='pink', ylab='S rarefied')
+points(rare_10 ~ abs(lat), data=gentry_div, col='orange')
+points(rare_20 ~ abs(lat), data=gentry_div, col='green3')
+points(rare_40 ~ abs(lat), data=gentry_div, col='purple')
+points(S_region ~ abs(lat), data=gentry_div, col='dodgerblue')
+with(gentry_div, lines(lowess(abs(lat[!is.na(rare_5)]),
+                              rare_5[!is.na(rare_5)]), col='pink'))
+with(gentry_div, lines(lowess(abs(lat[!is.na(rare_10)]),
+                              rare_10[!is.na(rare_10)]), col='orange'))
+with(gentry_div, lines(lowess(abs(lat[!is.na(rare_20)]),
+                              rare_20[!is.na(rare_20)]), col='green3'))
+with(gentry_div, lines(lowess(abs(lat[!is.na(rare_40)]),
+                              rare_40[!is.na(rare_40)]), col='purple'))
+with(gentry_div, lines(lowess(abs(lat), S_region), col='dodgerblue',
+                       lwd=2))
+legend('topright', c('n=N', 'n=40','n=20','n=10','n=5'), 
+       col=c('dodgerblue', 'purple', 'green3', 'orange', 'pink'),
+       pch=1, bty='n')
+#lograre
+plot(log10(rare_5) ~ abs(lat), data=gentry_div, ylim=c(0, 3), 
+     col='pink', ylab='log10 S rarefied')
+points(log10(rare_10) ~ abs(lat), data=gentry_div, col='orange')
+points(log10(rare_20) ~ abs(lat), data=gentry_div, col='green3')
+points(log10(rare_40) ~ abs(lat), data=gentry_div, col='purple')
+points(log10(S_region) ~ abs(lat), data=gentry_div, col='dodgerblue')
+with(gentry_div, lines(lowess(abs(lat[!is.na(rare_5)]),
+                              log10(rare_5[!is.na(rare_5)])), col='pink'))
+with(gentry_div, lines(lowess(abs(lat[!is.na(rare_10)]),
+                              log10(rare_10[!is.na(rare_10)])), col='orange'))
+with(gentry_div, lines(lowess(abs(lat[!is.na(rare_20)]),
+                              log10(rare_20[!is.na(rare_20)])), col='green3'))
+with(gentry_div, lines(lowess(abs(lat[!is.na(rare_40)]),
+                              log10(rare_40[!is.na(rare_40)])), col='purple'))
+with(gentry_div, lines(lowess(abs(lat), log10(S_region)), col='dodgerblue',
+                       lwd=2))
+legend('topright', c('n=N', 'n=40','n=20','n=10','n=5'), 
+       col=c('dodgerblue', 'purple', 'green3', 'orange', 'pink'),
+       pch=1, bty='n')
+#N
+plot(N_local ~ abs(lat), data=gentry_div, ylim=c(1, 1000), 
+     col='pink', ylab='N')
+points(N_region ~ abs(lat), data=gentry_div, col='dodgerblue')
+with(gentry_div, lines(lowess(abs(lat), N_local), col='red'))
+with(gentry_div, lines(lowess(abs(lat), N_region), col='blue'))
+#logN
+plot(log10(N_local) ~ abs(lat), data=gentry_div, ylim=c(0, 3), 
+     col='pink', ylab='log10 N')
+points(log10(N_region) ~ abs(lat), data=gentry_div, col='dodgerblue')
+with(gentry_div, lines(lowess(abs(lat), log10(N_local)), col='red'))
+with(gentry_div, lines(lowess(abs(lat), log10(N_region)), col='blue'))
+#
+plot(PIE_local ~ abs(lat), data=gentry_div, ylim=c(0, 1),
+     col='pink',  ylab='PIE')
+points(PIE_region ~ abs(lat), data=gentry_div, col='dodgerblue')
+with(gentry_div, lines(lowess(abs(lat), PIE_local), col='red'))
+with(gentry_div, lines(lowess(abs(lat), PIE_region), col='blue'))
+dev.off()
+
+       
