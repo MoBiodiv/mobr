@@ -201,7 +201,7 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
         stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
     if (method == 'samp' | method == 'spat') {
         if (is.null(dim(x)))
-            stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
+            stop('For random or spatially explicit sample based rarefaction "x" must be a site-by-species matrix as the input')
         else {
             x = (x > 0) * 1             
             # all sites are counted as samples even empty ones
@@ -224,15 +224,13 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
             effort[effort > n] = NA
     }    
     if (method == 'spat') {
-        # drop species with no observations  
-        x = x[ , colSums(x) > 0] 
-        explicit_loop = matrix(0, n, n)
-        if (!latlong){
-            pair_dist = as.matrix(dist(xy_coords))
-        } else {
+        S_spat = matrix(NA, n, n)
+        if (latlong){
             # Compute distance on sphere if xy are longitudes and latitudes
             # Assume x is longitude and y is latitude
-            pair_dist = sphere_dist(xy_coords$x, xy_coords$y)
+            pair_dist = sphere_dist(xy_coords$x, xy_coords$y)          
+        } else {
+            pair_dist = as.matrix(dist(xy_coords))
         }
         for (i in 1:n) {
             dist_to_site = pair_dist[i, ]
@@ -243,12 +241,11 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
             # Move focal site to the front
             new_order = c(i, new_order[new_order != i])
             comm_ordered = x[new_order, ]
-            # 1 for absence, 0 for presence
-            comm_bool = as.data.frame((comm_ordered == 0) * 1) 
-            rich = cumprod(comm_bool)
-            explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+            S_spat[i, 1] = sum(comm_ordered[1, ])
+            for (j in 2:n)
+                 S_spat[i, j] = sum(colSums(comm_ordered[1:j, ]) > 0)
         }
-        out = apply(explicit_loop, 1, mean)[effort]
+        out = apply(S_spat, 2, mean)[effort]
     } 
     else {
         # drop species with no observations  
