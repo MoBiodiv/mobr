@@ -143,10 +143,24 @@ sphere_dist = function(long, lat){
 #'   used
 #' @param xy_coords the spatial coordinates of the samples only required when 
 #'   using the spatial rarefaction method
+#' @param longlat if TRUE coordinates are treated as longitudes and latitudes
+#'   (in that order) and plot distances are computed as arc distances on a sphere.
+#'   If FALSE the typical Euclidean distances are computed between plots. Only
+#'   relevant for spatial rarefaction (i.e., method = 'spat').
+#' @param max_dist the maximum spatial distance of plot seperation to consider 
+#'   when carrying out spatial rarefaction (i.e., method = 'spat'). If NULL then 
+#'   no distance comprisons are excluded. This is currently not correctly
+#'   implemented when latlong is TRUE. 
 #' @param dens_ratio the ratio of individual density between a reference group
 #'   and the community data (i.e., x) under consideration. This arguement is
 #'   used to rescale the rarefation curve when estimating the effect of
 #'   individual density on group differences in richness.
+#' @param force boolean which specifies what the function should return if effort
+#'   is larger than the total number of samples (either individuals or plots).
+#'   The default behavior in which force = FALSE returns an NA when this occurs.
+#'   If force = TRUE then the total number of species in the community is
+#'   returned with a warning. 
+#' @param quiet if TRUE function does not return warnings
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #' the random sampling expectation for the individual and sampled based
@@ -190,13 +204,13 @@ sphere_dist = function(long, lat){
 #' rarefaction(inv_comm, method='samp')
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
 #' rarefaction(inv_comm, method='spat', xy_coords=inv_plot_attr[ , c('x','y')])
-rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE, 
-                       dens_ratio=1) {
+rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
+                       max_dist=NULL, dens_ratio=1, force=FALSE, quiet=FALSE) {
     if (!any(method %in% c('indiv', 'samp', 'spat')))
         stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
     if (method == 'samp' | method == 'spat') {
         if (is.null(dim(x)))
-            stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
+            stop('For random or spatially explicit sample based rarefaction "x" must be a site-by-species matrix as the input')
         else {
             x = (x > 0) * 1             
             # all sites are counted as samples even empty ones
@@ -212,34 +226,47 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
     }
     if (is.null(effort))
         effort = 1:n
-    if (any(effort > n))
-        warning('"effort" larger than total number of samples')
+    effort_names = effort
+    if (any(effort > n)) {
+        if(!quiet) warning('"effort" larger than total number of samples')
+        if (!force)
+            effort[effort > n] = NA
+    }    
     if (method == 'spat') {
-        # drop species with no observations  
-        x = x[ , colSums(x) > 0] 
-        explicit_loop = matrix(0, n, n)
-        if (!latlong){
-            pair_dist = as.matrix(dist(xy_coords))
-        } else {
+        if (latlong){
             # Compute distance on sphere if xy are longitudes and latitudes
             # Assume x is longitude and y is latitude
-            pair_dist = sphere_dist(xy_coords$x, xy_coords$y)
+            pair_dist = sphere_dist(xy_coords$x, xy_coords$y)          
+        } else {
+            pair_dist = as.matrix(dist(xy_coords))
         }
+        if (!is.null(max_dist)) {
+            if (any(pair_dist > max_dist)) 
+                pair_dist[pair_dist > max_dist] = NA
+            if (latlong)
+              stop('Censoring comparisons by a maximum spatial distance is not currently suppored when "latlong" is TRUE')
+        }
+        S_spat = matrix(NA, n, n)
         for (i in 1:n) {
-            dist_to_site = pair_dist[i, ]
             # Shuffle plots, so that tied grouping is not biased by original order.
-            new_order = sample(1:n)  
-            dist_new = dist_to_site[new_order]
-            new_order = new_order[order(dist_new)]
+            rand_order = sample(1:n)  
+            shuffle_dist = pair_dist[i, rand_order]
+            # NA's in dist_new are dropped from the distance orders
+            dist_order = rand_order[order(shuffle_dist, na.last=NA)]
             # Move focal site to the front
-            new_order = c(i, new_order[new_order != i])
-            comm_ordered = x[new_order, ]
-            # 1 for absence, 0 for presence
-            comm_bool = as.data.frame((comm_ordered == 0) * 1) 
-            rich = cumprod(comm_bool)
-            explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+            dist_order = c(i, dist_order[dist_order != i])
+            comm_ordered = x[dist_order, ]
+            S_spat[i, 1] = sum(comm_ordered[1, ])
+            effort_censored = 2:nrow(comm_ordered)
+            for (j in effort_censored)
+                 S_spat[i, j] = sum(colSums(comm_ordered[1:j, ]) > 0)
         }
-        out = apply(explicit_loop, 1, mean)[effort]
+        out = apply(S_spat, 2, mean, na.rm=T)
+        if (any(is.nan(out))) {
+            if(!quiet) warning('"effort" larger than total number of samples when constrained by "max_dist"')
+            out[is.nan(out)] = NA
+        }
+        out = out[effort]
     } 
     else {
         # drop species with no observations  
@@ -266,7 +293,7 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
         }
         out = rowSums(1 - p)
     }
-    names(out) = effort
+    names(out) = effort_names
     return(out)
 }
 
@@ -1234,8 +1261,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     cols = list()
     cols$trt = 'red'
     cols$ref = 'blue'
-    deltaS_col = 'turquoise'
-    ddeltaS_col = 'magenta'
+    cols$deltaS = 'turquoise'
+    cols$ddeltaS = 'magenta'
     if (is.null(par_args)) {
         par_args = paste('mfrow = c(', length(display), ',',
                          length(tests), ')',  sep='')
@@ -1329,8 +1356,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                           mob_out$indiv_rare[[ref_group]]
             plot(mob_out$indiv_rare$sample, deltaS_Sind,
                  ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-                 xlab = 'Number of individuals', 
+                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2,
+                 col = cols$deltaS, xlab = 'Number of individuals', 
                  ylab = expression(paste(Delta,'S', sep = '')), 
                  log=plot_log)
             abline(h = 0, lwd = 2, lty = 2)
@@ -1342,8 +1369,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                             sample_rare_ref$impl_S[1:minN]
             plot(seq(minN), delta_Ssample, 
                  ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-                 xlab = 'Number of plots', 
+                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2,
+                 col = cols$deltaS, xlab = 'Number of plots', 
                  ylab = expression(paste(Delta,'S', sep = '')))
             abline(h = 0, lwd = 2, lty = 2)
         }
@@ -1353,8 +1380,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
             plot(seq(minN), delta_Sspat, 
                  ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
                  cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2,
-                 col = deltaS_col,
-                 xlab = 'Number of plots',
+                 col = cols$deltaS, xlab = 'Number of plots',
                  ylab = expression(paste(Delta,'S', sep = '')))
             abline(h = 0, lwd = 2, lty = 2)
         }
@@ -1379,7 +1405,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                     col = '#C1CDCD', border = NA)
             abline(h = 0, lwd = 2, lty = 2)
             lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
-                  lwd = 2, col = ddeltaS_col)
+                  lwd = 2, col = cols$ddeltaS)
         }
         if ('N' %in% mob_out$tests) {
             mob_out$N[, -1] = lapply(mob_out$N[, -1], function(x)
@@ -1398,7 +1424,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                     col = '#C1CDCD', border = NA)
             abline(h = 0, lwd = 2, lty = 2)
             lines(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
-                  lwd = 2, col = ddeltaS_col)
+                  lwd = 2, col = cols$ddeltaS)
         }
         if ('agg' %in% mob_out$tests) {
             mob_out$agg[, -1] = lapply(mob_out$agg[, -1], function(x)
@@ -1417,7 +1443,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                     col = '#C1CDCD', border = NA)
            abline(h = 0, lwd = 2, lty = 2)
            lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
-                lwd = 2, col = ddeltaS_col)
+                lwd = 2, col = cols$ddeltaS)
         }
     }
  

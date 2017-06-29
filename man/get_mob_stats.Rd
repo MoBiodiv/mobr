@@ -4,13 +4,17 @@
 \alias{get_mob_stats}
 \title{Calculate sample based and group based biodiversity statistics}
 \usage{
-get_mob_stats(mob_in, group_var, n_min = 10, nperm = 1000)
+get_mob_stats(mob_in, group_var, ref_group = NULL, n_min = 5, nperm = 100)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
 
 \item{group_var}{a string that specifies which field in mob_in$env the data
 should be grouped by}
+
+\item{ref_group}{a character string used to define the reference group to
+which all other groups are compared with when "type" is discrete. It is not
+needed when "type" is continuous.}
 
 \item{n_min}{the minimum number of individuals a plot must have to be included
 in the estimate of rarefied richness}

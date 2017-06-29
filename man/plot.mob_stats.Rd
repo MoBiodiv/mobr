@@ -4,8 +4,8 @@
 \alias{plot.mob_stats}
 \title{Plot the scale agnostic statistics for a MoB analysis}
 \usage{
-\method{plot}{mob_stats}(mob_stats, display = c("all", "PIE", "beta PIE", "N",
-  "S", "S rare", "S asymp"), multipanel = FALSE, ...)
+\method{plot}{mob_stats}(mob_stats, display = c("all", "N", "S", "S rare",
+  "S asymp", "PIE", "ENS PIE"), multipanel = FALSE, ...)
 }
 \arguments{
 \item{mob_stats}{a \code{mob_stats} object that has the samples and 
