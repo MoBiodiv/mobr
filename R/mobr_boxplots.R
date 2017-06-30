@@ -125,6 +125,33 @@ get_pval <- function(rand, obs, n_samples)
    return(p_val)
 }
 
+#Get F statistics from diversity indices and grouping vector
+get_test_stats <- function(div_list, permute = F)
+{
+   group_id <- div_list$samples$group
+   if (permute)
+      group_id <- sample(group_id)
+   
+   F_list <- list() # F values for sample level 
+   
+   for (i in 2:length(div_list$samples)){
+      if (names(div_list$samples[i]) != "S_rare"){
+         lm1 <- lm(div_list$samples[[i]] ~ group_id)
+         F_list[[names(div_list$samples[i])]] <- anova(lm1)$F[1]
+      } else {
+         for (j in 1:length(div_list$samples[[i]])){
+            lm1 <- lm(div_list$samples[[i]][[j]] ~ group_id)  
+            F1 <- anova(lm1)$F[1]
+            names(F1) <- names(div_list$samples[["S_rare"]][j])
+            F_list[["S_rare"]][j] <- list(F1)
+         }
+            
+      }
+   }
+   
+   return(F_list)
+}
+
 
 #' Calculate sample based and group based biodiversity statistics
 #' @inheritParams get_delta_stats
@@ -150,7 +177,7 @@ get_mob_stats = function(mob_in,
                          n_min = 5,
                          n_rare_samples = NA,
                          n_rare_groups = NA,
-                         nperm = 100)
+                         nperm = 1000)
 {
    if (nperm < 1) 
        stop('Set nperm to a value greater than 1') 
@@ -299,10 +326,8 @@ These are removed for the calculation of rarefied richness."))
       PIE_samples = calc_PIE(mob_in$comm)
       PIE_groups  = calc_PIE(abund_group[,-1])
          
-      if ("PIE" %in% index){
-         out$samples$PIE = PIE_samples
-         out$groups$PIE  = PIE_groups
-      }   
+      out$samples$PIE = PIE_samples
+      out$groups$PIE  = PIE_groups
    }
    
    # Effective number of species based on PIE ----------------------------------
@@ -322,6 +347,27 @@ These are removed for the calculation of rarefied richness."))
       beta_ENS_PIE = ENS_PIE_groups[group_id] / ENS_PIE_samples
       beta_ENS_PIE[!is.finite(beta_ENS_PIE)] <- NA
       out$samples$beta_ENS_PIE = beta_ENS_PIE
+   }
+   
+   # Significance tests
+   F_obs <- get_test_stats(out, permute = F)
+   F_rand_list <- replicate(nperm, get_test_stats(out, permute = T), simplify = F)
+   
+   out$p_values$samples <- list()
+   var_names <- names(out$samples)[-1]
+   for (var in var_names){
+      if (var != "S_rare"){
+         F_rand <- sapply(F_rand_list,"[[",var)
+         p_val <- sum(F_obs[[var]] <= F_rand) / nperm
+         out$p_values$samples[[var]] <- p_val 
+      } else {
+         for (j in 1:length(F_obs$S_rare)){
+            F_rand <- sapply(F_rand_list,function(list){list$S_rare[[j]]})
+            p_val <- sum(F_obs$S_rare[[j]] <= F_rand) / nperm
+            names(p_val) <- names(F_obs$S_rare[[j]])
+            out$p_values$samples$S_rare[j] <- list(p_val)
+         }
+      }
    }
    
    # ---------------------------------------------------------------------------
@@ -352,31 +398,7 @@ These are removed for the calculation of rarefied richness."))
    # 
    # # permutation tests
    # 
-   # # output data for samples
-   # F_obs <- data.frame(N             = anova(lm(N_sample ~ group_id))$F[1],
-   #                     S             = anova(lm(S_sample ~ group_id))$F[1],
-   #                     S_rare1       = anova(lm(S_rare$S_rare1 ~ group_id))$F[1],
-   #                     S_rare2       = anova(lm(S_rare$S_rare2 ~ group_id))$F[1],
-   #                     S_rare3       = anova(lm(S_rare$S_rare3 ~ group_id))$F[1],
-   #                     S_asymp       = anova(lm(S_asymp_sample ~ group_id))$F[1],
-   #                     PIE           = anova(lm(PIE_sample ~ group_id))$F[1],
-   #                     ENS_PIE       = anova(lm(ENS_PIE_sample ~ group_id))$F[1],
-   #                     beta_S        = anova(lm(beta_S ~ group_id))$F[1],
-   #                     beta_ENS_PIE  = anova(lm(beta_S ~ group_id))$F[1]
-   #                    )
-   # 
-   # F_rand <- data.frame(N             = numeric(nperm),
-   #                      S             = numeric(nperm),
-   #                      S_rare1       = numeric(nperm),
-   #                      S_rare2       = numeric(nperm),
-   #                      S_rare3       = numeric(nperm),
-   #                      S_asymp       = numeric(nperm),
-   #                      PIE           = numeric(nperm),
-   #                      ENS_PIE       = numeric(nperm),
-   #                      beta_S        = numeric(nperm),
-   #                      beta_ENS_PIE  = numeric(nperm)
-   #                      )
-   # 
+   
    # # output data for groups
    # abund_group_bin = aggregate(mob_in$comm, by = list(group_bin), FUN = "sum")
    # group_bin_stats = apply(abund_group_bin[ ,-1], MARGIN = 1,
@@ -395,18 +417,7 @@ These are removed for the calculation of rarefied richness."))
    #                                )
    # 
    # for (i in 1:nperm){
-   #    group_id_rand     = sample(group_id)
-   #    F_rand$N[i]       = anova(lm(N_sample ~ group_id_rand))$F[1]
-   #    F_rand$S[i]       = anova(lm(S_sample ~ group_id_rand))$F[1]
-   #    F_rand$S_rare1[i] = anova(lm(S_rare$S_rare1 ~ group_id_rand))$F[1]
-   #    F_rand$S_rare2[i] = anova(lm(S_rare$S_rare2 ~ group_id_rand))$F[1]
-   #    F_rand$S_rare3[i] = anova(lm(S_rare$S_rare3 ~ group_id_rand))$F[1]
-   #    F_rand$S_asymp[i] = anova(lm(S_asymp_sample ~ group_id_rand))$F[1]
-   #    F_rand$PIE[i]     = anova(lm(PIE_sample ~ group_id_rand))$F[1]
-   #    F_rand$ENS_PIE[i] = anova(lm(ENS_PIE_sample ~ group_id_rand))$F[1]
-   #    F_rand$beta_S[i]  = anova(lm(beta_S ~ group_id_rand))$F[1]
-   #    F_rand$beta_ENS_PIE[i]  = anova(lm(beta_ENS_PIE ~ group_id_rand))$F[1]
-   #    
+   #  
    #    # random group level difference
    #    group_bin_rand = sample(group_bin, replace = F)
    #    abund_group_bin = aggregate(mob_in$comm, by = list(group_bin_rand), FUN = "sum")
@@ -416,29 +427,7 @@ These are removed for the calculation of rarefied richness."))
    #    delta_group_rand[i,] <- group_bin_stats[,"treatment"] - group_bin_stats[,"control"]
    # }
    # 
-   # # p-value for difference among samples 
-   # p_N       = sum(F_obs$N       <= F_rand$N) / nperm
-   # p_S       = sum(F_obs$S       <= F_rand$S) / nperm
-   # p_S_rare1 = sum(F_obs$S_rare1 <= F_rand$S_rare1) / nperm
-   # p_S_rare2 = sum(F_obs$S_rare2 <= F_rand$S_rare2) / nperm
-   # p_S_rare3 = sum(F_obs$S_rare3 <= F_rand$S_rare3) / nperm
-   # p_S_asymp = sum(F_obs$S_asymp <= F_rand$S_asymp) / nperm
-   # p_PIE     = sum(F_obs$PIE     <= F_rand$PIE) / nperm
-   # p_ENS_PIE = sum(F_obs$ENS_PIE <= F_rand$ENS_PIE) / nperm
-   # p_beta_S  = sum(F_obs$beta_S <= F_rand$beta_S) / nperm
-   # p_beta_ENS_PIE  = sum(F_obs$beta_ENS_PIE <= F_rand$beta_ENS_PIE) / nperm
-   # 
-   # pvalues_samples = data.frame(N       = p_N,
-   #                              S       = p_S,
-   #                              S_rare1 = p_S_rare1,
-   #                              S_rare2 = p_S_rare2,
-   #                              S_rare3 = p_S_rare3,
-   #                              S_asymp = p_S_asymp,
-   #                              PIE     = p_PIE,
-   #                              ENS_PIE = p_ENS_PIE,
-   #                              beta_S  = p_beta_S,
-   #                              beta_ENS_PIE  = p_beta_ENS_PIE
-   #                              )
+  
    # 
    # # p-values for difference between treatment & control
    # pvalues_groups = mapply(get_pval, delta_group_rand, delta_group_obs,
