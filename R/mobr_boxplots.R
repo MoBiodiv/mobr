@@ -462,165 +462,237 @@ These are removed for the calculation of rarefied richness."))
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
-#' plot(inv_stats, multipanel=TRUE)
-#' # with colors
-#' plot(inv_stats, multipanel=TRUE, col=c('red', 'blue'))
-#' # only display PIE results
-#' par(mfrow=c(1,3))
-#' plot(inv_stats, 'PIE', col=c('red', 'blue'))
-plot.mob_stats = function(mob_stats, 
-                          display=c('all','N', 'S', 'S_rare', 'S_asymp',
-                                    'PIE', 'ENS_PIE'),
-                          multipanel=FALSE, ...) {
-      if (multipanel) {
-          if ('all' %in% display) {
-              display = c('PIE', 'N', 'S', 'S asymp')
-              op = par(mfcol = c(3,5), las = 1, font.main = 1,
-                       mar = c(2, 2, 3, 2) + 0.1)
-          }
-          else
-              warning('The multipanel plots settings only make sense when display is set to "all"')
-      }# else if ('all' %in% display)
-       #   display = c('PIE', 'N', 'S', 'S asymp')
-      # PIE
-      if ('PIE' %in% display) {
-          if (multipanel)
-              par(fig = c(0.2, 0.4, 0.66, 1))
-          else
-             par(mfrow = c(1,2))
-          # panel_title = paste("PIE (p = ", mob_stats$pvalues$PIE,")\nplot scale",
-          #                     sep = "")
-          boxplot(PIE ~ group, data=mob_stats$samples, main = "PIE samples")
-          
-          if (multipanel)
-              par(fig = c(0.6, 0.8, 0.66, 1), new = T)
-          boxplot(PIE ~ group, data=mob_stats$groups, main = "PIE groups",boxwex = 0)
-          points(PIE ~ group, data=mob_stats$groups, pch = 19)
-      }
-      
-      # ENS PIE
-      if ('ENS_PIE' %in% display) {
-         if (multipanel)
-            par(fig = c(0.2, 0.4, 0.66, 1))
-         else
-            par(mfrow = c(1,3))
-         # panel_title = paste("ENS PIE (p = ", mob_stats$pvalues$ENS_PIE,")\nplot scale",
-         #                     sep = "")
-         boxplot(ENS_PIE ~ group, data=mob_stats$samples,
-                 main = "ENS PIE samples")
-         
-         # beta ENS PIE
-         # panel_title = paste("beta ENS PIE (p = ", mob_stats$pvalues$beta_ENS_PIE,")\n between scales",
-         #                     sep = "")
-         boxplot(beta_ENS_PIE ~ group, data=mob_stats$samples,
-                 main = "beta ENS PIE")
-         
-         if (multipanel)
-            par(fig = c(0.6, 0.8, 0.66, 1), new = T)
-         boxplot(ENS_PIE ~ group, data=mob_stats$groups, main = "ENS PIE groups",boxwex = 0)
-         points(ENS_PIE ~ group, data=mob_stats$groups, pch = 19)
-        
-      }
-      
-      if ('S' %in% display) {
-          if (multipanel)
-              par(fig = c(0, 0.2, 0.33, 0.66), new = T)
-          else
-              par(mfrow = c(1,3))
+#' plot(inv_stats) 
 
-          # S observed samples
-          #panel_title = paste("S (p = ", mob_stats$pvalues$S,")\n plot scale",
-          #                    sep = "")
-          boxplot(S ~ group, data=mob_stats$samples,
-                  main = "S samples")
-          
-          # S beta
-          #panel_title = paste("beta S (p = ", mob_stats$pvalues$beta_S,")\n between scales",
-          #                    sep = "")
-          boxplot(beta_S ~ group, data = mob_stats$samples,
-                  main = "beta S")
-          
-          # S groups
-          if (multipanel)
-              par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-          boxplot(S ~ group, data=mob_stats$groups, main = "S groups",boxwex = 0)
-          points(S ~ group, data=mob_stats$groups, pch = 19)
-          
-
-      }
-      # if ('S rare' %in% display) {
-      #    
-      #    n_rows <- max(length(mob_stats$samples$S_rare), length(mob_stats$samples$S_rare)) 
-      #    
-      #    if (multipanel)
-      #         par(fig = c(0, 0.2, 0.33, 0.66), new = T)
-      #     else
-      #         par(mfrow = c(1,2))
-      # 
-      #     # S rarefied samples
-      #     panel_title = paste("S rarefied (p = ", mob_stats$pvalues$S_rare,
-      #                         ")\n plot scale", sep = "")
-      #     boxplot(S_rare ~ group, data=mob_stats$samples,
-      #             main = panel_title, ...)
-      #     
-      #     # S groups
-      #     if (multipanel)
-      #         par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-      #     boxplot(S ~ group, data=mob_stats$groups, main = "S groups",boxwex = 0)
-      #     points(S ~ group, data=mob_stats$groups, pch = 19)
-      # 
-      # }
-      if ('N' %in% display) {
-          if (multipanel)
-              par(fig = c(0.2, 0.4, 0.33, 0.66), new = T)
-          else
-              par(mfrow = c(1,2))
-          # N samples
-          #panel_title = paste("N (p = ", mob_stats$pvalues$N,")\n plot scale",
-          #                    sep = "")
-          boxplot(N ~ group, data=mob_stats$samples, 
-                  main = "N samples")
+plot.mob_stats = function(mob_stats)
+{
+   var_names <- names(inv_stats$samples)[-1]
+   var_names2 <- var_names[var_names != "beta_S" & var_names != "beta_ENS_PIE"]
+   
+   for (var in var_names2){
       
-          # N groups
-          if (multipanel)
-              par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
-          # y_limits <- with(mob_stats$groups, range(c(N_mean, N_low, N_obs, N_up)))
-          # boxplot(N_mean ~ levels(group), data=mob_stats$groups,
-          #         main = "N\ntreatment scale", boxwex = 0, ylim = y_limits)
-          # points(N_obs ~ group, data = mob_stats$groups, pch = 19)
-          # plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$N_mean,
-          #        li = mob_stats$groups$N_low, ui = mob_stats$groups$N_up,
-          #        add = T, pch = 1, ...)
-          boxplot(N ~ group, data=mob_stats$groups, main = "N groups",boxwex = 0)
-          points(N ~ group, data=mob_stats$groups, pch = 19)
+      if (var %in% c("N", "S_asymp","PIE")){
+         
+         par(mfrow = c(1,2), las = 1, cex.lab = 1.2)
+         
+         y_sample <- mob_stats$samples[[var]]
+         p_val <- mob_stats$p_values$samples[[var]]
+         fig_title <- paste("Sample scale\np =",p_val)
+         
+         boxplot(y_sample ~ group, data=mob_stats$samples, main = fig_title,
+                 ylab =  var)
+         
+         y_group <- mob_stats$groups[[var]]
+         boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
+                 ylab = "", boxwex = 0)
+         points(y_group ~ group, data=mob_stats$groups, pch = 19)
       }
-      if ('S asymp' %in% display) {
-          if (multipanel)
-              par(fig = c(0.2, 0.4, 0, 0.33), new = T)
-          else
-              par(mfrow = c(1,2))
-           # S asymptotic
-          if (all(is.na(mob_stats$samples$S_asymp))){
-              warning("Cannot plot asymptotic richness for the samples")
-          } else {
-              # panel_title = paste("S asympotic (p = ", mob_stats$pvalues$S_asymp,
-              #                     ")\n plot scale", sep = "")
-              boxplot(S_asymp ~ group, data=mob_stats$samples,
-                      main = "S asymptotic")
-          }
-          
-          if (multipanel)
-              par(fig = c(0.6, 0.8, 0, 0.33), new = T)
-          if (all(is.na(mob_stats$groups$S_asymp))){
-              warning("Cannot plot asymptotic richness for the groups")
-          } else {
-             boxplot(S_asymp ~ group, data=mob_stats$groups, main = "S asymptotic groups",boxwex = 0)
-             points(S_asymp ~ group, data=mob_stats$groups, pch = 19)
-          }
-       
+      
+      if (var %in% c("S","ENS_PIE")){
+         par(mfrow = c(1,3), las = 1, cex.lab = 1.2)
+         
+         y_sample <- mob_stats$samples[[var]]
+         p_val <- mob_stats$p_values$samples[[var]]
+         fig_title <- paste("Sample scale\np =",p_val)
+         boxplot(y_sample ~ group, data=mob_stats$samples, main = fig_title,
+                 ylab =  var)
+         
+         beta_var <- paste("beta",var,sep = "_")
+         y_beta <- mob_stats$samples[[beta_var]]
+         p_val <- mob_stats$p_values$samples[[beta_var]]
+         fig_title <- paste("Beta-diversity\np =",p_val)
+         boxplot(y_beta ~ group, data=mob_stats$samples, main = fig_title)
+         
+         y_group <- mob_stats$groups[[var]]
+         boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
+                 ylab = "", boxwex = 0)
+         points(y_group ~ group, data=mob_stats$groups, pch = 19)
       }
-      if (multipanel)
-          par(op)
+      
+      if (var == "S_rare"){
+         n_rows <- max(length(mob_stats$samples$S_rare),
+                       length(mob_stats$groups$S_rare))   
+         
+         par(mfcol = c(n_rows,2), las = 1, cex.lab = 1.2)
+         
+         for (j in 1:length(mob_stats$samples$S_rare)){
+            y_sample <- mob_stats$samples$S_rare[[j]]
+            p_val <- mob_stats$p_values$samples$S_rare[[j]]
+            fig_title <- paste("Sample scale",names(p_val),"\np =",p_val)
+            boxplot(y_sample ~ group, data=mob_stats$samples, main = fig_title,
+                    ylab =  "S_rare")   
+         }
+         
+         y_coords <- (n_rows:0)/n_rows
+         for (j in 1:length(mob_stats$groups$S_rare)){
+            y_group <- mob_stats$groups$S_rare[[j]]
+            fig_title <- paste("Group scale",names(mob_stats$groups$S_rare[j]))
+            
+            par(fig = c(0.5, 1.0, y_coords[j+1], y_coords[j]), new = T)
+            boxplot(y_group ~ group, data = mob_stats$group, main = fig_title,
+                    ylab =  "S_rare", boxwex = 0)
+            points(y_group ~ group, data=mob_stats$groups, pch = 19)
+         }
+      }
+   }
 }
 
+
+# old code ---------------------------------------------------------------------
+# still kept for potential later use
+# plot.mob_stats = function(mob_stats, 
+#                           display=c('all','N', 'S', 'S_rare', 'S_asymp',
+#                                     'PIE', 'ENS_PIE'),
+#                           multipanel=FALSE, ...) {
+#       if (multipanel) {
+#           if ('all' %in% display) {
+#               display = c('PIE', 'N', 'S', 'S asymp')
+#               op = par(mfcol = c(3,5), las = 1, font.main = 1,
+#                        mar = c(2, 2, 3, 2) + 0.1)
+#           }
+#           else
+#               warning('The multipanel plots settings only make sense when display is set to "all"')
+#       }# else if ('all' %in% display)
+#        #   display = c('PIE', 'N', 'S', 'S asymp')
+#       # PIE
+#       if ('PIE' %in% display) {
+#           if (multipanel)
+#               par(fig = c(0.2, 0.4, 0.66, 1))
+#           else
+#              par(mfrow = c(1,2))
+#           # panel_title = paste("PIE (p = ", mob_stats$pvalues$PIE,")\nplot scale",
+#           #                     sep = "")
+#           boxplot(PIE ~ group, data=mob_stats$samples, main = "PIE samples")
+#           
+#           if (multipanel)
+#               par(fig = c(0.6, 0.8, 0.66, 1), new = T)
+#           boxplot(PIE ~ group, data=mob_stats$groups, main = "PIE groups",boxwex = 0)
+#           points(PIE ~ group, data=mob_stats$groups, pch = 19)
+#       }
+#       
+#       # ENS PIE
+#       if ('ENS_PIE' %in% display) {
+#          if (multipanel)
+#             par(fig = c(0.2, 0.4, 0.66, 1))
+#          else
+#             par(mfrow = c(1,3))
+#          # panel_title = paste("ENS PIE (p = ", mob_stats$pvalues$ENS_PIE,")\nplot scale",
+#          #                     sep = "")
+#          boxplot(ENS_PIE ~ group, data=mob_stats$samples,
+#                  main = "ENS PIE samples")
+#          
+#          # beta ENS PIE
+#          # panel_title = paste("beta ENS PIE (p = ", mob_stats$pvalues$beta_ENS_PIE,")\n between scales",
+#          #                     sep = "")
+#          boxplot(beta_ENS_PIE ~ group, data=mob_stats$samples,
+#                  main = "beta ENS PIE")
+#          
+#          if (multipanel)
+#             par(fig = c(0.6, 0.8, 0.66, 1), new = T)
+#          boxplot(ENS_PIE ~ group, data=mob_stats$groups, main = "ENS PIE groups",boxwex = 0)
+#          points(ENS_PIE ~ group, data=mob_stats$groups, pch = 19)
+#         
+#       }
+#       
+#       if ('S' %in% display) {
+#           if (multipanel)
+#               par(fig = c(0, 0.2, 0.33, 0.66), new = T)
+#           else
+#               par(mfrow = c(1,3))
+# 
+#           # S observed samples
+#           #panel_title = paste("S (p = ", mob_stats$pvalues$S,")\n plot scale",
+#           #                    sep = "")
+#           boxplot(S ~ group, data=mob_stats$samples,
+#                   main = "S samples")
+#           
+#           # S beta
+#           #panel_title = paste("beta S (p = ", mob_stats$pvalues$beta_S,")\n between scales",
+#           #                    sep = "")
+#           boxplot(beta_S ~ group, data = mob_stats$samples,
+#                   main = "beta S")
+#           
+#           # S groups
+#           if (multipanel)
+#               par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
+#           boxplot(S ~ group, data=mob_stats$groups, main = "S groups",boxwex = 0)
+#           points(S ~ group, data=mob_stats$groups, pch = 19)
+#           
+# 
+#       }
+#       # if ('S rare' %in% display) {
+#       #    
+#       #    n_rows <- max(length(mob_stats$samples$S_rare), length(mob_stats$samples$S_rare)) 
+#       #    
+#       #    if (multipanel)
+#       #         par(fig = c(0, 0.2, 0.33, 0.66), new = T)
+#       #     else
+#       #         par(mfrow = c(1,2))
+#       # 
+#       #     # S rarefied samples
+#       #     panel_title = paste("S rarefied (p = ", mob_stats$pvalues$S_rare,
+#       #                         ")\n plot scale", sep = "")
+#       #     boxplot(S_rare ~ group, data=mob_stats$samples,
+#       #             main = panel_title, ...)
+#       #     
+#       #     # S groups
+#       #     if (multipanel)
+#       #         par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
+#       #     boxplot(S ~ group, data=mob_stats$groups, main = "S groups",boxwex = 0)
+#       #     points(S ~ group, data=mob_stats$groups, pch = 19)
+#       # 
+#       # }
+#       if ('N' %in% display) {
+#           if (multipanel)
+#               par(fig = c(0.2, 0.4, 0.33, 0.66), new = T)
+#           else
+#               par(mfrow = c(1,2))
+#           # N samples
+#           #panel_title = paste("N (p = ", mob_stats$pvalues$N,")\n plot scale",
+#           #                    sep = "")
+#           boxplot(N ~ group, data=mob_stats$samples, 
+#                   main = "N samples")
+#       
+#           # N groups
+#           if (multipanel)
+#               par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
+#           # y_limits <- with(mob_stats$groups, range(c(N_mean, N_low, N_obs, N_up)))
+#           # boxplot(N_mean ~ levels(group), data=mob_stats$groups,
+#           #         main = "N\ntreatment scale", boxwex = 0, ylim = y_limits)
+#           # points(N_obs ~ group, data = mob_stats$groups, pch = 19)
+#           # plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$N_mean,
+#           #        li = mob_stats$groups$N_low, ui = mob_stats$groups$N_up,
+#           #        add = T, pch = 1, ...)
+#           boxplot(N ~ group, data=mob_stats$groups, main = "N groups",boxwex = 0)
+#           points(N ~ group, data=mob_stats$groups, pch = 19)
+#       }
+#       if ('S asymp' %in% display) {
+#           if (multipanel)
+#               par(fig = c(0.2, 0.4, 0, 0.33), new = T)
+#           else
+#               par(mfrow = c(1,2))
+#            # S asymptotic
+#           if (all(is.na(mob_stats$samples$S_asymp))){
+#               warning("Cannot plot asymptotic richness for the samples")
+#           } else {
+#               # panel_title = paste("S asympotic (p = ", mob_stats$pvalues$S_asymp,
+#               #                     ")\n plot scale", sep = "")
+#               boxplot(S_asymp ~ group, data=mob_stats$samples,
+#                       main = "S asymptotic")
+#           }
+#           
+#           if (multipanel)
+#               par(fig = c(0.6, 0.8, 0, 0.33), new = T)
+#           if (all(is.na(mob_stats$groups$S_asymp))){
+#               warning("Cannot plot asymptotic richness for the groups")
+#           } else {
+#              boxplot(S_asymp ~ group, data=mob_stats$groups, main = "S asymptotic groups",boxwex = 0)
+#              points(S_asymp ~ group, data=mob_stats$groups, pch = 19)
+#           }
+#        
+#       }
+#       if (multipanel)
+#           par(op)
+# }
+# 
 
