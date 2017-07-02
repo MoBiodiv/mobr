@@ -147,6 +147,11 @@ sphere_dist = function(long, lat){
 #'   and the community data (i.e., x) under consideration. This arguement is
 #'   used to rescale the rarefation curve when estimating the effect of
 #'   individual density on group differences in richness.
+#' @param force boolean which specifies what the function should return if effort
+#'   is larger than the total number of samples (either individuals or plots).
+#'   The default behavior in which force = FALSE returns an NA when this occurs.
+#'   If force = TRUE then the total number of species in the community is
+#'   returned with a warning. 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #' the random sampling expectation for the individual and sampled based
@@ -191,7 +196,7 @@ sphere_dist = function(long, lat){
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
 #' rarefaction(inv_comm, method='spat', xy_coords=inv_plot_attr[ , c('x','y')])
 rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE, 
-                       dens_ratio=1) {
+                       dens_ratio=1, force=FALSE) {
     if (!any(method %in% c('indiv', 'samp', 'spat')))
         stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
     if (method == 'samp' | method == 'spat') {
@@ -212,8 +217,12 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
     }
     if (is.null(effort))
         effort = 1:n
-    if (any(effort > n))
+    effort_names = effort
+    if (any(effort > n)) {
         warning('"effort" larger than total number of samples')
+        if (!force)
+            effort[effort > n] = NA
+    }    
     if (method == 'spat') {
         # drop species with no observations  
         x = x[ , colSums(x) > 0] 
@@ -266,7 +275,7 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
         }
         out = rowSums(1 - p)
     }
-    names(out) = effort
+    names(out) = effort_names
     return(out)
 }
 
@@ -1234,8 +1243,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     cols = list()
     cols$trt = 'red'
     cols$ref = 'blue'
-    deltaS_col = 'turquoise'
-    ddeltaS_col = 'magenta'
+    cols$deltaS = 'turquoise'
+    cols$ddeltaS = 'magenta'
     if (is.null(par_args)) {
         par_args = paste('mfrow = c(', length(display), ',',
                          length(tests), ')',  sep='')
@@ -1329,8 +1338,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                           mob_out$indiv_rare[[ref_group]]
             plot(mob_out$indiv_rare$sample, deltaS_Sind,
                  ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-                 xlab = 'Number of individuals', 
+                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2,
+                 col = cols$deltaS, xlab = 'Number of individuals', 
                  ylab = expression(paste(Delta,'S', sep = '')), 
                  log=plot_log)
             abline(h = 0, lwd = 2, lty = 2)
@@ -1342,8 +1351,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                             sample_rare_ref$impl_S[1:minN]
             plot(seq(minN), delta_Ssample, 
                  ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2, col = deltaS_col,
-                 xlab = 'Number of plots', 
+                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2,
+                 col = cols$deltaS, xlab = 'Number of plots', 
                  ylab = expression(paste(Delta,'S', sep = '')))
             abline(h = 0, lwd = 2, lty = 2)
         }
@@ -1353,8 +1362,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
             plot(seq(minN), delta_Sspat, 
                  ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
                  cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = 2,
-                 col = deltaS_col,
-                 xlab = 'Number of plots',
+                 col = cols$deltaS, xlab = 'Number of plots',
                  ylab = expression(paste(Delta,'S', sep = '')))
             abline(h = 0, lwd = 2, lty = 2)
         }
@@ -1379,7 +1387,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                     col = '#C1CDCD', border = NA)
             abline(h = 0, lwd = 2, lty = 2)
             lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
-                  lwd = 2, col = ddeltaS_col)
+                  lwd = 2, col = cols$ddeltaS)
         }
         if ('N' %in% mob_out$tests) {
             mob_out$N[, -1] = lapply(mob_out$N[, -1], function(x)
@@ -1398,7 +1406,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                     col = '#C1CDCD', border = NA)
             abline(h = 0, lwd = 2, lty = 2)
             lines(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
-                  lwd = 2, col = ddeltaS_col)
+                  lwd = 2, col = cols$ddeltaS)
         }
         if ('agg' %in% mob_out$tests) {
             mob_out$agg[, -1] = lapply(mob_out$agg[, -1], function(x)
@@ -1417,7 +1425,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                     col = '#C1CDCD', border = NA)
            abline(h = 0, lwd = 2, lty = 2)
            lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
-                lwd = 2, col = ddeltaS_col)
+                lwd = 2, col = cols$ddeltaS)
         }
     }
  
