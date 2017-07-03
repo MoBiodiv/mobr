@@ -351,7 +351,7 @@ get_mob_stats = function(mob_in,
       out$samples$S_rare <- list()
       
       n_rare_samples <- floor(n_rare_samples)
-      if (!is.numeric(n_rare_samples)){   
+      if (!is.numeric(n_rare_samples) | is.na(n_rare_samples)){   
          N_min_sample = min(out$samples$N)
          n_rare_samples = N_min_sample
       }
