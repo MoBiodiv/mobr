@@ -168,14 +168,13 @@ get_test_stats <- function(div_list, permute = F)
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
-#' plot(inv_stats, multipanel=TRUE)
+#' inv_stats = get_mob_stats(inv_mob_in, 'group', ref_group = "uninvaded", nperm=100, n_rare_samples = c(5,10))
+#' plot(inv_stats)
 get_mob_stats = function(mob_in,
                          group_var,
                          ref_group = NULL,
                          index = c("N","S","S_rare","S_asymp","PIE","ENS_PIE"),
-                         n_min = 5,
-                         n_rare_samples = NA,
+                         n_rare_samples = 0,
                          n_rare_groups = NA,
                          nperm = 1000)
 {
@@ -191,6 +190,9 @@ get_mob_stats = function(mob_in,
       stop("ref_group has to be one level in group_var!")
    
    group_id = relevel(group_id, ref_group)
+   group_type = c("(ctrl)",rep("(trt)", length(levels(group_id)) - 1))
+   group_labels <- paste(levels(group_id), group_type)
+   group_id <- factor(group_id, labels = group_labels) 
    
    index <- match.arg(index, several.ok = TRUE)
    print(index)
@@ -231,19 +233,28 @@ get_mob_stats = function(mob_in,
       out$samples$S_rare <- list()
       
       n_rare_samples <- floor(n_rare_samples)
-      if (is.na(n_rare_samples)){   
+      if (!is.numeric(n_rare_samples)){   
          N_min_sample = min(out$samples$N)
-         n_rare_samples = c(n_min, floor(N_min_sample/2), N_min_sample)
-         n_rare_samples = unique(n_rare_samples[n_rare_samples > 0])
+         n_rare_samples = N_min_sample
       }
       
-      plots_low_n = out$samples$N < n_min
-      
-      if (sum(plots_low_n) > 0){
-         warning(paste("There are",sum(plots_low_n),"plots with less then", n_min,"individuals. These plots are removed for the calculation of rarefied richness."))
+      if (any(n_rare_samples <= 1)){
+         warning(paste("Comparisons of rarefied richness do not make sense for",
+                       n_rare_samples,"individuals. Please choose higher value for \"n_rare_samples\"."))
       }
-   
+      
       for (i in 1:length(n_rare_samples)){
+         
+         plots_low_n = out$samples$N < n_rare_samples[i]
+         
+         if (sum(plots_low_n) == 1){
+            warning(paste("There is",sum(plots_low_n),"plot with less then", n_rare_samples[i],"individuals. This plot are removed for the calculation of rarefied richness."))
+         }
+         
+         if (sum(plots_low_n) > 1){
+            warning(paste("There are",sum(plots_low_n),"plots with less then", n_rare_samples[i],"individuals. These plots are removed for the calculation of rarefied richness."))
+         }
+         
          S_rare = rep(NA, nrow(mob_in$comm))
          S_rare[!plots_low_n] = apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
                                       rarefaction, method = "indiv",
@@ -257,23 +268,22 @@ get_mob_stats = function(mob_in,
       n_rare_groups <- floor(n_rare_groups)
       if (is.na(n_rare_groups)){   
          N_min_group = min(out$group$N)
-         n_rare_groups = c(n_min, floor(N_min_group/2), N_min_group)
-         n_rare_groups = unique(n_rare_groups[n_rare_groups > 0])
+         n_rare_groups = N_min_group
       }
       
-      groups_low_n = out$groups$N < n_min
-      
-      if (sum(groups_low_n) == 1){
-         warning(paste("There is",sum(plots_low_n),"group with less then", n_min,"individuals.
-These are removed for the calculation of rarefied richness."))
-      }
-      
-      if (sum(groups_low_n) > 1){
-         warning(paste("There are",sum(plots_low_n),"groups with less then", n_min,"individuals.
-These are removed for the calculation of rarefied richness."))
-      }
-      
+
       for (i in 1:length(n_rare_groups)){
+         
+         groups_low_n = out$groups$N < n_rare_groups[i]
+         
+         if (sum(groups_low_n) == 1){
+            warning(paste("There is",sum(groups_low_n),"group with less then",  n_rare_groups[i],"individuals. This is removed for the calculation of rarefied richness."))
+         }
+         
+         if (sum(groups_low_n) > 1){
+            warning(paste("There are",sum(groups_low_n),"groups with less then",  n_rare_groups[i],"individuals. These are removed for the calculation of rarefied richness."))
+         }
+         
          S_rare = rep(NA, nrow(abund_group))
          S_rare[!groups_low_n] = apply(abund_group[!groups_low_n,-1], MARGIN = 1,
                                        rarefaction, method = "indiv",
