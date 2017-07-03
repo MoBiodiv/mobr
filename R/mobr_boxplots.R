@@ -466,7 +466,7 @@ These are removed for the calculation of rarefied richness."))
 
 plot.mob_stats = function(mob_stats)
 {
-   var_names <- names(inv_stats$samples)[-1]
+   var_names <- names(mob_stats$samples)[-1]
    var_names2 <- var_names[var_names != "beta_S" & var_names != "beta_ENS_PIE"]
    
    for (var in var_names2){
