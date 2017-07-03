@@ -43,7 +43,7 @@ calc_PIE = function(x) {
     H = total/(total - 1)* (1 - H)
     if (any(is.na(total))) 
         is.na(H) = is.na(total)
-    H[!is.finite(H)] <- NA
+    H[!is.finite(H) | total == 0] <- NA # set NA, when total == 0 or total == 1
     return(H)
 }
 
