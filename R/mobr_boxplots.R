@@ -129,9 +129,11 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
 {
    out <- list("group" = groups)
    
+   groups_N <- rowSums(abund_mat) 
+   
    # Number of individuals -----------------------------------------------------
    if ("N" %in% index){
-      out$N  = rowSums(abund_mat)     
+      out$N  =  groups_N   
    } 
    
    # Number of species ---------------------------------------------------------
@@ -145,14 +147,14 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
       out$S_rare <- list()
       
       n_rare <- floor(n_rare)
-      if (is.na(n_rare)){   
-         N_min_group = min(out$N)
+      if (is.null(n_rare) | !is.numeric(n_rare)){   
+         N_min_group = min(groups_N)
          n_rare = N_min_group
       }
       
       for (i in 1:length(n_rare)){
          
-         groups_low_n = out$N < n_rare[i]
+         groups_low_n = groups_N < n_rare[i]
          
          if (sum(groups_low_n) == 1){
             warning(paste("There is",sum(groups_low_n),"group with less then",  n_rare[i],"individuals. This is removed for the calculation of rarefied richness."))
@@ -286,8 +288,8 @@ get_mob_stats = function(mob_in,
                          group_var,
                          ref_group = NULL,
                          index = c("N","S","S_rare","S_asymp","PIE","ENS_PIE"),
-                         n_rare_samples = 5,
-                         n_rare_groups = NA,
+                         n_rare_samples = NULL,
+                         n_rare_groups = NULL,
                          nperm = 100)
 {
    if (nperm < 1) 
@@ -329,9 +331,11 @@ get_mob_stats = function(mob_in,
                                     index = index,
                                     n_rare = n_rare_groups)
    
+   samples_N = rowSums(mob_in$comm) 
+   
    # Number of individuals -----------------------------------------------------
    if ("N" %in% index){
-      out$samples$N = rowSums(mob_in$comm) 
+      out$samples$N <- samples_N
    } 
    
    # Number of species ---------------------------------------------------------
@@ -351,8 +355,8 @@ get_mob_stats = function(mob_in,
       out$samples$S_rare <- list()
       
       n_rare_samples <- floor(n_rare_samples)
-      if (!is.numeric(n_rare_samples) | is.na(n_rare_samples)){   
-         N_min_sample = min(out$samples$N)
+      if (is.null(n_rare_sample) | !is.numeric(n_rare_samples)){   
+         N_min_sample = min(samples_N)
          n_rare_samples = N_min_sample
       }
       
@@ -363,7 +367,7 @@ get_mob_stats = function(mob_in,
       
       for (i in 1:length(n_rare_samples)){
          
-         plots_low_n = out$samples$N < n_rare_samples[i]
+         plots_low_n = samples_N < n_rare_samples[i]
          
          if (sum(plots_low_n) == 1){
             warning(paste("There is",sum(plots_low_n),"plot with less then", n_rare_samples[i],"individuals. This plot are removed for the calculation of rarefied richness."))
