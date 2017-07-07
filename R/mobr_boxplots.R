@@ -48,7 +48,6 @@ calc_PIE = function(x) {
 }
 
 # Calculate biodiversity indices of single group
-
 calc_biodiv_single_group <- function(abund_vec, n_rare){
    
    abund_vec <- abund_vec[abund_vec > 0]
@@ -125,24 +124,109 @@ get_pval <- function(rand, obs, n_samples)
    return(p_val)
 }
 
-#Get F statistics from diversity indices and grouping vector
-get_test_stats <- function(div_list, permute = F)
+# Get group-level biodiversity indices
+calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
 {
-   group_id <- div_list$samples$group
+   out <- list("group" = groups)
+   
+   groups_N <- rowSums(abund_mat) 
+   
+   # Number of individuals -----------------------------------------------------
+   if ("N" %in% index){
+      out$N  =  groups_N   
+   } 
+   
+   # Number of species ---------------------------------------------------------
+   if ("S" %in% index){
+      out$S  = rowSums(abund_mat > 0)  
+   }  
+   
+   # Rarefied richness ---------------------------------------------------------
+   if ("S_rare" %in% index){  
+      
+      out$S_rare <- list()
+      
+      if (any(is.null(n_rare)) | !is.numeric(n_rare)){   
+         N_min_group = min(groups_N)
+         n_rare = N_min_group
+      }
+      else {
+         n_rare <- floor(n_rare)
+      }
+      
+      for (i in 1:length(n_rare)){
+         
+         groups_low_n = groups_N < n_rare[i]
+         
+         if (sum(groups_low_n) == 1){
+            warning(paste("There is",sum(groups_low_n),"group with less then",  n_rare[i],"individuals. This is removed for the calculation of rarefied richness."))
+         }
+         
+         if (sum(groups_low_n) > 1){
+            warning(paste("There are",sum(groups_low_n),"groups with less then",  n_rare[i],"individuals. These are removed for the calculation of rarefied richness."))
+         }
+         
+         S_rare = rep(NA, nrow(abund_mat))
+         S_rare[!groups_low_n] = apply(abund_mat[!groups_low_n], MARGIN = 1,
+                                       rarefaction, method = "indiv",
+                                       effort = n_rare[i])
+         out$S_rare[[paste("n =", n_rare[i])]] = S_rare
+      }
+   } # end rarefied richness
+   
+   
+   # Asymptotic estimates species richness -------------------------------------
+   if ("S_asymp" %in% index){
+      
+      S_asymp_group <- try(vegan::estimateR(abund_mat))
+      if (class(S_asymp_group) == "try_error"){
+         warning("The Chao richness estimator cannot be calculated for all groups.")
+      } else {
+         S_asymp_group = S_asymp_group["S.chao1",]
+         S_asymp_group[!is.finite(S_asymp_group)] <- NA
+      }
+      
+      out$S_asymp <- S_asymp_group
+   }
+   
+   # Probability of Interspecific Encounter (PIE)-------------------------------
+   if ("PIE" %in% index){ 
+
+      PIE_groups  = calc_PIE(abund_mat)
+      out$PIE  = PIE_groups
+      }
+   
+   # Effective number of species based on PIE ----------------------------------
+   if ("ENS_PIE" %in% index){
+      
+      ENS_PIE_groups = vegan::diversity(abund_mat, index = "invsimpson")
+      ENS_PIE_groups[!is.finite(ENS_PIE_groups)] <- NA
+      
+      out$ENS_PIE = ENS_PIE_groups
+   }
+   
+   return(out)
+   
+}
+
+#Get F statistics from diversity indices and grouping vector
+get_F_values <- function(div_list, permute = F)
+{
+   group_id <- div_list$group
    if (permute)
       group_id <- sample(group_id)
    
    F_list <- list() # F values for sample level 
    
-   for (i in 2:length(div_list$samples)){
-      if (names(div_list$samples[i]) != "S_rare"){
-         lm1 <- lm(div_list$samples[[i]] ~ group_id)
-         F_list[[names(div_list$samples[i])]] <- anova(lm1)$F[1]
+   for (i in 2:length(div_list)){
+      if (names(div_list[i]) != "S_rare"){
+         lm1 <- lm(div_list[[i]] ~ group_id)
+         F_list[[names(div_list[i])]] <- anova(lm1)$F[1]
       } else {
-         for (j in 1:length(div_list$samples[[i]])){
-            lm1 <- lm(div_list$samples[[i]][[j]] ~ group_id)  
+         for (j in 1:length(div_list[[i]])){
+            lm1 <- lm(div_list[[i]][[j]] ~ group_id)  
             F1 <- anova(lm1)$F[1]
-            names(F1) <- names(div_list$samples[["S_rare"]][j])
+            names(F1) <- names(div_list[["S_rare"]][j])
             F_list[["S_rare"]][j] <- list(F1)
          }
             
@@ -150,6 +234,38 @@ get_test_stats <- function(div_list, permute = F)
    }
    
    return(F_list)
+}
+
+# Get group-level differences 
+get_group_diff <- function(abund_mat, group_bin, index, n_rare,
+                           permute = F)
+{
+   if (permute)
+      group_bin <- sample(group_bin)
+   
+   abund_group = aggregate(abund_mat, by = list(group_bin), FUN = "sum")
+   
+   group_list <- calc_biodiv_groups(abund_mat = abund_group[,-1],
+                                    groups = abund_group[,1],
+                                    index = index,
+                                    n_rare = n_rare)
+   
+   diff_list <- list() # differences for group-level 
+   
+   for (i in 2:length(group_list)){
+      var <- names(group_list[i])
+      if (var != "S_rare"){
+         diff_list[[var]] <- group_list[[var]][2] - group_list[[var]][1]
+      } else {
+         for (j in 1:length(group_list[[i]])){
+            d1 <-  group_list$S_rare[[j]][2] - group_list$S_rare[[j]][1]
+            names(d1) <- names(group_list[["S_rare"]][j])
+            diff_list[["S_rare"]][j] <- list(d1)
+         }
+      }
+   }
+   
+   return(diff_list)
 }
 
 
@@ -168,16 +284,15 @@ get_test_stats <- function(div_list, permute = F)
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
-#' plot(inv_stats, multipanel=TRUE)
+#' inv_stats = get_mob_stats(inv_mob_in, 'group', ref_group = "uninvaded", nperm=100, n_rare_samples = c(5,10))
+#' plot(inv_stats)
 get_mob_stats = function(mob_in,
                          group_var,
                          ref_group = NULL,
                          index = c("N","S","S_rare","S_asymp","PIE","ENS_PIE"),
-                         n_min = 5,
-                         n_rare_samples = NA,
-                         n_rare_groups = NA,
-                         nperm = 1000)
+                         n_rare_samples = NULL,
+                         n_rare_groups = NULL,
+                         nperm = 100)
 {
    if (nperm < 1) 
        stop('Set nperm to a value greater than 1') 
@@ -192,32 +307,43 @@ get_mob_stats = function(mob_in,
    
    group_id = relevel(group_id, ref_group)
    
+   # Create factor with just two levels: treatment / control
+   # for calculation of group-level differences
+   group_bin = factor(rep("control", times = length(group_id)),
+                      levels = c("control","treatment"))
+   group_bin[group_id != ref_group] <- "treatment"
+  
+   # Add labels to groups
+   group_type = c("(ctrl)",rep("(trt)", length(levels(group_id)) - 1))
+   group_labels <- paste(levels(group_id), group_type)
+   group_id <- factor(group_id, labels = group_labels) 
+   
    index <- match.arg(index, several.ok = TRUE)
    print(index)
-   
-   # # Create factor with just two levels: treatment / control
-   # group_bin = factor(rep("control", times = length(group_id)),
-   #                    levels = c("control","treatment"))
-   # group_bin[group_id != ref_group] <- "treatment"
-   
+ 
    # Abundance distribution pooled in groups
    abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
    
    #Define output list
-   out <- list("samples" = list("group" = group_id),
-               "groups" = list("group" = abund_group[,1]))
+   out <- list("samples" = list("group" = group_id))
+   
+   # Group-level indices
+   out$groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
+                                    groups = abund_group[,1],
+                                    index = index,
+                                    n_rare = n_rare_groups)
+   
+   samples_N = rowSums(mob_in$comm) 
    
    # Number of individuals -----------------------------------------------------
    if ("N" %in% index){
-      out$samples$N = rowSums(mob_in$comm) 
-      out$groups$N  = rowSums(abund_group[ ,-1])     
+      out$samples$N <- samples_N
    } 
    
    # Number of species ---------------------------------------------------------
    if ("S" %in% index){
       out$samples$S = rowSums(mob_in$comm > 0) 
-      out$groups$S  = rowSums(abund_group[ ,-1] > 0)  
-      
+       
       beta_S = out$group$S[group_id] / out$samples$S 
       beta_S[!is.finite(beta_S)] <- NA
       
@@ -230,60 +356,41 @@ get_mob_stats = function(mob_in,
       # sample level
       out$samples$S_rare <- list()
       
-      n_rare_samples <- floor(n_rare_samples)
-      if (is.na(n_rare_samples)){   
-         N_min_sample = min(out$samples$N)
-         n_rare_samples = c(n_min, floor(N_min_sample/2), N_min_sample)
-         n_rare_samples = unique(n_rare_samples[n_rare_samples > 0])
+      if (any(is.null(n_rare_samples)) | !is.numeric(n_rare_samples)){ 
+         N_min_sample = min(samples_N)
+         n_rare_samples = N_min_sample
+      }
+      else {
+         n_rare_samples <- floor(n_rare_samples)
       }
       
-      plots_low_n = out$samples$N < n_min
-      
-      if (sum(plots_low_n) > 0){
-         warning(paste("There are",sum(plots_low_n),"plots with less then", n_min,"individuals. These plots are removed for the calculation of rarefied richness."))
+      if (any(n_rare_samples <= 1)){
+         warning(paste("Comparisons of rarefied richness do not make sense for",
+                       n_rare_samples,"individuals. Please choose higher value for \"n_rare_samples\"."))
       }
-   
+      
       for (i in 1:length(n_rare_samples)){
+         
+         plots_low_n = samples_N < n_rare_samples[i]
+         
+         if (sum(plots_low_n) == 1){
+            warning(paste("There is",sum(plots_low_n),"plot with less then", n_rare_samples[i],"individuals. This plot are removed for the calculation of rarefied richness."))
+         }
+         
+         if (sum(plots_low_n) > 1){
+            warning(paste("There are",sum(plots_low_n),"plots with less then", n_rare_samples[i],"individuals. These plots are removed for the calculation of rarefied richness."))
+         }
+         
          S_rare = rep(NA, nrow(mob_in$comm))
          S_rare[!plots_low_n] = apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
                                       rarefaction, method = "indiv",
                                       effort = n_rare_samples[i])
          out$samples$S_rare[[paste("n =", n_rare_samples[i])]] = S_rare
       }
-      
-      # group level
-      out$groups$S_rare <- list()
-      
-      n_rare_groups <- floor(n_rare_groups)
-      if (is.na(n_rare_groups)){   
-         N_min_group = min(out$group$N)
-         n_rare_groups = c(n_min, floor(N_min_group/2), N_min_group)
-         n_rare_groups = unique(n_rare_groups[n_rare_groups > 0])
-      }
-      
-      groups_low_n = out$groups$N < n_min
-      
-      if (sum(groups_low_n) == 1){
-         warning(paste("There is",sum(plots_low_n),"group with less then", n_min,"individuals.
-These are removed for the calculation of rarefied richness."))
-      }
-      
-      if (sum(groups_low_n) > 1){
-         warning(paste("There are",sum(plots_low_n),"groups with less then", n_min,"individuals.
-These are removed for the calculation of rarefied richness."))
-      }
-      
-      for (i in 1:length(n_rare_groups)){
-         S_rare = rep(NA, nrow(abund_group))
-         S_rare[!groups_low_n] = apply(abund_group[!groups_low_n,-1], MARGIN = 1,
-                                       rarefaction, method = "indiv",
-                                       effort = n_rare_groups[i])
-         out$groups$S_rare[[paste("n =", n_rare_groups[i])]] = S_rare
-      }
    } # end rarefied richness
    
    
-   # Asymptotic estimates species richness -------------------------------------
+  # Asymptotic estimates species richness -------------------------------------
   if ("S_asymp" %in% index){
      
       S_asymp_sample = try(vegan::estimateR(mob_in$comm))
@@ -296,16 +403,6 @@ These are removed for the calculation of rarefied richness."))
       }
       
       out$samples$S_asymp <- S_asymp_sample
-      
-      S_asymp_group <- try(vegan::estimateR(abund_group[,-1]))
-      if (class(S_asymp_group) == "try_error"){
-         warning("The Chao richness estimator cannot be calculated for all groups.")
-      } else {
-         S_asymp_group = S_asymp_group["S.chao1",]
-         S_asymp_group[!is.finite(S_asymp_group)] <- NA
-      }
-      
-      out$groups$S_asymp <- S_asymp_group
   }
 
    # Probability of Interspecific Encounter (PIE)-------------------------------
@@ -324,10 +421,7 @@ These are removed for the calculation of rarefied richness."))
       }
       
       PIE_samples = calc_PIE(mob_in$comm)
-      PIE_groups  = calc_PIE(abund_group[,-1])
-         
       out$samples$PIE = PIE_samples
-      out$groups$PIE  = PIE_groups
    }
    
    # Effective number of species based on PIE ----------------------------------
@@ -338,20 +432,21 @@ These are removed for the calculation of rarefied richness."))
       ENS_PIE_samples = vegan::diversity(mob_in$comm, index = "invsimpson")
       ENS_PIE_samples[plots_n01] <- NA
       
-      ENS_PIE_groups = vegan::diversity(abund_group[,-1], index = "invsimpson")
-      ENS_PIE_groups[!is.finite(ENS_PIE_groups)] <- NA
-      
       out$samples$ENS_PIE = ENS_PIE_samples
-      out$groups$ENS_PIE = ENS_PIE_groups
       
-      beta_ENS_PIE = ENS_PIE_groups[group_id] / ENS_PIE_samples
+      beta_ENS_PIE = out$groups$ENS_PIE[group_id] / ENS_PIE_samples
       beta_ENS_PIE[!is.finite(beta_ENS_PIE)] <- NA
       out$samples$beta_ENS_PIE = beta_ENS_PIE
    }
    
    # Significance tests
-   F_obs <- get_test_stats(out, permute = F)
-   F_rand_list <- replicate(nperm, get_test_stats(out, permute = T), simplify = F)
+   F_obs <- get_F_values(out$samples, permute = F)
+   F_rand_list <- replicate(nperm, get_F_values(out$samples, permute = T), simplify = F)
+   
+   diff_obs <- get_group_diff(mob_in$comm, group_bin, index,n_rare = n_rare_groups, permute = F)
+   diff_rand_list <- replicate(nperm, get_group_diff(mob_in$comm, group_bin,
+                                                     index, n_rare = n_rare_groups,
+                                                     permute = T), simplify = F)
    
    out$p_values$samples <- list()
    var_names <- names(out$samples)[-1]
@@ -366,6 +461,23 @@ These are removed for the calculation of rarefied richness."))
             p_val <- sum(F_obs$S_rare[[j]] <= F_rand) / nperm
             names(p_val) <- names(F_obs$S_rare[[j]])
             out$p_values$samples$S_rare[j] <- list(p_val)
+         }
+      }
+   }
+   
+   out$p_values$groups <- list()
+   var_names <- names(out$groups)[-1]
+   for (var in var_names){
+      if (var != "S_rare"){
+         diff_rand <- sapply(diff_rand_list,"[[",var)
+         p_val <- get_pval(diff_rand, diff_obs[[var]], nperm)
+         out$p_values$groups[[var]] <- p_val 
+      } else {
+         for (j in 1:length(diff_obs$S_rare)){
+            diff_rand <- sapply(diff_rand_list,function(list){list$S_rare[[j]]})
+            p_val <- get_pval(diff_rand, diff_obs$S_rare[[j]], nperm)
+            names(p_val) <- names(diff_obs$S_rare[[j]])
+            out$p_values$groups$S_rare[j] <- list(p_val)
          }
       }
    }
@@ -399,39 +511,7 @@ These are removed for the calculation of rarefied richness."))
    # # permutation tests
    # 
    
-   # # output data for groups
-   # abund_group_bin = aggregate(mob_in$comm, by = list(group_bin), FUN = "sum")
-   # group_bin_stats = apply(abund_group_bin[ ,-1], MARGIN = 1,
-   #                         FUN = calc_biodiv_single_group, n_rare = rarefy_groups)
-   # colnames(group_bin_stats) <- abund_group_bin[,1]
-   # delta_group_obs <- group_bin_stats[,"treatment"] - group_bin_stats[,"control"]
-   # 
-   # delta_group_rand <- data.frame(N             = numeric(nperm),
-   #                                S             = numeric(nperm),
-   #                                S_rare1       = numeric(nperm),
-   #                                S_rare2       = numeric(nperm),
-   #                                S_rare3       = numeric(nperm),
-   #                                S_asymp       = numeric(nperm),
-   #                                PIE           = numeric(nperm),
-   #                                ENS_PIE       = numeric(nperm)
-   #                                )
-   # 
-   # for (i in 1:nperm){
-   #  
-   #    # random group level difference
-   #    group_bin_rand = sample(group_bin, replace = F)
-   #    abund_group_bin = aggregate(mob_in$comm, by = list(group_bin_rand), FUN = "sum")
-   #    group_bin_stats = apply(abund_group_bin[ ,-1], MARGIN = 1,
-   #                            FUN = calc_biodiv_single_group, n_rare = rarefy_groups)
-   #    colnames(group_bin_stats) <- abund_group_bin[,1]
-   #    delta_group_rand[i,] <- group_bin_stats[,"treatment"] - group_bin_stats[,"control"]
-   # }
-   # 
   
-   # 
-   # # p-values for difference between treatment & control
-   # pvalues_groups = mapply(get_pval, delta_group_rand, delta_group_obs,
-   #                           MoreArgs = list(n_samples = nperm))  
    class(out) = 'mob_stats'
    return(out)
 }
@@ -483,7 +563,9 @@ plot.mob_stats = function(mob_stats)
                  ylab =  var)
          
          y_group <- mob_stats$groups[[var]]
-         boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
+         p_val <- mob_stats$p_values$groups[[var]]
+         fig_title <- paste("Group scale\np =",p_val)
+         boxplot(y_group ~ group, data=mob_stats$groups, main = fig_title,
                  ylab = "", boxwex = 0)
          points(y_group ~ group, data=mob_stats$groups, pch = 19)
       }
@@ -504,7 +586,9 @@ plot.mob_stats = function(mob_stats)
          boxplot(y_beta ~ group, data=mob_stats$samples, main = fig_title)
          
          y_group <- mob_stats$groups[[var]]
-         boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
+         p_val <- mob_stats$p_values$groups[[var]]
+         fig_title <- paste("Group scale\np =",p_val)
+         boxplot(y_group ~ group, data=mob_stats$groups, main = fig_title,
                  ylab = "", boxwex = 0)
          points(y_group ~ group, data=mob_stats$groups, pch = 19)
       }
@@ -526,7 +610,10 @@ plot.mob_stats = function(mob_stats)
          y_coords <- (n_rows:0)/n_rows
          for (j in 1:length(mob_stats$groups$S_rare)){
             y_group <- mob_stats$groups$S_rare[[j]]
-            fig_title <- paste("Group scale",names(mob_stats$groups$S_rare[j]))
+            
+            p_val <- mob_stats$p_values$groups$S_rare[[j]]
+            fig_title <- paste("Group scale",names(mob_stats$groups$S_rare[j]),
+                               "\np =",p_val)
             
             par(fig = c(0.5, 1.0, y_coords[j+1], y_coords[j]), new = T)
             boxplot(y_group ~ group, data = mob_stats$group, main = fig_title,
