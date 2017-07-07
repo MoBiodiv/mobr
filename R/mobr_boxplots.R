@@ -146,10 +146,12 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
       
       out$S_rare <- list()
       
-      n_rare <- floor(n_rare)
-      if (is.null(n_rare) | !is.numeric(n_rare)){   
+      if (any(is.null(n_rare)) | !is.numeric(n_rare)){   
          N_min_group = min(groups_N)
          n_rare = N_min_group
+      }
+      else {
+         n_rare <- floor(n_rare)
       }
       
       for (i in 1:length(n_rare)){
@@ -354,10 +356,12 @@ get_mob_stats = function(mob_in,
       # sample level
       out$samples$S_rare <- list()
       
-      n_rare_samples <- floor(n_rare_samples)
-      if (is.null(n_rare_sample) | !is.numeric(n_rare_samples)){   
+      if (any(is.null(n_rare_samples)) | !is.numeric(n_rare_samples)){ 
          N_min_sample = min(samples_N)
          n_rare_samples = N_min_sample
+      }
+      else {
+         n_rare_samples <- floor(n_rare_samples)
       }
       
       if (any(n_rare_samples <= 1)){
