@@ -321,7 +321,6 @@ get_mob_stats = function(mob_in,
    group_labels <- paste(levels(group_id), group_type)
    group_id <- factor(group_id, labels = group_labels) 
    
-   index <- match.arg(index, several.ok = TRUE)
    print(index)
  
    # Abundance distribution pooled in groups
@@ -562,11 +561,11 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
    
    index_match <- intersect(index, var_names)
    if (length(index_match) == 0)
-      stop(paste("The indices",index,"are missing in the input. Please choose other indices or re-run get_mob_stats with the indices of interest."))
+      stop(paste("The indices", paste(index, collapse = ", "),"are missing in the input. Please choose other indices or re-run get_mob_stats with the indices of interest."))
    
    index_missing <- setdiff(index, var_names2)
    if (length(index_missing) > 0)
-      warning(paste("The indices",index_missing,"are missing in the input and cannot be plotted."))
+      warning(paste("The indices", paste(index, collapse = ", "),"are missing in the input and cannot be plotted."))
    
    if (multi_panel){
       S_rare_len <- max(length(mob_stats$samples$S_rare), length(mob_stats$groups$S_rare))
@@ -686,7 +685,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             if (!multi_panel) par(fig = c(0.5, 1.0, y_coords[j+1], y_coords[j]), new = T)
             else              par(fig = c(0.67, 1.0, (1+j)/n_rows, (2+j)/n_rows),new = T)
             boxplot(y_group ~ group, data = mob_stats$group, main = fig_title,
-                    ylab =  "S_rare", boxwex = 0)
+                    ylab =  "", boxwex = 0)
             points(y_group ~ group, data=mob_stats$groups, pch = 19)
             mtext(p_label, side = 3, line = 0)
          }
