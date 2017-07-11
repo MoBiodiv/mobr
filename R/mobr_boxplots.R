@@ -298,7 +298,7 @@ get_mob_stats = function(mob_in,
        stop('Set nperm to a value greater than 1') 
    
    INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
-   index <- match.arg(index, INDICES, several.ok = T)
+   index <- match.arg(index, INDICES, several.ok = TRUE)
    
    group_id  = factor(mob_in$env[, group_var])
    
@@ -547,10 +547,21 @@ get_mob_stats = function(mob_in,
 #' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
 #' plot(inv_stats) 
 
-plot.mob_stats = function(mob_stats)
+plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_PIE"))
 {
+   INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
+   index <- match.arg(index, INDICES, several.ok = TRUE)
+   
    var_names <- names(mob_stats$samples)[-1]
    var_names2 <- var_names[var_names != "beta_S" & var_names != "beta_ENS_PIE"]
+   
+   index_match <- intersect(index, var_names)
+   if (length(index_match) == 0)
+      stop(paste("The indices",index,"are missing in the input. Please choose other indices or re-run get_mob_stats with the indices of interest."))
+   
+   index_missing <- setdiff(index, var_names2)
+   if (length(index_missing) > 0)
+      warning(paste("The indices",index_missing,"are missing in the input and cannot be plotted."))
    
    for (var in var_names2){
       
