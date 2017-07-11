@@ -289,13 +289,16 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
 get_mob_stats = function(mob_in,
                          group_var,
                          ref_group = NULL,
-                         index = c("N","S","S_rare","S_asymp","PIE","ENS_PIE"),
+                         index = c("N","S","S_rare","S_asymp","ENS_PIE"),
                          n_rare_samples = NULL,
                          n_rare_groups = NULL,
                          nperm = 100)
 {
    if (nperm < 1) 
        stop('Set nperm to a value greater than 1') 
+   
+   INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
+   index <- match.arg(index, INDICES, several.ok = T)
    
    group_id  = factor(mob_in$env[, group_var])
    
