@@ -485,6 +485,8 @@ get_mob_stats = function(mob_in,
       }
    }
    
+   out$p_values$n_perm <- nperm
+   
    # ---------------------------------------------------------------------------
    # # old code - might be re-used later
    # 
@@ -563,48 +565,67 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
    if (length(index_missing) > 0)
       warning(paste("The indices",index_missing,"are missing in the input and cannot be plotted."))
    
-   for (var in var_names2){
+   for (var in index_match){
       
       if (var %in% c("N", "S_asymp","PIE")){
          
          par(mfrow = c(1,2), las = 1, cex.lab = 1.2)
          
          y_sample <- mob_stats$samples[[var]]
-         p_val <- mob_stats$p_values$samples[[var]]
-         fig_title <- paste("Sample scale\np =",p_val)
          
-         boxplot(y_sample ~ group, data=mob_stats$samples, main = fig_title,
+         p_val <- mob_stats$p_values$samples[[var]]
+         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+         else           p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+         
+         boxplot(y_sample ~ group, data=mob_stats$samples, main = "Sample scale",
                  ylab =  var)
+         mtext(p_label, side = 3, line = 0)
          
          y_group <- mob_stats$groups[[var]]
+         
          p_val <- mob_stats$p_values$groups[[var]]
-         fig_title <- paste("Group scale\np =",p_val)
-         boxplot(y_group ~ group, data=mob_stats$groups, main = fig_title,
+         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+         else           p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+         
+         boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
                  ylab = "", boxwex = 0)
          points(y_group ~ group, data=mob_stats$groups, pch = 19)
+         mtext(p_label, side = 3, line = 0)
       }
       
       if (var %in% c("S","ENS_PIE")){
          par(mfrow = c(1,3), las = 1, cex.lab = 1.2)
          
          y_sample <- mob_stats$samples[[var]]
+         
          p_val <- mob_stats$p_values$samples[[var]]
-         fig_title <- paste("Sample scale\np =",p_val)
-         boxplot(y_sample ~ group, data=mob_stats$samples, main = fig_title,
+         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+         else           p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+        
+         boxplot(y_sample ~ group, data=mob_stats$samples, main = "Sample scale",
                  ylab =  var)
+         mtext(p_label, side = 3, line = 0, cex = 0.8)
          
          beta_var <- paste("beta",var,sep = "_")
          y_beta <- mob_stats$samples[[beta_var]]
+         
          p_val <- mob_stats$p_values$samples[[beta_var]]
-         fig_title <- paste("Beta-diversity\np =",p_val)
-         boxplot(y_beta ~ group, data=mob_stats$samples, main = fig_title)
+         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+         else           p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+         
+         boxplot(y_beta ~ group, data=mob_stats$samples, main = "Beta-diversity across scales")
+         mtext(p_label, side = 3, line = 0, cex = 0.8)
          
          y_group <- mob_stats$groups[[var]]
+         
          p_val <- mob_stats$p_values$groups[[var]]
-         fig_title <- paste("Group scale\np =",p_val)
-         boxplot(y_group ~ group, data=mob_stats$groups, main = fig_title,
+         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+         else           p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+        
+         boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
                  ylab = "", boxwex = 0)
          points(y_group ~ group, data=mob_stats$groups, pch = 19)
+         mtext(p_label, side = 3, line = 0, cex = 0.8)
       }
       
       if (var == "S_rare"){
@@ -615,10 +636,15 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          
          for (j in 1:length(mob_stats$samples$S_rare)){
             y_sample <- mob_stats$samples$S_rare[[j]]
+            
             p_val <- mob_stats$p_values$samples$S_rare[[j]]
-            fig_title <- paste("Sample scale",names(p_val),"\np =",p_val)
+            if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+            else                          p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+            
+            fig_title <- paste("Sample scale",names(p_val))
             boxplot(y_sample ~ group, data=mob_stats$samples, main = fig_title,
-                    ylab =  "S_rare")   
+                    ylab =  "S_rare")  
+            mtext(p_label, side = 3, line = 0)
          }
          
          y_coords <- (n_rows:0)/n_rows
@@ -626,13 +652,16 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             y_group <- mob_stats$groups$S_rare[[j]]
             
             p_val <- mob_stats$p_values$groups$S_rare[[j]]
-            fig_title <- paste("Group scale",names(mob_stats$groups$S_rare[j]),
-                               "\np =",p_val)
+            if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+            else                          p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+            
+            fig_title <- paste("Group scale",names(mob_stats$groups$S_rare[j]))
             
             par(fig = c(0.5, 1.0, y_coords[j+1], y_coords[j]), new = T)
             boxplot(y_group ~ group, data = mob_stats$group, main = fig_title,
                     ylab =  "S_rare", boxwex = 0)
             points(y_group ~ group, data=mob_stats$groups, pch = 19)
+            mtext(p_label, side = 3, line = 0)
          }
       }
    }
