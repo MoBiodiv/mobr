@@ -549,7 +549,7 @@ get_mob_stats = function(mob_in,
 #' plot(inv_stats) 
 
 plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_PIE"),
-                          multi_panel = TRUE)
+                          multi_panel = FALSE)
 {
    INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
    
@@ -584,12 +584,12 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          
          p_val <- mob_stats$p_values$samples[[var]]
          if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-         else           p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+         else p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
          
          if (multi_panel)
             par(fig = c(0, 0.33, 1/n_rows, 2/n_rows),new = T)
          boxplot(y_sample ~ group, data=mob_stats$samples, main = "Sample scale",
-                 ylab =  var)
+                 ylab =  var, ylim = c(0, max(y_sample, na.rm = T)))
          mtext(p_label, side = 3, line = 0)
          
          y_group <- mob_stats$groups[[var]]
@@ -601,8 +601,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          if (multi_panel)
             par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows),new = T)
          boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
-                 ylab = "", boxwex = 0)
-         points(y_group ~ group, data=mob_stats$groups, pch = 19)
+                 ylab = "", boxwex = 0, ylim = c(0, max(y_group, na.rm = T)))
+         points(y_group ~ group, data=mob_stats$groups, pch = 8, cex = 1.5, lwd = 2)
          mtext(p_label, side = 3, line = 0)
       }
       
@@ -619,7 +619,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          if (multi_panel & var == "ENS_PIE")
             par(fig = c(0, 0.33, 0, 1/n_rows),new = T)
          boxplot(y_sample ~ group, data=mob_stats$samples, main = "Sample scale",
-                 ylab =  var)
+                 ylab =  var, ylim = c(0, max(y_sample, na.rm = T)))
          mtext(p_label, side = 3, line = 0)
          
          beta_var <- paste("beta",var,sep = "_")
@@ -631,7 +631,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          
          if (multi_panel & var == "ENS_PIE")
             par(fig = c(0.33, 0.67, 0, 1/n_rows),new = T)
-         boxplot(y_beta ~ group, data=mob_stats$samples, main = "Beta-diversity across scales")
+         boxplot(y_beta ~ group, data=mob_stats$samples, main = "Beta-diversity across scales",
+                 ylim = c(0, max(y_beta, na.rm = T)))
          mtext(p_label, side = 3, line = 0)
          
          y_group <- mob_stats$groups[[var]]
@@ -643,8 +644,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          if (multi_panel & var == "ENS_PIE")
             par(fig = c(0.67, 1.0, 0, 1/n_rows), new = T)
          boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
-                 ylab = "", boxwex = 0)
-         points(y_group ~ group, data=mob_stats$groups, pch = 19)
+                 ylab = "", boxwex = 0, ylim = c(0, max(y_group, na.rm = T)))
+         points(y_group ~ group, data=mob_stats$groups, pch = 8, cex = 1.5, lwd = 2)
          mtext(p_label, side = 3, line = 0)
       }
       
@@ -668,7 +669,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             if (multi_panel)
                par(fig = c(0, 0.33,  (1+j)/n_rows, (2+j)/n_rows),new = T)
             boxplot(y_sample ~ group, data=mob_stats$samples, main = fig_title,
-                    ylab =  "S_rare")  
+                    ylab =  "S_rare", ylim = c(0, max(y_sample, na.rm = T)))  
             mtext(p_label, side = 3, line = 0)
          }
          
@@ -685,8 +686,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             if (!multi_panel) par(fig = c(0.5, 1.0, y_coords[j+1], y_coords[j]), new = T)
             else              par(fig = c(0.67, 1.0, (1+j)/n_rows, (2+j)/n_rows),new = T)
             boxplot(y_group ~ group, data = mob_stats$group, main = fig_title,
-                    ylab =  "", boxwex = 0)
-            points(y_group ~ group, data=mob_stats$groups, pch = 19)
+                    ylab =  "", boxwex = 0, ylim = c(0, max(y_group, na.rm = T)))
+            points(y_group ~ group, data=mob_stats$groups, pch = 8, cex = 1.5, lwd = 2)
             mtext(p_label, side = 3, line = 0)
          }
       }
