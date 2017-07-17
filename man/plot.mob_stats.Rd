@@ -2,25 +2,20 @@
 % Please edit documentation in R/mobr_boxplots.R
 \name{plot.mob_stats}
 \alias{plot.mob_stats}
-\title{Plot the scale agnostic statistics for a MoB analysis}
+\title{Plot sample-level and group-level biodiversity statistics for a MoB analysis}
 \usage{
-\method{plot}{mob_stats}(mob_stats, display = c("all", "PIE", "beta PIE", "N",
-  "S", "S rare", "S asymp"), multipanel = FALSE, ...)
+\method{plot}{mob_stats}(mob_stats, index = c("N", "S", "S_rare", "S_asymp",
+  "ENS_PIE"), multi_panel = FALSE)
 }
 \arguments{
 \item{mob_stats}{a \code{mob_stats} object that has the samples and 
 treatment level statistics}
 
-\item{display}{eith a single character value of a vector of character
-values. If set to \code{all} then plots of PIE, beta PIE, S, N, and asymptic
-S will be produced, but not a plot of rarefied S.}
-
-\item{multipanel}{a boolean if TRUE then a pretty multipanel plot is produced 
-setting this argument to TRUE only makes sense when displaying all the 
-results (i.e., \code{display = 'all'})}
-
-\item{...}{additional graphical arguments to be supplied to the boxplot and
-points functions}
+\item{index}{The biodiversity statistics that should be plotted.
+See \code{\link{get_mob_stats}} for information on the indices. By default there
+is one figure for each index, with panels for sample-level and group-level results
+as well as beta-diversity for species richness \code{S} and the effective
+number of species \code{ENS_PIE}.}
 }
 \description{
 Plots a \code{mob_stats} object which is produced by the 
@@ -29,22 +24,15 @@ is displayed in the plot title if applicable.
 }
 \details{
 The user may specify which results to plot or simply to plot 
-all the results. Note however that the rarefied species richness
-results are not plotted by all
+all the results.
 }
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
-plot(inv_stats, multipanel=TRUE)
-# with colors
-plot(inv_stats, multipanel=TRUE, col=c('red', 'blue'))
-# only display PIE results
-par(mfrow=c(1,3))
-plot(inv_stats, 'PIE', col=c('red', 'blue'))
+inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 100)
+plot(inv_stats) 
 }
 \author{
-Felix May and Dan McGlinn
+Felix May, Xiao Xiao, and Dan McGlinn
 }
-
