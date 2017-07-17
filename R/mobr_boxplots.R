@@ -48,59 +48,81 @@ calc_PIE = function(x) {
 }
 
 # Calculate biodiversity indices of single group
-calc_biodiv_single_group <- function(abund_vec, n_rare){
+calc_biodiv_single_group <- function(abund_vec, index, n_rare){
    
+   abund_vec <- as.numeric(abund_vec)
    abund_vec <- abund_vec[abund_vec > 0]
    
-   out_vec <- c("N"       = NA,
-                "S"       = NA,
-                "S_rare1"  = NA,
-                "S_rare2"  = NA,
-                "S_rare3"  = NA,
-                "S_asymp" = NA,
-                "PIE"     = NA,
-                "ENS_PIE" = NA
-                )
+   out <- data.frame(var = factor(index[index != "S_rare"]), n_rare = NA, estimate = NA)
+   if ("S_rare" %in% index){
+      out <- rbind(out, expand.grid(var = "S_rare", n_rare = n_rare, estimate = NA)) 
+   }   
 
-   if (length(abund_vec) > 0){
-      out_vec["N"] <- sum(abund_vec)
-      out_vec["S"] <- length(abund_vec)
       
-      inext1 <- iNEXT::iNEXT(abund_vec, q = 0, datatype = "abundance", size = n_rare, se = F)
-      out_vec["S_rare1"] <- inext1$iNextEst$qD[1] 
-      out_vec["S_rare2"] <- inext1$iNextEst$qD[2] 
-      out_vec["S_rare3"] <- inext1$iNextEst$qD[3] 
+   # Number of individuals -----------------------------------------------------
+   if ("N" %in% index){
+      out$estimate[out$var == "N"]  =  sum(abund_vec)   
+   } 
+   
+   # Number of species ---------------------------------------------------------
+   if ("S" %in% index){
+      out$estimate[out$var == "S"]  = sum(abund_vec > 0)  
+   }  
+   
+   # Rarefied richness ---------------------------------------------------------
+   if ("S_rare" %in% index){  
+      inext1 <- iNEXT::iNEXT(abund_vec, q = 0, datatype = "abundance",
+                                size = n_rare, se = F)
+      out$estimate[out$var == "S_rare"] <- inext1$iNextEst$qD
+   } # end rarefied richness
+   
+   
+   # Asymptotic estimates species richness -------------------------------------
+   if ("S_asymp" %in% index){
       
-      if (sum(abund_vec) > 1){
-         out_vec["PIE"] <- calc_PIE(abund_vec)
-         out_vec["ENS_PIE"] <- 1/(1 - out_vec["PIE"])
-      }
-      S_asymp <- try(vegan::estimateR(abund_vec))
-      if (class(S_asymp) == "try_error"){
+      S_asymp_group <- try(vegan::estimateR(abund_vec))
+      if (class(S_asymp_group) == "try_error"){
          warning("The Chao richness estimator cannot be calculated for all groups.")
       } else {
-         out_vec["S_asymp"] = S_asymp["S.chao1"]
+         S_asymp_group = S_asymp_group["S.chao1"]
+         S_asymp_group[!is.finite(S_asymp_group)] <- NA
       }
+      
+      out$estimate[out$var == "S_asymp"] <- S_asymp_group
    }
    
-   return(out_vec)
+   # Probability of Interspecific Encounter (PIE)-------------------------------
+   if ("PIE" %in% index){ 
+      out$estimate[out$var == "PIE"]  = calc_PIE(abund_vec)
+   }
+   
+   # Effective number of species based on PIE ----------------------------------
+   if ("ENS_PIE" %in% index){
+      ENS_PIE_groups = vegan::diversity(abund_vec, index = "invsimpson")
+      ENS_PIE_groups[!is.finite(ENS_PIE_groups)] <- NA
+      out$estimate[out$var == "ENS_PIE"] = ENS_PIE_groups
+   }
+   
+   return(out)
 }
 
 # generate a single bootstrap sample of group-level biodiversity indices
-boot_sample_group <- function(comm_dat, n_rare)
+boot_sample_group <- function(comm_dat, index, n_rare)
 {
    n_sample <- nrow(comm_dat)
    sample_rows <- sample(1:n_sample, size = n_sample, replace = T)
    abund <- colSums(comm_dat[sample_rows, ])
-   out <- calc_biodiv_single_group(abund, n_rare = n_rare)
+   out <- calc_biodiv_single_group(abund, n_rare = n_rare, index = index)
    
    return(out)
 }
 
 # replicated bootstrap samples of group-level indices
-repl_boot_samples <- function(comm_dat, n_rare, n_perm = 100)
+repl_boot_samples <- function(comm_dat, index, n_rare, n_perm = 100)
 {
-   repl_biodiv <- replicate(n_perm, boot_sample_group(comm_dat, n_rare = n_rare))
+   repl_biodiv <- replicate(n_perm, boot_sample_group(comm_dat, index = index,
+                                                      n_rare = n_rare),
+                            simplify = FALSE)
    return(repl_biodiv)
 }
 
@@ -108,7 +130,7 @@ repl_boot_samples <- function(comm_dat, n_rare, n_perm = 100)
 get_mean_CI <- function(x, level = 0.95)
 {
    alpha <- 1 - level
-   p <- c(alpha/2, 1 - alpha/2)
+   p <- c(alpha/2, 0.5, 1 - alpha/2)
    mean_val <- rowMeans(x)
    CI_tab <- apply(x, MARGIN = 1, quantile, probs = p)
    CI_vec <- c(mean_val, CI_tab[1,], CI_tab[2,])
@@ -145,14 +167,6 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
    if ("S_rare" %in% index){  
       
       out$S_rare <- list()
-      
-      if (any(is.null(n_rare)) | !is.numeric(n_rare)){   
-         N_min_group = min(groups_N)
-         n_rare = N_min_group
-      }
-      else {
-         n_rare <- floor(n_rare)
-      }
       
       for (i in 1:length(n_rare)){
          
@@ -269,22 +283,101 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
 }
 
 
-#' Calculate sample based and group based biodiversity statistics
+#' Calculate sample based and group based biodiversity statistics.
 #' @inheritParams get_delta_stats
-#' @param group_var a string that specifies which field in mob_in$env the data
+#' 
+#' @param group_var A string that specifies which field in \code{mob_in$env} the data
 #'   should be grouped by
-#' @param n_min the minimum number of individuals a plot must have to be included
-#' in the estimate of rarefied richness
-#' @param nperm the number of permutations to use for testing for treatment effects
-#' @return a list of class \code{mob_stats} that contains p-values,
-#'  sample-scale (i.e., plot) statistics, and treatment scale statistics
+#' 
+#' @param ref_group The level in \code{group_var} that is used as control group for the
+#' control vs. treatment test at the group level.
+#' 
+#' @param index The calculated biodiversity statistics. The options are
+#' \itemize{
+#'    \item \code{N} ... Number of individuals (total abundance)
+#'    \item \code{S} ... Number of species
+#'    \item \code{S_rare} ... Rarefied number of species
+#'    \item \code{S_asymp} ... Estimated asymptotic species richness
+#'    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
+#'    \item \code{ENS_PIE} ... Effective number of species based on PIE
+#' }
+#' See \emph{Details} for additional information on the biodiverstiy statistics.
+#' 
+#' @n_rare_samples The standardized number of individuals used for the calculation
+#' of rarefied species richness at the sample level. This can a single value
+#' or an integer vector.
+#' 
+#' @n_rare_groups The standardized number of individuals used for the calculation
+#' of rarefied species richness at the group level. This can a single value
+#' or an integer vector.
+#' 
+#' @n_perm The number of permutations to use for testing for treatment effects
+#' 
+#' @details 
+#' \strong{Rarefied species richness} is the expected number of species, given
+#' a defined number of sampled individuals (Gotelli & Colwell 2001). Rarefied richness
+#' at the sample and group level is calculated for the values provided in
+#' \code{n_rare_samples} and \code{n_rare_groups}, respectively.
+#' When no values are provided the minimum number of individuals of the samples 
+#' or groups is used. \code{S_rare} is calculated using the function \code{\link{rarefaction}}.
+#' 
+#' \strong{Asymptotic species richness} is calculated using the bias-corrected Chao1
+#'  estimator (Chiu et al. 2014) provided in the function \code{\link[vegan]{estimateR}}.
+#' 
+#' \strong{PIE} represents the probility that two randomly drawn individuals
+#' belong to the same species. Here we use the definition of Hurlbert (1971), which considers
+#' sampling without replacement. PIE is closely related to the well-known Simpson 
+#' diversity index, but the latter assumes sampling with replacement.
+#' 
+#' \strong{ENS_PIE} represents the Effective Number of Species derived from PIE.
+#' This corresponds to the the number of equally abundant species, which together result
+#' in the same PIE as the observed community, with - most likely - uneven abundances
+#' (Jost 2006). That means the higher the difference between S and ENS_PIE the more
+#' uneven is the observed community. An intuitive interpretation of ENS_PIE is that
+#' it corresponds to the number of dominant species in the community.
+#' 
+#' For species richness \code{S} and the Effective Number of Species \code{ENS_PIE}
+#' we also calculate beta-diversity using multiplicative partitioning
+#' (Whittaker 1972, Jost 2007). That means for both indices we estimate beta-diversity as the ratio of group-level
+#' diversity (gamma) divided by sample-level diversity (alpha). 
+#' 
+#' We used permutation tests for assessing differences of the biodiversity statistics
+#' among the groups (Legendre & Legendre 1998). At the sample level, one-way ANOVA 
+#' (i.e. F-test) is implemented by shuffling treatment group labels across samples.
+#' 
+#'  At the group-level there is test whether the difference between treatment and control is significantly different from zero. For this purpose we permuted treatment group labels across samples, pooled the groups, and calculated the treatment-control difference for each permutation.
+#'  
+#' 
+#' @return A list of class \code{mob_stats} that contains sample-scale and 
+#' group-scale biodiversity statistics, as well as the p-values for permutation tests
+#' at both scales.
+#
 #' @author Felix May and Dan McGlinn
+#' 
+#' @references 
+#' 
+#' Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved nonparametric lower bound of species richness via a modified good-turing frequency formula. Biometrics, 70, 671-682.
+#' 
+#' Gotelli, N.J. & Colwell, R.K. (2001). Quantifying biodiversity: procedures and pitfalls in the measurement and comparison of species richness. Ecology letters, 4, 379-391.
+#' 
+#' Hurlbert, S.H. (1971). The Nonconcept of Species Diversity: A Critique and Alternative Parameters. Ecology, 52, 577-586.
+#' 
+#' Jost, L. (2006). Entropy and diversity. Oikos, 113, 363-375.
+#' 
+#' Jost, L. (2007). Partitioning Diversity into Independent Alpha and Beta Components. Ecology, 88, 2427–2439.
+#' 
+#' Legendre, P. & Legendre, L.F.J. (1998). Numerical Ecology, Volume 24, 2nd Edition Elsevier, Amsterdam; Boston.
+#' 
+#' Whittaker, R.H. (1972). Evolution and Measurement of Species Diversity. Taxon, 21, 213-251.
+#' 
 #' @export
+#' 
+#' 
 #' @examples 
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' inv_stats = get_mob_stats(inv_mob_in, 'group', ref_group = "uninvaded", nperm=100, n_rare_samples = c(5,10))
+#' inv_stats = get_mob_stats(inv_mob_in, 'group', ref_group = "uninvaded", n_perm = 100, n_rare_samples = c(5,10))
 #' plot(inv_stats)
 get_mob_stats = function(mob_in,
                          group_var,
@@ -292,9 +385,10 @@ get_mob_stats = function(mob_in,
                          index = c("N","S","S_rare","S_asymp","ENS_PIE"),
                          n_rare_samples = NULL,
                          n_rare_groups = NULL,
-                         nperm = 100)
+                         n_perm = 100
+                         )
 {
-   if (nperm < 1) 
+   if (n_perm < 1) 
        stop('Set nperm to a value greater than 1') 
    
    INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
@@ -330,10 +424,22 @@ get_mob_stats = function(mob_in,
    out <- list("samples" = list("group" = group_id))
    
    # Group-level indices
+   
+   # Get rarefaction level
+   groups_N <- rowSums(abund_group[,-1]) 
+   if (any(is.null(n_rare_groups)) | !is.numeric(n_rare_groups)){   
+      N_min_group = min(groups_N)
+      n_rare_groups = N_min_group
+   } else {
+      n_rare_groups <- floor(n_rare_groups)
+   }
+   
+  
    out$groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
                                     groups = abund_group[,1],
                                     index = index,
                                     n_rare = n_rare_groups)
+   # Sample-level indices
    
    samples_N = rowSums(mob_in$comm) 
    
@@ -443,24 +549,24 @@ get_mob_stats = function(mob_in,
    
    # Significance tests
    F_obs <- get_F_values(out$samples, permute = F)
-   F_rand_list <- replicate(nperm, get_F_values(out$samples, permute = T), simplify = F)
+   F_rand_list <- replicate(n_perm, get_F_values(out$samples, permute = T), simplify = F)
    
    diff_obs <- get_group_diff(mob_in$comm, group_bin, index,n_rare = n_rare_groups, permute = F)
-   diff_rand_list <- replicate(nperm, get_group_diff(mob_in$comm, group_bin,
-                                                     index, n_rare = n_rare_groups,
-                                                     permute = T), simplify = F)
+   diff_rand_list <- replicate(n_perm, get_group_diff(mob_in$comm, group_bin,
+                                                      index, n_rare = n_rare_groups,
+                                                      permute = T), simplify = F)
    
    out$p_values$samples <- list()
    var_names <- names(out$samples)[-1]
    for (var in var_names){
       if (var != "S_rare"){
          F_rand <- sapply(F_rand_list,"[[",var)
-         p_val <- sum(F_obs[[var]] <= F_rand) / nperm
+         p_val <- sum(F_obs[[var]] <= F_rand) / n_perm
          out$p_values$samples[[var]] <- p_val 
       } else {
          for (j in 1:length(F_obs$S_rare)){
             F_rand <- sapply(F_rand_list,function(list){list$S_rare[[j]]})
-            p_val <- sum(F_obs$S_rare[[j]] <= F_rand) / nperm
+            p_val <- sum(F_obs$S_rare[[j]] <= F_rand) / n_perm
             names(p_val) <- names(F_obs$S_rare[[j]])
             out$p_values$samples$S_rare[j] <- list(p_val)
          }
@@ -472,19 +578,19 @@ get_mob_stats = function(mob_in,
    for (var in var_names){
       if (var != "S_rare"){
          diff_rand <- sapply(diff_rand_list,"[[",var)
-         p_val <- get_pval(diff_rand, diff_obs[[var]], nperm)
+         p_val <- get_pval(diff_rand, diff_obs[[var]], n_perm)
          out$p_values$groups[[var]] <- p_val 
       } else {
          for (j in 1:length(diff_obs$S_rare)){
             diff_rand <- sapply(diff_rand_list,function(list){list$S_rare[[j]]})
-            p_val <- get_pval(diff_rand, diff_obs$S_rare[[j]], nperm)
+            p_val <- get_pval(diff_rand, diff_obs$S_rare[[j]], n_perm)
             names(p_val) <- names(diff_obs$S_rare[[j]])
             out$p_values$groups$S_rare[j] <- list(p_val)
          }
       }
    }
    
-   out$p_values$n_perm <- nperm
+   out$p_values$n_perm <- n_perm
    
    # ---------------------------------------------------------------------------
    # # old code - might be re-used later
@@ -495,6 +601,10 @@ get_mob_stats = function(mob_in,
    # row.names(group_stats) <- paste(row.names(group_stats), "_obs", sep = "")
    # 
    # # bootstrap replicates
+      # boot_samples <- by(mob_in$comm, INDICES = group_id, FUN = repl_boot_samples,
+   #                    n_rare = n_rare_groups, n_perm = n_perm, index = index,
+   #                    simplify = TRUE)
+
    # boot_samples <- by(mob_in$comm, INDICES = group_id, FUN = repl_boot_samples,
    #                    n_rare = rarefy_groups)
    # 
@@ -520,36 +630,43 @@ get_mob_stats = function(mob_in,
    return(out)
 }
 
-#' Plot the scale agnostic statistics for a MoB analysis
+#' Plot sample-level and group-level biodiversity statistics for a MoB analysis
 #' 
 #' Plots a \code{mob_stats} object which is produced by the 
 #' function \code{get_mob_stats}. The p value for each statistic
 #' is displayed in the plot title if applicable.
 #' 
 #' The user may specify which results to plot or simply to plot 
-#' all the results. Note however that the rarefied species richness
-#' results are not plotted by all
+#' all the results. 
+#' 
 #' @param mob_stats a \code{mob_stats} object that has the samples and 
 #' treatment level statistics
-#' @param display eith a single character value of a vector of character
-#' values. If set to \code{all} then plots of PIE, beta PIE, S, N, and asymptic
-#' S will be produced, but not a plot of rarefied S. 
-#' @param multipanel a boolean if TRUE then a pretty multipanel plot is produced 
-#' setting this argument to TRUE only makes sense when displaying all the 
-#' results (i.e., \code{display = 'all'})
-#' @param ... additional graphical arguments to be supplied to the boxplot and
-#' points functions
-#' @author Felix May and Dan McGlinn 
+#' 
+#' @param index The biodiversity statistics that should be plotted.
+#' See \code{\link{get_mob_stats}} for information on the indices. By default there
+#' is one figure for each index, with panels for sample-level and group-level results
+#' as well as beta-diversity for species richness \code{S} and the effective
+#' number of species \code{ENS_PIE}. 
+#' 
+#' @param multi_panel A logical variable. If \code{multi_panel = TRUE) then a 
+#' multipanel plot is produced, which shows observed, rarefied, and asymptotic 
+#' species richness and ENS_PIE at the sample-level and the group-level.
+#' This set of variables conveys a comprehensive picture of the underlying 
+#' biodiversity changes. 
+#' 
+#' @author Felix May, Xiao Xiao, and Dan McGlinn 
+#' 
 #' @export
+#' 
 #' @examples 
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' inv_stats = get_mob_stats(inv_mob_in, 'group', nperm=100)
+#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 100)
 #' plot(inv_stats) 
 
 plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_PIE"),
-                          multi_panel = TRUE)
+                          multi_panel = FALSE)
 {
    INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
    
@@ -578,18 +695,18 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
       if (var %in% c("N", "S_asymp","PIE")){
          
          if (!multi_panel)
-            par(mfrow = c(1,2), las = 1, cex.lab = 1.2)
+            op <- par(mfrow = c(1,2), las = 1, cex.lab = 1.2)
          
          y_sample <- mob_stats$samples[[var]]
          
          p_val <- mob_stats$p_values$samples[[var]]
          if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-         else           p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
+         else p_label <- bquote(p <= .(1/mob_stats$p_values$n_perm))
          
          if (multi_panel)
             par(fig = c(0, 0.33, 1/n_rows, 2/n_rows),new = T)
          boxplot(y_sample ~ group, data=mob_stats$samples, main = "Sample scale",
-                 ylab =  var)
+                 ylab =  var, ylim = c(0, 1.1*max(y_sample, na.rm = T)))
          mtext(p_label, side = 3, line = 0)
          
          y_group <- mob_stats$groups[[var]]
@@ -601,14 +718,14 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          if (multi_panel)
             par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows),new = T)
          boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
-                 ylab = "", boxwex = 0)
-         points(y_group ~ group, data=mob_stats$groups, pch = 19)
+                 ylab = "", boxwex = 0, ylim = c(0, 1.1*max(y_group, na.rm = T)))
+         points(y_group ~ group, data=mob_stats$groups, pch = 8, cex = 1.5, lwd = 2)
          mtext(p_label, side = 3, line = 0)
       }
       
       if (var %in% c("S", "ENS_PIE")){
          if (!multi_panel)
-            par(mfrow = c(1,3), las = 1, cex.lab = 1.2)
+            op <- par(mfrow = c(1,3), las = 1, cex.lab = 1.2)
          
          y_sample <- mob_stats$samples[[var]]
          
@@ -619,7 +736,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          if (multi_panel & var == "ENS_PIE")
             par(fig = c(0, 0.33, 0, 1/n_rows),new = T)
          boxplot(y_sample ~ group, data=mob_stats$samples, main = "Sample scale",
-                 ylab =  var)
+                 ylab =  var, ylim = c(0, 1.1*max(y_sample, na.rm = T)))
          mtext(p_label, side = 3, line = 0)
          
          beta_var <- paste("beta",var,sep = "_")
@@ -631,7 +748,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          
          if (multi_panel & var == "ENS_PIE")
             par(fig = c(0.33, 0.67, 0, 1/n_rows),new = T)
-         boxplot(y_beta ~ group, data=mob_stats$samples, main = "Beta-diversity across scales")
+         boxplot(y_beta ~ group, data=mob_stats$samples, main = "Beta-diversity across scales",
+                 ylim = c(0, 1.1*max(y_beta, na.rm = T)))
          mtext(p_label, side = 3, line = 0)
          
          y_group <- mob_stats$groups[[var]]
@@ -643,8 +761,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          if (multi_panel & var == "ENS_PIE")
             par(fig = c(0.67, 1.0, 0, 1/n_rows), new = T)
          boxplot(y_group ~ group, data=mob_stats$groups, main = "Group scale",
-                 ylab = "", boxwex = 0)
-         points(y_group ~ group, data=mob_stats$groups, pch = 19)
+                 ylab = "", boxwex = 0, ylim = c(0, 1.1*max(y_group, na.rm = T)))
+         points(y_group ~ group, data=mob_stats$groups, pch = 8, cex = 1.5, lwd = 2)
          mtext(p_label, side = 3, line = 0)
       }
       
@@ -653,7 +771,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          if (!multi_panel){
             n_rows <- max(length(mob_stats$samples$S_rare),
                           length(mob_stats$groups$S_rare)) 
-            par(mfcol = c(n_rows,2), las = 1, cex.lab = 1.2)
+            op <- par(mfcol = c(n_rows,2), las = 1, cex.lab = 1.2)
          }
             
          
@@ -668,7 +786,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             if (multi_panel)
                par(fig = c(0, 0.33,  (1+j)/n_rows, (2+j)/n_rows),new = T)
             boxplot(y_sample ~ group, data=mob_stats$samples, main = fig_title,
-                    ylab =  "S_rare")  
+                    ylab =  "S_rare", ylim = c(0, 1.1*max(y_sample, na.rm = T)))  
             mtext(p_label, side = 3, line = 0)
          }
          
@@ -685,8 +803,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             if (!multi_panel) par(fig = c(0.5, 1.0, y_coords[j+1], y_coords[j]), new = T)
             else              par(fig = c(0.67, 1.0, (1+j)/n_rows, (2+j)/n_rows),new = T)
             boxplot(y_group ~ group, data = mob_stats$group, main = fig_title,
-                    ylab =  "", boxwex = 0)
-            points(y_group ~ group, data=mob_stats$groups, pch = 19)
+                    ylab =  "", boxwex = 0, ylim = c(0, 1.1*max(y_group, na.rm = T)))
+            points(y_group ~ group, data=mob_stats$groups, pch = 8, cex = 1.5, lwd = 2)
             mtext(p_label, side = 3, line = 0)
          }
       }
