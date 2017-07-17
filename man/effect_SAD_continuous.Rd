@@ -14,4 +14,3 @@ Effect of SAD when type is "continuous"
 Directly add attributes to the input "out"
 }
 \keyword{internal}
-

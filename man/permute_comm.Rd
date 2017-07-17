@@ -46,4 +46,3 @@ permute_comm(comm, 'noagg', groups)
 permute_comm(comm, 'swapN')
 permute_comm(comm, 'swapN', groups)
 }
-

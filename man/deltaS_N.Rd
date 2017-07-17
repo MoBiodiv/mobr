@@ -31,4 +31,3 @@ individual-based and sample-based rarefaction curves.
 Dan McGlinn and Xiao Xiao
 }
 \keyword{internal}
-

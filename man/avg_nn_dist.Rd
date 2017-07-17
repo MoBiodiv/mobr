@@ -32,4 +32,3 @@ plot(avg_ord_dist(transect), type='o', main='transect',
 plot(avg_ord_dist(grid), type='o', main='grid',
      xlab='# of samples', ylab='average distance')
 }
-

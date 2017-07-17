@@ -32,4 +32,3 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 plot_abu(inv_mob_in, 'group', 'sad', pooled=F, log='x')
 plot_abu(inv_mob_in, 'group', 'rad', pooled=T, log='x')
 }
-

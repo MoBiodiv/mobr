@@ -5,11 +5,10 @@
 \title{Auxillary function for get_delta_stats()
 Effect of SAD when type is "discrete"}
 \usage{
-effect_SAD_discrete(out, group_sad, group_levels, ref_group, nperm)
+effect_SAD_discrete(out, group_sad, group_levels, ref_group, nperm, overall_p)
 }
 \description{
 Auxillary function for get_delta_stats()
 Effect of SAD when type is "discrete"
 }
 \keyword{internal}
-

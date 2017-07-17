@@ -14,4 +14,3 @@ Obtain the swap curve and/or spatial curve for each group if asked
 Directly add attributes to the input "out"
 }
 \keyword{internal}
-

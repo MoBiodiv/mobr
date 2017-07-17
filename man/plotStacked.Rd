@@ -38,4 +38,3 @@ first value > 0.}
 series is plotted on top of each other using filled polygons.
 }
 \keyword{internal}
-

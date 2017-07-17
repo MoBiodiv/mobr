@@ -16,7 +16,8 @@ Depends:
     scales,
     vegan,
     plotrix,
-    iNEXT
+    iNEXT,
+    dplyr
 Suggests:
     knitr,
     rmarkdown

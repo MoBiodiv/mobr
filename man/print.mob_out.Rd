@@ -10,4 +10,3 @@
 Print a shortened version of the mob_out object
 }
 \keyword{internal}
-

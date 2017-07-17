@@ -7,7 +7,7 @@
 get_delta_stats(mob_in, group_var, env_var = NULL, ref_group = NULL,
   tests = c("SAD", "N", "agg"), type = "discrete", inds = NULL,
   log_scale = FALSE, min_plots = NULL, density_stat = "mean",
-  corr = "spearman", nperm = 1000)
+  corr = "spearman", nperm = 1000, overall_p = FALSE)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -15,7 +15,7 @@ get_delta_stats(mob_in, group_var, env_var = NULL, ref_group = NULL,
 \item{group_var}{a character string specifying the environmental variable in
 mob_in$env used for grouping plots}
 
-\item{env_var}{an optional character string specicying a environmental variable
+\item{env_var}{an optional character string specifying a environmental variable
 in mob_in$env which is used in correlation analysis in the continuous case. 
 It is not needed if "type" is discrete or group_var is used in correlation.}
 
@@ -91,4 +91,3 @@ inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 \author{
 Xiao Xiao and Dan McGlinn
 }
-

@@ -24,4 +24,3 @@ plot_N(inv_comm)
 \author{
 Dan McGlinn
 }
-
