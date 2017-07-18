@@ -14,10 +14,11 @@ Depends:
     Jade,
     pracma,
     scales,
+    dplyr
+Imports:
     vegan,
     plotrix,
-    iNEXT,
-    dplyr
+    iNEXT
 Suggests:
     knitr,
     rmarkdown

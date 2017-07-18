@@ -47,7 +47,7 @@ or groups is used. \code{S_rare} is calculated using the function \code{\link{ra
 \strong{Asymptotic species richness} is calculated using the bias-corrected Chao1
  estimator (Chiu et al. 2014) provided in the function \code{\link[vegan]{estimateR}}.
 
-\strong{PIE} represents the probility that two randomly drawn individuals represent
+\strong{PIE} represents the probility that two randomly drawn individuals
 belong to the same species. Here we use the definition of Hurlbert (1971), which considers
 sampling without replacement. PIE is closely related to the well-known Simpson 
 diversity index, but the latter assumes sampling with replacement.
@@ -65,8 +65,8 @@ we also calculate beta-diversity using multiplicative partitioning
 diversity (gamma) divided by sample-level diversity (alpha). 
 
 We used permutation tests for assessing differences of the biodiversity statistics
-among the groups (Legendre & Legendre 1998). At the sample level, one-way ANOVA (i.e. F-test) is implemented
-by shuffeling treatment group labels across samples.
+among the groups (Legendre & Legendre 1998). At the sample level, one-way ANOVA 
+(i.e. F-test) is implemented by shuffling treatment group labels across samples.
 
  At the group-level there is test whether the difference between treatment and control is significantly different from zero. For this purpose we permuted treatment group labels across samples, pooled the groups, and calculated the treatment-control difference for each permutation.
 }
@@ -74,7 +74,7 @@ by shuffeling treatment group labels across samples.
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-inv_stats = get_mob_stats(inv_mob_in, 'group', ref_group = "uninvaded", n_perm = 100, n_rare_samples = c(5,10))
+inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 100, n_rare_samples = c(5,10))
 plot(inv_stats)
 }
 \references{
