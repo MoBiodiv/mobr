@@ -47,102 +47,22 @@ calc_PIE = function(x) {
     return(H)
 }
 
-# Calculate biodiversity indices of single group
-calc_biodiv_single_group <- function(abund_vec, index, n_rare){
-   
-   abund_vec <- as.numeric(abund_vec)
-   abund_vec <- abund_vec[abund_vec > 0]
-   
-   out <- data.frame(var = factor(index[index != "S_rare"]), n_rare = NA, estimate = NA)
-   if ("S_rare" %in% index){
-      out <- rbind(out, expand.grid(var = "S_rare", n_rare = n_rare, estimate = NA)) 
-   }   
-
-      
-   # Number of individuals -----------------------------------------------------
-   if ("N" %in% index){
-      out$estimate[out$var == "N"]  =  sum(abund_vec)   
-   } 
-   
-   # Number of species ---------------------------------------------------------
-   if ("S" %in% index){
-      out$estimate[out$var == "S"]  = sum(abund_vec > 0)  
-   }  
-   
-   # Rarefied richness ---------------------------------------------------------
-   if ("S_rare" %in% index){  
-      inext1 <- iNEXT::iNEXT(abund_vec, q = 0, datatype = "abundance",
-                                size = n_rare, se = F)
-      out$estimate[out$var == "S_rare"] <- inext1$iNextEst$qD
-   } # end rarefied richness
-   
-   
-   # Asymptotic estimates species richness -------------------------------------
-   if ("S_asymp" %in% index){
-      
-      S_asymp_group <- try(vegan::estimateR(abund_vec))
-      if (class(S_asymp_group) == "try_error"){
-         warning("The Chao richness estimator cannot be calculated for all groups.")
-      } else {
-         S_asymp_group = S_asymp_group["S.chao1"]
-         S_asymp_group[!is.finite(S_asymp_group)] <- NA
-      }
-      
-      dat_S_asymp <- data.frame(group = groups,
-                                index = "S_asymp",
-                                n_rare = NA,
-                                value = S_asymp_group)
-      dat_groups <- rbind(dat_groups, dat_S_asymp)
-      
-      out$estimate[out$var == "S_asymp"] <- S_asymp_group
-   }
-   
-   # Probability of Interspecific Encounter (PIE)-------------------------------
-   if ("PIE" %in% index){ 
-      out$estimate[out$var == "PIE"]  = calc_PIE(abund_vec)
-   }
-   
-   # Effective number of species based on PIE ----------------------------------
-   if ("ENS_PIE" %in% index){
-      ENS_PIE_groups = vegan::diversity(abund_vec, index = "invsimpson")
-      ENS_PIE_groups[!is.finite(ENS_PIE_groups)] <- NA
-      out$estimate[out$var == "ENS_PIE"] = ENS_PIE_groups
-   }
-   
-   return(out)
-}
-
 # generate a single bootstrap sample of group-level biodiversity indices
-boot_sample_group <- function(comm_dat, index, n_rare)
+boot_sample_groups <- function(abund_mat, groups, index, n_rare)
 {
-   n_sample <- nrow(comm_dat)
-   sample_rows <- sample(1:n_sample, size = n_sample, replace = T)
-   abund <- colSums(comm_dat[sample_rows, ])
-   out <- calc_biodiv_single_group(abund, n_rare = n_rare, index = index)
+   # sample rows and calculate abundance vector
+   sample_dat <- by(abund_mat, INDICES = groups, FUN = sample_frac, replace = T)
+   class(sample_dat) <- "list"
+   sample_dat <- bind_rows(sample_dat)
    
-   return(out)
-}
-
-# replicated bootstrap samples of group-level indices
-repl_boot_samples <- function(comm_dat, index, n_rare, n_perm = 100)
-{
-   repl_biodiv <- replicate(n_perm, boot_sample_group(comm_dat, index = index,
-                                                      n_rare = n_rare),
-                            simplify = FALSE)
-   return(repl_biodiv)
-}
-
-# get mean and confidence interval from bootstrap samples
-get_mean_CI <- function(x, level = 0.95)
-{
-   alpha <- 1 - level
-   p <- c(alpha/2, 0.5, 1 - alpha/2)
-   mean_val <- rowMeans(x)
-   CI_tab <- apply(x, MARGIN = 1, quantile, probs = p)
-   CI_vec <- c(mean_val, CI_tab[1,], CI_tab[2,])
-   names(CI_vec) <- paste(rep(colnames(CI_tab), 3),
-                          rep(c("mean","low", "up"), each = ncol(CI_tab)), sep = "_")
-   return(CI_vec)
+   # abundance distribution pooled in groups
+   abund_group = aggregate(sample_dat, by = list(groups), FUN = "sum")
+   
+   dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
+                                    groups = abund_group[,1],
+                                    index = index,
+                                    n_rare = n_rare_groups)
+   return(dat_groups)
 }
 
 # Get group-level p-values from permutation test
@@ -396,7 +316,9 @@ get_mob_stats = function(mob_in,
                          index = c("N","S","S_rare","S_asymp","ENS_PIE"),
                          n_rare_samples = NULL,
                          n_rare_groups = NULL,
-                         n_perm = 100
+                         n_perm = 100,
+                         boot_groups = F,
+                         conf_level = 0.95
                          )
 {
    if (n_perm < 1) 
@@ -603,59 +525,46 @@ get_mob_stats = function(mob_in,
       ungroup()
    
    # group level
-   diff_obs <- get_group_diff(mob_in$comm, group_bin, index, n_rare = n_rare_groups,                                     permute = F)
-   diff_rand <- bind_rows(replicate(n_perm, get_group_diff(mob_in$comm, group_bin,
-                                                           index,
-                                                           n_rare = n_rare_groups,
-                                                           permute = T),
+   if (!boot_groups){
+      diff_obs <- get_group_diff(mob_in$comm, group_bin, index, n_rare = n_rare_groups,                                     permute = F)
+      diff_rand <- bind_rows(replicate(n_perm, get_group_diff(mob_in$comm, group_bin,
+                                                              index,
+                                                              n_rare = n_rare_groups,
+                                                              permute = T),
+                                       simplify = F))
+      diff_obs <- diff_obs %>% mutate(d_obs = diff,
+                                      diff = NULL)
+      diff_rand <- left_join(diff_rand, diff_obs)
+      
+      p_val_groups <- diff_rand %>% 
+         group_by(index, n_rare) %>%
+         summarise(p_val = get_pval(rand = diff, obs = first(d_obs),
+                                    n_samples = n_perm)) %>%
+         ungroup()
+   } else {
+      # bootstrap sampling within groups
+      
+      boot_repl_groups <- bind_rows(replicate(n_perm,
+                                              boot_sample_groups(mob_in$comm,
+                                                                 groups = group_id,
+                                                                 index = index,
+                                                                 n_rare = n_rare),
                                     simplify = F))
-   diff_obs <- diff_obs %>% mutate(d_obs = diff,
-                                   diff = NULL)
-   diff_rand <- left_join(diff_rand, diff_obs)
-   
-   p_val_groups <- diff_rand %>% 
-      group_by(index, n_rare) %>%
-      summarise(p_val = get_pval(rand = diff, obs = first(d_obs), n_samples = n_perm)) %>%
-      ungroup()
+      
+      alpha <- 1 - conf_level
+      p <- c(alpha/2, 0.5, 1 - alpha/2)
+     
+      group_CI <- boot_repl_groups %>% 
+         group_by(group, index, n_rare) %>%
+         do(setNames(data.frame(t(quantile(.$value,p))), c("lower","median","upper")))
+   }
 
-   # ---------------------------------------------------------------------------
-   # # old code - might be re-used later
-   # 
-   # # Group-based statistics
-   # group_stats <- apply(abund_group[ ,-1], MARGIN = 1,
-   #                      FUN = calc_biodiv_single_group, n_rare = rarefy_groups)
-   # row.names(group_stats) <- paste(row.names(group_stats), "_obs", sep = "")
-   # 
-   # # bootstrap replicates
-      # boot_samples <- by(mob_in$comm, INDICES = group_id, FUN = repl_boot_samples,
-   #                    n_rare = n_rare_groups, n_perm = n_perm, index = index,
-   #                    simplify = TRUE)
-
-   # boot_samples <- by(mob_in$comm, INDICES = group_id, FUN = repl_boot_samples,
-   #                    n_rare = rarefy_groups)
-   # 
-   # boot_CI <- sapply(boot_samples, get_mean_CI)
-   # group_dat <- as.data.frame(t(rbind(group_stats, boot_CI)))
-   # group_dat <- group_dat[,c("N_obs","N_mean","N_low","N_up",
-   #                           "S_obs","S_mean","S_low","S_up",
-   #                           "S_rare1_obs","S_rare1_mean","S_rare1_low","S_rare1_up",
-   #                           "S_rare2_obs","S_rare2_mean","S_rare2_low","S_rare2_up",
-   #                           "S_rare3_obs","S_rare3_mean","S_rare3_low","S_rare3_up",
-   #                           "S_asymp_obs","S_asymp_mean","S_asymp_low","S_asymp_up",
-   #                           "PIE_obs","PIE_mean","PIE_low","PIE_up",
-   #                           "ENS_PIE_obs","ENS_PIE_mean","ENS_PIE_low","ENS_PIE_up")]
-   # group <- factor(levels(group_id))
-   # group_dat <- cbind(group, group_dat)
-   # rownames(group_dat) <- NULL
-   # 
-   # # permutation tests
-   # 
    
    out <- list(samples_stats = dat_samples,
                groups_stats  = dat_groups,
                samples_pval  = p_val_samples,
                groups_pval  = p_val_groups,
-               n_perm        = n_perm)
+               p_min        = 1/n_perm)
   
    class(out) = 'mob_stats'
    return(out)
