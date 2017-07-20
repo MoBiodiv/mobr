@@ -16,6 +16,12 @@ See \code{\link{get_mob_stats}} for information on the indices. By default there
 is one figure for each index, with panels for sample-level and group-level results
 as well as beta-diversity for species richness \code{S} and the effective
 number of species \code{ENS_PIE}.}
+
+\item{multi_panel}{A logical variable. If \code{multi_panel = TRUE} then a 
+multipanel plot is produced, which shows observed, rarefied, and asymptotic 
+species richness and ENS_PIE at the sample-level and the group-level.
+This set of variables conveys a comprehensive picture of the underlying 
+biodiversity changes.}
 }
 \description{
 Plots a \code{mob_stats} object which is produced by the 

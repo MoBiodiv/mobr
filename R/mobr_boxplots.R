@@ -61,7 +61,7 @@ boot_sample_groups <- function(abund_mat, groups, index, n_rare)
    dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
                                     groups = abund_group[,1],
                                     index = index,
-                                    n_rare = n_rare_groups)
+                                    n_rare = n_rare)
    return(dat_groups)
 }
 
@@ -76,58 +76,48 @@ get_pval <- function(rand, obs, n_samples)
 # Get group-level biodiversity indices
 calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
 {
-   dat_groups <- data.frame(group = factor(),
-                            index = factor(),
-                            n_rare = numeric(),
-                            val = numeric())
+   dat_groups <- expand.grid(group = groups,
+                             index = index[index != "S_rare"],
+                             n_rare = NA)
+   
+   dat_S_rare <- expand.grid(n_rare = n_rare,
+                             group = groups,
+                             index = "S_rare"
+                             )
+   dat_S_rare <- dat_S_rare[,c(2,3,1)]
+   
+   dat_groups <- rbind(dat_groups, dat_S_rare)
+   dat_groups$value <- NA
    
    groups_N <- rowSums(abund_mat) 
    
    # Number of individuals -----------------------------------------------------
    if ("N" %in% index){
-      dat_N <- data.frame(group = groups,
-                          index = "N",
-                          n_rare = NA,
-                          value = groups_N)
-      dat_groups <- rbind(dat_groups, dat_N)
+      dat_groups$value[dat_groups$index == "N"] <- groups_N
    } 
    
    # Number of species ---------------------------------------------------------
    if ("S" %in% index){
-      dat_S <- data.frame(group = groups,
-                          index = "S",
-                          n_rare = NA,
-                          value = rowSums(abund_mat > 0) )
-      dat_groups <- rbind(dat_groups, dat_S)
+      dat_groups$value[dat_groups$index == "S"] <-  rowSums(abund_mat > 0)
    }  
    
    # Rarefied richness ---------------------------------------------------------
-   if ("S_rare" %in% index){  
-   
-      for (i in 1:length(n_rare)){
+   if ("S_rare" %in% index){
+         inext1 <- try(iNEXT::iNEXT(as.data.frame(t(abund_mat)), q = 0,
+                                size = n_rare, se = F))
+         if (class(inext1) == "try_error"){
+            warning("Error in the calculation of rarefied species richness using iNEXT.")
+         } else {
+            S_rare <- lapply(inext1$iNextEst, function(dat){filter(dat, m %in% n_rare)})
+            S_rare_dat <- distinct(bind_rows(S_rare))
          
-         groups_low_n = groups_N < n_rare[i]
-         
-         if (sum(groups_low_n) == 1){
-            warning(paste("There is",sum(groups_low_n),"group with less then",  n_rare[i],"individuals. This is removed for the calculation of rarefied richness."))
+            #S_rare_dat <- unique(S_rare_dat)
+            
+            S_rare_dat$groups <- rep(groups, times = length(n_rare))
+            dat_groups$value[dat_groups$index == "S_rare"] <- S_rare_dat$qD
          }
-         
-         if (sum(groups_low_n) > 1){
-            warning(paste("There are",sum(groups_low_n),"groups with less then",  n_rare[i],"individuals. These are removed for the calculation of rarefied richness."))
-         }
-         
-         dat_S_rare <- data.frame(group = groups,
-                                  index = "S_rare",
-                                  n_rare = n_rare[i],
-                                  value = rep(NA, nrow(abund_mat)))
-         
-         dat_S_rare$value[!groups_low_n] <- apply(abund_mat[!groups_low_n], MARGIN = 1,
-                                                  rarefaction, method = "indiv",
-                                                  effort = n_rare[i])
-         dat_groups <- rbind(dat_groups, dat_S_rare)
-      }
    } # end rarefied richness
-   
+
    
    # Asymptotic estimates species richness -------------------------------------
    if ("S_asymp" %in% index){
@@ -140,34 +130,20 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
          S_asymp_group[!is.finite(S_asymp_group)] <- NA
       }
     
-      dat_S_asymp <- data.frame(group = groups,
-                                index = "S_asymp",
-                                n_rare = NA,
-                                value = S_asymp_group)
-      dat_groups <- rbind(dat_groups, dat_S_asymp)
+      dat_groups$value[dat_groups$index == "S_asymp"] <- S_asymp_group
    }
    
    # Probability of Interspecific Encounter (PIE)-------------------------------
-   if ("PIE" %in% index){ 
-
-      dat_PIE <- data.frame(group = groups,
-                            index = "PIE",
-                            n_rare = NA,
-                            value = calc_PIE(abund_mat))
-      dat_groups <- rbind(dat_groups, dat_PIE)
+   if ("PIE" %in% index){ #
+      dat_groups$value[dat_groups$index == "PIE"] <- calc_PIE(abund_mat)
    }
    
    # Effective number of species based on PIE ----------------------------------
    if ("ENS_PIE" %in% index){
-      
       ENS_PIE_groups = vegan::diversity(abund_mat, index = "invsimpson")
       ENS_PIE_groups[!is.finite(ENS_PIE_groups)] <- NA
       
-      dat_ENS_PIE <- data.frame(group = groups,
-                                index = "ENS_PIE",
-                                n_rare = NA,
-                                value = ENS_PIE_groups)
-      dat_groups <- rbind(dat_groups, dat_ENS_PIE)
+      dat_groups$value[dat_groups$index == "ENS_PIE"] <- calc_PIE(abund_mat)
    }
    
    return(dat_groups)
@@ -205,12 +181,12 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
                                     groups = abund_group[,1],
                                     index = index,
                                     n_rare = n_rare)
-   dat_groups <- dat_groups %>%
+   delta_groups <- dat_groups %>%
       group_by(index, n_rare) %>%
-      summarise(diff = value[group == "treatment"] - value[group == "control"]) %>%
+      summarise(delta = diff(value)) %>%
       ungroup()
    
-   return(dat_groups)
+   return(delta_groups)
 }
 
 
@@ -234,15 +210,15 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
 #' }
 #' See \emph{Details} for additional information on the biodiverstiy statistics.
 #' 
-#' @n_rare_samples The standardized number of individuals used for the calculation
+#' @param n_rare_samples The standardized number of individuals used for the calculation
 #' of rarefied species richness at the sample level. This can a single value
 #' or an integer vector.
 #' 
-#' @n_rare_groups The standardized number of individuals used for the calculation
+#' @param n_rare_groups The standardized number of individuals used for the calculation
 #' of rarefied species richness at the group level. This can a single value
 #' or an integer vector.
 #' 
-#' @n_perm The number of permutations to use for testing for treatment effects
+#' @param n_perm The number of permutations to use for testing for treatment effects
 #' 
 #' @details 
 #' \strong{Rarefied species richness} is the expected number of species, given
@@ -302,7 +278,6 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
 #' Whittaker, R.H. (1972). Evolution and Measurement of Species Diversity. Taxon, 21, 213-251.
 #' 
 #' @export
-#' 
 #' 
 #' @examples 
 #' data(inv_comm)
@@ -514,7 +489,7 @@ get_mob_stats = function(mob_in,
    
    # sample level
    F_obs <- get_F_values(dat_samples, permute = F)
-   F_rand <- dplyr::bind_rows(replicate(n_perm, get_F_values(dat_samples, permute = T),                                           simplify = F)) %>% ungroup()
+   F_rand <- dplyr::bind_rows(replicate(n_perm, get_F_values(dat_samples, permute = T),                                            simplify = F)) %>% ungroup()
    F_obs <- F_obs %>% mutate(F_val_obs = F_val,
                              F_val = NULL)
    F_rand <- left_join(F_rand, F_obs)
@@ -526,48 +501,97 @@ get_mob_stats = function(mob_in,
    
    # group level
    if (!boot_groups){
-      diff_obs <- get_group_diff(mob_in$comm, group_bin, index, n_rare = n_rare_groups,                                     permute = F)
+      diff_obs <- get_group_diff(mob_in$comm, group_bin, index, n_rare = n_rare_groups,                                                                 permute = F)
       diff_rand <- bind_rows(replicate(n_perm, get_group_diff(mob_in$comm, group_bin,
                                                               index,
                                                               n_rare = n_rare_groups,
                                                               permute = T),
                                        simplify = F))
-      diff_obs <- diff_obs %>% mutate(d_obs = diff,
-                                      diff = NULL)
+      diff_obs <- diff_obs %>% mutate(d_obs = delta,
+                                      delta = NULL)
       diff_rand <- left_join(diff_rand, diff_obs)
       
       p_val_groups <- diff_rand %>% 
          group_by(index, n_rare) %>%
-         summarise(p_val = get_pval(rand = diff, obs = first(d_obs),
-                                    n_samples = n_perm)) %>%
-         ungroup()
+         summarise(p_val = get_pval(rand = delta, obs = first(d_obs),
+                                    n_samples = n_perm)) %>% ungroup()
    } else {
       # bootstrap sampling within groups
       
-      boot_repl_groups <- bind_rows(replicate(n_perm,
-                                              boot_sample_groups(mob_in$comm,
-                                                                 groups = group_id,
-                                                                 index = index,
-                                                                 n_rare = n_rare),
-                                    simplify = F))
+      boot_repl_groups <- replicate(n_perm,
+                                    boot_sample_groups(mob_in$comm,
+                                                       groups = group_id,
+                                                       index = index,
+                                                       n_rare = n_rare_groups),
+                                    simplify = F)
+      boot_repl_groups <- bind_rows(boot_repl_groups)
       
       alpha <- 1 - conf_level
       p <- c(alpha/2, 0.5, 1 - alpha/2)
      
-      group_CI <- boot_repl_groups %>% 
+      dat_groups <- boot_repl_groups %>% 
          group_by(group, index, n_rare) %>%
-         do(setNames(data.frame(t(quantile(.$value,p))), c("lower","median","upper")))
+         do(setNames(data.frame(t(quantile(.$value, p, na.rm = T))),
+                     c("lower","median","upper")))
    }
 
+   # order output data frames by indices
+   dat_groups$index <- factor(dat_groups$index, levels = index)
+   dat_groups <- dat_groups[order(dat_groups$index, dat_groups$group),]
    
-   out <- list(samples_stats = dat_samples,
-               groups_stats  = dat_groups,
-               samples_pval  = p_val_samples,
-               groups_pval  = p_val_groups,
-               p_min        = 1/n_perm)
+   if (!boot_groups){
+      
+      p_val_groups$index <- factor(p_val_groups$index, levels = index)
+      p_val_groups <- p_val_groups[order(p_val_groups$index),]
+       
+      out <- list(samples_stats = dat_samples,
+                  groups_stats  = dat_groups,
+                  samples_pval  = p_val_samples,
+                  groups_pval  = p_val_groups,
+                  p_min        = 1/n_perm)
+   } else {
+      out <- list(samples_stats = dat_samples,
+                  groups_stats  = dat_groups,
+                  samples_pval  = p_val_samples,
+                  p_min        = 1/n_perm)
+   }
   
    class(out) = 'mob_stats'
    return(out)
+}
+
+# Panel function for sample level results
+samples_panel1 <- function(sample_dat, p_val, p_min, ylab = "",
+                           main = "Sample scale", ...)
+{
+   if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+   else                          p_label <- bquote(p <= .(p_min))
+   
+   boxplot(value ~ group, data = sample_dat, main = main,
+           ylab =  ylab, ylim = c(0, 1.1*max(sample_dat$value, na.rm = T)), ...)
+   mtext(p_label, side = 3, line = 0)  
+}
+
+# Panel function for group level results
+groups_panel1 <- function(group_dat, p_val, p_min, ylab = "", ...)
+{
+   if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
+   else                          p_label <- bquote(p <= .(p_min))
+   
+   boxplot(value ~ group, data = group_dat, main = "Group scale",
+           ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$value, na.rm = T)),
+           ...)
+   points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2, ...)
+   mtext(p_label, side = 3, line = 0)
+}
+
+# Panel function for group level results with confidence intervals
+groups_panel2 <- function(group_dat, ylab = "", main = "Group scale", ...)
+{
+   boxplot(median ~ group, data = group_dat, main = main,
+           ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)))
+   plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
+          ui = group_dat$upper, add = T, pch = 19, cex = 1.5, sfrac = 0.02)
 }
 
 #' Plot sample-level and group-level biodiversity statistics for a MoB analysis
@@ -588,7 +612,7 @@ get_mob_stats = function(mob_in,
 #' as well as beta-diversity for species richness \code{S} and the effective
 #' number of species \code{ENS_PIE}. 
 #' 
-#' @param multi_panel A logical variable. If \code{multi_panel = TRUE) then a 
+#' @param multi_panel A logical variable. If \code{multi_panel = TRUE} then a 
 #' multipanel plot is produced, which shows observed, rarefied, and asymptotic 
 #' species richness and ENS_PIE at the sample-level and the group-level.
 #' This set of variables conveys a comprehensive picture of the underlying 
@@ -639,77 +663,64 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
    for (var in index_match){
       
       if (var %in% c("N", "S_asymp","PIE")){
-         
+      
          if (!multi_panel)
             op <- par(mfrow = c(1,2), las = 1, cex.lab = 1.2)
          
-         dat_samples <- filter(mob_stats$samples_stats, index == var)
-         
-         p_val <- with(mob_stats$samples_pval, p_val[index == var])
-         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-         else                          p_label <- bquote(p <= .(1/mob_stats$n_perm))
-         
          if (multi_panel)
             par(fig = c(0, 0.33, 1/n_rows, 2/n_rows),new = T)
-         boxplot(value ~ group, data = dat_samples, main = "Sample scale",
-                 ylab =  var, ylim = c(0, 1.1*max(dat_samples$value, na.rm = T)))
-         mtext(p_label, side = 3, line = 0)
          
-         dat_groups <- filter(mob_stats$groups_stats, index == var)
-         
-         p_val <- with(mob_stats$groups_pval, p_val[index == var])
-         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-         else                          p_label <- bquote(p <= .(1/mob_stats$n_perm))
+         dat_samples <- filter(mob_stats$samples_stats, index == var)
+         p_val <- with(mob_stats$samples_pval, p_val[index == var])
+         samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
+                        ylab = var, main = "Sample scale")
          
          if (multi_panel)
             par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows),new = T)
-         boxplot(value ~ group, data = dat_groups, main = "Group scale",
-                 ylab = "", boxwex = 0, ylim = c(0, 1.1*max(dat_groups$value, na.rm = T)))
-         points(value ~ group, data = dat_groups, pch = 8, cex = 1.5, lwd = 2)
-         mtext(p_label, side = 3, line = 0)
-      }
-      
-      if (var %in% c("S", "ENS_PIE")){
-         if (!multi_panel)
-            op <- par(mfrow = c(1,3), las = 1, cex.lab = 1.2)
-         
-         dat_samples <- filter(mob_stats$samples_stats, index == var)
-         
-         p_val <- with(mob_stats$samples_pval, p_val[index == var])
-         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-         else                          p_label <- bquote(p <= .(1/mob_stats$n_perm))
-        
-         if (multi_panel & var == "ENS_PIE")
-            par(fig = c(0, 0.33, 0, 1/n_rows),new = T)
-         boxplot(value ~ group, data = dat_samples, main = "Sample scale",
-                 ylab =  var, ylim = c(0, 1.1*max(dat_samples$value, na.rm = T)))
-         mtext(p_label, side = 3, line = 0)
-         
-         beta_var <- paste("beta", var, sep = "_")
-         dat_samples <- filter(mob_stats$samples_stats, index == beta_var)
-         
-         p_val <- with(mob_stats$samples_pval, p_val[index == var])
-         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-         else                          p_label <- bquote(p <= .(1/mob_stats$n_perm))
-         
-         if (multi_panel & var == "ENS_PIE")
-            par(fig = c(0.33, 0.67, 0, 1/n_rows),new = T)
-         boxplot(value ~ group, data = dat_samples, main = "Beta-diversity across scales",
-                 ylim = c(0, 1.1*max(dat_samples$value, na.rm = T)))
-         mtext(p_label, side = 3, line = 0)
          
          dat_groups <- filter(mob_stats$groups_stats, index == var)
          
-         p_val <- with(mob_stats$groups_pval, p_val[index == var])
-         if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-         else                          p_label <- bquote(p <= .(1/mob_stats$n_perm))
-        
+         if (!is.null(mob_stats$groups_pval)){
+            p_val <- with(mob_stats$groups_pval, p_val[index == var])
+            groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min) 
+         } else {
+            groups_panel2(dat_groups) 
+         }
+      }
+      
+      if (var %in% c("S", "ENS_PIE")){
+         
+         if (!multi_panel)
+            op <- par(mfrow = c(1,3), las = 1, cex.lab = 1.2)
+         
+         if (multi_panel & var == "ENS_PIE")
+            par(fig = c(0, 0.33, 0, 1/n_rows),new = T)
+         
+         dat_samples <- filter(mob_stats$samples_stats, index == var)
+         p_val <- with(mob_stats$samples_pval, p_val[index == var])
+         samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
+                        ylab = var, main = "Sample scale")
+         
+         if (multi_panel & var == "ENS_PIE")
+            par(fig = c(0.33, 0.67, 0, 1/n_rows),new = T)
+         
+         beta_var <- paste("beta", var, sep = "_")
+         dat_samples <- filter(mob_stats$samples_stats, index == beta_var)
+         p_val <- with(mob_stats$samples_pval, p_val[index == beta_var])
+         samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
+                        ylab = "", main = "Beta-diversity across scales")
+         
          if (multi_panel & var == "ENS_PIE")
             par(fig = c(0.67, 1.0, 0, 1/n_rows), new = T)
-         boxplot(value ~ group, data = dat_groups, main = "Group scale",
-                 ylab = "", boxwex = 0, ylim = c(0, 1.1*max(dat_groups$value, na.rm = T)))
-         points(value ~ group, data = dat_groups, pch = 8, cex = 1.5, lwd = 2)
-         mtext(p_label, side = 3, line = 0)
+         
+         dat_groups <- filter(mob_stats$groups_stats, index == var)
+         
+         if (!is.null(mob_stats$groups_pval)){
+            p_val <- with(mob_stats$groups_pval, p_val[index == var])
+            groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min) 
+         } else {
+            groups_panel2(dat_groups) 
+         }
       }
       
       if (var == "S_rare"){
@@ -725,202 +736,38 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             
             dat_samples <- filter(S_rare_samples, n_rare == n_rare_samples[j])
             
-            pval <- with(mob_stats$samples_pval,
-                         p_val[index == var & n_rare == n_rare_samples[j]])
-            if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-            else                          p_label <- bquote(p <= .(1/mob_stats$n_perm))
+            p_val <- with(mob_stats$samples_pval,
+                          p_val[index == var & n_rare == n_rare_samples[j]])
             
             fig_title <- paste("Sample scale, n = ",n_rare_samples[j])
             if (multi_panel)
                par(fig = c(0, 0.33,  (1+j)/n_rows, (2+j)/n_rows),new = T)
-            boxplot(value ~ group, data = dat_samples, main = fig_title,
-                    ylab =  "S_rare", ylim = c(0, 1.1*max(dat_samples$value, na.rm = T)))  
-            mtext(p_label, side = 3, line = 0)
+            samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min, ylab = var,
+                           main = fig_title)
          }
          
          y_coords <- (S_rare_len:0)/S_rare_len
          
          for (j in 1:length(n_rare_groups)){
             
-            dat_groups <- filter(S_rare_groups, n_rare == n_rare_groups[j])
-            
-            pval <- with(mob_stats$groups_pval,
-                         p_val[index == var & n_rare == n_rare_groups[j]])
-            if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
-            else                          p_label <- bquote(p <= .(1/mob_stats$n_perm))
-            
             fig_title <- paste("Group scale, n = ", n_rare_groups[j])
             
             if (!multi_panel) par(fig = c(0.5, 1.0, y_coords[j+1], y_coords[j]), new = T)
             else              par(fig = c(0.67, 1.0, (1+j)/n_rows, (2+j)/n_rows),new = T)
-            boxplot(value ~ group, data = dat_groups, main = fig_title,
-                    ylab =  "", boxwex = 0,
-                    ylim = c(0, 1.1*max(dat_groups$value, na.rm = T)))
-            points(value ~ group, data = dat_groups, pch = 8, cex = 1.5, lwd = 2)
-            mtext(p_label, side = 3, line = 0)
+            
+            dat_groups <- filter(S_rare_groups, n_rare == n_rare_groups[j])
+            
+            if (!is.null(mob_stats$groups_pval)){
+               pval <- with(mob_stats$groups_pval,
+                            p_val[index == var & n_rare == n_rare_groups[j]])
+               groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min,
+                             ylab = "", main = fig_title)
+            } else {
+               groups_panel2(dat_groups, main = fig_title) 
+            }
          }
       }
    }
    
    par(op)
 }
-
-
-# old code ---------------------------------------------------------------------
-# still kept for potential later use
-# plot.mob_stats = function(mob_stats, 
-#                           display=c('all','N', 'S', 'S_rare', 'S_asymp',
-#                                     'PIE', 'ENS_PIE'),
-#                           multipanel=FALSE, ...) {
-#       if (multipanel) {
-#           if ('all' %in% display) {
-#               display = c('PIE', 'N', 'S', 'S asymp')
-#               op = par(mfcol = c(3,5), las = 1, font.main = 1,
-#                        mar = c(2, 2, 3, 2) + 0.1)
-#           }
-#           else
-#               warning('The multipanel plots settings only make sense when display is set to "all"')
-#       }# else if ('all' %in% display)
-#        #   display = c('PIE', 'N', 'S', 'S asymp')
-#       # PIE
-#       if ('PIE' %in% display) {
-#           if (multipanel)
-#               par(fig = c(0.2, 0.4, 0.66, 1))
-#           else
-#              par(mfrow = c(1,2))
-#           # panel_title = paste("PIE (p = ", mob_stats$pvalues$PIE,")\nplot scale",
-#           #                     sep = "")
-#           boxplot(PIE ~ group, data=mob_stats$samples, main = "PIE samples")
-#           
-#           if (multipanel)
-#               par(fig = c(0.6, 0.8, 0.66, 1), new = T)
-#           boxplot(PIE ~ group, data=mob_stats$groups, main = "PIE groups",boxwex = 0)
-#           points(PIE ~ group, data=mob_stats$groups, pch = 19)
-#       }
-#       
-#       # ENS PIE
-#       if ('ENS_PIE' %in% display) {
-#          if (multipanel)
-#             par(fig = c(0.2, 0.4, 0.66, 1))
-#          else
-#             par(mfrow = c(1,3))
-#          # panel_title = paste("ENS PIE (p = ", mob_stats$pvalues$ENS_PIE,")\nplot scale",
-#          #                     sep = "")
-#          boxplot(ENS_PIE ~ group, data=mob_stats$samples,
-#                  main = "ENS PIE samples")
-#          
-#          # beta ENS PIE
-#          # panel_title = paste("beta ENS PIE (p = ", mob_stats$pvalues$beta_ENS_PIE,")\n between scales",
-#          #                     sep = "")
-#          boxplot(beta_ENS_PIE ~ group, data=mob_stats$samples,
-#                  main = "beta ENS PIE")
-#          
-#          if (multipanel)
-#             par(fig = c(0.6, 0.8, 0.66, 1), new = T)
-#          boxplot(ENS_PIE ~ group, data=mob_stats$groups, main = "ENS PIE groups",boxwex = 0)
-#          points(ENS_PIE ~ group, data=mob_stats$groups, pch = 19)
-#         
-#       }
-#       
-#       if ('S' %in% display) {
-#           if (multipanel)
-#               par(fig = c(0, 0.2, 0.33, 0.66), new = T)
-#           else
-#               par(mfrow = c(1,3))
-# 
-#           # S observed samples
-#           #panel_title = paste("S (p = ", mob_stats$pvalues$S,")\n plot scale",
-#           #                    sep = "")
-#           boxplot(S ~ group, data=mob_stats$samples,
-#                   main = "S samples")
-#           
-#           # S beta
-#           #panel_title = paste("beta S (p = ", mob_stats$pvalues$beta_S,")\n between scales",
-#           #                    sep = "")
-#           boxplot(beta_S ~ group, data = mob_stats$samples,
-#                   main = "beta S")
-#           
-#           # S groups
-#           if (multipanel)
-#               par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-#           boxplot(S ~ group, data=mob_stats$groups, main = "S groups",boxwex = 0)
-#           points(S ~ group, data=mob_stats$groups, pch = 19)
-#           
-# 
-#       }
-#       # if ('S rare' %in% display) {
-#       #    
-#       #    n_rows <- max(length(mob_stats$samples$S_rare), length(mob_stats$samples$S_rare)) 
-#       #    
-#       #    if (multipanel)
-#       #         par(fig = c(0, 0.2, 0.33, 0.66), new = T)
-#       #     else
-#       #         par(mfrow = c(1,2))
-#       # 
-#       #     # S rarefied samples
-#       #     panel_title = paste("S rarefied (p = ", mob_stats$pvalues$S_rare,
-#       #                         ")\n plot scale", sep = "")
-#       #     boxplot(S_rare ~ group, data=mob_stats$samples,
-#       #             main = panel_title, ...)
-#       #     
-#       #     # S groups
-#       #     if (multipanel)
-#       #         par(fig = c(0.8, 1.0, 0.33, 0.66), new = T)
-#       #     boxplot(S ~ group, data=mob_stats$groups, main = "S groups",boxwex = 0)
-#       #     points(S ~ group, data=mob_stats$groups, pch = 19)
-#       # 
-#       # }
-#       if ('N' %in% display) {
-#           if (multipanel)
-#               par(fig = c(0.2, 0.4, 0.33, 0.66), new = T)
-#           else
-#               par(mfrow = c(1,2))
-#           # N samples
-#           #panel_title = paste("N (p = ", mob_stats$pvalues$N,")\n plot scale",
-#           #                    sep = "")
-#           boxplot(N ~ group, data=mob_stats$samples, 
-#                   main = "N samples")
-#       
-#           # N groups
-#           if (multipanel)
-#               par(fig = c(0.6, 0.8, 0.33, 0.66), new = T)
-#           # y_limits <- with(mob_stats$groups, range(c(N_mean, N_low, N_obs, N_up)))
-#           # boxplot(N_mean ~ levels(group), data=mob_stats$groups,
-#           #         main = "N\ntreatment scale", boxwex = 0, ylim = y_limits)
-#           # points(N_obs ~ group, data = mob_stats$groups, pch = 19)
-#           # plotCI(x = as.numeric(mob_stats$groups$group), y = mob_stats$groups$N_mean,
-#           #        li = mob_stats$groups$N_low, ui = mob_stats$groups$N_up,
-#           #        add = T, pch = 1, ...)
-#           boxplot(N ~ group, data=mob_stats$groups, main = "N groups",boxwex = 0)
-#           points(N ~ group, data=mob_stats$groups, pch = 19)
-#       }
-#       if ('S asymp' %in% display) {
-#           if (multipanel)
-#               par(fig = c(0.2, 0.4, 0, 0.33), new = T)
-#           else
-#               par(mfrow = c(1,2))
-#            # S asymptotic
-#           if (all(is.na(mob_stats$samples$S_asymp))){
-#               warning("Cannot plot asymptotic richness for the samples")
-#           } else {
-#               # panel_title = paste("S asympotic (p = ", mob_stats$pvalues$S_asymp,
-#               #                     ")\n plot scale", sep = "")
-#               boxplot(S_asymp ~ group, data=mob_stats$samples,
-#                       main = "S asymptotic")
-#           }
-#           
-#           if (multipanel)
-#               par(fig = c(0.6, 0.8, 0, 0.33), new = T)
-#           if (all(is.na(mob_stats$groups$S_asymp))){
-#               warning("Cannot plot asymptotic richness for the groups")
-#           } else {
-#              boxplot(S_asymp ~ group, data=mob_stats$groups, main = "S asymptotic groups",boxwex = 0)
-#              points(S_asymp ~ group, data=mob_stats$groups, pch = 19)
-#           }
-#        
-#       }
-#       if (multipanel)
-#           par(op)
-# }
-# 
-
