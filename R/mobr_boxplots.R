@@ -48,15 +48,15 @@ calc_PIE = function(x) {
 }
 
 # generate a single bootstrap sample of group-level biodiversity indices
-boot_sample_groups <- function(abund_mat, groups, index, n_rare)
+boot_sample_groups <- function(abund_mat, index, n_rare)
 {
    # sample rows and calculate abundance vector
-   sample_dat <- by(abund_mat, INDICES = groups, FUN = sample_frac, replace = T)
+   sample_dat <- by(abund_mat, INDICES = abund_mat$group_id, FUN = sample_frac, replace = T)
    class(sample_dat) <- "list"
    sample_dat <- bind_rows(sample_dat)
    
    # abundance distribution pooled in groups
-   abund_group = aggregate(sample_dat, by = list(groups), FUN = "sum")
+   abund_group = aggregate(sample_dat[,-1], by = list(sample_dat[,1]), FUN = "sum")
    
    dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
                                     groups = abund_group[,1],
@@ -318,10 +318,10 @@ get_mob_stats = function(mob_in,
                       levels = c("control","treatment"))
    group_bin[group_id != ref_group] <- "treatment"
   
-   # Add labels to groups
-   group_type = c("(ctrl)",rep("(trt)", length(levels(group_id)) - 1))
-   group_labels <- paste(levels(group_id), group_type)
-   group_id <- factor(group_id, labels = group_labels) 
+   # # Add labels to groups
+   # group_type = c("(ctrl)",rep("(trt)", length(levels(group_id)) - 1))
+   # group_labels <- paste(levels(group_id), group_type)
+   # group_id <- factor(group_id, labels = group_labels) 
    
    print(index)
  
@@ -518,9 +518,10 @@ get_mob_stats = function(mob_in,
    } else {
       # bootstrap sampling within groups
       
+      abund_dat <- cbind(group_id, mob_in$comm)
+      
       boot_repl_groups <- replicate(n_perm,
-                                    boot_sample_groups(mob_in$comm,
-                                                       groups = group_id,
+                                    boot_sample_groups(abund_dat,
                                                        index = index,
                                                        n_rare = n_rare_groups),
                                     simplify = F)
@@ -536,8 +537,12 @@ get_mob_stats = function(mob_in,
    }
 
    # order output data frames by indices
+   dat_samples <- dat_samples[order(dat_samples$index, dat_samples$group),]
+   
    dat_groups$index <- factor(dat_groups$index, levels = index)
    dat_groups <- dat_groups[order(dat_groups$index, dat_groups$group),]
+   
+   
    
    if (!boot_groups){
       
@@ -590,8 +595,8 @@ groups_panel2 <- function(group_dat, ylab = "", main = "Group scale", ...)
 {
    boxplot(median ~ group, data = group_dat, main = main,
            ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)))
-   plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
-          ui = group_dat$upper, add = T, pch = 19, cex = 1.5, sfrac = 0.02)
+   plotrix::plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
+                   ui = group_dat$upper, add = T, pch = 19, cex = 1.5, sfrac = 0.02)
 }
 
 #' Plot sample-level and group-level biodiversity statistics for a MoB analysis
