@@ -283,15 +283,15 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 100, n_rare_samples = c(5,10))
+#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 20, n_rare_samples = c(5,10))
 #' plot(inv_stats)
 get_mob_stats = function(mob_in,
                          group_var,
                          ref_group = NULL,
                          index = c("N","S","S_rare","S_asymp","ENS_PIE"),
                          n_rare_samples = NULL,
-                         n_rare_groups = NULL,
-                         n_perm = 100,
+                         n_rare_min = 10,
+                         n_perm = 20,
                          boot_groups = F,
                          conf_level = 0.95
                          )
@@ -325,19 +325,32 @@ get_mob_stats = function(mob_in,
    
    print(index)
  
-   # Abundance distribution pooled in groups
-   abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
+   # Get rarefaction level
+   samples_N = rowSums(mob_in$comm) 
+   samples_per_group <- table(group_id)
+   
+   if (any(is.null(n_rare_samples)) | !is.numeric(n_rare_samples)){ 
+      N_min_sample = min(samples_N)
+      n_rare_samples = N_min_sample
+   } else {
+      n_rare_samples <- floor(n_rare_samples)
+   }
+   
+   if (any(n_rare_samples < n_rare_min)){
+      warning(paste("The number of individuals for rarefaction analysis is too low and is set to the minimum of", n_rare_min,"individuals."))
+      
+      n_rare_samples[n_rare_samples < n_rare_min] <- n_rare_min
+      n_rare_samples <- unique(n_rare_samples)
+      
+      print(paste("Number of individuals for rarefaction:",
+                  paste(n_rare_samples, collapse = ", ")))
+   }
   
    # Group-level indices
+   n_rare_groups <- n_rare_samples*min(samples_per_group)
    
-   # Get rarefaction level
-   groups_N <- rowSums(abund_group[,-1]) 
-   if (any(is.null(n_rare_groups)) | !is.numeric(n_rare_groups)){   
-      N_min_group = min(groups_N)
-      n_rare_groups = N_min_group
-   } else {
-      n_rare_groups <- floor(n_rare_groups)
-   }
+   # Abundance distribution pooled in groups
+   abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
    
    dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
                                     groups = abund_group[,1],
@@ -350,8 +363,6 @@ get_mob_stats = function(mob_in,
                              n_rare = numeric(),
                              val = numeric()
                              )
-   
-   samples_N = rowSums(mob_in$comm) 
    
    # Number of individuals -----------------------------------------------------
    if ("N" %in% index){
@@ -382,19 +393,6 @@ get_mob_stats = function(mob_in,
    # Rarefied richness ---------------------------------------------------------
    if ("S_rare" %in% index){  
       
-      if (any(is.null(n_rare_samples)) | !is.numeric(n_rare_samples)){ 
-         N_min_sample = min(samples_N)
-         n_rare_samples = N_min_sample
-      }
-      else {
-         n_rare_samples <- floor(n_rare_samples)
-      }
-      
-      if (any(n_rare_samples <= 1)){
-         warning(paste("Comparisons of rarefied richness do not make sense for",
-                       n_rare_samples,"individuals. Please choose higher value for \"n_rare_samples\"."))
-      }
-      
       for (i in 1:length(n_rare_samples)){
          
          plots_low_n = samples_N < n_rare_samples[i]
@@ -415,7 +413,18 @@ get_mob_stats = function(mob_in,
          dat_S_rare$value[!plots_low_n] = apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
                                                 rarefaction, method = "indiv",
                                                 effort = n_rare_samples[i])
-         dat_samples <- rbind(dat_samples, dat_S_rare)
+         
+         S_rare_group <- with(dat_groups, {value[index == "S_rare" & n_rare == n_rare_groups[i]]})
+         
+         beta_S_rare <- S_rare_group[group_id]/dat_S_rare$value
+         beta_S_rare[!is.finite(beta_S_rare)] <- NA
+         
+         dat_beta_S_rare <- data.frame(group = group_id,
+                                       index = "beta_S_rare",
+                                       n_rare = n_rare_samples[i],
+                                       value = beta_S_rare)
+         
+         dat_samples <- rbind(dat_samples, dat_S_rare, dat_beta_S_rare)
       }
    } # end rarefied richness
    
@@ -436,7 +445,16 @@ get_mob_stats = function(mob_in,
                                 index = "S_asymp",
                                 n_rare = NA,
                                 value = S_asymp_sample)
-      dat_samples <- rbind(dat_samples, dat_S_asymp)
+      
+      beta_S_asymp <- dat_groups$value[dat_groups$index == "S_asymp"][group_id]/S_asymp_sample
+      beta_S_asymp[!is.finite(beta_S_asymp)] <- NA
+      
+      dat_beta_S_asymp <- data.frame(group = group_id,
+                                     index = "beta_S_asymp",
+                                     n_rare = NA,
+                                     value = beta_S_asymp)
+      
+      dat_samples <- rbind(dat_samples, dat_S_asymp, dat_beta_S_asymp)
   }
 
    # Probability of Interspecific Encounter (PIE)-------------------------------
@@ -578,12 +596,12 @@ samples_panel1 <- function(sample_dat, p_val, p_min, ylab = "",
 }
 
 # Panel function for group level results
-groups_panel1 <- function(group_dat, p_val, p_min, ylab = "", ...)
+groups_panel1 <- function(group_dat, p_val, p_min, ylab = "", main = "Group scale", ...)
 {
    if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
    else                          p_label <- bquote(p <= .(p_min))
    
-   boxplot(value ~ group, data = group_dat, main = "Group scale",
+   boxplot(value ~ group, data = group_dat, main = main,
            ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$value, na.rm = T)),
            ...)
    points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2, ...)

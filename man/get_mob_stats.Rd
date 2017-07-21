@@ -5,9 +5,8 @@
 \title{Calculate sample based and group based biodiversity statistics.}
 \usage{
 get_mob_stats(mob_in, group_var, ref_group = NULL, index = c("N", "S",
-  "S_rare", "S_asymp", "ENS_PIE"), n_rare_samples = NULL,
-  n_rare_groups = NULL, n_perm = 100, boot_groups = F,
-  conf_level = 0.95)
+  "S_rare", "S_asymp", "ENS_PIE"), n_rare_samples = NULL, n_rare_min = 10,
+  n_perm = 20, boot_groups = F, conf_level = 0.95)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -33,11 +32,11 @@ See \emph{Details} for additional information on the biodiverstiy statistics.}
 of rarefied species richness at the sample level. This can a single value
 or an integer vector.}
 
+\item{n_perm}{The number of permutations to use for testing for treatment effects}
+
 \item{n_rare_groups}{The standardized number of individuals used for the calculation
 of rarefied species richness at the group level. This can a single value
 or an integer vector.}
-
-\item{n_perm}{The number of permutations to use for testing for treatment effects}
 }
 \value{
 A list of class \code{mob_stats} that contains sample-scale and 
@@ -85,7 +84,7 @@ among the groups (Legendre & Legendre 1998). At the sample level, one-way ANOVA
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 100, n_rare_samples = c(5,10))
+inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 20, n_rare_samples = c(5,10))
 plot(inv_stats)
 }
 \references{
