@@ -5,7 +5,7 @@
 \title{Calculate sample based and group based biodiversity statistics.}
 \usage{
 get_mob_stats(mob_in, group_var, ref_group = NULL, index = c("N", "S",
-  "S_rare", "S_asymp", "ENS_PIE"), n_rare_samples = NULL, n_rare_min = 10,
+  "S_rare", "S_asymp", "ENS_PIE"), n_rare_samples = NULL, n_rare_min = 5,
   n_perm = 20, boot_groups = F, conf_level = 0.95)
 }
 \arguments{

@@ -290,7 +290,7 @@ get_mob_stats = function(mob_in,
                          ref_group = NULL,
                          index = c("N","S","S_rare","S_asymp","ENS_PIE"),
                          n_rare_samples = NULL,
-                         n_rare_min = 10,
+                         n_rare_min = 5,
                          n_perm = 20,
                          boot_groups = F,
                          conf_level = 0.95
@@ -560,8 +560,6 @@ get_mob_stats = function(mob_in,
    dat_groups$index <- factor(dat_groups$index, levels = index)
    dat_groups <- dat_groups[order(dat_groups$index, dat_groups$group),]
    
-   
-   
    if (!boot_groups){
       
       p_val_groups$index <- factor(p_val_groups$index, levels = index)
@@ -685,21 +683,15 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
    
    for (var in index_match){
       
-      if (var %in% c("N", "S_asymp","PIE")){
+      if (var %in% c("N","PIE")){
       
          if (!multi_panel)
             op <- par(mfrow = c(1,2), las = 1, cex.lab = 1.2)
-         
-         if (multi_panel)
-            par(fig = c(0, 0.33, 1/n_rows, 2/n_rows),new = T)
          
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
                         ylab = var, main = "Sample scale")
-         
-         if (multi_panel)
-            par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows),new = T)
          
          dat_groups <- filter(mob_stats$groups_stats, index == var)
          
@@ -711,21 +703,25 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          }
       }
       
-      if (var %in% c("S", "ENS_PIE")){
+      if (var %in% c("S", "S_asymp", "ENS_PIE")){
          
          if (!multi_panel)
             op <- par(mfrow = c(1,3), las = 1, cex.lab = 1.2)
          
-         if (multi_panel & var == "ENS_PIE")
-            par(fig = c(0, 0.33, 0, 1/n_rows),new = T)
+         if (multi_panel){
+            if (var == "S_asymp") par(fig = c(0, 0.33, 1/n_rows, 2/n_rows), new = T)
+            if (var == "ENS_PIE") par(fig = c(0, 0.33, 0       , 1/n_rows), new = T)
+         }
          
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
                         ylab = var, main = "Sample scale")
          
-         if (multi_panel & var == "ENS_PIE")
-            par(fig = c(0.33, 0.67, 0, 1/n_rows),new = T)
+         if (multi_panel){
+            if (var == "S_asymp") par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = T)
+            if (var == "ENS_PIE") par(fig = c(0.33, 0.67, 0       , 1/n_rows), new = T)
+         }
          
          beta_var <- paste("beta", var, sep = "_")
          dat_samples <- filter(mob_stats$samples_stats, index == beta_var)
@@ -733,8 +729,10 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
                         ylab = "", main = "Beta-diversity across scales")
          
-         if (multi_panel & var == "ENS_PIE")
-            par(fig = c(0.67, 1.0, 0, 1/n_rows), new = T)
+         if (multi_panel){
+            if (var == "S_asymp") par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows), new = T)
+            if (var == "ENS_PIE") par(fig = c(0.67, 1.0, 0       , 1/n_rows), new = T)
+         }
          
          dat_groups <- filter(mob_stats$groups_stats, index == var)
          
@@ -749,46 +747,54 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
       if (var == "S_rare"){
          
          if (!multi_panel){
-            op <- par(mfcol = c(S_rare_len, 2), las = 1, cex.lab = 1.2)
+            op <- par(mfrow = c(S_rare_len, 3), las = 1, cex.lab = 1.2)
          }
             
          n_rare_samples <- unique(S_rare_samples$n_rare)
          n_rare_groups <- unique(S_rare_groups$n_rare)
          
-         for (j in 1:length(n_rare_samples)){
+         for (i in 1:length(n_rare_samples)){
             
-            dat_samples <- filter(S_rare_samples, n_rare == n_rare_samples[j])
-            
-            p_val <- with(mob_stats$samples_pval,
-                          p_val[index == var & n_rare == n_rare_samples[j]])
-            
-            fig_title <- paste("Sample scale, n = ",n_rare_samples[j])
             if (multi_panel)
-               par(fig = c(0, 0.33,  (1+j)/n_rows, (2+j)/n_rows),new = T)
+               par(fig = c(0, 0.33, (1+i)/n_rows, (2+i)/n_rows), new = T)
+            
+            dat_samples <- filter(S_rare_samples, n_rare == n_rare_samples[i])
+            p_val <- with(mob_stats$samples_pval,
+                          p_val[index == var & n_rare == n_rare_samples[i]])
+            
+            fig_title <- paste("Sample scale, n = ",n_rare_samples[i])
+            
             samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min, ylab = var,
                            main = fig_title)
-         }
-         
-         y_coords <- (S_rare_len:0)/S_rare_len
-         
-         for (j in 1:length(n_rare_groups)){
             
-            fig_title <- paste("Group scale, n = ", n_rare_groups[j])
+            if (multi_panel)
+               par(fig = c(0.33, 0.67, (1+i)/n_rows, (2+i)/n_rows), new = T)
             
-            if (!multi_panel) par(fig = c(0.5, 1.0, y_coords[j+1], y_coords[j]), new = T)
-            else              par(fig = c(0.67, 1.0, (1+j)/n_rows, (2+j)/n_rows),new = T)
+            beta_var <- paste("beta", var, sep = "_")
+            dat_samples <- filter(mob_stats$samples_stats, index == beta_var)
+            p_val <- with(mob_stats$samples_pval,
+                          p_val[index == beta_var & n_rare == n_rare_samples[i]])
+            samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
+                           ylab = "", main = "Beta-diversity across scales")
             
-            dat_groups <- filter(S_rare_groups, n_rare == n_rare_groups[j])
+            if (multi_panel)
+               par(fig = c(0.67, 1.0, (1+i)/n_rows, (2+i)/n_rows), new = T)
+            
+            dat_groups <- filter(S_rare_groups, n_rare == n_rare_groups[i])
+            fig_title <- paste("Group scale, n = ", n_rare_groups[i])
             
             if (!is.null(mob_stats$groups_pval)){
                pval <- with(mob_stats$groups_pval,
-                            p_val[index == var & n_rare == n_rare_groups[j]])
+                            p_val[index == var & n_rare == n_rare_groups[i]])
                groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min,
                              ylab = "", main = fig_title)
             } else {
                groups_panel2(dat_groups, main = fig_title) 
             }
          }
+         
+         y_coords <- (S_rare_len:0)/S_rare_len
+         
       }
    }
    
