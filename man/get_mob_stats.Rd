@@ -11,8 +11,8 @@ get_mob_stats(mob_in, group_var, ref_group = NULL, index = c("N", "S",
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
 
-\item{group_var}{A string that specifies which field in \code{mob_in$env} the data
-should be grouped by}
+\item{group_var}{A string that specifies which field in \code{mob_in$env} the 
+data should be grouped by}
 
 \item{ref_group}{The level in \code{group_var} that is used as control group for the
 control vs. treatment test at the group level.}
@@ -28,57 +28,97 @@ control vs. treatment test at the group level.}
 }
 See \emph{Details} for additional information on the biodiverstiy statistics.}
 
-\item{n_rare_samples}{The standardized number of individuals used for the calculation
-of rarefied species richness at the sample level. This can a single value
-or an integer vector.}
+\item{n_rare_samples}{The standardized number of individuals used for the
+calculation of rarefied species richness at the sample level. This can a be
+single value or an integer vector. As default the minimum number of individuals
+found across the samples is used, when this is not smaller than \code{n_rare_min}.}
 
-\item{n_perm}{The number of permutations to use for testing for treatment effects}
+\item{n_rare_min}{The minimum number of individuals considered for the calculation
+of rarefied richness. Samples with less individuals then \code{n_rare_min} are
+excluded from the analysis with a warning. Accordingly, when \code{n_rare_samples}
+is set by the user it has to be higher than \code{n_rare_min}.}
 
-\item{n_rare_groups}{The standardized number of individuals used for the calculation
-of rarefied species richness at the group level. This can a single value
-or an integer vector.}
+\item{n_perm}{The number of permutations to use for testing for treatment effects.}
+
+\item{boot_groups}{Use bootstrap resampling within groups to derive group-level
+confidence intervals for all biodiversity indices. Default is \code{FALSE}. 
+See \emph{Details} for information on the bootstrap approach.}
+
+\item{conf_level}{Confidence level used for the calculation of group-level 
+bootstrapped confidence intervals. Only used when \code{boot_groups = TRUE}.}
 }
 \value{
 A list of class \code{mob_stats} that contains sample-scale and 
 group-scale biodiversity statistics, as well as the p-values for permutation tests
 at both scales.
+
+When \code{boot_groups = TRUE} there are no p-values at the group level. Instead
+there is lower bound, median, and upper bound for each biodiversity index derived
+from the bootstrap within groups.
 }
 \description{
 Calculate sample based and group based biodiversity statistics.
 }
 \details{
+\strong{BIODIVERSITY INDICES}
+
 \strong{Rarefied species richness} is the expected number of species, given
 a defined number of sampled individuals (Gotelli & Colwell 2001). Rarefied richness
-at the sample and group level is calculated for the values provided in
-\code{n_rare_samples} and \code{n_rare_groups}, respectively.
-When no values are provided the minimum number of individuals of the samples 
-or groups is used. \code{S_rare} is calculated using the function \code{\link{rarefaction}}.
+at the sample level is calculated for the values provided in
+\code{n_rare_samples} as long as these values are not smaller than the 
+user-defined minimum value \code{n_rare_min}. In this case the minimum value
+is used and samples with less individuals are discarded.
+When no values for \code{n_rare_samples} are provided the observed 
+minimum number of individuals of the samples is used, which is the standard
+in rarefaction analysis (Gotelli & Colwell 2001). Because the number
+of individuals is expected to scale linearly with sample area or effort at the group
+level the number of individuals for rarefaction is calculated as the minimum
+number of samples within groups times \code{n_rare_samples}. For example,
+when there are 10 samples within each group, \code{n_rare_groups} equals
+\code{10 * n_rare_samples}. 
 
 \strong{Asymptotic species richness} is calculated using the bias-corrected Chao1
  estimator (Chiu et al. 2014) provided in the function \code{\link[vegan]{estimateR}}.
 
-\strong{PIE} represents the probility that two randomly drawn individuals
+\strong{PIE} represents the probability that two randomly drawn individuals
 belong to the same species. Here we use the definition of Hurlbert (1971), which considers
 sampling without replacement. PIE is closely related to the well-known Simpson 
 diversity index, but the latter assumes sampling with replacement.
 
-\strong{ENS_PIE} represents the Effective Number of Species derived from PIE.
-This corresponds to the the number of equally abundant species, which together result
-in the same PIE as the observed community, with - most likely - uneven abundances
-(Jost 2006). That means the higher the difference between S and ENS_PIE the more
+\strong{ENS_PIE} represents the Effective Number of Species derived from the PIE.
+This corresponds to the the number of equally abundant species (i.e. a perfectly
+even community), there would need to be to achieve the observed PIE (Jost 2006).
+This means the higher the difference between S and ENS_PIE the more
 uneven is the observed community. An intuitive interpretation of ENS_PIE is that
-it corresponds to the number of dominant species in the community.
+it corresponds to the number of dominant (highly abundant) species in the community.
 
-For species richness \code{S} and the Effective Number of Species \code{ENS_PIE}
+For species richness \code{S}, rarefied richness \code{S_rare}, asymptotic
+richness \code{S_asymp}, and the Effective Number of Species \code{ENS_PIE}
 we also calculate beta-diversity using multiplicative partitioning
-(Whittaker 1972, Jost 2007). That means for both indices we estimate beta-diversity as the ratio of group-level
-diversity (gamma) divided by sample-level diversity (alpha). 
+(Whittaker 1972, Jost 2007). That means for these indices we estimate beta-diversity 
+as the ratio of group-level diversity (gamma) divided by sample-level diversity (alpha). 
+
+\strong{PERMUTATION TESTS AND BOOTSTRAP}
 
 We used permutation tests for assessing differences of the biodiversity statistics
 among the groups (Legendre & Legendre 1998). At the sample level, one-way ANOVA 
 (i.e. F-test) is implemented by shuffling treatment group labels across samples.
 
- At the group-level there is test whether the difference between treatment and control is significantly different from zero. For this purpose we permuted treatment group labels across samples, pooled the groups, and calculated the treatment-control difference for each permutation.
+ At the group-level there is test whether the difference between treatment and control
+ is significantly different from zero. For this purpose we permuted treatment group labels
+ across samples, pooled the groups, and calculated the treatment-control difference for each
+ permutation. This test only works for the comparison of two groups, i.e. treatment vs. control.
+ The means the reference level specified by argument \code{ref_group} is compared
+ with all other groups pooled.
+ 
+ Especially, when there are more then two groups a bootstrap approachj can be used
+ to test differences at the group level. When \code{boot_groups = T} instead
+ of the group-level permutation test, there will be resampling of samples within
+ groups to derive group-level confidence intervals for all biodiversity indices.
+ The function output includes lower and upper confidence bounds and the median
+ of the bootstrap samples. Please note that for the richness indices sampling
+ with replacement corresponds to rarefaction to ca. 2/3 of the individuals, because
+ the same samples occur several times in the resampled data sets.
 }
 \examples{
 data(inv_comm)

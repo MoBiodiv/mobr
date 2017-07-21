@@ -14,8 +14,7 @@ treatment level statistics}
 \item{index}{The biodiversity statistics that should be plotted.
 See \code{\link{get_mob_stats}} for information on the indices. By default there
 is one figure for each index, with panels for sample-level and group-level results
-as well as beta-diversity for species richness \code{S} and the effective
-number of species \code{ENS_PIE}.}
+as well as for beta-diversity when applicable.}
 
 \item{multi_panel}{A logical variable. If \code{multi_panel = TRUE} then a 
 multipanel plot is produced, which shows observed, rarefied, and asymptotic 
@@ -25,7 +24,7 @@ biodiversity changes.}
 }
 \description{
 Plots a \code{mob_stats} object which is produced by the 
-function \code{get_mob_stats}. The p value for each statistic
+function \code{get_mob_stats}. The p-value for each statistic
 is displayed in the plot title if applicable.
 }
 \details{
@@ -36,8 +35,11 @@ all the results.
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 100)
+inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 20)
 plot(inv_stats) 
+
+windows(15,20)
+plot(inv_stats, multi_panel = T)
 }
 \author{
 Felix May, Xiao Xiao, and Dan McGlinn
