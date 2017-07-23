@@ -71,8 +71,8 @@ is used and samples with less individuals are discarded.
 When no values for \code{n_rare_samples} are provided the observed 
 minimum number of individuals of the samples is used, which is the standard
 in rarefaction analysis (Gotelli & Colwell 2001). Because the number
-of individuals is expected to scale linearly with sample area or effort at the group
-level the number of individuals for rarefaction is calculated as the minimum
+of individuals is expected to scale linearly with sample area or effort,
+at the group level the number of individuals for rarefaction is calculated as the minimum
 number of samples within groups times \code{n_rare_samples}. For example,
 when there are 10 samples within each group, \code{n_rare_groups} equals
 \code{10 * n_rare_samples}. 

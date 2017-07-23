@@ -143,7 +143,7 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
       ENS_PIE_groups = vegan::diversity(abund_mat, index = "invsimpson")
       ENS_PIE_groups[!is.finite(ENS_PIE_groups)] <- NA
       
-      dat_groups$value[dat_groups$index == "ENS_PIE"] <- calc_PIE(abund_mat)
+      dat_groups$value[dat_groups$index == "ENS_PIE"] <- ENS_PIE_groups
    }
    
    return(dat_groups)
