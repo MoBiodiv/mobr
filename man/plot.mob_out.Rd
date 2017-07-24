@@ -45,4 +45,3 @@ plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
 \author{
 Xiao Xiao and Dan McGlinn
 }
-

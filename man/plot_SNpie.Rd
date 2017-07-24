@@ -27,4 +27,3 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 plot_SNpie(inv_mob_in, 'group')
 }
 }
-

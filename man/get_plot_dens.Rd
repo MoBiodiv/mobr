@@ -14,4 +14,3 @@ Returns the "assumed" plot density given
 whether min, max or mean is used
 }
 \keyword{internal}
-

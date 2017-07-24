@@ -13,4 +13,3 @@ Auxillary function for get_delta_stats()
 Effect of N when type is "continuous"
 }
 \keyword{internal}
-

@@ -4,7 +4,8 @@
 \alias{rarefaction}
 \title{Rarefaction Species Richness}
 \usage{
-rarefaction(x, method, effort = NULL, xy_coords = NULL, dens_ratio = 1)
+rarefaction(x, method, effort = NULL, xy_coords = NULL, latlong = FALSE,
+  dens_ratio = 1, force = FALSE)
 }
 \arguments{
 \item{x}{community data, a matrix-like object or a vector which should either
@@ -26,6 +27,12 @@ using the spatial rarefaction method}
 and the community data (i.e., x) under consideration. This arguement is
 used to rescale the rarefation curve when estimating the effect of
 individual density on group differences in richness.}
+
+\item{force}{boolean which specifies what the function should return if effort
+is larger than the total number of samples (either individuals or plots).
+The default behavior in which force = FALSE returns an NA when this occurs.
+If force = TRUE then the total number of species in the community is
+returned with a warning.}
 }
 \value{
 A vector of rarefied species richness values
@@ -66,9 +73,6 @@ rarefaction(inv_comm, method='samp')
 # sampled based rarefaction under spatially explicit nearest neighbor sampling
 rarefaction(inv_comm, method='spat', xy_coords=inv_plot_attr[ , c('x','y')])
 }
-\author{
-Dan McGlinn and Xiao Xiao
-}
 \references{
 Cayuela, L., N.J. Gotelli, & R.K. Colwell (2015) Ecological and 
 biogeographic null hypotheses for comparing rarefaction curves. Ecological
@@ -80,4 +84,6 @@ Chiarucci, A., G. Bacaro, D. Rocchini, C. Ricotta, M. Palmer, & S. Scheiner
 structure of biological communities into sample-based rarefaction. Community
 Ecology 10:209-214.
 }
-
+\author{
+Dan McGlinn and Xiao Xiao
+}
