@@ -14,14 +14,24 @@ represent a species-abundance distribution or a plot (rows) by species
 \description{
 PIE is also known as Simpson's evenness index and this function is 
 a reduced form of the function vegan::diversity(). Jari Oksanen and Bob O'Hara
-are the original authors of the function vegan::diversity()
+are the original authors of the function vegan::diversity().
+}
+\details{
+In this function the formulate of Hurlbert (1971) is used to calculate PIE:
+
+PIE = N/(N-1)*(1 - p_i^2),
+
+where N is the total number of individuals and p_i is the relative abundance
+of species i.
 }
 \examples{
 data(inv_comm)
 calc_PIE(inv_comm)
 }
+\references{
+Hurlbert, S. H. 1971. The Nonconcept of Species Diversity: A Critique and Alternative Parameters. - Ecology 52: 577–586.
+}
 \author{
 Dan McGlinn
 }
 \keyword{internal}
-

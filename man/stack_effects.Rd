@@ -39,4 +39,3 @@ inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 stack_effects(inv_mob_out, 'invaded')
 stack_effects(inv_mob_out, 'invaded', prop=TRUE)
 }
-

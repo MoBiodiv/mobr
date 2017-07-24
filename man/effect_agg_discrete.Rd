@@ -5,12 +5,11 @@
 \title{Auxillary function for get_delta_stats()
 Effect of aggregation when type is "discrete"}
 \usage{
-effect_agg_discrete(mob_in, sample_rare, ref_group, group_plots, group_data,
-  group_levels, nperm)
+effect_agg_discrete(out, mob_in, ref_group, group_plots, group_data,
+  group_levels, nperm, overall_p)
 }
 \description{
 Auxillary function for get_delta_stats()
 Effect of aggregation when type is "discrete"
 }
 \keyword{internal}
-

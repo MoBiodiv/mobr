@@ -4,7 +4,7 @@
 \alias{make_mob_in}
 \title{Create the 'mob_in' object.}
 \usage{
-make_mob_in(comm, plot_attr, binary = FALSE)
+make_mob_in(comm, plot_attr, binary = FALSE, latlong = FALSE)
 }
 \arguments{
 \item{comm}{community matrix with plots as rows and species columns.}
@@ -16,6 +16,10 @@ column(s) has to have names "x" and/or "y".}
 
 \item{binary}{whether the plot by species matrix "comm" is in abundances or 
 presence/absence.}
+
+\item{latlong}{whether the coordinates are in latitude-longitude. If TRUE, it
+is assumed that column "x" is longitude and column "y" is latitude, both in 
+radians.}
 }
 \value{
 a "mob_in" object with four attributes. "comm" is the plot by species 
@@ -36,4 +40,3 @@ scales.
 \author{
 Dan McGlinn and Xiao Xiao
 }
-

@@ -5,12 +5,11 @@
 \title{Auxillary function for get_delta_stats()
 Effect of N when type is "discrete"}
 \usage{
-effect_N_discrete(mob_in, group_levels, ref_group, groups, density_stat,
-  ind_sample_size, nperm)
+effect_N_discrete(out, mob_in, group_levels, ref_group, groups, density_stat,
+  ind_sample_size, nperm, overall_p)
 }
 \description{
 Auxillary function for get_delta_stats()
 Effect of N when type is "discrete"
 }
 \keyword{internal}
-
