@@ -1,3 +1,31 @@
+# Function for individual-based rarefaction and extrapolation from the 
+# iNEXT package
+#https://github.com/JohnsonHsieh/iNEXT
+# In code file iNEXT.R
+D0.hat <- function(x, m){
+   x <- x[x > 0]
+   n <- sum(x)
+   Sub <- function(m){
+      if(m <= n){
+         Fun <- function(x){
+            if(x <= (n - m)) exp(lgamma(n - x + 1) + lgamma(n - m + 1) - lgamma(n - x - m + 1) - lgamma(n + 1))
+            else 0
+         }
+         sum(1 - sapply(x, Fun))
+      }
+      else {
+         Sobs <- sum(x > 0)
+         f1 <- sum(x == 1)
+         f2 <- sum(x == 2)
+         f0.hat <- ifelse(f2 == 0, (n - 1) / n * f1 * (f1 - 1) / 2, (n - 1) / n * f1 ^ 2/ 2 / f2)	#estimation of unseen species via Chao1
+         A <- n*f0.hat/(n*f0.hat+f1)
+         ifelse(f1 ==0, Sobs ,Sobs + f0.hat * (1 - A ^ (m - n)))	
+      }
+   }
+   sapply(m, Sub)
+}
+
+
 #' Calculate probability of interspecific encounter (PIE)
 #' 
 #' PIE is also known as Simpson's evenness index and this function is 
@@ -58,10 +86,10 @@ boot_sample_groups <- function(abund_mat, index, n_rare)
    # abundance distribution pooled in groups
    abund_group = aggregate(sample_dat[,-1], by = list(sample_dat[,1]), FUN = "sum")
    
-   dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
-                                    groups = abund_group[,1],
-                                    index = index,
-                                    n_rare = n_rare)
+   dat_groups <- calc_biodiv(abund_mat = abund_group[,-1],
+                             groups = abund_group[,1],
+                             index = index,
+                             n_rare = n_rare)
    return(dat_groups)
 }
 
@@ -73,80 +101,88 @@ get_pval <- function(rand, obs, n_samples)
    return(p_val)
 }
 
-# Get group-level biodiversity indices
-calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
+# Get biodiversity indices
+calc_biodiv <- function(abund_mat, groups, index, n_rare)
 {
-   dat_groups <- expand.grid(group = groups,
-                             index = index[index != "S_rare"],
-                             n_rare = NA)
+   dat1 <- expand.grid(group = groups,
+                       index = index[index != "S_rare"],
+                       n_rare = NA)
+   dat1$value <- NA
    
-   dat_S_rare <- expand.grid(n_rare = n_rare,
-                             group = groups,
-                             index = "S_rare"
-                             )
-   dat_S_rare <- dat_S_rare[,c(2,3,1)]
-   
-   dat_groups <- rbind(dat_groups, dat_S_rare)
-   dat_groups$value <- NA
-   
-   groups_N <- rowSums(abund_mat) 
+   N <- rowSums(abund_mat) 
    
    # Number of individuals -----------------------------------------------------
-   if ("N" %in% index){
-      dat_groups$value[dat_groups$index == "N"] <- groups_N
+   if (any(index == "N")){
+      dat1$value[dat1$index == "N"] <- N
    } 
    
    # Number of species ---------------------------------------------------------
-   if ("S" %in% index){
-      dat_groups$value[dat_groups$index == "S"] <-  rowSums(abund_mat > 0)
+   if (any(index == "S")){
+      dat1$value[dat1$index == "S"] <-  rowSums(abund_mat > 0)
    }  
    
    # Rarefied richness ---------------------------------------------------------
-   if ("S_rare" %in% index){
-         inext1 <- try(iNEXT::iNEXT(as.data.frame(t(abund_mat)), q = 0,
-                                size = n_rare, se = F))
-         if (class(inext1) == "try_error"){
-            warning("Error in the calculation of rarefied species richness using iNEXT.")
+   if (any(index == "S_rare")){
+      
+         dat_S_rare <- expand.grid(group = groups,
+                                   n_rare = n_rare,
+                                   index = "S_rare",
+                                   value = NA)
+         dat_S_rare <- dat_S_rare[,c(2,3,1,4)]
+         dat1 <- rbind(dat1, dat_S_rare)
+      
+         d0_hat <- try(as.numeric(apply(abund_mat, MARGIN = 1, D0.hat, m = n_rare)))
+         if (class(d0_hat) == "try_error"){
+            warning("Error in the calculation of rarefied species richness.")
          } else {
-            S_rare <- lapply(inext1$iNextEst, function(dat){filter(dat, m %in% n_rare)})
-            S_rare_dat <- distinct(bind_rows(S_rare))
-         
-            #S_rare_dat <- unique(S_rare_dat)
-            
-            S_rare_dat$groups <- rep(groups, times = length(n_rare))
-            dat_groups$value[dat_groups$index == "S_rare"] <- S_rare_dat$qD
+            dat1$value[dat1$index == "S_rare"] <- d0_hat
          }
    } # end rarefied richness
 
-   
    # Asymptotic estimates species richness -------------------------------------
-   if ("S_asymp" %in% index){
+   if (any(index == "S_asymp")){
       
-      S_asymp_group <- try(vegan::estimateR(abund_mat))
-      if (class(S_asymp_group) == "try_error"){
+      S_asymp <- try(vegan::estimateR(abund_mat))
+      if (class(S_asymp) == "try_error"){
          warning("The Chao richness estimator cannot be calculated for all groups.")
       } else {
-         S_asymp_group = S_asymp_group["S.chao1",]
-         S_asymp_group[!is.finite(S_asymp_group)] <- NA
+         S_asymp = S_asymp["S.chao1",]
+         S_asymp[!is.finite(S_asymp)] <- NA
       }
     
-      dat_groups$value[dat_groups$index == "S_asymp"] <- S_asymp_group
+      dat1$value[dat1$index == "S_asymp"] <- S_asymp
    }
    
    # Probability of Interspecific Encounter (PIE)-------------------------------
-   if ("PIE" %in% index){ #
-      dat_groups$value[dat_groups$index == "PIE"] <- calc_PIE(abund_mat)
+   if (any(index == "PIE")){
+      
+      plots_n01 = N <= 1 # Hurlbert's PIE can only be calculated for two or more individuals
+      
+      if (sum(plots_n01) == 1){
+         warning(paste("There is",sum(plots_n01), "plot with less than two individuals.
+                       This is removed for the calculation of PIE."))
+         
+      }
+      
+      if (sum(plots_n01) > 1){
+         warning(paste("There are",sum(plots_n01), "plots with less than two individuals.
+                       These are removed for the calculation of PIE."))
+         
+      }
+      
+      dat1$value[dat1$index == "PIE"] <- calc_PIE(abund_mat)
    }
    
    # Effective number of species based on PIE ----------------------------------
-   if ("ENS_PIE" %in% index){
-      ENS_PIE_groups = vegan::diversity(abund_mat, index = "invsimpson")
-      ENS_PIE_groups[!is.finite(ENS_PIE_groups)] <- NA
+   if (any(index == "ENS_PIE")){
+      plots_n01 = N <= 1
+      ENS_PIE = vegan::diversity(abund_mat, index = "invsimpson")
+      ENS_PIE[plots_n01 | !is.finite(ENS_PIE)] <- NA
       
-      dat_groups$value[dat_groups$index == "ENS_PIE"] <- ENS_PIE_groups
+      dat1$value[dat1$index == "ENS_PIE"] <- ENS_PIE
    }
    
-   return(dat_groups)
+   return(dat1)
    
 }
 
@@ -177,10 +213,10 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
    
    abund_group <- aggregate(abund_mat, by = list(group_bin), FUN = "sum")
    
-   dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
-                                    groups = abund_group[,1],
-                                    index = index,
-                                    n_rare = n_rare)
+   dat_groups <- calc_biodiv(abund_mat = abund_group[,-1],
+                             groups = abund_group[,1],
+                             index = index,
+                             n_rare = n_rare)
    delta_groups <- dat_groups %>%
       group_by(index, n_rare) %>%
       summarise(delta = diff(value)) %>%
@@ -393,155 +429,78 @@ get_mob_stats = function(mob_in,
    # Abundance distribution pooled in groups
    abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
    
-   dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
-                                    groups = abund_group[,1],
-                                    index = index,
-                                    n_rare = n_rare_groups)
+   dat_groups <- calc_biodiv(abund_mat = abund_group[,-1],
+                             groups = abund_group[,1],
+                             index = index,
+                             n_rare = n_rare_groups)
    
-   # Sample-level indices
-   dat_samples <- data.frame(group = factor(),
-                             index = factor(),
-                             n_rare = numeric(),
-                             val = numeric()
-                             )
+   dat_samples <- calc_biodiv(abund_mat = mob_in$comm,
+                              groups = group_id,
+                              index = index,
+                              n_rare = n_rare_samples)
    
-   # Number of individuals -----------------------------------------------------
-   if ("N" %in% index){
-      dat_N <- data.frame(group = group_id,
-                          index = "N",
-                          n_rare = NA,
-                          value = samples_N)
-      dat_samples <- rbind(dat_samples, dat_N)
-   } 
+   # beta-diversity
    
    # Number of species ---------------------------------------------------------
-   if ("S" %in% index){
-      dat_S <- data.frame(group = group_id,
-                          index = "S",
-                          n_rare = NA,
-                          value = rowSums(mob_in$comm > 0))
+   if (any(index == "S")){
+      gamma <- with(dat_groups, value[index == "S"])
+      alpha <- with(dat_samples,  value[index == "S"])
       
-      beta_S <- dat_groups$value[dat_groups$index == "S"][group_id]/dat_S$value
+      beta_S <- gamma[group_id]/alpha
+      beta_S[!is.finite(beta_S)] <- NA
+      
       dat_betaS <- data.frame(group = group_id,
                               index = "beta_S",
                               n_rare = NA,
                               value = beta_S)
-      
-      dat_betaS$value[!is.finite(dat_betaS$value)] <- NA
-      dat_samples <- rbind(dat_samples, dat_S, dat_betaS)
+      dat_samples <- rbind(dat_samples, dat_betaS)
    }  
    
    # Rarefied richness ---------------------------------------------------------
    if ("S_rare" %in% index){  
-      
       for (i in 1:length(n_rare_samples)){
+         gamma <- with(dat_groups, value[index == "S_rare" & n_rare == n_rare_groups[i]])
+         alpha <- with(dat_samples,  value[index == "S_rare" & n_rare == n_rare_samples[i]])
          
-         plots_low_n = samples_N < n_rare_samples[i]
-         
-         if (sum(plots_low_n) == 1){
-            warning(paste("There is",sum(plots_low_n),"plot with less then", n_rare_samples[i],"individuals. This plot are removed for the calculation of rarefied richness."))
-         }
-         
-         if (sum(plots_low_n) > 1){
-            warning(paste("There are",sum(plots_low_n),"plots with less then", n_rare_samples[i],"individuals. These plots are removed for the calculation of rarefied richness."))
-         }
-         
-         dat_S_rare <- data.frame(group = group_id,
-                                  index = "S_rare",
-                                  n_rare = n_rare_samples[i],
-                                  value = rep(NA, nrow(mob_in$comm)))
-         
-         dat_S_rare$value[!plots_low_n] = apply(mob_in$comm[!plots_low_n,], MARGIN = 1,
-                                                rarefaction, method = "indiv",
-                                                effort = n_rare_samples[i])
-         
-         S_rare_group <- with(dat_groups, {value[index == "S_rare" & n_rare == n_rare_groups[i]]})
-         
-         beta_S_rare <- S_rare_group[group_id]/dat_S_rare$value
+         beta_S_rare <- gamma[group_id]/alpha
          beta_S_rare[!is.finite(beta_S_rare)] <- NA
          
          dat_beta_S_rare <- data.frame(group = group_id,
                                        index = "beta_S_rare",
                                        n_rare = n_rare_samples[i],
                                        value = beta_S_rare)
-         
-         dat_samples <- rbind(dat_samples, dat_S_rare, dat_beta_S_rare)
+         dat_samples <- rbind(dat_samples, dat_beta_S_rare)
       }
    } # end rarefied richness
-   
-   
-  # Asymptotic estimates species richness -------------------------------------
-  if ("S_asymp" %in% index){
-     
-      S_asymp_sample = try(vegan::estimateR(mob_in$comm))
-      if (class(S_asymp_sample) == "try_error"){
-         warning("The Chao richness estimator cannot be calculated for all samples.")
-         S_asymp_sample <- rep(NA, nrow(mob_in$comm))
-      } else {
-         S_asymp_sample = S_asymp_sample["S.chao1",]
-         S_asymp_sample[!is.finite(S_asymp_sample)] <- NA
-      }
+
+   # Asymptotic estimates species richness -------------------------------------
+   if ("S_asymp" %in% index){
+      gamma <- with(dat_groups, value[index == "S_asymp"])
+      alpha <- with(dat_samples,  value[index == "S_asymp"])
       
-      dat_S_asymp <- data.frame(group = group_id,
-                                index = "S_asymp",
-                                n_rare = NA,
-                                value = S_asymp_sample)
-      
-      beta_S_asymp <- dat_groups$value[dat_groups$index == "S_asymp"][group_id]/S_asymp_sample
+      beta_S_asymp <- gamma[group_id]/alpha
       beta_S_asymp[!is.finite(beta_S_asymp)] <- NA
       
       dat_beta_S_asymp <- data.frame(group = group_id,
                                      index = "beta_S_asymp",
                                      n_rare = NA,
                                      value = beta_S_asymp)
-      
-      dat_samples <- rbind(dat_samples, dat_S_asymp, dat_beta_S_asymp)
-  }
-
-   # Probability of Interspecific Encounter (PIE)-------------------------------
-   if ("PIE" %in% index){ 
-      
-      plots_n01 = samples_N <= 1 # Hurlbert's PIE can only be calculated for two or more individuals
-      
-      if (sum(plots_n01) == 1){
-         warning(paste("There is",sum(plots_n01), "plot with less than two individuals.
-   This is removed for the calculation of PIE."))
-      }
-      
-      if (sum(plots_n01) > 1){
-         warning(paste("There are",sum(plots_n01), "plots with less than two individuals.
-   These are removed for the calculation of PIE."))
-      }
-      
-      dat_PIE <- data.frame(group = group_id,
-                            index = "PIE",
-                            n_rare = NA,
-                            value = calc_PIE(mob_in$comm))
-      dat_samples <- rbind(dat_samples, dat_PIE)
+      dat_samples <- rbind(dat_samples, dat_beta_S_asymp)
    }
    
    # Effective number of species based on PIE ----------------------------------
    if ("ENS_PIE" %in% index){
+      gamma <- with(dat_groups, value[index == "ENS_PIE"])
+      alpha <- with(dat_samples,  value[index == "ENS_PIE"])
       
-      plots_n01 = samples_N <= 1
-
-      ENS_PIE_samples = vegan::diversity(mob_in$comm, index = "invsimpson")
-      ENS_PIE_samples[plots_n01 | !is.finite(ENS_PIE_samples)] <- NA
-      
-      dat_ENS_PIE <- data.frame(group = group_id,
-                                index = "ENS_PIE",
-                                n_rare = NA,
-                                value = ENS_PIE_samples)
-      
-      beta_ENS_PIE <-
-         dat_groups$value[dat_groups$index == "ENS_PIE"][group_id]/dat_ENS_PIE$value
+      beta_ENS_PIE <- gamma[group_id]/alpha
       beta_ENS_PIE[!is.finite(beta_ENS_PIE)] <- NA
       
       dat_beta_ENS_PIE <- data.frame(group = group_id,
                                      index = "beta_ENS_PIE",
                                      n_rare = NA,
                                      value = beta_ENS_PIE)
-      dat_samples <- rbind(dat_samples, dat_ENS_PIE, dat_beta_ENS_PIE)
+      dat_samples <- rbind(dat_samples, dat_beta_ENS_PIE)
    }
    
    # Significance tests
@@ -596,10 +555,20 @@ get_mob_stats = function(mob_in,
    }
 
    # order output data frames by indices
-   dat_samples <- dat_samples[order(dat_samples$index, dat_samples$group),]
+   dat_samples$index <- factor(dat_samples$index,
+                               levels = c("N",
+                                          "S","beta_S",
+                                          "S_rare","beta_S_rare",
+                                          "S_asymp","beta_S_asymp",
+                                          "PIE",
+                                          "ENS_PIE","beta_ENS_PIE"))
+   dat_samples <- dat_samples[order(dat_samples$index, dat_samples$n_rare, dat_samples$group),]
    
    dat_groups$index <- factor(dat_groups$index, levels = index)
-   dat_groups <- dat_groups[order(dat_groups$index, dat_groups$group),]
+   dat_groups <- dat_groups[order(dat_groups$index, dat_groups$n_rare, dat_groups$group),]
+   
+   #remove unused factor levels
+   dat_samples$index <- factor(dat_samples$index)
    
    if (!boot_groups){
       
@@ -721,7 +690,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
    
    if (multi_panel){
       n_rows <- 3 + S_rare_len
-      op <- par(mfrow = c(n_rows,3), las = 1)
+      op <- par(mfrow = c(n_rows,3), las = 1, cex.lab = 1.4, oma = c(0,1,0,0), xpd = NA)
    } 
    
    for (var in index_match){
@@ -729,12 +698,17 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
       if (var %in% c("N","PIE")){
       
          if (!multi_panel)
-            op <- par(mfrow = c(1,2), las = 1, cex.lab = 1.2)
+            op <- par(mfrow = c(1,2), las = 1, cex.lab = 1.3,
+                      oma = c(0,2,0,0), mar = c(4,3,5,1), xpd = NA)
+         
+         y_label <- switch(var,
+                           "N" = expression(N),
+                           "PIE" = expression(PIE))
          
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab = var, main = "Sample scale")
+                        ylab =  y_label, main = "Sample scale")
          
          dat_groups <- filter(mob_stats$groups_stats, index == var)
          
@@ -749,17 +723,23 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
       if (var %in% c("S", "S_asymp", "ENS_PIE")){
          
          if (!multi_panel)
-            op <- par(mfrow = c(1,3), las = 1, cex.lab = 1.2)
+            op <- par(mfrow = c(1,3), cex.lab = 1.6,
+                      oma = c(0,2,0,0), mar = c(4,3,5,1), xpd = NA)
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0, 0.33, 1/n_rows, 2/n_rows), new = T)
             if (var == "ENS_PIE") par(fig = c(0, 0.33, 0       , 1/n_rows), new = T)
          }
          
+         y_label <- switch(var,
+                           "S" = expression(S),
+                           "S_asymp" = expression(S[asymp]),
+                           "ENS_PIE" = expression(ENS[PIE]))
+         
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab = var, main = "Sample scale")
+                        ylab =  y_label, main = "Sample scale")
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = T)
@@ -770,7 +750,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          dat_samples <- filter(mob_stats$samples_stats, index == beta_var)
          p_val <- with(mob_stats$samples_pval, p_val[index == beta_var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab = "", main = "Beta-diversity across scales")
+                        ylab =  "", main = "Beta-diversity across scales")
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows), new = T)
@@ -790,8 +770,11 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
       if (var == "S_rare"){
          
          if (!multi_panel){
-            op <- par(mfrow = c(S_rare_len, 3), las = 1, cex.lab = 1.2)
+            op <- par(mfrow = c(S_rare_len, 3), las = 1, cex.lab = 1.6,
+                      oma = c(0,2,0,0), mar = c(4,3,5,1), xpd = NA)
          }
+         
+         y_label <- expression(S[rare])
             
          n_rare_samples <- unique(S_rare_samples$n_rare)
          n_rare_groups <- unique(S_rare_groups$n_rare)
@@ -807,7 +790,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             
             fig_title <- paste("Sample scale, n = ",n_rare_samples[i])
             
-            samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min, ylab = var,
+            samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
+                           ylab = y_label,
                            main = fig_title)
             
             if (multi_panel)

@@ -17,8 +17,7 @@ Depends:
     dplyr
 Imports:
     vegan,
-    plotrix,
-    iNEXT
+    plotrix
 Suggests:
     knitr,
     rmarkdown
