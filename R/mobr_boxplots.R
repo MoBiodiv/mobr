@@ -86,10 +86,10 @@ boot_sample_groups <- function(abund_mat, index, n_rare)
    # abundance distribution pooled in groups
    abund_group = aggregate(sample_dat[,-1], by = list(sample_dat[,1]), FUN = "sum")
    
-   dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
-                                    groups = abund_group[,1],
-                                    index = index,
-                                    n_rare = n_rare)
+   dat_groups <- calc_biodiv(abund_mat = abund_group[,-1],
+                             groups = abund_group[,1],
+                             index = index,
+                             n_rare = n_rare)
    return(dat_groups)
 }
 
@@ -213,10 +213,10 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
    
    abund_group <- aggregate(abund_mat, by = list(group_bin), FUN = "sum")
    
-   dat_groups <- calc_biodiv_groups(abund_mat = abund_group[,-1],
-                                    groups = abund_group[,1],
-                                    index = index,
-                                    n_rare = n_rare)
+   dat_groups <- calc_biodiv(abund_mat = abund_group[,-1],
+                             groups = abund_group[,1],
+                             index = index,
+                             n_rare = n_rare)
    delta_groups <- dat_groups %>%
       group_by(index, n_rare) %>%
       summarise(delta = diff(value)) %>%
@@ -690,7 +690,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
    
    if (multi_panel){
       n_rows <- 3 + S_rare_len
-      op <- par(mfrow = c(n_rows,3), las = 1, cex.lab = 1.4)
+      op <- par(mfrow = c(n_rows,3), las = 1, cex.lab = 1.4, oma = c(0,1,0,0), xpd = NA)
    } 
    
    for (var in index_match){
@@ -698,12 +698,17 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
       if (var %in% c("N","PIE")){
       
          if (!multi_panel)
-            op <- par(mfrow = c(1,2), las = 1, cex.lab = 1.2)
+            op <- par(mfrow = c(1,2), las = 1, cex.lab = 1.3,
+                      oma = c(0,2,0,0), mar = c(4,3,5,1), xpd = NA)
+         
+         y_label <- switch(var,
+                           "N" = expression(N),
+                           "PIE" = expression(PIE))
          
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab = var, main = "Sample scale")
+                        ylab =  y_label, main = "Sample scale")
          
          dat_groups <- filter(mob_stats$groups_stats, index == var)
          
@@ -718,7 +723,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
       if (var %in% c("S", "S_asymp", "ENS_PIE")){
          
          if (!multi_panel)
-            op <- par(mfrow = c(1,3), las = 1, cex.lab = 1.4, mar = c(5,6,5,1))
+            op <- par(mfrow = c(1,3), cex.lab = 1.6,
+                      oma = c(0,2,0,0), mar = c(4,3,5,1), xpd = NA)
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0, 0.33, 1/n_rows, 2/n_rows), new = T)
@@ -726,14 +732,14 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          }
          
          y_label <- switch(var,
-                           "S" = "S",
+                           "S" = expression(S),
                            "S_asymp" = expression(S[asymp]),
                            "ENS_PIE" = expression(ENS[PIE]))
          
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab = y_label, main = "Sample scale")
+                        ylab =  y_label, main = "Sample scale")
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = T)
@@ -744,7 +750,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          dat_samples <- filter(mob_stats$samples_stats, index == beta_var)
          p_val <- with(mob_stats$samples_pval, p_val[index == beta_var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab = "", main = "Beta-diversity across scales")
+                        ylab =  "", main = "Beta-diversity across scales")
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows), new = T)
@@ -764,8 +770,11 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
       if (var == "S_rare"){
          
          if (!multi_panel){
-            op <- par(mfrow = c(S_rare_len, 3), las = 1, cex.lab = 1.2)
+            op <- par(mfrow = c(S_rare_len, 3), las = 1, cex.lab = 1.6,
+                      oma = c(0,2,0,0), mar = c(4,3,5,1), xpd = NA)
          }
+         
+         y_label <- expression(S[rare])
             
          n_rare_samples <- unique(S_rare_samples$n_rare)
          n_rare_groups <- unique(S_rare_groups$n_rare)
@@ -781,7 +790,8 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             
             fig_title <- paste("Sample scale, n = ",n_rare_samples[i])
             
-            samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min, ylab = var,
+            samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
+                           ylab = y_label,
                            main = fig_title)
             
             if (multi_panel)
