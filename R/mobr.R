@@ -390,7 +390,7 @@ permute_comm = function(comm, method, groups=NULL) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
-        meta_sad = Jade::SpecDist(sp_abu)$probability
+        meta_sad = sp_abu[sp_abu > 0] / sum(sp_abu)
         plot_ids = 1:nrow(group_comm)
         if (method == 'noagg') {
             Ngroup = N[row_indices]
@@ -569,7 +569,7 @@ effect_SAD_continuous = function(out, group_sad, env_levels, corr, nperm){
         cor(x, env_levels, method=corr))
     # Null test
     overall_sad_lumped = as.numeric(colSums(group_sad))
-    meta_freq = SpecDist(overall_sad_lumped)$probability
+    meta_freq = overall_sad_lumped[overall_sad_lumped > 0] / sum(overall_sad_lumped)
     null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
     cat('\nComputing null model for SAD effect\n')
     pb <- txtProgressBar(min = 0, max = nperm, style = 3)
@@ -615,7 +615,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm,
         deltaS = out$indiv_rare[, level] - out$indiv_rare[, as.character(ref_group)]
         level_sad = group_sad[which(group_levels == level), ]
         comp_sad_lumped = as.numeric(colSums(rbind(ref_sad, level_sad)))
-        meta_freq = SpecDist(comp_sad_lumped)$probability
+        meta_freq = comp_sad_lumped[comp_sad_lumped > 0] / sum(comp_sad_lumped)
         
         null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
         for (i in 1:nperm){
@@ -910,7 +910,6 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #'   "env_var" may not be linear.
 #' @param nperm number of iterations to run for null tests.
 #' @return a "mob_out" object with attributes
-#' @importFrom Jade SpecDist
 #' @author Xiao Xiao and Dan McGlinn
 #' @export
 #' @examples
