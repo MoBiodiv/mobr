@@ -1,6 +1,4 @@
 # Sensitivity test for Mobr functions
-# using Felix May's MoBspatial package
-.libPaths("C://Users//Xiao//Documents//R//win-library//3.2")
 library(mobsim)
 library(mobr)
 # Generate an SAD from a poisson lognormal distribution with fixed S, N, and parameters
@@ -188,8 +186,7 @@ out = comp_two_groups(ref_pars, ref_pars_almost_equal, sqrt_numplots, Niter)
 results = rbind(results, out)
 names(results) = c('N', 'cv', 'sigma', 'SADTot', 'SADErr', 'NTot',
                    'NErr', 'AggTot', 'AggErr')
-write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
-          row.names = F, quote = F)
+write.csv(results, 'mobr_sensitivity.csv', row.names = F, quote = F)
 
 # Scenarios where only one aspect has changed
 par_list = list(N = c(700, 800, 900), SAD = c(0.5, 1, 1.5),
@@ -201,8 +198,7 @@ for (i in 1:length(par_list)){
       comp_pars[i + 1] = pars[j]
       out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
       results = rbind(results, out)
-      write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
-                row.names = F, quote = F)
+      write.csv(results, 'mobr_sensitivity.csv', row.names = F, quote = F)
    }
 }
 
@@ -215,13 +211,11 @@ for (i in 2:length(comp_pars_full)){
    comp_pars[i] = ref_pars[i]
    out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
    results = rbind(results, out)
-   write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
-             row.names = F, quote = F)
+   write.csv(results, 'mobr_sensitivity.csv', row.names = F, quote = F)
 }
 
 # Scenario where all three aspects have changed
 out = comp_two_groups(ref_pars, comp_pars_full, sqrt_numplots, Niter)
 results = rbind(results, out)
 
-write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
-          row.names = F, quote = F)
+write.csv(results, 'mobr_sensitivity.csv', row.names = F, quote = F)
