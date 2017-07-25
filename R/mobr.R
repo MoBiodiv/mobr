@@ -390,7 +390,7 @@ permute_comm = function(comm, method, groups=NULL) {
         row_indices = groups == group_levels[i]
         group_comm = comm[row_indices, ]
         sp_abu = colSums(group_comm)
-        meta_sad = Jade::SpecDist(sp_abu)$probability
+        sp_freq = sp_abu[sp_abu > 0] / sum(sp_abu)
         plot_ids = 1:nrow(group_comm)
         if (method == 'noagg') {
             Ngroup = N[row_indices]
@@ -400,10 +400,10 @@ permute_comm = function(comm, method, groups=NULL) {
         else 
             stop('The argument swap must be either "noagg" or "swapN"')
         sp_draws = sapply(plot_ids, function(x)
-            sample(1:length(meta_sad), size=Ngroup[x], 
-                   replace=T, prob=meta_sad))
+            sample(1:length(sp_freq), size=Ngroup[x], 
+                   replace=T, prob=sp_freq))
         tmp_comm = t(sapply(plot_ids, function(x)
-            table(c(sp_draws[[x]], 1:length(meta_sad))) - 1 ))
+            table(c(sp_draws[[x]], 1:length(sp_freq))) - 1 ))
         # The following lines are necessary because tmp_comm may have more
         # columns than comm_group_perm
         comm_new = matrix(0, nrow = nrow(comm_group_perm), 
@@ -569,16 +569,16 @@ effect_SAD_continuous = function(out, group_sad, env_levels, corr, nperm){
         cor(x, env_levels, method=corr))
     # Null test
     overall_sad_lumped = as.numeric(colSums(group_sad))
-    meta_freq = SpecDist(overall_sad_lumped)$probability
+    sp_freq = overall_sad_lumped[overall_sad_lumped > 0] / sum(overall_sad_lumped)
     null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
     cat('\nComputing null model for SAD effect\n')
     pb <- txtProgressBar(min = 0, max = nperm, style = 3)
     for (i in 1:nperm){
         # Note: necessary to convert sample to factor, so that zero counts are kept
         sad_perm = sapply(rowSums(group_sad), function(x)
-            data.frame(table(factor(sample(1:length(meta_freq), x, replace = T,
-                                           prob = meta_freq), 
-                                    levels = 1:length(meta_freq))))[, 2])
+            data.frame(table(factor(sample(1:length(sp_freq), x, replace = T,
+                                           prob = sp_freq), 
+                                    levels = 1:length(sp_freq))))[, 2])
         perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
             rarefaction(x, 'indiv', ind_sample_size))
         null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x)
@@ -615,14 +615,14 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm,
         deltaS = out$indiv_rare[, level] - out$indiv_rare[, as.character(ref_group)]
         level_sad = group_sad[which(group_levels == level), ]
         comp_sad_lumped = as.numeric(colSums(rbind(ref_sad, level_sad)))
-        meta_freq = SpecDist(comp_sad_lumped)$probability
+        sp_freq = comp_sad_lumped[comp_sad_lumped > 0] / sum(comp_sad_lumped)
         
         null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
         for (i in 1:nperm){
             sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
-                data.frame(table(factor(sample(1:length(meta_freq),x, replace = T,
-                                               prob = meta_freq),
-                                        levels = 1:length(meta_freq))))[, 2])
+                data.frame(table(factor(sample(1:length(sp_freq),x, replace = T,
+                                               prob = sp_freq),
+                                        levels = 1:length(sp_freq))))[, 2])
             perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
                 rarefaction(x, 'indiv', ind_sample_size))
             null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
@@ -910,7 +910,6 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #'   "env_var" may not be linear.
 #' @param nperm number of iterations to run for null tests.
 #' @return a "mob_out" object with attributes
-#' @importFrom Jade SpecDist
 #' @author Xiao Xiao and Dan McGlinn
 #' @export
 #' @examples

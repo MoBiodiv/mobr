@@ -1,6 +1,5 @@
 # Sensitivity test for Mobr functions
-# using Felix May's MoBspatial package
-library(MoBspatial)
+library(mobsim)
 library(mobr)
 # Generate an SAD from a poisson lognormal distribution with fixed S, N, and parameters
 # This function is copied and modified from the one in MoBspatial for our purpose
@@ -46,10 +45,10 @@ SAD.lognorm <- function(S.pool, N.local, mean.abund = 100, cv.abund = 1,
 #   and sigma (spatial aggregation)
 sim_comm_single_pars = function(S, N, cv, sigma, sqrt_numplots, rand.seed = 10){
     sim_sad = SAD.lognorm(S, N, cv.abund = cv, rand.seed = rand.seed)
-    sim_comm = Sim.Thomas.Coords(sim_sad$abund, sigma)
+    sim_comm = sim_thomas_coords(sim_sad$abund, sigma)$census
     out = list()
     out$comm = matrix(0, sqrt_numplots^2, S)
-    names(out$comm) = sapply(1:S, function(x) paste('species', as.character(x),
+    colnames(out$comm) = sapply(1:S, function(x) paste('species', as.character(x),
                                                     sep = ''))
     out$coords = matrix(NA, sqrt_numplots^2, 2)
     x_span = 1 / sqrt_numplots
@@ -60,12 +59,12 @@ sim_comm_single_pars = function(S, N, cv, sigma, sqrt_numplots, rand.seed = 10){
         xlim = c(i-1, i) * x_span
         for (j in 1:sqrt_numplots){
             ylim = c(j-1, j) * y_span
-            cond = which(sim_comm$X >= xlim[1] & sim_comm$X <= xlim[2] &
-                             sim_comm$Y >= ylim[1] & sim_comm$Y <= ylim[2])
+            cond = which(sim_comm$x >= xlim[1] & sim_comm$x <= xlim[2] &
+                             sim_comm$y >= ylim[1] & sim_comm$y <= ylim[2])
             comm_plot = sim_comm[cond, ]
-            plot_sad = data.frame(table(comm_plot$SpecID))
+            plot_sad = data.frame(table(comm_plot$species))
             for (k in 1:nrow(plot_sad)){
-                out$comm[nrow, which(names(out$comm) == as.character(plot_sad[k, 1]))] =
+                out$comm[nrow, which(colnames(out$comm) == as.character(plot_sad[k, 1]))] =
                 plot_sad[k, 2]
             }
             out$coords[nrow, ] = c(mean(xlim), mean(ylim))
@@ -187,6 +186,7 @@ out = comp_two_groups(ref_pars, ref_pars_almost_equal, sqrt_numplots, Niter)
 results = rbind(results, out)
 names(results) = c('N', 'cv', 'sigma', 'SADTot', 'SADErr', 'NTot',
                    'NErr', 'AggTot', 'AggErr')
+write.csv(results, 'mobr_sensitivity.csv', row.names = F, quote = F)
 
 # Scenarios where only one aspect has changed
 par_list = list(N = c(700, 800, 900), SAD = c(0.5, 1, 1.5),
@@ -198,6 +198,7 @@ for (i in 1:length(par_list)){
       comp_pars[i + 1] = pars[j]
       out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
       results = rbind(results, out)
+      write.csv(results, 'mobr_sensitivity.csv', row.names = F, quote = F)
    }
 }
 
@@ -210,11 +211,11 @@ for (i in 2:length(comp_pars_full)){
    comp_pars[i] = ref_pars[i]
    out = comp_two_groups(ref_pars, comp_pars, sqrt_numplots, Niter)
    results = rbind(results, out)
+   write.csv(results, 'mobr_sensitivity.csv', row.names = F, quote = F)
 }
 
 # Scenario where all three aspects have changed
 out = comp_two_groups(ref_pars, comp_pars_full, sqrt_numplots, Niter)
 results = rbind(results, out)
 
-write.csv(results, 'C:\\Users\\Xiao\\Documents\\GitHub\\mobr\\scripts\\mobr_sensitivity.csv',
-          row.names = F, quote = F)
+write.csv(results, 'mobr_sensitivity.csv', row.names = F, quote = F)
