@@ -107,30 +107,29 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
    dat_groups <- expand.grid(group = groups,
                              index = index[index != "S_rare"],
                              n_rare = NA)
-   
-   dat_S_rare <- expand.grid(group = groups,
-                             n_rare = n_rare,
-                             index = "S_rare"
-                             )
-   dat_S_rare <- dat_S_rare[,c(2,3,1)]
-
-   dat_groups <- rbind(dat_groups, dat_S_rare)
    dat_groups$value <- NA
    
    groups_N <- rowSums(abund_mat) 
    
    # Number of individuals -----------------------------------------------------
-   if ("N" %in% index){
+   if (any(index == "N")){
       dat_groups$value[dat_groups$index == "N"] <- groups_N
    } 
    
    # Number of species ---------------------------------------------------------
-   if ("S" %in% index){
+   if (any(index == "S")){
       dat_groups$value[dat_groups$index == "S"] <-  rowSums(abund_mat > 0)
    }  
    
    # Rarefied richness ---------------------------------------------------------
-   if ("S_rare" %in% index){
+   if (any(index == "S_rare")){
+      
+         dat_S_rare <- expand.grid(group = groups,
+                                   n_rare = n_rare,
+                                   index = "S_rare",
+                                   value = NA)
+         dat_S_rare <- dat_S_rare[,c(2,3,1,4)]
+         dat_groups <- rbind(dat_groups, dat_S_rare)
       
          d0_hat <- try(as.numeric(apply(abund_mat, MARGIN = 1, D0.hat, m = n_rare)))
          if (class(d0_hat) == "try_error"){
@@ -142,7 +141,7 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
 
    
    # Asymptotic estimates species richness -------------------------------------
-   if ("S_asymp" %in% index){
+   if (any(index == "S_asymp")){
       
       S_asymp_group <- try(vegan::estimateR(abund_mat))
       if (class(S_asymp_group) == "try_error"){
@@ -156,12 +155,12 @@ calc_biodiv_groups <- function(abund_mat, groups, index, n_rare)
    }
    
    # Probability of Interspecific Encounter (PIE)-------------------------------
-   if ("PIE" %in% index){ #
+   if (any(index == "PIE")){ #
       dat_groups$value[dat_groups$index == "PIE"] <- calc_PIE(abund_mat)
    }
    
    # Effective number of species based on PIE ----------------------------------
-   if ("ENS_PIE" %in% index){
+   if (any(index == "ENS_PIE")){
       ENS_PIE_groups = vegan::diversity(abund_mat, index = "invsimpson")
       ENS_PIE_groups[!is.finite(ENS_PIE_groups)] <- NA
       
@@ -421,10 +420,11 @@ get_mob_stats = function(mob_in,
                                     n_rare = n_rare_groups)
    
    # Sample-level indices
-   dat_samples <- calc_biodiv_groups(abund_mat = mob_in$comm, groups = group_id, index = index,
-                      n_rare = n_rare_groups)
+   dat_samples <- calc_biodiv_groups(abund_mat = mob_in$comm,
+                                     groups = group_id,
+                                     index = index,
+                                     n_rare = n_rare_samples)
    
- 
    # Significance tests
    
    # sample level
