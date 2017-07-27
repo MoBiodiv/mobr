@@ -592,37 +592,42 @@ get_mob_stats = function(mob_in,
 }
 
 # Panel function for sample level results
-samples_panel1 <- function(sample_dat, p_val, p_min, ylab = "",
+samples_panel1 <- function(sample_dat, p_val, p_min, col, ylab = "",
                            main = "Sample scale", ...)
 {
    if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
    else                          p_label <- bquote(p <= .(p_min))
    
    boxplot(value ~ group, data = sample_dat, main = main,
-           ylab =  ylab, ylim = c(0, 1.1*max(sample_dat$value, na.rm = T)), ...)
+           ylab =  ylab, ylim = c(0, 1.1*max(sample_dat$value, na.rm = T)), 
+           col = col, ...)
    mtext(p_label, side = 3, line = 0)  
 }
 
 # Panel function for group level results
-groups_panel1 <- function(group_dat, p_val, p_min, ylab = "", main = "Group scale", ...)
+groups_panel1 <- function(group_dat, p_val, p_min, col, ylab = "", main = "Group scale",
+                          ...)
 {
    if (p_val > 0 | is.na(p_val)) p_label <- bquote(p == .(p_val))
    else                          p_label <- bquote(p <= .(p_min))
    
    boxplot(value ~ group, data = group_dat, main = main,
            ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$value, na.rm = T)),
-           ...)
-   points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2, ...)
+           col = col, ...)
+   points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2, col = col,
+          ...)
    mtext(p_label, side = 3, line = 0)
 }
 
 # Panel function for group level results with confidence intervals
-groups_panel2 <- function(group_dat, ylab = "", main = "Group scale", ...)
+groups_panel2 <- function(group_dat, col, ylab = "", main = "Group scale", ...)
 {
    boxplot(median ~ group, data = group_dat, main = main,
-           ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)))
+           ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)),
+           col = col, ...)
    plotrix::plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
-                   ui = group_dat$upper, add = T, pch = 19, cex = 1.5, sfrac = 0.02)
+                   ui = group_dat$upper, add = T, pch = 19, cex = 1.5, sfrac = 0.02,
+                   col = col, ...)
 }
 
 #' Plot sample-level and group-level biodiversity statistics for a MoB analysis
@@ -648,6 +653,12 @@ groups_panel2 <- function(group_dat, ylab = "", main = "Group scale", ...)
 #' This set of variables conveys a comprehensive picture of the underlying 
 #' biodiversity changes. 
 #' 
+#' @param col a vector of colors for the two groups (control and treatment), set
+#' to NA if no color is preferred
+#' 
+#' @param ... additional arguments to provide to boxplot, points, and confidence
+#' interval functions
+#' 
 #' @author Felix May, Xiao Xiao, and Dan McGlinn 
 #' 
 #' @export
@@ -656,14 +667,20 @@ groups_panel2 <- function(group_dat, ylab = "", main = "Group scale", ...)
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 20)
+#' # without bootstrap CI for group scale
+#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
+#'  ref_group = "uninvaded", n_perm = 20)
 #' plot(inv_stats) 
 #' 
 #' windows(15,20)
 #' plot(inv_stats, multi_panel = T)
+#' # with bootstrap CI for group scale
+#' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group",
+#'  ref_group = "uninvaded", n_perm = 20, boot_groups=T)
+#' plot(inv_stats_boot)
 
 plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_PIE"),
-                          multi_panel = FALSE)
+                          multi_panel = FALSE, col=c("#2B83BA", "#FFC000"), ...)
 {
    INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
    
@@ -708,15 +725,15 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab =  y_label, main = "Sample scale")
+                        ylab =  y_label, main = "Sample scale", col = col, ...)
          
          dat_groups <- filter(mob_stats$groups_stats, index == var)
          
          if (!is.null(mob_stats$groups_pval)){
             p_val <- with(mob_stats$groups_pval, p_val[index == var])
-            groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min) 
+            groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min, col = col, ...) 
          } else {
-            groups_panel2(dat_groups) 
+            groups_panel2(dat_groups, col = col, ...) 
          }
       }
       
@@ -739,7 +756,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab =  y_label, main = "Sample scale")
+                        ylab =  y_label, main = "Sample scale", col = col, ...)
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = T)
@@ -750,7 +767,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          dat_samples <- filter(mob_stats$samples_stats, index == beta_var)
          p_val <- with(mob_stats$samples_pval, p_val[index == beta_var])
          samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                        ylab =  "", main = "Beta-diversity across scales")
+                        ylab =  "", main = "Beta-diversity across scales", col = col, ...)
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows), new = T)
@@ -761,9 +778,9 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          
          if (!is.null(mob_stats$groups_pval)){
             p_val <- with(mob_stats$groups_pval, p_val[index == var])
-            groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min) 
+            groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min, col = col, ...) 
          } else {
-            groups_panel2(dat_groups) 
+            groups_panel2(dat_groups, col = col, ...) 
          }
       }
       
@@ -792,7 +809,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             
             samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
                            ylab = y_label,
-                           main = fig_title)
+                           main = fig_title, col = col, ...)
             
             if (multi_panel)
                par(fig = c(0.33, 0.67, (1+i)/n_rows, (2+i)/n_rows), new = T)
@@ -802,7 +819,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
             p_val <- with(mob_stats$samples_pval,
                           p_val[index == beta_var & n_rare == n_rare_samples[i]])
             samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                           ylab = "", main = "Beta-diversity across scales")
+                           ylab = "", main = "Beta-diversity across scales", col = col, ...)
             
             if (multi_panel)
                par(fig = c(0.67, 1.0, (1+i)/n_rows, (2+i)/n_rows), new = T)
@@ -814,9 +831,9 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
                pval <- with(mob_stats$groups_pval,
                             p_val[index == var & n_rare == n_rare_groups[i]])
                groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min,
-                             ylab = "", main = fig_title)
+                             ylab = "", main = fig_title, col = col, ...)
             } else {
-               groups_panel2(dat_groups, main = fig_title) 
+               groups_panel2(dat_groups, main = fig_title, col = col, ...) 
             }
          }
          
