@@ -5,8 +5,8 @@
 \title{Plot summary graphics of the effect on species richness}
 \usage{
 overlap_effects(mob_out, trt_group, display = "raw", prop = FALSE,
-  stretch = TRUE, common_scale = FALSE, xlabel_indiv = TRUE, lty = 1,
-  lwd = 3, col = c("#1AB2FF", "#FFBF80", "#A6EDFF"))
+  rescale = "max_effort", common_scale = FALSE, xlabel_indiv = TRUE,
+  lty = 1, lwd = 3, col = c("#1AB2FF", "#FFBF80", "#7030A0"))
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -19,11 +19,16 @@ absolute value of the effect sizes.}
 
 \item{prop}{boolean if TRUE then propotions are used in the stacked area plot}
 
-\item{stretch}{boolean whether or not to rescale individuals
-such that the maximum number of individuals is at the scale of 
-the maximum number of samples. Defaults to TRUE.}
+\item{rescale}{string that specifies how to rescale number of individuals to
+the number of samples. Defaults to 'max_effort' which rescales by 
+setting the maximum number of individuals considered in the individual
+rarefaction curve to the scale of the maximum number of samples considered
+in the spatial rarefaction curve. The other option is 'density_stat' which
+rescales individuals to number of samples using the density statistic 
+specified when the mob statistics where computed by \link[mobr]{get_delta_stats}}. 
 
-\item{common_scale}{boolean}
+\item{common_scale}{boolean defaults to FALSE. If TRUE then all the effects
+are trucated to only be across the same range of number of individuals.}
 
 \item{xlabel_indiv}{boolean if TRUE then the top axis is 
 labeled with numbers of individuals}

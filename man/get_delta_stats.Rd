@@ -47,6 +47,17 @@ the position of the points. If log_scale is TRUE, the points are equally
 spaced on logarithmic scale. If it is FALSE (default), the points are
 equally spaced on arithmetic scale.}
 
+\item{min_plot}{minimal number of plots for test 'agg', where plots are
+randomized within groups as null test. If it is given a value, all groups
+with fewer plots than min_plot are removed for this test. If it is NULL
+(default), all groups are kept. Warnings are issued if 1. there is only one
+group left and "type" is discrete, or 2. there are less than three groups
+left and "type" is continuous, or 3. reference group ("ref_group") is
+removed and "type" is discrete. In these three scenarios, the function will
+terminate. A different warning is issued if any of the remaining groups
+have less than five plots (which have less than 120 permutations), but the 
+test will be carried out.}
+
 \item{density_stat}{reference density used in converting number of plots to
 numbers of individuals, a step in test "N". It can take one of the
 three values: "mean", "max", or "min". If it is "mean", the average
@@ -60,19 +71,13 @@ can take two values, "spearman" or "pearson". "spearman" (default) is
 generally recommended because the relationship between the response and
 "env_var" may not be linear.}
 
-\item{nperm}{number of iterations to run for null tests.}
+\item{nperm}{number of iterations to run for null tests, defaults to 1000.}
 
-\item{min_plot}{minimal number of plots for test 'agg', where plots are
-randomized within groups as null test. If it is given a value, all groups
-with fewer plots than min_plot are removed for this test. If it is NULL
-(default), all groups are kept. Warnings are issued if 1. there is only one
-group left and "type" is discrete, or 2. there are less than three groups
-left and "type" is continuous, or 3. reference group ("ref_group") is
-removed and "type" is discrete. In these three scenarios, the function will
-terminate. A different warning is issued if any of the remaining groups
-have less than five plots (which have less than 120 permutations), but the 
-test will be carried out.}
-}
+\item{overall_p}{boolean defaults to FALSE specifies if overall across scale 
+p-values for the null tests. This should be interpreted with caution because
+the overall p-values depend on scales of measurement yet do not explicitly 
+reflect significance at any particular scale.}
+
 \value{
 a "mob_out" object with attributes
 }
