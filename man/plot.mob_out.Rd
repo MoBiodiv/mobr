@@ -20,10 +20,9 @@ ddelta S plots are scaled identically accross the tested effects}
 \item{display}{argument specifies what graphics to display can be either
 'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
 
-\item{par_args}{optional argument that sets graphical parameters to set}
+\item{lwd}{a single value for for line width, see \link[graphics]{par}.}
 
-\item{same_scale}{if TRUE then all three plots have the same range on the 
-y-axis.}
+\item{par_args}{optional argument that sets graphical parameters to set}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial
