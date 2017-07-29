@@ -77,7 +77,7 @@ generally recommended because the relationship between the response and
 p-values for the null tests. This should be interpreted with caution because
 the overall p-values depend on scales of measurement yet do not explicitly 
 reflect significance at any particular scale.}
-
+}
 \value{
 a "mob_out" object with attributes
 }
