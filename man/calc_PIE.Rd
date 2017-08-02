@@ -12,26 +12,30 @@ represent a species-abundance distribution or a plot (rows) by species
 (columns) matrix.}
 }
 \description{
-PIE is also known as Simpson's evenness index and this function is 
-a reduced form of the function vegan::diversity(). Jari Oksanen and Bob O'Hara
-are the original authors of the function vegan::diversity().
+PIE is also known as Simpson's evenness index and the Gini-Simpson index.
+The formula of Hurlbert (1971) is used to calculate PIE:
 }
 \details{
-In this function the formulate of Hurlbert (1971) is used to calculate PIE:
+\eqn{PIE = N /(N - 1) * (1 - p_i^2)}
 
-PIE = N/(N-1)*(1 - p_i^2),
+where N is the total number of individuals and \eqn{p_i} is the relative abundance
+of species i. This formulation uses sampling without replacement and it is
+sometimes referred to as the bias corrected formulation of PIE.
 
-where N is the total number of individuals and p_i is the relative abundance
-of species i.
+The code in this function borrows heavily from the function vegan::diversity()
+but computes a different quantitiy. The function vegan::diversity() computes
+PIE when sampling with replacement is assumed. The difference between the two 
+formulations will decrease as N becomes large. Jari Oksanen and Bob O'Hara are
+the original authors of the function vegan::diversity().
 }
 \examples{
 data(inv_comm)
 calc_PIE(inv_comm)
 }
 \references{
-Hurlbert, S. H. 1971. The Nonconcept of Species Diversity: A Critique and Alternative Parameters. - Ecology 52: 577–586.
+Hurlbert, S. H. 1971. The noncept of species diversity: a critique and
+ alternative parameters. Ecology 52: 577–586.
 }
 \author{
 Dan McGlinn
 }
-\keyword{internal}
