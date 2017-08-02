@@ -28,26 +28,29 @@ D0.hat <- function(x, m){
 
 #' Calculate probability of interspecific encounter (PIE)
 #' 
-#' PIE is also known as Simpson's evenness index and this function is 
-#' a reduced form of the function vegan::diversity(). Jari Oksanen and Bob O'Hara
-#' are the original authors of the function vegan::diversity().
+#' PIE is also known as Simpson's evenness index and the Gini-Simpson index.
+#' The formula of Hurlbert (1971) is used to calculate PIE:
 #' 
-#' In this function the formulate of Hurlbert (1971) is used to calculate PIE:
+#' \eqn{PIE = N /(N - 1) * (1 - p_i^2)}
 #' 
-#' PIE = N/(N-1)*(1 - p_i^2),
+#' where N is the total number of individuals and \eqn{p_i} is the relative abundance
+#' of species i. This formulation uses sampling without replacement and it is
+#' sometimes referred to as the bias corrected formulation of PIE. 
 #' 
-#' where N is the total number of individuals and p_i is the relative abundance
-#' of species i. 
-#' 
+#' The code in this function borrows heavily from the function vegan::diversity()
+#' but computes a different quantitiy. The function vegan::diversity() computes
+#' PIE when sampling with replacement is assumed. The difference between the two 
+#' formulations will decrease as N becomes large. Jari Oksanen and Bob O'Hara are
+#' the original authors of the function vegan::diversity().
 #' 
 #' @inheritParams rarefaction
 #' @author Dan McGlinn
-#' @keywords internal
 #' 
 #' @references 
-#' Hurlbert, S. H. 1971. The Nonconcept of Species Diversity: A Critique and Alternative Parameters. - Ecology 52: 577–586.
-
-#' 
+#' Hurlbert, S. H. 1971. The noncept of species diversity: a critique and
+#'  alternative parameters. Ecology 52: 577–586.
+#'
+#' @export
 #' @examples 
 #' data(inv_comm)
 #' calc_PIE(inv_comm)
@@ -65,12 +68,14 @@ calc_PIE = function(x) {
     }
     x = x * x
     if (length(dim(x)) > 1) 
-        H = apply(x, 1, sum, na.rm = TRUE)
+        H = rowSums(x, na.rm = TRUE)
     else 
         H = sum(x, na.rm = TRUE)
-    H = total/(total - 1)* (1 - H)
-    if (any(is.na(total))) 
-        is.na(H) = is.na(total)
+    # correct for sampling with replacement
+    H = total / (total - 1) * (1 - H)
+    # check NA in data
+    if (any(NAS = is.na(total)))
+        H[NAS] = NA
     H[!is.finite(H) | total == 0] <- NA # set NA, when total == 0 or total == 1
     return(H)
 }
