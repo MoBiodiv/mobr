@@ -1579,7 +1579,7 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
     if (common_scale)
         dat = subset(dat , effort <= max(dat$effort[dat$type == 'SAD']))
     if (is.null(ylim)) {
-        if (dispaly == 'raw')
+        if (display == 'raw')
            ylim = range(dat$effect)
         else if (prop)
            ylim = c(0, 1)
