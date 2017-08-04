@@ -4,8 +4,8 @@
 \alias{plot_rarefaction}
 \title{Plot rarefaction curves for each treatment group}
 \usage{
-plot_rarefaction(mob_in, env_var, method, pooled = T, col = NULL, lwd = 1,
-  log = "", leg_loc = "topleft", ...)
+plot_rarefaction(mob_in, env_var, ref_group, method, pooled = T, col = NULL,
+  lwd = 1, log = "", leg_loc = "topleft", ...)
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
@@ -17,7 +17,8 @@ specifies the grouping variable.}
 sample spatially explicit based rarefaction respectively}
 
 \item{pooled}{boolean specifying if samples should be pooled at the group
-level or not}
+level or not. Defaults to TRUE. This argument only applies when
+the individual based rarefaction is used (i.e., method = 'indiv')}
 
 \item{col}{optional vector of colors.}
 
@@ -27,7 +28,8 @@ level or not}
     is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
     and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
 
-\item{leg_loc}{the location of the legend, see \code{\link[graphics]{legend}}.}
+\item{leg_loc}{the location of the legend. Defaults to 'topleft', 
+see \code{\link[graphics]{legend}}.}
 
 \item{...}{other arguments to provide to \code{\link[mobr]{rarefaction}}}
 }
@@ -38,6 +40,15 @@ Plot rarefaction curves for each treatment group
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=TRUE, log='')
-plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=FALSE, log='')
+# random individual based rarefaction curves
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+                 pooled=TRUE, leg_loc='bottomright')
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+                 pooled=FALSE, log='x')
+# random sample based rarefaction curves 
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'samp',
+                 log='xy')
+# spatial sample based rarefaction curves 
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat',
+                 log='xy', xy_coords = inv_mob_in$spat)                 
 }

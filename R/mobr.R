@@ -1111,7 +1111,8 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #'   not
 #' @param col optional vector of colors.
 #' @param lwd a vector of line widths, see \code{\link[graphics]{par}}.
-#' @param leg_loc the location of the legend, see \code{\link[graphics]{legend}}.
+#' @param leg_loc the location of the legend. Defaults to 'topleft', 
+#'  see \code{\link[graphics]{legend}}.
 #' @inheritParams graphics::plot.default
 #' @importFrom scales alpha
 #' @export
@@ -1119,14 +1120,15 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' plot_abu(inv_mob_in, 'group', 'sad', pooled=F, log='x')
-#' plot_abu(inv_mob_in, 'group', 'rad', pooled=T, log='x')
-plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
-                    col=NA, lwd=1, log='', leg_loc = 'topleft') {
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=F, log='x')
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=T, log='x')
+plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FALSE,
+                    col=NULL, lwd=1, log='', leg_loc = 'topleft') {
     env_data = mob_in$env[ , env_var]
-    grps = unique(env_data)
-    if (is.na(col[1])) 
-        col = rainbow(length(grps))
+    grps = unique(as.character(env_data))
+    grps = c(ref_group, sort(grps[grps != ref_group]))
+    if (is.null(col)) 
+        col = c("#FFC000", "#2B83BA", rainbow(10))[1:length(grps)]
     else if (length(col) != length(grps))
       stop('Length of col vector must match the number of unique groups')
     if ('sad' == type) {
@@ -1183,7 +1185,8 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
 #' Plot rarefaction curves for each treatment group
 #' 
 #' @param pooled boolean specifying if samples should be pooled at the group
-#'  level or not
+#'  level or not. Defaults to TRUE. This argument only applies when
+#'  the individual based rarefaction is used (i.e., method = 'indiv')
 #' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
 #' @inheritParams plot_abu
 #' @inheritParams rarefaction
@@ -1193,17 +1196,33 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=TRUE, log='')
-#' plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=FALSE, log='')
-plot_rarefaction = function(mob_in, env_var, method, pooled=T, 
+#' # random individual based rarefaction curves
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+#'                  pooled=TRUE, leg_loc='bottomright')
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+#'                  pooled=FALSE, log='x')
+#' # random sample based rarefaction curves 
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'samp',
+#'                  log='xy')
+#' # spatial sample based rarefaction curves 
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat',
+#'                  log='xy', xy_coords = inv_mob_in$spat)                 
+plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T, 
                             col=NULL, lwd=1, log='', leg_loc = 'topleft',
                             ...) {
+    if (pooled == FALSE & method != 'indiv')
+        stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="indiv")')
     env_data = mob_in$env[ , env_var]
-    grps = unique(env_data)
+    grps = unique(as.character(env_data))
+    grps = c(ref_group, sort(grps[grps != ref_group]))
     if (is.null(col)) 
         col = c("#FFC000", "#2B83BA", rainbow(10))[1:length(grps)]
     else if (length(col) != length(grps))
         stop('Length of col vector must match the number of unique groups')
+    if (method == 'indiv')
+        xlab = 'Number of individuals'
+    else
+        xlab = 'Number of samples'
     if (pooled) {
         Srare = lapply(grps, function(x) 
                        rarefaction(mob_in$comm[env_data == x, ], method, ...))
@@ -1211,7 +1230,7 @@ plot_rarefaction = function(mob_in, env_var, method, pooled=T,
         ylim = c(1, max(unlist(Srare)))
         n = as.numeric(names(Srare[[1]]))
         plot(n, Srare[[1]], type = "n",
-             xlab = "Number of samples", ylab = "Species richness", 
+             xlab = xlab, ylab = "Species richness", 
              xlim = xlim, ylim = ylim, log = log)
         for (i in seq_along(grps)) {
             col_grp = col[i]
@@ -1228,7 +1247,7 @@ plot_rarefaction = function(mob_in, env_var, method, pooled=T,
         ylim = c(1, max(unlist(Srare)))
         n = as.numeric(names(Srare[[1]][[1]]))
         plot(n, Srare[[1]][[1]], type = "n",
-             xlab = "Number of samples", ylab = "Species richness", 
+             xlab = xlab, ylab = "Species richness", 
              xlim = xlim, ylim = ylim, log = log)        
         for (i in seq_along(grps)) {
             col_grp = col[i]
