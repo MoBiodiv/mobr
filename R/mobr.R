@@ -1604,13 +1604,14 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
                                         times=length(effort)),
                             effort = rep(effort, each=3),
                             abs_effect = props)
-         }  
+            ylab = 'Fraction of abs(Diff. in Richness)'
+         } else
+            ylab = 'abs(Diff. in Richness)'
          plotStacked(unique(dat$effort),
                      data.frame(dat$abs_effect[dat$type == 'SAD'],
                                 dat$abs_effect[dat$type == 'N'],
                                 dat$abs_effect[dat$type == 'agg']),
-                     xlab = 'Number of Samples',
-                     ylab = 'abs(Difference in Richness)',
+                     xlab = 'Number of Samples', ylab = ylab ,
                      col = col, border=NA,
                      frame.plot=F, ylim=ylim, log=log)
     }
