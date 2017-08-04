@@ -1449,7 +1449,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 #' 
 #' All three treatment effect sizes due to the SAD, N, or aggregation are
 #' graphed on a single plot. The treatment effect is defined as the treatment difference
-#' in richness due to a particular componnet of community structure. The overlap
+#' in richness due to a particular component of community structure. The overlap
 #' of the three effects is accomplished by rescaling numbers of individuals 
 #' to the number of plots. The effect sizes may be plotted simply in their raw 
 #' form or as stacked area plots. 
@@ -1463,7 +1463,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 #'  rarefaction curve to the scale of the maximum number of samples considered
 #'  in the spatial rarefaction curve. The other option is 'density_stat' which
 #'  rescales individuals to number of samples using the density statistic 
-#'  specified when the mob statistics where computed by \code\{link[mobr]{get_delta_stats}}. 
+#'  specified when the mob statistics where computed by \code{\link[mobr]{get_delta_stats}}. 
 #' @param common_scale boolean defaults to FALSE. If TRUE then all the effects
 #'  are trucated to only be across the same range of number of individuals.
 #' @param xlabel_indiv boolean if TRUE then the top axis is 
@@ -1474,6 +1474,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 #'  line can be given its own color with the curves ordered as SAD, N, and
 #'  aggregation.
 #' @inheritParams plot.mob_out
+#' @inheritParams graphics::plot.default
 #' @importFrom pracma pchip
 #' @export
 #' @examples 
@@ -1487,7 +1488,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 #' overlap_effects(inv_mob_out, 'invaded', display='stacked', prop=TRUE)
 overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
                            rescale='max_effort', common_scale=FALSE, 
-                           xlabel_indiv=TRUE, lty=1, lwd=3,
+                           xlabel_indiv=TRUE, ylim=NULL, log='', lty=1, lwd=3,
                            col=c("#1AB2FF", "#FFBF80", "#7030A0")) {
     if (prop & display != 'stacked')
         stop("Proptional differences can only be used when considering stacked area graphs (i.e., display = 'stacked')")
@@ -1524,25 +1525,20 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
     agg = agg[effort, ]
     dat = rbind(SAD, N, agg)
     dat$abs_effect = abs(dat$effect)
-    if (prop) {
-        props = unlist(tapply(dat$abs_effect, dat$effort,
-                              function(x) x / sum(x)))
-        dat = data.frame(type = rep(c('SAD', 'N', 'agg'), 
-                                    times=length(effort)),
-                          effort = rep(effort, each=3),
-                          abs_effect = props)
-        ylim = c(0, 1)
-    } else {
-        ylim = NULL
-    }
     if (common_scale)
         dat = subset(dat , effort <= max(dat$effort[dat$type == 'SAD']))
+    if (is.null(ylim)) {
+        if (dispaly == 'raw')
+           ylim = range(dat$effect)
+        else if (prop)
+           ylim = c(0, 1)
+    }
     if (display == 'raw') {
        plot(effect ~ effort, data=dat, subset= type == 'SAD',
             xlab = 'Number of Samples',
             ylab = 'Difference in Richness',
-            frame.plot=F, ylim=range(dat$effect),
-            type='l', col=col[1], lwd=lwd, lty=lty[1])
+            frame.plot=F, ylim=ylim, type='l', col=col[1],
+            lwd=lwd, lty=lty[1], log=log)
        lines(unique(dat$effort), dat$effect[dat$type == 'N'], col=col[2], 
              lwd=lwd, lty=lty[2])
        lines(unique(dat$effort), dat$effect[dat$type == 'agg'], col=col[3], 
@@ -1550,14 +1546,22 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
        abline(h=0, lty=2, lwd=2)
     }
     if (display == 'stacked') {
-        plotStacked(unique(dat$effort),
-                    data.frame(dat$abs_effect[dat$type == 'SAD'],
-                               dat$abs_effect[dat$type == 'N'],
-                               dat$abs_effect[dat$type == 'agg']),
-                    xlab = 'Number of Samples',
-                    ylab = 'abs(Difference in Richness)',
-                    col = col, border=NA,
-                    frame.plot=F, ylim=ylim)
+        if (prop) {
+            props = unlist(tapply(dat$abs_effect, dat$effort,
+                                  function(x) x / sum(x)))
+            dat = data.frame(type = rep(c('SAD', 'N', 'agg'), 
+                                        times=length(effort)),
+                            effort = rep(effort, each=3),
+                            abs_effect = props)
+         }  
+         plotStacked(unique(dat$effort),
+                     data.frame(dat$abs_effect[dat$type == 'SAD'],
+                                dat$abs_effect[dat$type == 'N'],
+                                dat$abs_effect[dat$type == 'agg']),
+                     xlab = 'Number of Samples',
+                     ylab = 'abs(Difference in Richness)',
+                     col = col, border=NA,
+                     frame.plot=F, ylim=ylim, log=log)
     }
     ticks = axTicks(side=3)
     n_indices = round(seq(1, length(virt_effort), 

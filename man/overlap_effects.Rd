@@ -6,7 +6,8 @@
 \usage{
 overlap_effects(mob_out, trt_group, display = "raw", prop = FALSE,
   rescale = "max_effort", common_scale = FALSE, xlabel_indiv = TRUE,
-  lty = 1, lwd = 3, col = c("#1AB2FF", "#FFBF80", "#7030A0"))
+  ylim = NULL, log = "", lty = 1, lwd = 3, col = c("#1AB2FF",
+  "#FFBF80", "#7030A0"))
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -25,13 +26,19 @@ setting the maximum number of individuals considered in the individual
 rarefaction curve to the scale of the maximum number of samples considered
 in the spatial rarefaction curve. The other option is 'density_stat' which
 rescales individuals to number of samples using the density statistic 
-specified when the mob statistics where computed by \link[mobr]{get_delta_stats}}. 
+specified when the mob statistics where computed by \code{\link[mobr]{get_delta_stats}}.}
 
 \item{common_scale}{boolean defaults to FALSE. If TRUE then all the effects
 are trucated to only be across the same range of number of individuals.}
 
 \item{xlabel_indiv}{boolean if TRUE then the top axis is 
 labeled with numbers of individuals}
+
+\item{ylim}{the y limits of the plot.}
+
+\item{log}{a character string which contains \code{"x"} if the x axis
+    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
+    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
 
 \item{lty}{a vector of line types, see \link[graphics]{par}.}
 
@@ -44,7 +51,7 @@ aggregation.}
 \description{
 All three treatment effect sizes due to the SAD, N, or aggregation are
 graphed on a single plot. The treatment effect is defined as the treatment difference
-in richness due to a particular componnet of community structure. The overlap
+in richness due to a particular component of community structure. The overlap
 of the three effects is accomplished by rescaling numbers of individuals 
 to the number of plots. The effect sizes may be plotted simply in their raw 
 form or as stacked area plots.
