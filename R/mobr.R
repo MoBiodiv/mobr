@@ -1242,40 +1242,6 @@ plot_rarefaction = function(mob_in, env_var, method, pooled=T,
     }
     legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
 }
-#' Create 3d plot of richness, abundance, and probability of interspecific 
-#' encounter
-#' 
-#' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
-#' @param env_var a string that specifies the column name in mob_in$env that 
-#'   specifies the grouping variable. 
-#' @param col optional vector of colors.
-#' @importFrom rgl plot3d
-#' @export
-#' @examples
-#' \donttest{
-#' data(inv_comm)
-#' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' plot_SNpie(inv_mob_in, 'group')
-#' }
-plot_SNpie = function(mob_in, env_var, col = NA) {
-    # TO DO: add check to ensure that col is the same length as treatments
-    if (!requireNamespace("rgl", quietly = TRUE)) {
-        stop("rgl package needed for this function to work. Please install it.")
-    }
-    env_data = mob_in$env[ , env_var]
-    grps = unique(env_data)
-    if (is.na(col[1])) 
-        col = rainbow(length(grps))
-    S_list = rowSums(mob_in$comm > 0)
-    N_list = rowSums(mob_in$comm)
-    PIE_list = sapply(1:nrow(mob_in$comm), function(x) 
-                      N_list[x]/(N_list[x] - 1) *
-                        (1 - sum((mob_in$comm[x, ] / N_list[x])^2)))
-    col_list = sapply(env_data, function(x) col[which(grps == x)])
-    rgl::plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list,
-                size = 8)
-} 
 
 #' Plot mob curves
 #' 
