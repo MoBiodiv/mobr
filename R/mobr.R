@@ -216,7 +216,10 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
         n = sum(x)
     }
     if (is.null(effort))
-        effort = 1:n
+        if (n == 0)
+            effort = 0
+        else
+            effort = 1:n
     effort_names = effort
     if (any(effort > n)) {
         warning('"effort" larger than total number of samples')
@@ -887,7 +890,7 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #'   the position of the points. If log_scale is TRUE, the points are equally
 #'   spaced on logarithmic scale. If it is FALSE (default), the points are
 #'   equally spaced on arithmetic scale.
-#' @param min_plot minimal number of plots for test 'agg', where plots are
+#' @param min_plots minimal number of plots for test 'agg', where plots are
 #'   randomized within groups as null test. If it is given a value, all groups
 #'   with fewer plots than min_plot are removed for this test. If it is NULL
 #'   (default), all groups are kept. Warnings are issued if 1. there is only one
@@ -1107,7 +1110,9 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' @param pooled boolean specifying if abundances should be pooled at the group level or
 #'   not
 #' @param col optional vector of colors.
-#' @param log specify which axes to apply log transformations to.
+#' @param lwd a vector of line widths, see \code{\link[graphics]{par}}.
+#' @param leg_loc the location of the legend, see \code{\link[graphics]{legend}}.
+#' @inheritParams graphics::plot.default
 #' @importFrom scales alpha
 #' @export
 #' @examples
@@ -1117,7 +1122,7 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' plot_abu(inv_mob_in, 'group', 'sad', pooled=F, log='x')
 #' plot_abu(inv_mob_in, 'group', 'rad', pooled=T, log='x')
 plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
-                    col=NA, log='', leg_loc = 'topleft') {
+                    col=NA, lwd=1, log='', leg_loc = 'topleft') {
     env_data = mob_in$env[ , env_var]
     grps = unique(env_data)
     if (is.na(col[1])) 
@@ -1175,7 +1180,68 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
     legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
 }
     
-
+#' Plot rarefaction curves for each treatment group
+#' 
+#' @param pooled boolean specifying if samples should be pooled at the group
+#'  level or not
+#' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
+#' @inheritParams plot_abu
+#' @inheritParams rarefaction
+#' @importFrom scales alpha
+#' @export
+#' @examples
+#' data(inv_comm)
+#' data(inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=TRUE, log='')
+#' plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=FALSE, log='')
+plot_rarefaction = function(mob_in, env_var, method, pooled=T, 
+                            col=NULL, lwd=1, log='', leg_loc = 'topleft',
+                            ...) {
+    env_data = mob_in$env[ , env_var]
+    grps = unique(env_data)
+    if (is.null(col)) 
+        col = c("#FFC000", "#2B83BA", rainbow(10))[1:length(grps)]
+    else if (length(col) != length(grps))
+        stop('Length of col vector must match the number of unique groups')
+    if (pooled) {
+        Srare = lapply(grps, function(x) 
+                       rarefaction(mob_in$comm[env_data == x, ], method, ...))
+        xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
+        ylim = c(1, max(unlist(Srare)))
+        n = as.numeric(names(Srare[[1]]))
+        plot(n, Srare[[1]], type = "n",
+             xlab = "Number of samples", ylab = "Species richness", 
+             xlim = xlim, ylim = ylim, log = log)
+        for (i in seq_along(grps)) {
+            col_grp = col[i]
+            n = as.numeric(names(Srare[[i]]))
+            lines(n, Srare[[i]], col = col_grp, lwd = 1, type = "l")
+        }
+    } else {
+        Srare = lapply(grps, function(x)
+                       apply(mob_in$comm[env_data == x, ], 1, function(y)
+                             rarefaction(y, method, ...)))
+        xlim = c(1, max(unlist(lapply(Srare, function(x)
+                                 lapply(x, function(y)
+                                        as.numeric(names(y)))))))
+        ylim = c(1, max(unlist(Srare)))
+        n = as.numeric(names(Srare[[1]][[1]]))
+        plot(n, Srare[[1]][[1]], type = "n",
+             xlab = "Number of samples", ylab = "Species richness", 
+             xlim = xlim, ylim = ylim, log = log)        
+        for (i in seq_along(grps)) {
+            col_grp = col[i]
+            for (j in seq_along(Srare[[i]])) {
+                 n = as.numeric(names(Srare[[i]][[j]]))
+                 if (n[1] > 0)
+                     lines(n, Srare[[i]][[j]], col = scales::alpha(col_grp, 0.5),
+                           lwd = 1, type = 'l')
+            }
+        }
+    }
+    legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
+}
 #' Create 3d plot of richness, abundance, and probability of interspecific 
 #' encounter
 #' 

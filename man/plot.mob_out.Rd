@@ -5,7 +5,8 @@
 \title{Plot mob curves}
 \usage{
 \method{plot}{mob_out}(mob_out, trt_group, ref_group, same_scale = FALSE,
-  display = c("rarefaction", "delta S", "ddelta S"), par_args = NULL)
+  log = NULL, display = c("rarefaction", "delta S", "ddelta S"), lwd = 3,
+  par_args = NULL)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -23,6 +24,9 @@ ddelta S plots are scaled identically accross the tested effects}
 \item{lwd}{a single value for for line width, see \link[graphics]{par}.}
 
 \item{par_args}{optional argument that sets graphical parameters to set}
+
+\item{same_scale}{if TRUE then all three plots have the same range on the 
+y-axis.}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial
