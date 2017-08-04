@@ -1540,7 +1540,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
                            rescale='max_effort', common_scale=FALSE, 
                            xlabel_indiv=TRUE, ylim=NULL, log='', lty=1, lwd=3,
-                           col=c("#1AB2FF", "#FFBF80", "#7030A0")) {
+                           col=c("#1AB2FF", "#FCD5B5", "#7030A0")) {
     if (prop & display != 'stacked')
         stop("Proptional differences can only be used when considering stacked area graphs (i.e., display = 'stacked')")
     if (length(lty) == 1) 
