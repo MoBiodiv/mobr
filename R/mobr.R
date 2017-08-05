@@ -69,19 +69,66 @@ make_mob_in = function(comm, plot_attr, binary=FALSE, latlong=FALSE) {
     return(out)
 }
 
+#' Subset the rows of the mob data input object
+#' 
+#' This function subsets the rows of comm, env, and spat attributes of
+#' the mob_in object
+#' 
+#' @param mob_in an object of class mob_in created by \code{\link{make_mob_in}}
+#' @param drop_levels boolean if TRUE unused levels are removed from factors
+#'  in mob_in$env
+#' @inheritParams 
+#' @export
+#' @examples 
+#'  data(inv_comm)
+#'  data(inv_plot_attr)
+#'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#'  subset(inv_mob_in, group == 'invaded')
+#'  subset(inv_mob_in, 1:4, type='integer')
+#'  subset(inv_mob_in, 1:4, type='integer', droplevels=TRUE)
+#'  sub_log = c(T, F, T, rep(F, nrow(inv_mob_in$comm) - 3))
+#'  subset(inv_mob_in, sub_log, type='logical')
+subset.mob_in = function(mob_in, subset, type='string', drop_levels=FALSE) {
+    if (missing(subset))
+        r <- rep_len(TRUE, nrow(mob_in$comm))
+    if (type == 'integer')
+        r <- 1:nrow(mob_in$comm) %in% subset
+    if (type == 'logical')
+        r <- subset
+    if (type == 'string'){
+        e <- substitute(subset)
+        r <- eval(e, mob_in$env)
+        if (!is.logical(r)) 
+            stop("'subset' must be logical when type = 'string'")
+   } 
+   mob_in$comm = mob_in$comm[r, ]
+   mob_in$env = mob_in$env[r, ]
+   if (drop_levels)
+       mob_in$env = droplevels(mob_in$env)
+   if (!is.null(mob_in$spat))
+       mob_in$spat = mob_in$spat[r, ]
+   return(mob_in)
+}
+  
 #' Print a shortened verison of the mob_in object
 #' @keywords internal
 #' @export
-print.mob_in = function(x) {
-    cat('Only the first five rows of any matrices are printed\n')
+print.mob_in = function(x, nrows=6, nsp=5) {
+    if (nrow(x$comm) > nrows) 
+        cat(paste('Only the first', nrows, 'rows of any matrices are printed\n'))
+    else 
+        nrows = nrow(x$comm)
     cat('\n$tests\n')
     print(x$tests)
-    cat('\n$comm (only first five species columns)\n')
-    print(x$comm[1:5, 1:5])
+    if (ncol(x$comm) > nsp)
+        cat(paste('\n$comm (Only first', nsp, 'species columns are printed)\n'))
+    else 
+        nsp = ncol(x$comm)
+    print(x$comm[1:nrows, 1:nsp])
     cat('\n$env\n')
-    print(head(x$env))
+    print(head(x$env, nrows))
     cat('\n$spat\n')
-    print(head(x$spat))
+    print(head(x$spat, nrows))
 }
 
 #' Print a shortened version of the mob_out object
@@ -1134,7 +1181,7 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' @param col optional vector of colors.
 #' @param lwd a vector of line widths, see \code{\link[graphics]{par}}.
 #' @param leg_loc the location of the legend. Defaults to 'topleft', 
-#'  see \code{\link[graphics]{legend}}.
+#'  see \code{\link[graphics]{legend}}. If set to NA then no legend is printed.
 #' @inheritParams graphics::plot.default
 #' @importFrom scales alpha
 #' @export
@@ -1153,9 +1200,10 @@ plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FAL
         col = c("#FFC000", "#2B83BA", rainbow(10))[1:length(grps)]
     else if (length(col) != length(grps))
       stop('Length of col vector must match the number of unique groups')
+    title = ifelse(pooled, 'Group Scale', 'Sample Scale')
     if ('sad' == type) {
         plot(1, type = "n", xlab = "% abundance", ylab = "% species", 
-             xlim = c(0.01, 1), ylim = c(0.01, 1), log = log)
+             xlim = c(0.01, 1), ylim = c(0.01, 1), log = log, main = title)
         for (i in 1:length(grps)) {
             col_grp = col[i]
             comm_grp = mob_in$comm[env_data == grps[i], ]
@@ -1182,7 +1230,8 @@ plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FAL
     if ('rad' == type) {
         plot(1:10, 1:10, type='n', xlab='rank', ylab='abundance',
              log=log, xlim=c(1, ncol(mob_in$comm)), 
-             ylim=range(0.01, 1), cex.lab = 1.5, cex.axis = 1.5)
+             ylim=range(0.01, 1), cex.lab = 1.5, cex.axis = 1.5,
+             main = title)
         for (i in 1:length(grps)) {
              col_grp = col[i]
              comm_grp = mob_in$comm[env_data == grps[i], ]
@@ -1201,7 +1250,8 @@ plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FAL
              }
         }
     }
-    legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
+    if (!is.na(leg_loc))
+        legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
 }
     
 #' Plot rarefaction curves for each treatment group
@@ -1247,11 +1297,12 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
         xlab = 'Number of samples'
     if (pooled) {
         Srare = lapply(grps, function(x) 
-                       rarefaction(mob_in$comm[env_data == x, ], method, ...))
+                       rarefaction(subset(mob_in, env_data == x, 'logical'),
+                                   method, ...))
         xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
         ylim = c(1, max(unlist(Srare)))
         n = as.numeric(names(Srare[[1]]))
-        plot(n, Srare[[1]], type = "n",
+        plot(n, Srare[[1]], type = "n", main = "Group scale",
              xlab = xlab, ylab = "Species richness", 
              xlim = xlim, ylim = ylim, log = log)
         for (i in seq_along(grps)) {
@@ -1261,14 +1312,14 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
         }
     } else {
         Srare = lapply(grps, function(x)
-                       apply(mob_in$comm[env_data == x, ], 1, function(y)
-                             rarefaction(y, method, ...)))
+                       apply(mob_in$comm[env_data == x, ], 1,
+                             function(y)  rarefaction(y, method, ...)))
         xlim = c(1, max(unlist(lapply(Srare, function(x)
                                  lapply(x, function(y)
                                         as.numeric(names(y)))))))
         ylim = c(1, max(unlist(Srare)))
         n = as.numeric(names(Srare[[1]][[1]]))
-        plot(n, Srare[[1]][[1]], type = "n",
+        plot(n, Srare[[1]][[1]], type = "n", main = "Sample scale",
              xlab = xlab, ylab = "Species richness", 
              xlim = xlim, ylim = ylim, log = log)        
         for (i in seq_along(grps)) {
@@ -1281,7 +1332,8 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
             }
         }
     }
-    legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
+    if (!is.na(leg_loc))
+        legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
 }
 
 #' Plot mob curves

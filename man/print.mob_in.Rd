@@ -4,7 +4,7 @@
 \alias{print.mob_in}
 \title{Print a shortened verison of the mob_in object}
 \usage{
-\method{print}{mob_in}(x)
+\method{print}{mob_in}(x, nrows = 6, nsp = 5)
 }
 \description{
 Print a shortened verison of the mob_in object

@@ -27,7 +27,7 @@ not}
     and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
 
 \item{leg_loc}{the location of the legend. Defaults to 'topleft', 
-see \code{\link[graphics]{legend}}.}
+see \code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
 }
 \description{
 Plot distributions of species abundance
