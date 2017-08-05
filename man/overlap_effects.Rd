@@ -7,7 +7,7 @@
 overlap_effects(mob_out, trt_group, display = "raw", prop = FALSE,
   rescale = "max_effort", common_scale = FALSE, xlabel_indiv = TRUE,
   ylim = NULL, log = "", lty = 1, lwd = 3, col = c("#1AB2FF",
-  "#FFBF80", "#7030A0"))
+  "#FCD5B5", "#7030A0"))
 }
 \arguments{
 \item{mob_out}{a mob_out class object}

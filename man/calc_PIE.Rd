@@ -7,9 +7,10 @@
 calc_PIE(x)
 }
 \arguments{
-\item{x}{community data, a matrix-like object or a vector which should either
-represent a species-abundance distribution or a plot (rows) by species
-(columns) matrix.}
+\item{x}{can either be a: 1) mob_in object, 2) community matrix-like
+object in which rows represent plots and columns represent species, or 3)
+`species-abundance distribution vector which contains the abundance of 
+each species.}
 }
 \description{
 PIE is also known as Simpson's evenness index and the Gini-Simpson index.

@@ -55,6 +55,9 @@ D0.hat <- function(x, m){
 #' data(inv_comm)
 #' calc_PIE(inv_comm)
 calc_PIE = function(x) {
+    if (class(x) == 'mob_in') {
+        x = x_mob_in$comm
+    }
     x = drop(as.matrix(x))
     if (any(x < 0, na.rm = TRUE)) 
         stop("input data must be non-negative")
