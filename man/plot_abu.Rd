@@ -4,8 +4,8 @@
 \alias{plot_abu}
 \title{Plot distributions of species abundance}
 \usage{
-plot_abu(mob_in, env_var, type = c("sad", "rad"), pooled = FALSE,
-  col = NA, log = "", leg_loc = "topleft")
+plot_abu(mob_in, env_var, ref_group, type = c("sad", "rad"), pooled = FALSE,
+  col = NULL, lwd = 1, log = "", leg_loc = "topleft")
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
@@ -20,7 +20,14 @@ not}
 
 \item{col}{optional vector of colors.}
 
-\item{log}{specify which axes to apply log transformations to.}
+\item{lwd}{a vector of line widths, see \code{\link[graphics]{par}}.}
+
+\item{log}{a character string which contains \code{"x"} if the x axis
+    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
+    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
+
+\item{leg_loc}{the location of the legend. Defaults to 'topleft', 
+see \code{\link[graphics]{legend}}.}
 }
 \description{
 Plot distributions of species abundance
@@ -29,6 +36,6 @@ Plot distributions of species abundance
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-plot_abu(inv_mob_in, 'group', 'sad', pooled=F, log='x')
-plot_abu(inv_mob_in, 'group', 'rad', pooled=T, log='x')
+plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=F, log='x')
+plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=T, log='x')
 }

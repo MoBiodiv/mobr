@@ -216,7 +216,10 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=FALSE,
         n = sum(x)
     }
     if (is.null(effort))
-        effort = 1:n
+        if (n == 0)
+            effort = 0
+        else
+            effort = 1:n
     effort_names = effort
     if (any(effort > n)) {
         warning('"effort" larger than total number of samples')
@@ -887,7 +890,7 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #'   the position of the points. If log_scale is TRUE, the points are equally
 #'   spaced on logarithmic scale. If it is FALSE (default), the points are
 #'   equally spaced on arithmetic scale.
-#' @param min_plot minimal number of plots for test 'agg', where plots are
+#' @param min_plots minimal number of plots for test 'agg', where plots are
 #'   randomized within groups as null test. If it is given a value, all groups
 #'   with fewer plots than min_plot are removed for this test. If it is NULL
 #'   (default), all groups are kept. Warnings are issued if 1. there is only one
@@ -1107,21 +1110,25 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' @param pooled boolean specifying if abundances should be pooled at the group level or
 #'   not
 #' @param col optional vector of colors.
-#' @param log specify which axes to apply log transformations to.
+#' @param lwd a vector of line widths, see \code{\link[graphics]{par}}.
+#' @param leg_loc the location of the legend. Defaults to 'topleft', 
+#'  see \code{\link[graphics]{legend}}.
+#' @inheritParams graphics::plot.default
 #' @importFrom scales alpha
 #' @export
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' plot_abu(inv_mob_in, 'group', 'sad', pooled=F, log='x')
-#' plot_abu(inv_mob_in, 'group', 'rad', pooled=T, log='x')
-plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
-                    col=NA, log='', leg_loc = 'topleft') {
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=F, log='x')
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=T, log='x')
+plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FALSE,
+                    col=NULL, lwd=1, log='', leg_loc = 'topleft') {
     env_data = mob_in$env[ , env_var]
-    grps = unique(env_data)
-    if (is.na(col[1])) 
-        col = rainbow(length(grps))
+    grps = unique(as.character(env_data))
+    grps = c(ref_group, sort(grps[grps != ref_group]))
+    if (is.null(col)) 
+        col = c("#FFC000", "#2B83BA", rainbow(10))[1:length(grps)]
     else if (length(col) != length(grps))
       stop('Length of col vector must match the number of unique groups')
     if ('sad' == type) {
@@ -1175,41 +1182,85 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'), pooled=FALSE,
     legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
 }
     
-
-#' Create 3d plot of richness, abundance, and probability of interspecific 
-#' encounter
+#' Plot rarefaction curves for each treatment group
 #' 
-#' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
-#' @param env_var a string that specifies the column name in mob_in$env that 
-#'   specifies the grouping variable. 
-#' @param col optional vector of colors.
-#' @importFrom rgl plot3d
+#' @param pooled boolean specifying if samples should be pooled at the group
+#'  level or not. Defaults to TRUE. This argument only applies when
+#'  the individual based rarefaction is used (i.e., method = 'indiv')
+#' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
+#' @inheritParams plot_abu
+#' @inheritParams rarefaction
+#' @importFrom scales alpha
 #' @export
 #' @examples
-#' \donttest{
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' plot_SNpie(inv_mob_in, 'group')
-#' }
-plot_SNpie = function(mob_in, env_var, col = NA) {
-    # TO DO: add check to ensure that col is the same length as treatments
-    if (!requireNamespace("rgl", quietly = TRUE)) {
-        stop("rgl package needed for this function to work. Please install it.")
-    }
+#' # random individual based rarefaction curves
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+#'                  pooled=TRUE, leg_loc='bottomright')
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+#'                  pooled=FALSE, log='x')
+#' # random sample based rarefaction curves 
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'samp',
+#'                  log='xy')
+#' # spatial sample based rarefaction curves 
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat',
+#'                  log='xy', xy_coords = inv_mob_in$spat)                 
+plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T, 
+                            col=NULL, lwd=1, log='', leg_loc = 'topleft',
+                            ...) {
+    if (pooled == FALSE & method != 'indiv')
+        stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="indiv")')
     env_data = mob_in$env[ , env_var]
-    grps = unique(env_data)
-    if (is.na(col[1])) 
-        col = rainbow(length(grps))
-    S_list = rowSums(mob_in$comm > 0)
-    N_list = rowSums(mob_in$comm)
-    PIE_list = sapply(1:nrow(mob_in$comm), function(x) 
-                      N_list[x]/(N_list[x] - 1) *
-                        (1 - sum((mob_in$comm[x, ] / N_list[x])^2)))
-    col_list = sapply(env_data, function(x) col[which(grps == x)])
-    rgl::plot3d(S_list, N_list, PIE_list, "S", "N", "PIE", col = col_list,
-                size = 8)
-} 
+    grps = unique(as.character(env_data))
+    grps = c(ref_group, sort(grps[grps != ref_group]))
+    if (is.null(col)) 
+        col = c("#FFC000", "#2B83BA", rainbow(10))[1:length(grps)]
+    else if (length(col) != length(grps))
+        stop('Length of col vector must match the number of unique groups')
+    if (method == 'indiv')
+        xlab = 'Number of individuals'
+    else
+        xlab = 'Number of samples'
+    if (pooled) {
+        Srare = lapply(grps, function(x) 
+                       rarefaction(mob_in$comm[env_data == x, ], method, ...))
+        xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
+        ylim = c(1, max(unlist(Srare)))
+        n = as.numeric(names(Srare[[1]]))
+        plot(n, Srare[[1]], type = "n",
+             xlab = xlab, ylab = "Species richness", 
+             xlim = xlim, ylim = ylim, log = log)
+        for (i in seq_along(grps)) {
+            col_grp = col[i]
+            n = as.numeric(names(Srare[[i]]))
+            lines(n, Srare[[i]], col = col_grp, lwd = 1, type = "l")
+        }
+    } else {
+        Srare = lapply(grps, function(x)
+                       apply(mob_in$comm[env_data == x, ], 1, function(y)
+                             rarefaction(y, method, ...)))
+        xlim = c(1, max(unlist(lapply(Srare, function(x)
+                                 lapply(x, function(y)
+                                        as.numeric(names(y)))))))
+        ylim = c(1, max(unlist(Srare)))
+        n = as.numeric(names(Srare[[1]][[1]]))
+        plot(n, Srare[[1]][[1]], type = "n",
+             xlab = xlab, ylab = "Species richness", 
+             xlim = xlim, ylim = ylim, log = log)        
+        for (i in seq_along(grps)) {
+            col_grp = col[i]
+            for (j in seq_along(Srare[[i]])) {
+                 n = as.numeric(names(Srare[[i]][[j]]))
+                 if (n[1] > 0)
+                     lines(n, Srare[[i]][[j]], col = scales::alpha(col_grp, 0.5),
+                           lwd = 1, type = 'l')
+            }
+        }
+    }
+    legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
+}
 
 #' Plot mob curves
 #' 
@@ -1489,7 +1540,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
                            rescale='max_effort', common_scale=FALSE, 
                            xlabel_indiv=TRUE, ylim=NULL, log='', lty=1, lwd=3,
-                           col=c("#1AB2FF", "#FFBF80", "#7030A0")) {
+                           col=c("#1AB2FF", "#FCD5B5", "#7030A0")) {
     if (prop & display != 'stacked')
         stop("Proptional differences can only be used when considering stacked area graphs (i.e., display = 'stacked')")
     if (length(lty) == 1) 
@@ -1528,7 +1579,7 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
     if (common_scale)
         dat = subset(dat , effort <= max(dat$effort[dat$type == 'SAD']))
     if (is.null(ylim)) {
-        if (dispaly == 'raw')
+        if (display == 'raw')
            ylim = range(dat$effect)
         else if (prop)
            ylim = c(0, 1)
@@ -1553,13 +1604,14 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
                                         times=length(effort)),
                             effort = rep(effort, each=3),
                             abs_effect = props)
-         }  
+            ylab = 'Fraction of abs(Diff. in Richness)'
+         } else
+            ylab = 'abs(Diff. in Richness)'
          plotStacked(unique(dat$effort),
                      data.frame(dat$abs_effect[dat$type == 'SAD'],
                                 dat$abs_effect[dat$type == 'N'],
                                 dat$abs_effect[dat$type == 'agg']),
-                     xlab = 'Number of Samples',
-                     ylab = 'abs(Difference in Richness)',
+                     xlab = 'Number of Samples', ylab = ylab ,
                      col = col, border=NA,
                      frame.plot=F, ylim=ylim, log=log)
     }

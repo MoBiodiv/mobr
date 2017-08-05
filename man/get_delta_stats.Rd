@@ -47,7 +47,7 @@ the position of the points. If log_scale is TRUE, the points are equally
 spaced on logarithmic scale. If it is FALSE (default), the points are
 equally spaced on arithmetic scale.}
 
-\item{min_plot}{minimal number of plots for test 'agg', where plots are
+\item{min_plots}{minimal number of plots for test 'agg', where plots are
 randomized within groups as null test. If it is given a value, all groups
 with fewer plots than min_plot are removed for this test. If it is NULL
 (default), all groups are kept. Warnings are issued if 1. there is only one
