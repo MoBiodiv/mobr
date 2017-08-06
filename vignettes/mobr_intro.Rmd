@@ -8,7 +8,6 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-
 # Installing `mobr`
 
 The package `mobr` is currently available on GitHub and you can freely download 
@@ -19,24 +18,32 @@ The easiest option is to install the package directly from GitHub using the pack
 ```{r, eval = F}
 install.packages('devtools')
 library(devtools)
+```
+
+The package also requires the `dplyr` package which has many dependencies. If you do 
+not already have the `dplyr` package installed we suggest you install it and 
+all of its dependencies using :
+
+```{r, eval=F}
+install.packages(c('bindrcpp','glue','pkgconfig','tibble','plyr','dplyr'))
+```
+
+Then check that `dplyr` can be loaded with `library(dplyr)`.
+Now you should be ready to go with the `mobr` install
+
+```{r, eval=F}
 install_github('MoBiodiv/mobr')
 ```
 
-The package requires the `dplyr` package which has many depandances. If you do 
-not already have the `dplyr` package installed we suggest you install it and 
-all of its dependancies using:
-
-```{r, eval=F}
-install.packages('tidyverse')
-```
-
-Then check that `dplyr` can be loaded with `library(dplyr)`. 
+If you receive an error we would love to receive your bug report 
+[here](https://github.com/MoBiodiv/mobr/issues)
 
 # Data structure required by `mobr`
 
 To work with `mobr` you need two matrix-like data tables:
 
 1. Species abundance data in a community matrix (rows are sites and columns are species)
+
 2. A site attributes table (rows are sites and columns are site attributes)
 
 The community matrix must include the number of individuals of each species.
@@ -49,16 +56,15 @@ spatial you simply set either x or y to a single number and put the temporal
 measurement for the other coordinate. 
 
 Throughout this vignette we use an example of a study on the effects of an
-invasive plant Lonicera mackii on understory plant biodiversity in a Missouri
+invasive plant _Lonicera maackii_ on understory plant biodiversity in a Missouri
 woodland (Powell et al. 2003)
 
-
-This data set is included in `mobr`and available after
+This data set is included in `mobr`and available after loading the library
 
 ```{r, message=FALSE}
 library(mobr)
-data(inv_comm) # Community matrix
-data(inv_plot_attr) # Plot attributes
+data(inv_comm)      # Community matrix
+data(inv_plot_attr) # Plot attributes data.frame
 ```
 
 ```{r}
@@ -76,6 +82,7 @@ into on single object
 
 ```{r}
 inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in
 ```
 
 # Exploratory data analysis
@@ -122,63 +129,141 @@ of rank curve).
 
 # Two-scale analysis
 
-The function `mob_stats` calculates the following biodiversity indices for every 
-plot and for every groups defined by one grouping variable (e.g. experimental
-treatment) defined by the user.
+There are a myriad of biodiversity indices. We have attempted to chose a subset
+of metrics that can all be derived from the individual rarefaction curve which
+capture the aspects of biodiversity we are most interested in, namely:
 
-* N - Number of individuals
-* S - Observed species richness
-* S_rare - Rarefied species richness
-* S_asymp - Estimated asymptotic species richness using biased corrected
-* PIE - Probability of Interspecific Encounter (Hurlbert 1971)
-* ENS_PIE - Effective number of species based on PIE (Jost 2007)
+1. Numbers of individuals (i.e., density effects)
+2. The distribution of rarity and commonness (i.e., the SAD)
+3. The spatial patchiness or aggregation of conspecifics.
+
+The metrics we have selected are:
+
+* **N - Number of individuals**
+* **S - Observed species richness**
+* **S_rarefied - Rarefied species richness (Hurlbert 1971)**
+* **S_asymptote - Estimated asymptotic species richness using biased corrected method (Chiu et al. 2014)**
+* **PIE - Probability of Interspecific Encounter (Hurlbert 1971)**
+* **S_PIE - Effective number of species based on PIE (Jost 2007)**
+
+Each of these metrics can be computed for either the sample or group scale individual rarefaction curves as shown in the figure below: 
+
+![](../vignettes/metrics.png)
+
+The ratio of a given biodiversity metric at the group and sample scales
+(i.e., $\beta_S = S_{group} / S_{sample}$ can provide simple measures of
+species turnover or \(\beta\)-diversity. Depending on which metric the 
+\(\beta\)-diversity is derived from will determine what aspects of species
+turnover it is most sensitive too (e.g., $\beta_{asymptote}$ is more sensitive 
+to turnover in rare species).
+
 
 ```{r}
 inv_stats <- get_mob_stats(inv_mob_in, group_var = "group", 
-                           ref_group = 'uninvaded', n_perm = 2)
+                           ref_group = 'uninvaded', n_perm = 200)
 ```
 
 We can examine the `inv_stats` object 
+
 ```{r}
 names(inv_stats)
 ```
 
 There are also functions for plotting the indices at the sample and group levels.
-First let's examine the suite of biodiversity metrics
+First let's examine species richness:
 
-```{r, fig.width = 7, fig.height = 10}
-plot(inv_stats, multi_panel = TRUE)
+```{r, fig.width = 7, fig.height = 3.5}
+plot(inv_stats, 'S')
 ```
 
+Invasion appears to decrease local sample diversity but not gamma diversity.
+Somewhat surprisingly it appears to increase \(\beta\)diversity. 
 
 One of the major effects we observed in the individual rarefaction curve was 
 that the invaded sites appeared to have fewer individuals, let's examine the 
 test of that:
 
-```{r, fig.width = 7, fig.height = 5}
+```{r, fig.width = 7, fig.height = 4.5}
 plot(inv_stats, 'N')
 ```
 
+Clearly our intuition was correct there is a very strong negative effect of 
+invasion on N. So it appears that the changes we observed in S may be due to 
+the negative effect of invasion on N. Let's examine `S_rare` to test this:
+
+```{r, fig.width = 7, fig.height = 3.5}
+plot(inv_stats, 'S_rare')
+```
+
+```{r, fig.width = 7, fig.height = 3.5}
+plot(inv_stats, 'S_PIE')
+```
+
+We can also plot `S_asymp` but for this dataset this metric
+does not show strong patterns so we'll stop here for now. If you 
+want to plot all the biodiversity metrics at once you can simply use:
+
+```{r, eval=FALSE}
+plot(inv_stats)
+# alternatively
+plot(inv_stats, multi_panel = TRUE)
+```
 
 # Continuous scale analysis
 
-The complete analysis using `mobr` aims at disentangling the consequences of three
-biodiversity components on observed changes in species richness
+The continuous scale analysis using `mobr` aims at disentangling the 
+consequences of three biodiversity components on observed changes in species
+richness
 
-1. Species abundance distribution (SAD)
-2. Number of individuals (N) 
-3. Aggregation (clumping) of conspecific individuals
+1. **Species abundance distribution (SAD)**
+2. **Number of individuals (N)**
+3. **Aggregation (clumping) of conspecific individuals**
 
-For the sake of speed we'll run the analysis with just 50 permutations but 
-at least 500 are recommended for actual applications. 
+To accomplish this we use three different rarefaction curves which each 
+capture different aspects of community structure:
+
+![](../vignettes/rarefaction_curves.png){ width=75% }
+
+If we examine the difference between each of these curves in our two treatments
+we can learn how the treatment influences richness via its effects on 
+different components of community structure.
+
+![](../vignettes/deltaS_concept.png){ width=95% }
+
+We can carry out this analysis in `mobr` using the function `get_delta_stats`.
+For the sake of speed we'll run the analysis with just 20 permutations but 
+at least 200 are recommended for actual applications. 
+
 ```{r, include=FALSE}
 inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                             type='discrete', log_scale=TRUE, nperm = 2)
+                             type='discrete', log_scale=TRUE, n_perm = 20)
 ```
 
-```{r, fig.width=7, fig.height=7}
-plot(inv_deltaS, 'invaded', 'uninvaded')
+The best way to examine the contents of this object is to plot it. 
+First let's examine the three rarefaction curves:
+
+```{r, fig.width=7, fig.height=3.5}
+plot(inv_deltaS, 'invaded', 'uninvaded', display='rarefaction')
 ```
+
+Now let's consider the differences between each set of curves:
+
+```{r, fig.width=7, fig.height=3.5}
+plot(inv_deltaS, 'invaded', 'uninvaded', display='delta S')
+```
+
+Lastly, we can isolate the individual effects of each component by taking one
+more difference between the curves:
+
+```{r, fig.width=7, fig.height=3.5}
+plot(inv_deltaS, 'invaded', 'uninvaded', display='ddelta S')
+```
+
+The grey polygons above represent the 95% quantile for the null models of
+no treatment effect. 
+
+Let's examine these individual effects across in a way that is easier to compare
+their effects using the function `overlap_effects`
 
 ```{r, fig.width=7, fig.height=4}
 par(mfrow=c(1,2))
@@ -186,12 +271,13 @@ overlap_effects(inv_deltaS, 'invaded', display='raw')
 overlap_effects(inv_deltaS, 'invaded', display='stacked', prop=T)
 ```
 
-
 # References
 
 1. Powell, K.I., Chase, J.M. & Knight, T.M. (2013). Invasive Plants Have Scale-Dependent Effects on Diversity by Altering Species-Area Relationships. Science, 339, 316–318.
 
 1. Gotelli, N.J. & Colwell, R.K. (2001). Quantifying biodiversity: procedures and pitfalls in the measurement and comparison of species richness. Ecology letters, 4, 379–391
+
+1. Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved nonparametric lower bound of species richness via a modified good-turing frequency formula. Biometrics, 70, 671-682.
 
 1. Hurlbert, S.H. (1971). The Nonconcept of Species Diversity: A Critique and Alternative Parameters. Ecology, 52, 577–586
 
