@@ -92,8 +92,8 @@ The package `mobr` offers functions for exploratory data analysis and visualizat
 First let's look at the spatial rarefaction curve in which samples are
 added depending on their spatial proximity. 
 
-```{r, fig.width = 7, fig.height=7}
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat', lwd=2)
+```{r, fig.width = 5, fig.height = 5}
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat', lwd=4)
 ```
 
 We can see that invasion decreases richness and that the magnitude of the effect
@@ -148,7 +148,7 @@ The metrics we have selected are:
 
 Each of these metrics can be computed for either the sample or group scale individual rarefaction curves as shown in the figure below: 
 
-![](../vignettes/metrics.png)
+![](../vignettes/metrics.png){ width=85% }
 
 The ratio of a given biodiversity metric at the group and sample scales
 (i.e., $\beta_S = S_{group} / S_{sample}$ can provide simple measures of
@@ -158,9 +158,13 @@ turnover it is most sensitive too (e.g., $\beta_{asymptote}$ is more sensitive
 to turnover in rare species).
 
 
-```{r}
+```{r, eval = FALSE}
 inv_stats <- get_mob_stats(inv_mob_in, group_var = "group", 
                            ref_group = 'uninvaded', n_perm = 200)
+```
+
+```{r, echo = FALSE}
+load('../vignettes/inv_stats.Rdata')
 ```
 
 We can examine the `inv_stats` object 
@@ -234,9 +238,13 @@ We can carry out this analysis in `mobr` using the function `get_delta_stats`.
 For the sake of speed we'll run the analysis with just 20 permutations but 
 at least 200 are recommended for actual applications. 
 
-```{r, include=FALSE}
+```{r, eval=FALSE}
 inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                              type='discrete', log_scale=TRUE, n_perm = 20)
+```
+
+```{r, echo=FALSE}
+load('../vignettes/inv_deltaS.Rdata')
 ```
 
 The best way to examine the contents of this object is to plot it. 
