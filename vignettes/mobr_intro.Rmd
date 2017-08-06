@@ -279,6 +279,20 @@ overlap_effects(inv_deltaS, 'invaded', display='raw')
 overlap_effects(inv_deltaS, 'invaded', display='stacked', prop=T)
 ```
 
+You can use these same kinds of analyses on your own datasets or on some of other datasets we have included with the package: 
+
+```{r, eval=FALSE}
+# plant community in response to a prescribed fire treatment in a
+# central US woodland
+data(fire_comm)
+data(fire_plot_attr)
+
+# aquatic invertebrates in experimental cattle tanks where nutrients
+# were manipulated
+data(tank_comm)
+data(tank_plot_attr)
+```
+
 # References
 
 1. Powell, K.I., Chase, J.M. & Knight, T.M. (2013). Invasive Plants Have Scale-Dependent Effects on Diversity by Altering Species-Area Relationships. Science, 339, 316–318.
