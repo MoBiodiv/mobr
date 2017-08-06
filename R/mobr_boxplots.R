@@ -182,12 +182,12 @@ calc_biodiv <- function(abund_mat, groups, index, n_rare)
    }
    
    # Effective number of species based on PIE ----------------------------------
-   if (any(index == "ENS_PIE")){
+   if (any(index == "S_PIE")){
       plots_n01 = N <= 1
-      ENS_PIE = vegan::diversity(abund_mat, index = "invsimpson")
-      ENS_PIE[plots_n01 | !is.finite(ENS_PIE)] <- NA
+      S_PIE = vegan::diversity(abund_mat, index = "invsimpson")
+      S_PIE[plots_n01 | !is.finite(S_PIE)] <- NA
       
-      dat1$value[dat1$index == "ENS_PIE"] <- ENS_PIE
+      dat1$value[dat1$index == "S_PIE"] <- S_PIE
    }
    
    return(dat1)
@@ -250,7 +250,7 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
 #'    \item \code{S_rare} ... Rarefied number of species
 #'    \item \code{S_asymp} ... Estimated asymptotic species richness
 #'    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
-#'    \item \code{ENS_PIE} ... Effective number of species based on PIE
+#'    \item \code{S_PIE} ... Effective number of species based on PIE
 #' }
 #' See \emph{Details} for additional information on the biodiverstiy statistics.
 #' 
@@ -300,15 +300,15 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
 #' sampling without replacement. PIE is closely related to the well-known Simpson 
 #' diversity index, but the latter assumes sampling with replacement.
 #' 
-#' \strong{ENS_PIE} represents the Effective Number of Species derived from the PIE.
+#' \strong{S_PIE} represents the Effective Number of Species derived from the PIE.
 #' This corresponds to the the number of equally abundant species (i.e. a perfectly
 #' even community), there would need to be to achieve the observed PIE (Jost 2006).
-#' This means the higher the difference between S and ENS_PIE the more
-#' uneven is the observed community. An intuitive interpretation of ENS_PIE is that
+#' This means the higher the difference between S and S_PIE the more
+#' uneven is the observed community. An intuitive interpretation of S_PIE is that
 #' it corresponds to the number of dominant (highly abundant) species in the community.
 #' 
 #' For species richness \code{S}, rarefied richness \code{S_rare}, asymptotic
-#' richness \code{S_asymp}, and the Effective Number of Species \code{ENS_PIE}
+#' richness \code{S_asymp}, and the Effective Number of Species \code{S_PIE}
 #' we also calculate beta-diversity using multiplicative partitioning
 #' (Whittaker 1972, Jost 2007). That means for these indices we estimate beta-diversity 
 #' as the ratio of group-level diversity (gamma) divided by sample-level diversity (alpha). 
@@ -373,7 +373,7 @@ get_group_diff <- function(abund_mat, group_bin, index, n_rare,
 get_mob_stats = function(mob_in,
                          group_var,
                          ref_group = NULL,
-                         index = c("N","S","S_rare","S_asymp","ENS_PIE"),
+                         index = c("N","S","S_rare","S_asymp","S_PIE"),
                          n_rare_samples = NULL,
                          n_rare_min = 5,
                          n_perm = 20,
@@ -384,7 +384,7 @@ get_mob_stats = function(mob_in,
    if (n_perm < 1) 
        stop('Set nperm to a value greater than 1') 
    
-   INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
+   INDICES <- c("N", "S", "S_rare","S_asymp","PIE","S_PIE")
    index <- match.arg(index, INDICES, several.ok = TRUE)
    
    group_id  = factor(mob_in$env[, group_var])
@@ -497,18 +497,18 @@ get_mob_stats = function(mob_in,
    }
    
    # Effective number of species based on PIE ----------------------------------
-   if ("ENS_PIE" %in% index){
-      gamma <- with(dat_groups, value[index == "ENS_PIE"])
-      alpha <- with(dat_samples,  value[index == "ENS_PIE"])
+   if ("S_PIE" %in% index){
+      gamma <- with(dat_groups, value[index == "S_PIE"])
+      alpha <- with(dat_samples,  value[index == "S_PIE"])
       
-      beta_ENS_PIE <- gamma[group_id]/alpha
-      beta_ENS_PIE[!is.finite(beta_ENS_PIE)] <- NA
+      beta_S_PIE <- gamma[group_id]/alpha
+      beta_S_PIE[!is.finite(beta_S_PIE)] <- NA
       
-      dat_beta_ENS_PIE <- data.frame(group = group_id,
-                                     index = "beta_ENS_PIE",
+      dat_beta_S_PIE <- data.frame(group = group_id,
+                                     index = "beta_S_PIE",
                                      n_rare = NA,
-                                     value = beta_ENS_PIE)
-      dat_samples <- rbind(dat_samples, dat_beta_ENS_PIE)
+                                     value = beta_S_PIE)
+      dat_samples <- rbind(dat_samples, dat_beta_S_PIE)
    }
    
    # Significance tests
@@ -569,7 +569,7 @@ get_mob_stats = function(mob_in,
                                           "S_rare","beta_S_rare",
                                           "S_asymp","beta_S_asymp",
                                           "PIE",
-                                          "ENS_PIE","beta_ENS_PIE"))
+                                          "S_PIE","beta_S_PIE"))
    dat_samples <- dat_samples[order(dat_samples$index, dat_samples$n_rare, dat_samples$group),]
    
    dat_groups$index <- factor(dat_groups$index, levels = index)
@@ -657,7 +657,7 @@ groups_panel2 <- function(group_dat, col, ylab = "", main = "Group scale", ...)
 #' 
 #' @param multi_panel A logical variable. If \code{multi_panel = TRUE} then a 
 #' multipanel plot is produced, which shows observed, rarefied, and asymptotic 
-#' species richness and ENS_PIE at the sample-level and the group-level.
+#' species richness and S_PIE at the sample-level and the group-level.
 #' This set of variables conveys a comprehensive picture of the underlying 
 #' biodiversity changes. 
 #' 
@@ -687,16 +687,16 @@ groups_panel2 <- function(group_dat, col, ylab = "", main = "Group scale", ...)
 #'  ref_group = "uninvaded", n_perm = 20, boot_groups=T)
 #' plot(inv_stats_boot)
 
-plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_PIE"),
+plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","S_PIE"),
                           multi_panel = FALSE, col=c("#2B83BA", "#FFC000"), ...)
 {
-   INDICES <- c("N", "S", "S_rare","S_asymp","PIE","ENS_PIE")
+   INDICES <- c("N", "S", "S_rare","S_asymp","PIE","S_PIE")
    
-   if (multi_panel) index <- c("S","S_rare","S_asymp","ENS_PIE")
+   if (multi_panel) index <- c("S","S_rare","S_asymp","S_PIE")
    index <- match.arg(index, INDICES, several.ok = TRUE)
    
    var_names <- levels(mob_stats$samples_stats$index)
-   var_names2 <- var_names[var_names != "beta_S" & var_names != "beta_ENS_PIE"]
+   var_names2 <- var_names[var_names != "beta_S" & var_names != "beta_S_PIE"]
    
    index_match <- intersect(index, var_names)
    if (length(index_match) == 0)
@@ -745,7 +745,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          }
       }
       
-      if (var %in% c("S", "S_asymp", "ENS_PIE")){
+      if (var %in% c("S", "S_asymp", "S_PIE")){
          
          if (!multi_panel)
             op <- par(mfrow = c(1,3), cex.lab = 1.6,
@@ -753,13 +753,13 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0, 0.33, 1/n_rows, 2/n_rows), new = T)
-            if (var == "ENS_PIE") par(fig = c(0, 0.33, 0       , 1/n_rows), new = T)
+            if (var == "S_PIE") par(fig = c(0, 0.33, 0       , 1/n_rows), new = T)
          }
          
          y_label <- switch(var,
                            "S" = expression(S),
                            "S_asymp" = expression(S[asymp]),
-                           "ENS_PIE" = expression(ENS[PIE]))
+                           "S_PIE" = expression(S[PIE]))
          
          dat_samples <- filter(mob_stats$samples_stats, index == var)
          p_val <- with(mob_stats$samples_pval, p_val[index == var])
@@ -768,7 +768,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = T)
-            if (var == "ENS_PIE") par(fig = c(0.33, 0.67, 0       , 1/n_rows), new = T)
+            if (var == "S_PIE") par(fig = c(0.33, 0.67, 0       , 1/n_rows), new = T)
          }
          
          beta_var <- paste("beta", var, sep = "_")
@@ -779,7 +779,7 @@ plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","ENS_P
          
          if (multi_panel){
             if (var == "S_asymp") par(fig = c(0.67, 1.0, 1/n_rows, 2/n_rows), new = T)
-            if (var == "ENS_PIE") par(fig = c(0.67, 1.0, 0       , 1/n_rows), new = T)
+            if (var == "S_PIE") par(fig = c(0.67, 1.0, 0       , 1/n_rows), new = T)
          }
          
          dat_groups <- filter(mob_stats$groups_stats, index == var)

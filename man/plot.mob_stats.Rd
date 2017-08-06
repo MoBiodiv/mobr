@@ -5,7 +5,7 @@
 \title{Plot sample-level and group-level biodiversity statistics for a MoB analysis}
 \usage{
 \method{plot}{mob_stats}(mob_stats, index = c("N", "S", "S_rare", "S_asymp",
-  "ENS_PIE"), multi_panel = FALSE, col = c("#2B83BA", "#FFC000"), ...)
+  "S_PIE"), multi_panel = FALSE, col = c("#2B83BA", "#FFC000"), ...)
 }
 \arguments{
 \item{mob_stats}{a \code{mob_stats} object that has the samples and 
@@ -18,7 +18,7 @@ as well as for beta-diversity when applicable.}
 
 \item{multi_panel}{A logical variable. If \code{multi_panel = TRUE} then a 
 multipanel plot is produced, which shows observed, rarefied, and asymptotic 
-species richness and ENS_PIE at the sample-level and the group-level.
+species richness and S_PIE at the sample-level and the group-level.
 This set of variables conveys a comprehensive picture of the underlying 
 biodiversity changes.}
 

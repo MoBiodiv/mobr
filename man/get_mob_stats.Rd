@@ -5,7 +5,7 @@
 \title{Calculate sample based and group based biodiversity statistics.}
 \usage{
 get_mob_stats(mob_in, group_var, ref_group = NULL, index = c("N", "S",
-  "S_rare", "S_asymp", "ENS_PIE"), n_rare_samples = NULL, n_rare_min = 5,
+  "S_rare", "S_asymp", "S_PIE"), n_rare_samples = NULL, n_rare_min = 5,
   n_perm = 20, boot_groups = F, conf_level = 0.95)
 }
 \arguments{
@@ -24,7 +24,7 @@ control vs. treatment test at the group level.}
    \item \code{S_rare} ... Rarefied number of species
    \item \code{S_asymp} ... Estimated asymptotic species richness
    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
-   \item \code{ENS_PIE} ... Effective number of species based on PIE
+   \item \code{S_PIE} ... Effective number of species based on PIE
 }
 See \emph{Details} for additional information on the biodiverstiy statistics.}
 
@@ -85,15 +85,15 @@ belong to the same species. Here we use the definition of Hurlbert (1971), which
 sampling without replacement. PIE is closely related to the well-known Simpson 
 diversity index, but the latter assumes sampling with replacement.
 
-\strong{ENS_PIE} represents the Effective Number of Species derived from the PIE.
+\strong{S_PIE} represents the Effective Number of Species derived from the PIE.
 This corresponds to the the number of equally abundant species (i.e. a perfectly
 even community), there would need to be to achieve the observed PIE (Jost 2006).
-This means the higher the difference between S and ENS_PIE the more
-uneven is the observed community. An intuitive interpretation of ENS_PIE is that
+This means the higher the difference between S and S_PIE the more
+uneven is the observed community. An intuitive interpretation of S_PIE is that
 it corresponds to the number of dominant (highly abundant) species in the community.
 
 For species richness \code{S}, rarefied richness \code{S_rare}, asymptotic
-richness \code{S_asymp}, and the Effective Number of Species \code{ENS_PIE}
+richness \code{S_asymp}, and the Effective Number of Species \code{S_PIE}
 we also calculate beta-diversity using multiplicative partitioning
 (Whittaker 1972, Jost 2007). That means for these indices we estimate beta-diversity 
 as the ratio of group-level diversity (gamma) divided by sample-level diversity (alpha). 
