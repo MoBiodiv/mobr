@@ -77,7 +77,7 @@ make_mob_in = function(comm, plot_attr, binary=FALSE, latlong=FALSE) {
 #' @param mob_in an object of class mob_in created by \code{\link{make_mob_in}}
 #' @param drop_levels boolean if TRUE unused levels are removed from factors
 #'  in mob_in$env
-#' @inheritParams 
+#' @inheritParams base::subset
 #' @export
 #' @examples 
 #'  data(inv_comm)

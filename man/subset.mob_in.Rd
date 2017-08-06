@@ -10,6 +10,9 @@
 \arguments{
 \item{mob_in}{an object of class mob_in created by \code{\link{make_mob_in}}}
 
+\item{subset}{logical expression indicating elements or rows to keep:
+    missing values are taken as false.}
+
 \item{drop_levels}{boolean if TRUE unused levels are removed from factors
 in mob_in$env}
 }
