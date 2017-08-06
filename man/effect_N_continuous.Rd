@@ -6,7 +6,7 @@
 Effect of N when type is "continuous"}
 \usage{
 effect_N_continuous(mob_in, S, group_levels, env_levels, group_data, plot_dens,
-  plot_abd, ind_sample_size, corr, nperm)
+  plot_abd, ind_sample_size, corr, n_perm)
 }
 \description{
 Auxillary function for get_delta_stats()

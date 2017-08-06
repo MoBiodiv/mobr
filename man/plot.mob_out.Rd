@@ -40,7 +40,7 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                              type='discrete', log_scale=TRUE, nperm=2)
+                              type='discrete', log_scale=TRUE, n_perm=2)
 plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
 plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
 plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')

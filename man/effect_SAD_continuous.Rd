@@ -6,7 +6,7 @@
 Effect of SAD when type is "continuous"
 Directly add attributes to the input "out"}
 \usage{
-effect_SAD_continuous(out, group_sad, env_levels, corr, nperm)
+effect_SAD_continuous(out, group_sad, env_levels, corr, n_perm)
 }
 \description{
 Auxillary function for get_delta_stats()

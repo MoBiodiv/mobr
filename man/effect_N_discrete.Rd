@@ -6,7 +6,7 @@
 Effect of N when type is "discrete"}
 \usage{
 effect_N_discrete(out, mob_in, group_levels, ref_group, groups, density_stat,
-  ind_sample_size, nperm, overall_p)
+  ind_sample_size, n_perm, overall_p)
 }
 \description{
 Auxillary function for get_delta_stats()

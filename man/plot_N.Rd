@@ -5,12 +5,12 @@
 \title{Plot the relationship between the number of plots and the number of
 inviduals}
 \usage{
-plot_N(comm, nperm = 1000)
+plot_N(comm, n_perm = 1000)
 }
 \arguments{
 \item{comm}{community matrix with sites as rows and species as columns}
 
-\item{nperm}{number of permutations to average across, defaults to 1000}
+\item{n_perm}{number of permutations to average across, defaults to 1000}
 }
 \description{
 The MoB methods assume a linear relationship between the number of 

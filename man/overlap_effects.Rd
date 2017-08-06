@@ -61,7 +61,7 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                              type='discrete', log_scale=TRUE, nperm=2)
+                              type='discrete', log_scale=TRUE, n_perm=2)
 overlap_effects(inv_mob_out, 'invaded')
 overlap_effects(inv_mob_out, 'invaded', display='stacked')
 overlap_effects(inv_mob_out, 'invaded', display='stacked', prop=TRUE)

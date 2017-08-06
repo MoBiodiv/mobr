@@ -7,7 +7,7 @@
 get_delta_stats(mob_in, group_var, env_var = NULL, ref_group = NULL,
   tests = c("SAD", "N", "agg"), type = "discrete", inds = NULL,
   log_scale = FALSE, min_plots = NULL, density_stat = "mean",
-  corr = "spearman", nperm = 1000, overall_p = FALSE)
+  corr = "spearman", n_perm = 1000, overall_p = FALSE)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -71,7 +71,7 @@ can take two values, "spearman" or "pearson". "spearman" (default) is
 generally recommended because the relationship between the response and
 "env_var" may not be linear.}
 
-\item{nperm}{number of iterations to run for null tests, defaults to 1000.}
+\item{n_perm}{number of iterations to run for null tests, defaults to 1000.}
 
 \item{overall_p}{boolean defaults to FALSE specifies if overall across scale 
 p-values for the null tests. This should be interpreted with caution because
@@ -91,7 +91,7 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                           type='discrete', log_scale=TRUE, nperm=20)
+                           type='discrete', log_scale=TRUE, n_perm=20)
 }
 \author{
 Xiao Xiao and Dan McGlinn

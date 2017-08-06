@@ -634,7 +634,7 @@ get_sample_curves = function(mob_in, group_levels, group_data, approved_tests){
 #' Effect of SAD when type is "continuous"
 #' Directly add attributes to the input "out"
 #' @keywords internal
-effect_SAD_continuous = function(out, group_sad, env_levels, corr, nperm){
+effect_SAD_continuous = function(out, group_sad, env_levels, corr, n_perm){
     ind_sample_size = out$indiv_rare[, 1]
     ind_rare = out$indiv_rare[, -1]
     ind_cor = apply(ind_rare, 1, function(x) 
@@ -642,10 +642,10 @@ effect_SAD_continuous = function(out, group_sad, env_levels, corr, nperm){
     # Null test
     overall_sad_lumped = as.numeric(colSums(group_sad))
     sp_freq = overall_sad_lumped[overall_sad_lumped > 0] / sum(overall_sad_lumped)
-    null_ind_r_mat = matrix(NA, nperm, length(ind_sample_size))
+    null_ind_r_mat = matrix(NA, n_perm, length(ind_sample_size))
     cat('\nComputing null model for SAD effect\n')
-    pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-    for (i in 1:nperm){
+    pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
+    for (i in 1:n_perm){
         # Note: necessary to convert sample to factor, so that zero counts are kept
         sad_perm = sapply(rowSums(group_sad), function(x)
             data.frame(table(factor(sample(1:length(sp_freq), x, replace = T,
@@ -672,7 +672,7 @@ effect_SAD_continuous = function(out, group_sad, env_levels, corr, nperm){
 #' Auxillary function for get_delta_stats()
 #' Effect of SAD when type is "discrete"
 #' @keywords internal
-effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm, 
+effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, n_perm, 
                                overall_p){
     ind_sample_size = out$indiv_rare[, 1]
     ref_sad = group_sad[which(group_levels == as.character(ref_group)), ]
@@ -680,7 +680,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm,
                                 stringsAsFactors = F)
 
     cat('\nComputing null model for SAD effect\n')
-    pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
+    pb <- txtProgressBar(min = 0, max = n_perm * (length(group_levels) - 1), 
                          style = 3)
     k = 1
     for (level in group_levels[group_levels != ref_group]){
@@ -689,8 +689,8 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm,
         comp_sad_lumped = as.numeric(colSums(rbind(ref_sad, level_sad)))
         sp_freq = comp_sad_lumped[comp_sad_lumped > 0] / sum(comp_sad_lumped)
         
-        null_ind_deltaS_mat = matrix(NA, nperm, length(ind_sample_size))
-        for (i in 1:nperm){
+        null_ind_deltaS_mat = matrix(NA, n_perm, length(ind_sample_size))
+        for (i in 1:n_perm){
             sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
                 data.frame(table(factor(sample(1:length(sp_freq),x, replace = T,
                                                prob = sp_freq),
@@ -725,7 +725,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, nperm,
 #' @keywords internal
 effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data, 
                                plot_dens, plot_abd, ind_sample_size, corr, 
-                               nperm){
+                               n_perm){
     # TODO: checks?
     effect_N_by_group = data.frame(matrix(NA, ncol = length(group_levels) + 1,
                                           nrow = length(ind_sample_size)))
@@ -740,10 +740,10 @@ effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data,
     r_emp = apply(effect_N_by_group[ , -1], 1, function(x)
         cor(x, env_levels, method = corr))
     
-    null_N_r_mat = matrix(NA, nperm, length(r_emp))
+    null_N_r_mat = matrix(NA, n_perm, length(r_emp))
     cat('\nComputing null model for N effect\n')
-    pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-    for (i in 1:nperm){
+    pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
+    for (i in 1:n_perm){
         comm_perm = permute_comm(mob_in$comm, 'swapN', group_data)
         effect_N_perm = data.frame(matrix(NA, ncol = length(group_levels),
                                           nrow = length(ind_sample_size)))
@@ -775,13 +775,13 @@ effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data,
 #' Effect of N when type is "discrete" 
 #' @keywords internal
 effect_N_discrete = function(out, mob_in, group_levels, ref_group, groups, 
-                             density_stat, ind_sample_size, nperm, overall_p){
+                             density_stat, ind_sample_size, n_perm, overall_p){
     out_N = NULL
     if (overall_p)
         overallp_N = data.frame(matrix(0, nrow = 0, ncol = 2), 
                                 stringsAsFactors = F)
     cat('\nComputing null model for N effect\n')
-    pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
+    pb <- txtProgressBar(min = 0, max = n_perm * (length(group_levels) - 1), 
                          style = 3)
     k = 1
     for (level in group_levels[group_levels != as.character(ref_group)]){
@@ -793,8 +793,8 @@ effect_N_discrete = function(out, mob_in, group_levels, ref_group, groups,
             deltaS_N(comm_levels[plot_levels == x, ], plot_dens_level, 
                      ind_sample_size)$deltaS)
         ddeltaS_level = N_eff[, 2] - N_eff[, 1]
-        null_N_deltaS_mat = matrix(NA, nperm, length(ddeltaS_level))
-        for (i in 1:nperm){
+        null_N_deltaS_mat = matrix(NA, n_perm, length(ddeltaS_level))
+        for (i in 1:n_perm){
             # swap plot abu between group 1 and each other group
             comm_perm = permute_comm(comm_levels, 'swapN', plot_levels)  
             min_N = min(sum(comm_perm[plot_levels == as.character(ref_group), ]), 
@@ -831,7 +831,7 @@ effect_N_discrete = function(out, mob_in, group_levels, ref_group, groups,
 #' Effect of aggregation when type is "continuous"
 #' @keywords internal
 effect_agg_continuous = function(mob_in, sample_rare, group_plots, group_levels, 
-                                 group_data, env_levels, corr, nperm){
+                                 group_data, env_levels, corr, n_perm){
     min_plot_level = min(group_plots$Freq)
     r_emp = c()
     for (iplot in seq(min_plot_level)){
@@ -842,10 +842,10 @@ effect_agg_continuous = function(mob_in, sample_rare, group_plots, group_levels,
         r_emp = c(r_emp, cor(deltaS_i, env_i, method = corr))
     }
 
-    null_agg_r_mat = matrix(NA, nperm, min_plot_level)
+    null_agg_r_mat = matrix(NA, n_perm, min_plot_level)
     cat('\nComputing null model for aggregation effect\n')
-    pb <- txtProgressBar(min = 0, max = nperm, style = 3)
-    for (i in 1:nperm){
+    pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
+    for (i in 1:n_perm){
         comm_perm = comm
         comm_perm$comm = permute_comm(mob_in$comm, 'noagg', group_data)
         sample_rare_perm = get_sample_curves(comm_perm, group_levels, group_data, 
@@ -878,13 +878,13 @@ effect_agg_continuous = function(mob_in, sample_rare, group_plots, group_levels,
 #' Effect of aggregation when type is "discrete"
 #' @keywords internal
 effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data, 
-                               group_levels, nperm, overall_p){
+                               group_levels, n_perm, overall_p){
     sample_rare = out$sample_rare
     ref_sample = sample_rare[which(sample_rare$group == 
                                        as.character(ref_group)), ]
     table_agg = data.frame(matrix(NA, nrow = 0, ncol = 6))
     cat('\nComputing null model for aggregation effect\n')
-    pb <- txtProgressBar(min = 0, max = nperm * (length(group_levels) - 1), 
+    pb <- txtProgressBar(min = 0, max = n_perm * (length(group_levels) - 1), 
                          style = 3)
     k = 1
     for (level in group_levels[group_levels != as.character(ref_group)]){
@@ -893,8 +893,8 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
         ddeltaS_level = sample_rare$deltaS_agg[sample_rare$group == level][1:min_plot_level] - 
             sample_rare$deltaS_agg[sample_rare$group == ref_group][1:min_plot_level]
         
-        null_agg_deltaS_mat = matrix(NA, nperm, min_plot_level)
-        for (i in 1:nperm){
+        null_agg_deltaS_mat = matrix(NA, n_perm, min_plot_level)
+        for (i in 1:n_perm){
             comm_perm = mob_in
             comm_perm$comm = permute_comm(mob_in$comm, 'noagg', group_data)
             sample_rare_perm = get_sample_curves(comm_perm, group_levels, group_data, 
@@ -980,7 +980,7 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #'   can take two values, "spearman" or "pearson". "spearman" (default) is
 #'   generally recommended because the relationship between the response and
 #'   "env_var" may not be linear.
-#' @param nperm number of iterations to run for null tests, defaults to 1000.
+#' @param n_perm number of iterations to run for null tests, defaults to 1000.
 #' @param overall_p boolean defaults to FALSE specifies if overall across scale 
 #'  p-values for the null tests. This should be interpreted with caution because
 #'  the overall p-values depend on scales of measurement yet do not explicitly 
@@ -993,13 +993,13 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #' data(inv_plot_attr)
 #' inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-#'                            type='discrete', log_scale=TRUE, nperm=20)
+#'                            type='discrete', log_scale=TRUE, n_perm=20)
 
 get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL, 
                            tests = c('SAD', 'N', 'agg'),
                            type='discrete', inds = NULL, log_scale = FALSE,
                            min_plots = NULL, density_stat ='mean',
-                           corr='spearman', nperm=1000, overall_p = FALSE) {
+                           corr='spearman', n_perm=1000, overall_p = FALSE) {
     
     approved_tests = get_delta_overall_checks(mob_in, type, group_var, env_var, 
                                               density_stat, tests)
@@ -1044,15 +1044,15 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
     if (type == 'continuous'){
         get_delta_continuous_checks(corr, group_levels, env_raw)
         if ('SAD' %in% approved_tests)
-            out = effect_SAD_continuous(out, group_sad, env_levels, corr, nperm)
+            out = effect_SAD_continuous(out, group_sad, env_levels, corr, n_perm)
         if ('N' %in% approved_tests)
             out = effect_N_continuous(out, mob_in, S, group_levels, env_levels, 
                                         group_data, plot_dens, plot_abd, 
-                                        ind_sample_size, corr, nperm)
+                                        ind_sample_size, corr, n_perm)
         if ('agg' %in% approved_tests)
             out$agg = effect_agg_continuous(mob_in, out$sample_rare,
                                             group_plots, group_levels, 
-                                            group_data, env_levels, corr, nperm)
+                                            group_data, env_levels, corr, n_perm)
     } else if (type == 'discrete') {
         get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
         if (overall_p) {
@@ -1065,13 +1065,13 @@ reflect significance at any particular scale. Be careful in interpretation.')
         }
         if ('SAD' %in% approved_tests)
             out = effect_SAD_discrete(out, group_sad, group_levels, ref_group,
-                                      nperm, overall_p)
+                                      n_perm, overall_p)
         if ('N' %in% approved_tests)
             out = effect_N_discrete(out, mob_in, group_levels, ref_group, groups,
-                                    density_stat,ind_sample_size, nperm, overall_p)
+                                    density_stat,ind_sample_size, n_perm, overall_p)
         if ('agg' %in% approved_tests)
             out = effect_agg_discrete(out, mob_in, ref_group, group_plots, 
-                                      group_data, group_levels, nperm, overall_p)
+                                      group_data, group_levels, n_perm, overall_p)
     } else 
         stop('The argument "type" must be either "discrete" or "continuous"')
     class(out) = 'mob_out'
@@ -1358,7 +1358,7 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-#'                               type='discrete', log_scale=TRUE, nperm=2)
+#'                               type='discrete', log_scale=TRUE, n_perm=2)
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
@@ -1607,7 +1607,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-#'                               type='discrete', log_scale=TRUE, nperm=2)
+#'                               type='discrete', log_scale=TRUE, n_perm=2)
 #' overlap_effects(inv_mob_out, 'invaded')
 #' overlap_effects(inv_mob_out, 'invaded', display='stacked')
 #' overlap_effects(inv_mob_out, 'invaded', display='stacked', prop=TRUE)
@@ -1706,16 +1706,16 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
 #' plots and the number of individuals. This function provides a means of 
 #' verifying the validity of this assumption
 #' @param comm community matrix with sites as rows and species as columns
-#' @param nperm number of permutations to average across, defaults to 1000
+#' @param n_perm number of permutations to average across, defaults to 1000
 #' @author Dan McGlinn
 #' @export
 #' @examples
 #' data(inv_comm)
 #' plot_N(inv_comm)
-plot_N = function(comm, nperm=1000) {
+plot_N = function(comm, n_perm=1000) {
     N = rowSums(comm)
     plot_dens = mean(N)
-    N_sum = apply(replicate(nperm, cumsum(sample(N))), 1, mean)
+    N_sum = apply(replicate(n_perm, cumsum(sample(N))), 1, mean)
     plot(N_sum, xlab='Number of plots', ylab='Number of Individuals')
     abline(a=0, b=plot_dens, col='red')
     legend('topleft', 'Expected line', lty=1, bty='n', col='red')

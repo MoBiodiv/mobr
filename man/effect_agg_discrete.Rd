@@ -6,7 +6,7 @@
 Effect of aggregation when type is "discrete"}
 \usage{
 effect_agg_discrete(out, mob_in, ref_group, group_plots, group_data,
-  group_levels, nperm, overall_p)
+  group_levels, n_perm, overall_p)
 }
 \description{
 Auxillary function for get_delta_stats()

@@ -6,7 +6,7 @@
 Effect of aggregation when type is "continuous"}
 \usage{
 effect_agg_continuous(mob_in, sample_rare, group_plots, group_levels,
-  group_data, env_levels, corr, nperm)
+  group_data, env_levels, corr, n_perm)
 }
 \description{
 Auxillary function for get_delta_stats()
