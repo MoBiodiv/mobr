@@ -376,7 +376,7 @@ get_mob_stats = function(mob_in,
                          index = c("N","S","S_rare","S_asymp","S_PIE"),
                          n_rare_samples = NULL,
                          n_rare_min = 5,
-                         n_perm = 20,
+                         n_perm = 200,
                          boot_groups = F,
                          conf_level = 0.95
                          )

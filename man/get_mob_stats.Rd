@@ -6,7 +6,7 @@
 \usage{
 get_mob_stats(mob_in, group_var, ref_group = NULL, index = c("N", "S",
   "S_rare", "S_asymp", "S_PIE"), n_rare_samples = NULL, n_rare_min = 5,
-  n_perm = 20, boot_groups = F, conf_level = 0.95)
+  n_perm = 200, boot_groups = F, conf_level = 0.95)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
