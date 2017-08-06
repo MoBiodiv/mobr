@@ -4,11 +4,29 @@ This reposititory hosts an R package that is being developed for
 estimating biodiversity and the components of its change.
 
 # How to install mobr
+
+The easiest option is to install the package directly from GitHub using the package `devtools`. If you do not already have `devtools` installed then need to install it.
+
 ```r
+install.packages('devtools')
 library(devtools)
-install_github('MoBiodiv/mobr')
-library(mobr)
 ```
+
+The package also requires the `dplyr` package which has many dependencies. If you do 
+not already have the `dplyr` package installed we suggest you install it and 
+all of its dependencies using :
+
+```r
+install.packages(c('bindrcpp','glue','pkgconfig','tibble','plyr','dplyr'))
+```
+
+Then check that `dplyr` can be loaded with `library(dplyr)`.
+Now you should be ready to go with the `mobr` install
+
+```r
+install_github('MoBiodiv/mobr')
+```
+
 # Examples
 ```r
 library(mobr)
@@ -16,7 +34,7 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                              type='discrete', log_scale=TRUE, nperm=100)
+                              type='discrete', log_scale=TRUE, n_perm=100)
 plot(inv_mob_out, 'invaded', 'uninvaded')
 ```
 
