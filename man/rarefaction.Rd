@@ -10,8 +10,7 @@ rarefaction(x, method, effort = NULL, xy_coords = NULL, latlong = NULL,
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like
 object in which rows represent plots and columns represent species, or 3)
-`species-abundance distribution vector which contains the abundance of 
-each species.}
+a vector which contains the abundance of each species.}
 
 \item{method}{either 'indiv', 'sampl', or 'spat' for individual, sample, or 
 sample spatially explicit based rarefaction respectively}
