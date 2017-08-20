@@ -14,18 +14,23 @@ deltaS_N(comm, ref_dens, inds)
 \item{inds}{the number of individuals to sample over}
 }
 \value{
-a two column data.frame containing the number of individuals and the 
-  difference in species richness
+a two column data.frame containing the number of individuals (inds)
+  and the difference in species richness (deltaS)
 }
 \description{
-Difference between the individual and sample-based rarefaction 
-  curves for one group with the evaluation sample size (number of individuals)
-  defined by ref_dens, evaluated at specified points (given by inds) Output:
-  a two-column data frame, with sample size (effort) and deltaS (effect of N)
+Difference between the individual and non-spatial sample-based
+  rarefaction curves for one group with the evaluation sample size (number of
+  individuals) defined by ref_dens, evaluated at specified points (given by
+  inds). The rescaling of sampling effort from number of samples to number
+  of individuals is acocmplished using the mean density of individuals 
+  per sample.
 }
 \details{
 Internal function for computing the difference in species richness between 
-individual-based and sample-based rarefaction curves.
+individual-based and non-spatial sample-based rarefaction curves using an 
+analytical approach of stretching (ref_dens > group_dens) or strinking
+(ref_dens < group_dens) the individual-based rarefaction curve to provide the
+non-spatial rarefaction result.
 }
 \author{
 Dan McGlinn and Xiao Xiao

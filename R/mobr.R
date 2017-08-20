@@ -384,17 +384,22 @@ avg_nn_dist = function(xy_coords) {
 #' Difference in S due to N
 #' 
 #' Internal function for computing the difference in species richness between 
-#' individual-based and sample-based rarefaction curves.
+#' individual-based and non-spatial sample-based rarefaction curves using an 
+#' analytical approach of stretching (ref_dens > group_dens) or strinking
+#' (ref_dens < group_dens) the individual-based rarefaction curve to provide the
+#' non-spatial rarefaction result.
 #' 
 #' @param comm community matrix with plots as rows and species columns.
 #' @param ref_dens the reference density
 #' @param inds the number of individuals to sample over
-#' @description  Difference between the individual and sample-based rarefaction 
-#'   curves for one group with the evaluation sample size (number of individuals)
-#'   defined by ref_dens, evaluated at specified points (given by inds) Output:
-#'   a two-column data frame, with sample size (effort) and deltaS (effect of N)
-#' @return a two column data.frame containing the number of individuals and the 
-#'   difference in species richness
+#' @description  Difference between the individual and non-spatial sample-based
+#'   rarefaction curves for one group with the evaluation sample size (number of
+#'   individuals) defined by ref_dens, evaluated at specified points (given by
+#'   inds). The rescaling of sampling effort from number of samples to number
+#'   of individuals is acocmplished using the mean density of individuals 
+#'   per sample.
+#' @return a two column data.frame containing the number of individuals (inds)
+#'   and the difference in species richness (deltaS)
 #' @author Dan McGlinn and Xiao Xiao
 #' @importFrom pracma pchip
 #' @keywords internal
