@@ -1416,18 +1416,26 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     sample_rare_ref = mob_out$sample_rare[mob_out$sample_rare == ref_group, ]
     if ('rarefaction' %in% display) {
         groups = c(trt_group, ref_group)
-        if ('SAD' %in% mob_out$tests) {
-            if (!same_scale)
-                ylim_rare = range(mob_out$indiv_rare[, -1])
-            plot(mob_out$indiv_rare$sample, mob_out$indiv_rare[, trt_group], 
-                 lwd = lwd, type = 'l', col = cols$trt, xlab = 'Number of individuals', 
-                 ylab = 'Richness (S)', main = 'Individual', 
-                 xlim = c(xmin, max(mob_out$indiv_rare$sample)), ylim = ylim_rare, 
-                 cex.axis = 1.5, cex.lab = 1.5, log=plot_log)
-            lines(mob_out$indiv_rare$sample, mob_out$indiv_rare[, ref_group], 
-                  lwd = lwd, col = cols$ref)
-            legend('topleft', as.character(groups), col=as.character(unlist(cols)), 
-                   lty=1, lwd=lwd, bty='n')
+        if ('agg' %in% mob_out$tests) {
+          if (!same_scale)
+            ylim_rare = c(0, max(mob_out$sample_rare$expl_S))
+          for (i in 1:length(groups)){
+            group = groups[i]
+            dat_group = mob_out$sample_rare[mob_out$sample_rare$group == group, ]
+            if (i == 1)
+              plot(dat_group$sample_plot, dat_group$expl_S, lwd = lwd,
+                   type = 'l', xlab = 'Number of plots',
+                   ylab = 'Richness (S)', col = cols$trt,
+                   xlim = c(xmin, max(dat_group$sample_plot)),
+                   ylim = ylim_rare,
+                   main = 'Spatial', cex.axis = 1.5, cex.lab = 1.5,
+                   log=plot_log)
+            else
+              lines(dat_group$sample_plot, dat_group$expl_S,
+                    lwd = lwd, col = cols$ref)
+          }
+          legend('topleft', as.character(groups), col=as.character(unlist(cols)), 
+                 lty=1, lwd=lwd, bty='n')          
         }
         if ('N' %in% mob_out$tests) {
             if (!same_scale)
@@ -1448,41 +1456,31 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                           lwd = lwd, col = cols$ref)
             }
         }
-        if ('agg' %in% mob_out$tests) {
-            if (!same_scale)
-                ylim_rare = c(0, max(mob_out$sample_rare$expl_S))
-            for (i in 1:length(groups)){
-                group = groups[i]
-                dat_group = mob_out$sample_rare[mob_out$sample_rare$group == group, ]
-                if (i == 1)
-                    plot(dat_group$sample_plot, dat_group$expl_S, lwd = lwd,
-                         type = 'l', xlab = 'Number of plots',
-                         ylab = 'Richness (S)', col = cols$trt,
-                         xlim = c(xmin, max(dat_group$sample_plot)),
-                         ylim = ylim_rare,
-                         main = 'Spatial', cex.axis = 1.5, cex.lab = 1.5,
-                         log=plot_log)
-                else
-                    lines(dat_group$sample_plot, dat_group$expl_S,
-                          lwd = lwd, col = cols$ref)
-            }
-        }
+        if ('SAD' %in% mob_out$tests) {
+          if (!same_scale)
+            ylim_rare = range(mob_out$indiv_rare[, -1])
+          plot(mob_out$indiv_rare$sample, mob_out$indiv_rare[, trt_group], 
+               lwd = lwd, type = 'l', col = cols$trt, xlab = 'Number of individuals', 
+               ylab = 'Richness (S)', main = 'Individual', 
+               xlim = c(xmin, max(mob_out$indiv_rare$sample)), ylim = ylim_rare, 
+               cex.axis = 1.5, cex.lab = 1.5, log=plot_log)
+          lines(mob_out$indiv_rare$sample, mob_out$indiv_rare[, ref_group], 
+                lwd = lwd, col = cols$ref)
+        }        
     }    
     if ('delta S' %in% display) {
-        if ('SAD' %in% mob_out$tests) {
-            # Create the plots for the three delta-S between groups
-            deltaS_Sind = mob_out$indiv_rare[[trt_group]] - 
-                          mob_out$indiv_rare[[ref_group]]
-            plot(mob_out$indiv_rare$sample, deltaS_Sind,
-                 ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
-                 col = cols$deltaS, xlab = 'Number of individuals', 
-                 ylab = expression(Delta * 'S due to SAD'), log=plot_log)
-            abline(h = 0, lwd = 1, lty = 2)
-
-        } 
+      minN = min(nrow(sample_rare_group), nrow(sample_rare_ref))
+      if ('agg' %in% mob_out$tests) {
+        delta_Sspat = sample_rare_group$expl_S[1:minN] - 
+          sample_rare_ref$expl_S[1:minN]
+        plot(seq(minN), delta_Sspat, 
+             ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
+             cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
+             col = cols$deltaS, xlab = 'Number of plots',
+             ylab = expression(Delta * 'S due to SAD, N, & agg.'))
+        abline(h = 0, lwd = 1, lty = 2)
+      }
         if ('N' %in% mob_out$tests) {
-            minN = min(nrow(sample_rare_group), nrow(sample_rare_ref))
             delta_Ssample = sample_rare_group$impl_S[1:minN] - 
                             sample_rare_ref$impl_S[1:minN]
             plot(seq(minN), delta_Ssample, 
@@ -1492,40 +1490,46 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                  ylab = expression(Delta * 'S due to SAD & N'))
             abline(h = 0, lwd = 1, lty = 2)
         }
-        if ('agg' %in% mob_out$tests) {
-            delta_Sspat = sample_rare_group$expl_S[1:minN] - 
-                          sample_rare_ref$expl_S[1:minN]
-            plot(seq(minN), delta_Sspat, 
-                 ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
-                 col = cols$deltaS, xlab = 'Number of plots',
-                 ylab = expression(Delta * 'S due to SAD, N, & agg.'))
-            abline(h = 0, lwd = 1, lty = 2)
-        }
+      if ('SAD' %in% mob_out$tests) {
+        # Create the plots for the three delta-S between groups
+        deltaS_Sind = mob_out$indiv_rare[[trt_group]] - 
+          mob_out$indiv_rare[[ref_group]]
+        plot(mob_out$indiv_rare$sample, deltaS_Sind,
+             ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
+             cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
+             col = cols$deltaS, xlab = 'Number of individuals', 
+             ylab = expression(Delta * 'S due to SAD'), log=plot_log)
+        abline(h = 0, lwd = 1, lty = 2)
+        
+      }       
+
     }
     if ('ddelta S' %in% display) {
         # Create the plots for the three ddelta S
          ylim_ddelta = range(lapply(mob_out[tests], function(x)
                               lapply(x[ , -(1:2)], function(y)
                                      as.numeric(as.character(y)))))
-        if ('SAD' %in% mob_out$tests) {
-            mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
-                                       as.numeric(as.character(x))) 
-            delta_Sind = mob_out$SAD[which(as.character(mob_out$SAD$group) == as.character(trt_group)), ]
-            if (!same_scale)
-                ylim = range(delta_Sind[ , -(1:2)])
-            plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
-                 ylim = ylim_ddelta, log=plot_log,
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'n',
-                 xlab = 'Number of individuals', ylab = expression(Delta * 'S due to SAD'))
-            polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
-                    c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
-                    col = '#C1CDCD', border = NA)
-            abline(h = 0, lwd = 1, lty = 2)
-            lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
-                  lwd = lwd, col = cols$ddeltaS)
-        }
-        if ('N' %in% mob_out$tests) {
+         if ('agg' %in% mob_out$tests) {
+           mob_out$agg[, -1] = lapply(mob_out$agg[, -1], function(x)
+             as.numeric(as.character(x))) 
+           ddelta_Sspat = mob_out$agg[which(as.character(mob_out$agg$group) == as.character(trt_group)), ]
+           if (!same_scale)
+             ylim = range(ddelta_Sspat[ , -(1:2)])
+           plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
+                ylim = ylim_ddelta, log='',
+                cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
+                xlab = 'Number of plots', 
+                ylab = expression(Delta * 'S due to agg.'))
+           polygon(c(ddelta_Sspat$effort_sample,
+                     rev(ddelta_Sspat$effort_sample)), 
+                   c(ddelta_Sspat$ddeltaS_null_low,
+                     rev(ddelta_Sspat$ddeltaS_null_high)),
+                   col = '#C1CDCD', border = NA)
+           abline(h = 0, lwd = 1, lty = 2)
+           lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
+                 lwd = lwd, col = cols$ddeltaS)
+         }
+         if ('N' %in% mob_out$tests) {
             mob_out$N[, -1] = lapply(mob_out$N[, -1], function(x)
                                      as.numeric(as.character(x))) 
             ddelta_Ssample = mob_out$N[which(as.character(mob_out$N$group) == as.character(trt_group)), ]
@@ -1545,26 +1549,24 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
             lines(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
                   lwd = lwd, col = cols$ddeltaS)
         }
-        if ('agg' %in% mob_out$tests) {
-            mob_out$agg[, -1] = lapply(mob_out$agg[, -1], function(x)
-                                       as.numeric(as.character(x))) 
-            ddelta_Sspat = mob_out$agg[which(as.character(mob_out$agg$group) == as.character(trt_group)), ]
-            if (!same_scale)
-                ylim = range(ddelta_Sspat[ , -(1:2)])
-            plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
-                 ylim = ylim_ddelta, log='',
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
-                 xlab = 'Number of plots', 
-                 ylab = expression(Delta * 'S due to agg.'))
-            polygon(c(ddelta_Sspat$effort_sample,
-                      rev(ddelta_Sspat$effort_sample)), 
-                    c(ddelta_Sspat$ddeltaS_null_low,
-                      rev(ddelta_Sspat$ddeltaS_null_high)),
-                    col = '#C1CDCD', border = NA)
+         if ('SAD' %in% mob_out$tests) {
+           mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
+             as.numeric(as.character(x))) 
+           delta_Sind = mob_out$SAD[which(as.character(mob_out$SAD$group) == as.character(trt_group)), ]
+           if (!same_scale)
+             ylim = range(delta_Sind[ , -(1:2)])
+           plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
+                ylim = ylim_ddelta, log=plot_log,
+                cex.axis = 1.5, cex.lab = 1.5, type = 'n',
+                xlab = 'Number of individuals', ylab = expression(Delta * 'S due to SAD'))
+           polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
+                   c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
+                   col = '#C1CDCD', border = NA)
            abline(h = 0, lwd = 1, lty = 2)
-           lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
-                lwd = lwd, col = cols$ddeltaS)
-        }
+           lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
+                 lwd = lwd, col = cols$ddeltaS)
+         }         
+
     }
 }
 
