@@ -227,12 +227,13 @@ for(i in seq_along(dat)) {
     cat(paste('Analysis of', names(dat)[i], 'dataset'))
     
     tst[[i]] =  get_delta_stats(dat[[i]], 'groups', ref_group = ref_groups[i], 
-                                type='discrete', log_scale=TRUE, nperm=200)
-    stats[[i]] = get_mob_stats(dat[[i]], 'groups', nperm=200)
+                                type='discrete', log_scale=TRUE, n_perm=200)
+    stats[[i]] = get_mob_stats(dat[[i]], 'groups', n_perm=200)
 
     pdf(paste('./figs/', names(tst)[i], '_results.pdf', sep=''))
         plot(stats[[i]], multipanel = T, col=c('red', 'blue')) 
-        plot_abu(dat[[i]], 'groups', 'rad', pooled=T, log = 'x')
+        plot_rarefaction(dat[[i]], 'groups', ref_groups[i], 'spat')
+        plot_abu(dat[[i]], 'groups', ref_groups[i], 'rad', pooled=T, log = 'x')
         plot_abu(dat[[i]], 'groups', 'sad', log='x')
         plot(tst[[i]], trt_groups[i], ref_groups[i], same_scale=T)
         par(mfrow=c(1,1))
