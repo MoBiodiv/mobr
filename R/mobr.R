@@ -297,7 +297,7 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
         x = x[ , colSums(x) > 0] 
         explicit_loop = matrix(0, n, n)
         if (is.null(latlong))
-            stop('The argument "latlong" must be set TRUE or FALSE')
+            stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
         if (latlong){
             # Compute distance on sphere if xy are longitudes and latitudes
             # Assume x is longitude and y is latitude
