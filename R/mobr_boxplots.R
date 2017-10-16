@@ -198,7 +198,9 @@ calc_biodiv <- function(abund_mat, groups, index, n_rare)
 get_F_values <- function(div_dat, permute = F)
 {
    if (permute)
-      div_dat <- mutate(div_dat, group = sample(group))
+      div_dat <- div_dat %>%
+         group_by(index, n_rare) %>%
+         mutate(group = sample(group))
    
    models <- div_dat %>%
       group_by(index, n_rare) %>%
@@ -515,7 +517,7 @@ get_mob_stats = function(mob_in,
    
    # sample level
    F_obs <- get_F_values(dat_samples, permute = F)
-   F_rand <- dplyr::bind_rows(replicate(n_perm, get_F_values(dat_samples, permute = T),                                            simplify = F)) %>% ungroup()
+   F_rand <- dplyr::bind_rows(replicate(n_perm, get_F_values(dat_samples, permute = T), simplify = F)) %>% ungroup()
    F_obs <- F_obs %>% mutate(F_val_obs = F_val,
                              F_val = NULL)
    F_rand <- left_join(F_rand, F_obs)
