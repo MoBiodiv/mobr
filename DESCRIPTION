@@ -15,7 +15,6 @@ Depends:
     scales,
     dplyr
 Imports:
-    vegan,
     plotrix
 Suggests:
     knitr,

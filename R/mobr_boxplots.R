@@ -1,30 +1,45 @@
-# Function for individual-based rarefaction and extrapolation from the 
-# iNEXT package
-#https://github.com/JohnsonHsieh/iNEXT
-# In code file iNEXT.R
-D0.hat <- function(x, m){
-   x <- x[x > 0]
-   n <- sum(x)
-   Sub <- function(m){
-      if(m <= n){
-         Fun <- function(x){
-            if(x <= (n - m)) exp(lgamma(n - x + 1) + lgamma(n - m + 1) - lgamma(n - x - m + 1) - lgamma(n + 1))
-            else 0
-         }
-         sum(1 - sapply(x, Fun))
-      }
-      else {
-         Sobs <- sum(x > 0)
-         f1 <- sum(x == 1)
-         f2 <- sum(x == 2)
-         f0.hat <- ifelse(f2 == 0, (n - 1) / n * f1 * (f1 - 1) / 2, (n - 1) / n * f1 ^ 2/ 2 / f2)	#estimation of unseen species via Chao1
-         A <- n*f0.hat/(n*f0.hat+f1)
-         ifelse(f1 ==0, Sobs ,Sobs + f0.hat * (1 - A ^ (m - n)))	
-      }
-   }
-   sapply(m, Sub)
+#' Estimation of species richness
+#' 
+#' \code{calc_chao1}: estimation of species richness based on the methods
+#' proposed in Chao (1984, 1987). 
+#' 
+#' This function is a trimmed version of \code{iNext::ChaoRichess} found at 
+#' \url{https://github.com/JohnsonHsieh/iNEXT}. T. C. Hsieh, K. H. Ma and Anne
+#' Chao are the orginal authors of the \code{iNEXT} package. 
+#' 
+#' @param x a vector of species abundances or a site-by-species matrix
+#' 
+#' @return a vector of species richness estimates
+#' 
+#' @examples 
+#' data(inv_comm)
+#' calc_chao1(inv_comm)
+#' @references 
+#' Chao, A. (1984) Nonparametric estimation of the number of classes in a
+#' population. Scandinavian Journal of Statistics, 11, 265-270.
+#' Chao, A. (1987) Estimating the population size for capture-recapture data with
+#' unequal catchability. Biometrics, 43, 783-791.
+#' 
+#' @export
+calc_chao1 = function(x){
+    if(!is.numeric(x) & !is.matrix(x) & !is.data.frame(x))
+        stop("invalid data structure")
+    if(is.matrix(x) | is.data.frame(x)){
+        S_Chao1= apply(x, 1, calc_chao1)
+    } else {
+        n <- sum(x)
+        D <- sum(x > 0)
+        f1 <- sum(x == 1)
+        f2 <- sum(x == 2)
+        if (f1 > 0 & f2 > 0)
+            S_Chao1 <- D + (n - 1) / n * f1^2 / (2 * f2)
+        else if (f1 > 1 & f2 == 0) # bias corrected form
+            S_Chao1 <- D + (n - 1) / n * f1 * (f1 - 1) / (2 * (f2 + 1))
+        else
+            S_Chao1 <- D
+    }
+    return(S_Chao1)
 }
-
 
 #' Calculate probability of interspecific encounter (PIE)
 #' 
@@ -44,6 +59,9 @@ D0.hat <- function(x, m){
 #' the original authors of the function vegan::diversity().
 #' 
 #' @inheritParams rarefaction
+#' @param ENS boolean that determines if the effective number of species should
+#' be returned or the raw PIE value. Defaults to FALSE
+#'
 #' @author Dan McGlinn
 #' 
 #' @references 
@@ -54,7 +72,8 @@ D0.hat <- function(x, m){
 #' @examples 
 #' data(inv_comm)
 #' calc_PIE(inv_comm)
-calc_PIE = function(x) {
+#' calc_PIE(inv_comm, ENS=TRUE)
+calc_PIE = function(x, ENS=FALSE) {
     if (class(x) == 'mob_in') {
         x = x_mob_in$comm
     }
@@ -74,11 +93,16 @@ calc_PIE = function(x) {
         H = rowSums(x, na.rm = TRUE)
     else 
         H = sum(x, na.rm = TRUE)
-    # correct for sampling with replacement
-    H = total / (total - 1) * (1 - H)
-    # check NA in data
-    if (any(NAS = is.na(total)))
-        H[NAS] = NA
+    if (ENS) {
+        # convert to effective number of species
+        H = 1 / H
+    } else {
+        # correct for sampling with replacement
+        H = total / (total - 1) * (1 - H)
+        # check NA in data
+        if (any(NAS = is.na(total)))
+            H[NAS] = NA
+    }        
     H[!is.finite(H) | total == 0] <- NA # set NA, when total == 0 or total == 1
     return(H)
 }
@@ -112,53 +136,46 @@ get_pval <- function(rand, obs, n_samples)
 # Get biodiversity indices
 calc_biodiv <- function(abund_mat, groups, index, n_rare)
 {
-   dat1 <- expand.grid(group = groups,
-                       index = index[index != "S_rare"],
-                       n_rare = NA)
-   dat1$value <- NA
-   
+   out <- expand.grid(group = groups,
+                      index = index[index != "S_rare"],
+                      n_rare = NA, value = NA)
    N <- rowSums(abund_mat) 
    
    # Number of individuals -----------------------------------------------------
    if (any(index == "N")){
-      dat1$value[dat1$index == "N"] <- N
+      out$value[out$index == "N"] <- N
    } 
    
    # Number of species ---------------------------------------------------------
    if (any(index == "S")){
-      dat1$value[dat1$index == "S"] <-  rowSums(abund_mat > 0)
+      out$value[out$index == "S"] <-  rowSums(abund_mat > 0)
    }  
    
    # Rarefied richness ---------------------------------------------------------
    if (any(index == "S_rare")){
       
          dat_S_rare <- expand.grid(group = groups,
-                                   n_rare = n_rare,
-                                   index = "S_rare",
-                                   value = NA)
-         dat_S_rare <- dat_S_rare[,c(2,3,1,4)]
-         dat1 <- rbind(dat1, dat_S_rare)
+                                   index = 'S_rare',
+                                   n_rare = n_rare, value = NA)
+         out <- rbind(out, dat_S_rare)
       
-         d0_hat <- try(as.numeric(apply(abund_mat, MARGIN = 1, D0.hat, m = n_rare)))
-         if (class(d0_hat) == "try_error"){
-            warning("Error in the calculation of rarefied species richness.")
-         } else {
-            dat1$value[dat1$index == "S_rare"] <- d0_hat
-         }
+         out$value[out$index == "S_rare"] <- apply(abund_mat, 1, rarefaction,
+                                                   method = 'indiv', effort= n_rare,
+                                                   force = T)
    } # end rarefied richness
 
    # Asymptotic estimates species richness -------------------------------------
    if (any(index == "S_asymp")){
       
-      S_asymp <- try(vegan::estimateR(abund_mat))
+      S_asymp <- try(calc_chao1(abund_mat))
       if (class(S_asymp) == "try_error"){
          warning("The Chao richness estimator cannot be calculated for all groups.")
       } else {
-         S_asymp = S_asymp["S.chao1",]
+         S_obs = rowSums(abund_mat > 0)
          S_asymp[!is.finite(S_asymp)] <- NA
       }
     
-      dat1$value[dat1$index == "S_asymp"] <- S_asymp
+      out$value[out$index == "S_asymp"] <- S_asymp - S_obs
    }
    
    # Probability of Interspecific Encounter (PIE)-------------------------------
@@ -167,30 +184,29 @@ calc_biodiv <- function(abund_mat, groups, index, n_rare)
       plots_n01 = N <= 1 # Hurlbert's PIE can only be calculated for two or more individuals
       
       if (sum(plots_n01) == 1){
-         warning(paste("There is",sum(plots_n01), "plot with less than two individuals.
+         warning(paste("There is", sum(plots_n01), "plot with less than two individuals.
                        This is removed for the calculation of PIE."))
          
       }
       
       if (sum(plots_n01) > 1){
-         warning(paste("There are",sum(plots_n01), "plots with less than two individuals.
+         warning(paste("There are", sum(plots_n01), "plots with less than two individuals.
                        These are removed for the calculation of PIE."))
          
       }
       
-      dat1$value[dat1$index == "PIE"] <- calc_PIE(abund_mat)
+      out$value[out$index == "PIE"] <- calc_PIE(abund_mat)
    }
    
    # Effective number of species based on PIE ----------------------------------
    if (any(index == "S_PIE")){
       plots_n01 = N <= 1
-      S_PIE = vegan::diversity(abund_mat, index = "invsimpson")
-      S_PIE[plots_n01 | !is.finite(S_PIE)] <- NA
-      
-      dat1$value[dat1$index == "S_PIE"] <- S_PIE
+      S_PIE = calc_PIE(abund_mat, ENS=TRUE)
+      S_PIE[plots_n01] <- NA
+      out$value[out$index == "S_PIE"] <- S_PIE
    }
    
-   return(dat1)
+   return(out)
    
 }
 

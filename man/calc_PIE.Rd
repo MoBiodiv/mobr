@@ -4,12 +4,15 @@
 \alias{calc_PIE}
 \title{Calculate probability of interspecific encounter (PIE)}
 \usage{
-calc_PIE(x)
+calc_PIE(x, ENS = FALSE)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
+
+\item{ENS}{boolean that determines if the effective number of species should
+be returned or the raw PIE value. Defaults to FALSE}
 }
 \description{
 PIE is also known as Simpson's evenness index and the Gini-Simpson index.
@@ -31,6 +34,7 @@ the original authors of the function vegan::diversity().
 \examples{
 data(inv_comm)
 calc_PIE(inv_comm)
+calc_PIE(inv_comm, ENS=TRUE)
 }
 \references{
 Hurlbert, S. H. 1971. The noncept of species diversity: a critique and
