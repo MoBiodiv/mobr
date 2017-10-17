@@ -350,6 +350,41 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
     return(out)
 }
 
+#' Compute permutation derived individual-based rarefaction curves
+#' 
+#' An internal function that can provide an independent derivation of 
+#' the individual rarefaction curve for the purposes of testing the 
+#' performance of the function \code{rarefaction}
+#' 
+#' @param abu a vector of species abundances
+#' @param n_perm the number of permutations to average across, defaults to 100
+#' @param n_indiv the number of individuals to evaluate the rarefaction curve
+#' at. The default behavior is to evaluate it on a log2 interval from 1 to N 
+#' @examples 
+#' data(inv_comm)
+#' sad = colSums(inv_comm)
+#' ind_rare_perm(sad)
+#' @keywords internal
+ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
+    if (!is.vector(abu)) {
+        stop('abu must be a vector of abundances')
+    } 
+    calc_S = function(splist, n_indiv) {
+        sapply(n_indiv, function(n) length(unique(splist[1:n])))
+    }
+    rand_splist = function(abu, S) {
+        sample(unlist(mapply(rep, 1:S, abu)), replace=F)
+    }
+    S = length(abu)
+    N = sum(abu)
+    if (is.null(n_indiv))
+        n_indiv = c(2^(seq(0, log2(N))), N)
+    S_rand = replicate(n_perm, calc_S(rand_splist(abu, S), n_indiv))
+    S_avg = apply(S_rand, 1, mean)
+    S_qt = apply(S_rand, 1, quantile, c(0.025, 0.975))
+    return(data.frame(n_indiv, S_avg, S_lo = S_qt[1, ], S_hi = S_qt[2, ]))
+}
+
 #' Compute average nearest neighbor distance
 #' 
 #' This function computes the average distance of the next
@@ -413,7 +448,6 @@ deltaS_N = function(comm, ref_dens, inds){
     out = data.frame(inds = inds, deltaS = deltaS)
     return(out)
 }
-
 
 #' Permute community matrix within groups
 #' 
@@ -490,7 +524,7 @@ permute_comm = function(comm, method, groups=NULL) {
     }  
     return(comm_group_perm)
 }
-  
+
 # Convert specified columns of a dataframe from factors to numeric
 df_factor_to_numeric = function(dataframe, cols = NULL){
     if (is.null(cols)) cols = 1:ncol(dataframe)
