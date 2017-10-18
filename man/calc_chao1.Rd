@@ -7,10 +7,10 @@
 calc_chao1(x)
 }
 \arguments{
-\item{x}{a vector of species abundances}
+\item{x}{a vector of species abundances or a site-by-species matrix}
 }
 \value{
-a vector of observed species richness and a species richness estimate
+a vector of species richness estimates
 }
 \description{
 \code{calc_chao1}: estimation of species richness based on the methods
