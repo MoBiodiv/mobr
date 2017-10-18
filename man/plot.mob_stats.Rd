@@ -42,15 +42,14 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 # without bootstrap CI for group scale
-inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
- ref_group = "uninvaded", n_perm = 20)
+inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
 plot(inv_stats) 
 
 windows(15,20)
 plot(inv_stats, multi_panel = T)
 # with bootstrap CI for group scale
-inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group",
- ref_group = "uninvaded", n_perm = 20, boot_groups=T)
+inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
+                               boot_groups=T)
 plot(inv_stats_boot)
 }
 \author{

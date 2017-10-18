@@ -227,12 +227,12 @@ get_F_values = function(div_dat, permute = F) {
 }
 
 # Get group-level differences 
-get_group_diff = function(abund_mat, group_bin, index, n_rare,
+get_group_diff = function(abund_mat, group_id, index, n_rare,
                           permute = F){
     if (permute)
-        group_bin = sample(group_bin)
+        group_id = sample(group_id)
    
-    abund_group = aggregate(abund_mat, by = list(group_bin), FUN = "sum")
+    abund_group = aggregate(abund_mat, by = list(group_id), FUN = "sum")
    
     dat_groups = calc_biodiv(abund_mat = abund_group[,-1],
                              groups = abund_group[,1],
@@ -240,21 +240,17 @@ get_group_diff = function(abund_mat, group_bin, index, n_rare,
                              n_rare = n_rare)
     delta_groups = dat_groups %>%
                    group_by(index, n_rare) %>%
-                   summarise(delta = diff(value)) %>%
+                   summarise(delta = mean(dist(value))) %>%
                    ungroup()
    
     return(delta_groups)
 }
 
-
 #' Calculate sample based and group based biodiversity statistics.
 #' @inheritParams get_delta_stats
 #' 
-#' @param group_var A string that specifies which field in \code{mob_in$env} the 
-#' data should be grouped by
-#' 
-#' @param ref_group The level in \code{group_var} that is used as control group for the
-#' control vs. treatment test at the group level.
+#' @param group_var A string that specifies which field in \code{mob_in$env} the
+#'   data should be grouped by
 #' 
 #' @param index The calculated biodiversity statistics. The options are
 #' \itemize{
@@ -267,113 +263,128 @@ get_group_diff = function(abund_mat, group_bin, index, n_rare,
 #' }
 #' See \emph{Details} for additional information on the biodiverstiy statistics.
 #' 
-#' @param n_rare_samples The standardized number of individuals used for the
-#' calculation of rarefied species richness at the sample level. This can a be
-#' single value or an integer vector. As default the minimum number of individuals
-#' found across the samples is used, when this is not smaller than \code{n_rare_min}.
-#' 
-#' @param n_rare_min The minimum number of individuals considered for the calculation
-#' of rarefied richness. Samples with less individuals then \code{n_rare_min} are
-#' excluded from the analysis with a warning. Accordingly, when \code{n_rare_samples}
-#' is set by the user it has to be higher than \code{n_rare_min}.
-#' 
-#' @param n_perm The number of permutations to use for testing for treatment effects.
-#' 
-#' @param boot_groups Use bootstrap resampling within groups to derive group-level
-#' confidence intervals for all biodiversity indices. Default is \code{FALSE}. 
-#' See \emph{Details} for information on the bootstrap approach.
-#' 
+#' @param n_rare_samples The standardized number of individuals used for the 
+#'   calculation of rarefied species richness at the sample level. This can a be
+#'   single value or an integer vector. As default the minimum number of
+#'   individuals found across the samples is used, when this is not smaller than
+#'   \code{n_rare_min}.
+#'   
+#' @param n_rare_min The minimum number of individuals considered for the
+#'   calculation of rarefied richness. Samples with less individuals then
+#'   \code{n_rare_min} are excluded from the analysis with a warning.
+#'   Accordingly, when \code{n_rare_samples} is set by the user it has to be
+#'   higher than \code{n_rare_min}.
+#'   
+#' @param n_perm The number of permutations to use for testing for treatment
+#'   effects.
+#'   
+#' @param boot_groups Use bootstrap resampling within groups to derive
+#'   group-level confidence intervals for all biodiversity indices. Default is
+#'   \code{FALSE}. See \emph{Details} for information on the bootstrap approach.
+#'   
 #' @param conf_level Confidence level used for the calculation of group-level 
-#' bootstrapped confidence intervals. Only used when \code{boot_groups = TRUE}.
-#' 
+#'   bootstrapped confidence intervals. Only used when \code{boot_groups =
+#'   TRUE}.
+#'   
 #' @details 
 #' 
 #' \strong{BIODIVERSITY INDICES}
 #' 
-#' \strong{Rarefied species richness} is the expected number of species, given
-#' a defined number of sampled individuals (Gotelli & Colwell 2001). Rarefied richness
-#' at the sample level is calculated for the values provided in
+#' \strong{Rarefied species richness} is the expected number of species, given a
+#' defined number of sampled individuals (Gotelli & Colwell 2001). Rarefied
+#' richness at the sample level is calculated for the values provided in 
 #' \code{n_rare_samples} as long as these values are not smaller than the 
-#' user-defined minimum value \code{n_rare_min}. In this case the minimum value
-#' is used and samples with less individuals are discarded.
-#' When no values for \code{n_rare_samples} are provided the observed 
-#' minimum number of individuals of the samples is used, which is the standard
-#' in rarefaction analysis (Gotelli & Colwell 2001). Because the number
-#' of individuals is expected to scale linearly with sample area or effort,
-#' at the group level the number of individuals for rarefaction is calculated as the minimum
-#' number of samples within groups times \code{n_rare_samples}. For example,
-#' when there are 10 samples within each group, \code{n_rare_groups} equals
-#' \code{10 * n_rare_samples}. 
+#' user-defined minimum value \code{n_rare_min}. In this case the minimum value 
+#' is used and samples with less individuals are discarded. When no values for
+#' \code{n_rare_samples} are provided the observed minimum number of individuals
+#' of the samples is used, which is the standard in rarefaction analysis
+#' (Gotelli & Colwell 2001). Because the number of individuals is expected to
+#' scale linearly with sample area or effort, at the group level the number of
+#' individuals for rarefaction is calculated as the minimum number of samples
+#' within groups times \code{n_rare_samples}. For example, when there are 10
+#' samples within each group, \code{n_rare_groups} equals \code{10 *
+#' n_rare_samples}.
 #' 
-#' \strong{Asymptotic species richness} is calculated using the bias-corrected Chao1
-#'  estimator (Chiu et al. 2014) provided in the function \code{\link[vegan]{estimateR}}.
+#' \strong{Asymptotic species richness} is calculated using the bias-corrected
+#' Chao1 estimator (Chiu et al. 2014) provided in the function
+#' \code{\link[vegan]{estimateR}}.
 #' 
-#' \strong{PIE} represents the probability that two randomly drawn individuals
-#' belong to the same species. Here we use the definition of Hurlbert (1971), which considers
-#' sampling without replacement. PIE is closely related to the well-known Simpson 
-#' diversity index, but the latter assumes sampling with replacement.
+#' \strong{PIE} represents the probability that two randomly drawn individuals 
+#' belong to the same species. Here we use the definition of Hurlbert (1971),
+#' which considers sampling without replacement. PIE is closely related to the
+#' well-known Simpson diversity index, but the latter assumes sampling with
+#' replacement.
 #' 
-#' \strong{S_PIE} represents the Effective Number of Species derived from the PIE.
-#' This corresponds to the the number of equally abundant species (i.e. a perfectly
-#' even community), there would need to be to achieve the observed PIE (Jost 2006).
-#' This means the higher the difference between S and S_PIE the more
-#' uneven is the observed community. An intuitive interpretation of S_PIE is that
-#' it corresponds to the number of dominant (highly abundant) species in the community.
+#' \strong{S_PIE} represents the Effective Number of Species derived from the
+#' PIE. This corresponds to the the number of equally abundant species (i.e. a
+#' perfectly even community), there would need to be to achieve the observed PIE
+#' (Jost 2006). This means the higher the difference between S and S_PIE the
+#' more uneven is the observed community. An intuitive interpretation of S_PIE
+#' is that it corresponds to the number of dominant (highly abundant) species in
+#' the community.
 #' 
-#' For species richness \code{S}, rarefied richness \code{S_rare}, asymptotic
-#' richness \code{S_asymp}, and the Effective Number of Species \code{S_PIE}
-#' we also calculate beta-diversity using multiplicative partitioning
-#' (Whittaker 1972, Jost 2007). That means for these indices we estimate beta-diversity 
-#' as the ratio of group-level diversity (gamma) divided by sample-level diversity (alpha). 
+#' For species richness \code{S}, rarefied richness \code{S_rare}, asymptotic 
+#' richness \code{S_asymp}, and the Effective Number of Species \code{S_PIE} we
+#' also calculate beta-diversity using multiplicative partitioning (Whittaker
+#' 1972, Jost 2007). That means for these indices we estimate beta-diversity as
+#' the ratio of group-level diversity (gamma) divided by sample-level diversity
+#' (alpha).
 #' 
 #' \strong{PERMUTATION TESTS AND BOOTSTRAP}
 #' 
-#' We used permutation tests for assessing differences of the biodiversity statistics
-#' among the groups (Legendre & Legendre 1998). At the sample level, one-way ANOVA 
-#' (i.e. F-test) is implemented by shuffling treatment group labels across samples.
+#' We used permutation tests for assessing differences of the biodiversity
+#' statistics among the groups (Legendre & Legendre 1998). At the sample level,
+#' one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
+#' labels across samples.
 #' 
-#'  At the group-level there is test whether the difference between treatment and control
-#'  is significantly different from zero. For this purpose we permuted treatment group labels
-#'  across samples, pooled the groups, and calculated the treatment-control difference for each
-#'  permutation. This test only works for the comparison of two groups, i.e. treatment vs. control.
-#'  The means the reference level specified by argument \code{ref_group} is compared
-#'  with all other groups pooled.
-#'  
-#'  Especially, when there are more then two groups a bootstrap approachj can be used
-#'  to test differences at the group level. When \code{boot_groups = T} instead
-#'  of the group-level permutation test, there will be resampling of samples within
-#'  groups to derive group-level confidence intervals for all biodiversity indices.
-#'  The function output includes lower and upper confidence bounds and the median
-#'  of the bootstrap samples. Please note that for the richness indices sampling
-#'  with replacement corresponds to rarefaction to ca. 2/3 of the individuals, because
-#'  the same samples occur several times in the resampled data sets.
-#'  
+#' At the group-level we aggregate the community matrix by summing across the 
+#' groups. Then we compute the mean difference in a given biodiversity index
+#' between the groups and perform a permuatation test by shuffling the treatment
+#' group labels. .
+#' 
+#' A bootstrap approach can be used to also test differences at the group level.
+#' When \code{boot_groups = T} instead of the group-level permutation test,
+#' there will be resampling of samples within groups to derive group-level
+#' confidence intervals for all biodiversity indices. The function output
+#' includes lower and upper confidence bounds and the median of the bootstrap
+#' samples. Please note that for the richness indices sampling with replacement
+#' corresponds to rarefaction to ca. 2/3 of the individuals, because the same
+#' samples occur several times in the resampled data sets.
+#' 
 #' 
 #' @return A list of class \code{mob_stats} that contains sample-scale and 
-#' group-scale biodiversity statistics, as well as the p-values for permutation tests
-#' at both scales.
-#' 
-#' When \code{boot_groups = TRUE} there are no p-values at the group level. Instead
-#' there is lower bound, median, and upper bound for each biodiversity index derived
-#' from the bootstrap within groups.
+#'   group-scale biodiversity statistics, as well as the p-values for
+#'   permutation tests at both scales.
+#'   
+#'   When \code{boot_groups = TRUE} there are no p-values at the group level.
+#'   Instead there is lower bound, median, and upper bound for each biodiversity
+#'   index derived from the bootstrap within groups.
 #
 #' @author Felix May and Dan McGlinn
 #' 
 #' @references 
 #' 
-#' Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved nonparametric lower bound of species richness via a modified good-turing frequency formula. Biometrics, 70, 671-682.
+#' Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved
+#' nonparametric lower bound of species richness via a modified good-turing
+#' frequency formula. Biometrics, 70, 671-682.
 #' 
-#' Gotelli, N.J. & Colwell, R.K. (2001). Quantifying biodiversity: procedures and pitfalls in the measurement and comparison of species richness. Ecology letters, 4, 379-391.
+#' Gotelli, N.J. & Colwell, R.K. (2001). Quantifying biodiversity: procedures
+#' and pitfalls in the measurement and comparison of species richness. Ecology
+#' letters, 4, 379-391.
 #' 
-#' Hurlbert, S.H. (1971). The Nonconcept of Species Diversity: A Critique and Alternative Parameters. Ecology, 52, 577-586.
+#' Hurlbert, S.H. (1971). The Nonconcept of Species Diversity: A Critique and
+#' Alternative Parameters. Ecology, 52, 577-586.
 #' 
 #' Jost, L. (2006). Entropy and diversity. Oikos, 113, 363-375.
 #' 
-#' Jost, L. (2007). Partitioning Diversity into Independent Alpha and Beta Components. Ecology, 88, 2427–2439.
+#' Jost, L. (2007). Partitioning Diversity into Independent Alpha and Beta
+#' Components. Ecology, 88, 2427–2439.
 #' 
-#' Legendre, P. & Legendre, L.F.J. (1998). Numerical Ecology, Volume 24, 2nd Edition Elsevier, Amsterdam; Boston.
+#' Legendre, P. & Legendre, L.F.J. (1998). Numerical Ecology, Volume 24, 2nd
+#' Edition Elsevier, Amsterdam; Boston.
 #' 
-#' Whittaker, R.H. (1972). Evolution and Measurement of Species Diversity. Taxon, 21, 213-251.
+#' Whittaker, R.H. (1972). Evolution and Measurement of Species Diversity.
+#' Taxon, 21, 213-251.
 #' 
 #' @export
 #' 
@@ -381,9 +392,10 @@ get_group_diff = function(abund_mat, group_bin, index, n_rare,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 20, n_rare_samples = c(5,10))
+#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
+#'                           n_perm = 20, n_rare_samples = c(5,10))
 #' plot(inv_stats)
-get_mob_stats = function(mob_in, group_var, ref_group = NULL,
+get_mob_stats = function(mob_in, group_var, 
                          index = c("N","S","S_rare","S_asymp","S_PIE"),
                          n_rare_samples = NULL, n_rare_min = 5,
                          n_perm = 200, boot_groups = F, conf_level = 0.95) {
@@ -394,27 +406,7 @@ get_mob_stats = function(mob_in, group_var, ref_group = NULL,
     index = match.arg(index, INDICES, several.ok = TRUE)
    
     group_id  = factor(mob_in$env[, group_var])
-   
-    if (is.null(ref_group))
-        ref_group = levels(group_id)[1]
-   
-    if (!ref_group %in% levels(group_id))
-        stop("ref_group has to be one level in group_var!")
-   
-    #group_id = relevel(group_id, ref_group) #does not change F-value so no need to keep
-   
-    # Create factor with just two levels: treatment / control
-    # for calculation of group-level differences
-    #group_bin = factor(rep("control", times = length(group_id)),
-    #                   levels = c("control","treatment"))
-    #group_bin[group_id != ref_group] = "treatment"
-    group_bin = group_id
-  
-    # # Add labels to groups
-    # group_type = c("(ctrl)",rep("(trt)", length(levels(group_id)) - 1))
-    # group_labels = paste(levels(group_id), group_type)
-    # group_id = factor(group_id, labels = group_labels) 
-   
+    
     print(index)
  
    # Get rarefaction level
@@ -534,9 +526,9 @@ get_mob_stats = function(mob_in, group_var, ref_group = NULL,
    
    # group level
    if (!boot_groups){
-      diff_obs = get_group_diff(mob_in$comm, group_bin, index,
+      diff_obs = get_group_diff(mob_in$comm, group_id, index,
                                 n_rare=n_rare_groups, permute=F)
-      diff_rand = bind_rows(replicate(n_perm, get_group_diff(mob_in$comm, group_bin,
+      diff_rand = bind_rows(replicate(n_perm, get_group_diff(mob_in$comm, group_id,
                                                               index,
                                                               n_rare = n_rare_groups,
                                                               permute = T),
@@ -546,9 +538,10 @@ get_mob_stats = function(mob_in, group_var, ref_group = NULL,
       diff_rand = left_join(diff_rand, diff_obs)
       
       p_val_groups = diff_rand %>% 
-         group_by(index, n_rare) %>%
-         summarise(p_val = get_pval(rand = delta, obs = first(d_obs),
-                                    n_samples = n_perm)) %>% ungroup()
+                     group_by(index, n_rare) %>%
+                     summarise(p_val = get_pval(rand = delta, obs = first(d_obs),
+                                                n_samples = n_perm)) %>%
+                     ungroup()
    } else {
       # bootstrap sampling within groups
       
@@ -684,15 +677,14 @@ groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' # without bootstrap CI for group scale
-#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
-#'  ref_group = "uninvaded", n_perm = 20)
+#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
 #' plot(inv_stats) 
 #' 
 #' windows(15,20)
 #' plot(inv_stats, multi_panel = T)
 #' # with bootstrap CI for group scale
-#' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group",
-#'  ref_group = "uninvaded", n_perm = 20, boot_groups=T)
+#' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
+#'                                boot_groups=T)
 #' plot(inv_stats_boot)
 
 plot.mob_stats = function(mob_stats, index = c("N","S","S_rare","S_asymp","S_PIE"),
