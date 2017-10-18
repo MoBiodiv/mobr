@@ -108,67 +108,66 @@ calc_PIE = function(x, ENS=FALSE) {
 }
 
 # generate a single bootstrap sample of group-level biodiversity indices
-boot_sample_groups = function(abund_mat, index, n_rare)
-{
+boot_sample_groups = function(abund_mat, index, n_rare) {
    # sample rows and calculate abundance vector
-   sample_dat = by(abund_mat, INDICES = abund_mat$group_id, FUN = sample_frac, replace = T)
+   sample_dat = by(abund_mat, INDICES = abund_mat$group_id, FUN = sample_frac,
+                   replace = T)
    class(sample_dat) = "list"
    sample_dat = bind_rows(sample_dat)
    
    # abundance distribution pooled in groups
-   abund_group = aggregate(sample_dat[,-1], by = list(sample_dat[,1]), FUN = "sum")
+   abund_group = aggregate(sample_dat[ , -1], by = list(sample_dat[ , 1]),
+                           FUN = "sum")
    
-   dat_groups = calc_biodiv(abund_mat = abund_group[,-1],
-                             groups = abund_group[,1],
-                             index = index,
-                             n_rare = n_rare)
+   dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
+                            groups = abund_group[ , 1],
+                            index = index,
+                            n_rare = n_rare)
    return(dat_groups)
 }
 
 # Get group-level p-values from permutation test
-get_pval = function(rand, obs, n_samples)
-{
+get_pval = function(rand, obs, n_samples) {
    n_extremes = sum(rand < -abs(obs) | rand > abs(obs))
    p_val = n_extremes/n_samples
    return(p_val)
 }
 
 # Get biodiversity indices
-calc_biodiv = function(abund_mat, groups, index, n_rare)
-{
-   out = expand.grid(group = groups,
+calc_biodiv = function(abund_mat, groups, index, n_rare) {
+    out = expand.grid(group = groups,
                       index = index[index != "S_rare"],
                       n_rare = NA, value = NA)
-   N = rowSums(abund_mat) 
+    N = rowSums(abund_mat) 
    
-   # Number of individuals -----------------------------------------------------
-   if (any(index == "N")){
-      out$value[out$index == "N"] = N
-   } 
+    # Number of individuals -----------------------------------------------------
+    if (any(index == "N")) {
+        out$value[out$index == "N"] = N
+    } 
    
-   # Number of species ---------------------------------------------------------
-   if (any(index == "S")){
-      out$value[out$index == "S"] =  rowSums(abund_mat > 0)
-   }  
+    # Number of species ---------------------------------------------------------
+    if (any(index == "S")) {
+        out$value[out$index == "S"] =  rowSums(abund_mat > 0)
+    }  
    
-   # Rarefied richness ---------------------------------------------------------
-   if (any(index == "S_rare")){
+    # Rarefied richness ---------------------------------------------------------
+    if (any(index == "S_rare")){
       
-         dat_S_rare = expand.grid(group = groups,
-                                   index = 'S_rare',
-                                   n_rare = n_rare, value = NA)
-         out = rbind(out, dat_S_rare)
+        dat_S_rare = expand.grid(group = groups,
+                                 index = 'S_rare',
+                                 n_rare = n_rare, value = NA)
+        out = rbind(out, dat_S_rare)
       
-         out$value[out$index == "S_rare"] = apply(abund_mat, 1, rarefaction,
-                                                   method = 'indiv', effort= n_rare,
-                                                   force = T)
-   } # end rarefied richness
-
-   # Asymptotic estimates species richness -------------------------------------
-   if (any(index == "S_asymp")){
+        out$value[out$index == "S_rare"] = apply(abund_mat, 1, rarefaction,
+                                                 method = 'indiv', effort= n_rare,
+                                                 force = T)
+    } 
+ 
+    # Asymptotic estimates species richness -------------------------------------
+    if (any(index == "S_asymp")){
       
-      S_asymp = try(calc_chao1(abund_mat))
-      if (class(S_asymp) == "try_error"){
+        S_asymp = try(calc_chao1(abund_mat))
+      if (class(S_asymp) == "try_error") {
          warning("The Chao richness estimator cannot be calculated for all groups.")
       } else {
          S_obs = rowSums(abund_mat > 0)
@@ -179,31 +178,28 @@ calc_biodiv = function(abund_mat, groups, index, n_rare)
    }
    
    # Probability of Interspecific Encounter (PIE)-------------------------------
-   if (any(index == "PIE")){
-      
-      plots_n01 = N <= 1 # Hurlbert's PIE can only be calculated for two or more individuals
-      
-      if (sum(plots_n01) == 1){
-         warning(paste("There is", sum(plots_n01), "plot with less than two individuals.
-                       This is removed for the calculation of PIE."))
+   if (any(index == "PIE")) {
+       # Hurlbert's PIE can only be calculated for two or more individuals
+       plots_n01 = N <= 1 
+       if (sum(plots_n01) == 1) {
+           warning(paste("There is", sum(plots_n01), "plot with less than two individuals.
+                         This is removed for the calculation of PIE."))
          
-      }
-      
-      if (sum(plots_n01) > 1){
-         warning(paste("There are", sum(plots_n01), "plots with less than two individuals.
-                       These are removed for the calculation of PIE."))
+       }
+       if (sum(plots_n01) > 1) {
+           warning(paste("There are", sum(plots_n01), "plots with less than two individuals.
+                         These are removed for the calculation of PIE."))
          
-      }
-      
-      out$value[out$index == "PIE"] = calc_PIE(abund_mat)
+       }
+       out$value[out$index == "PIE"] = calc_PIE(abund_mat)
    }
    
    # Effective number of species based on PIE ----------------------------------
    if (any(index == "S_PIE")){
-      plots_n01 = N <= 1
-      S_PIE = calc_PIE(abund_mat, ENS=TRUE)
-      S_PIE[plots_n01] = NA
-      out$value[out$index == "S_PIE"] = S_PIE
+       plots_n01 = N <= 1
+       S_PIE = calc_PIE(abund_mat, ENS=TRUE)
+       S_PIE[plots_n01] = NA
+       out$value[out$index == "S_PIE"] = S_PIE
    }
    
    return(out)
@@ -211,44 +207,43 @@ calc_biodiv = function(abund_mat, groups, index, n_rare)
 }
 
 #Get F statistics from diversity indices and grouping vector
-get_F_values = function(div_dat, permute = F)
-{
-   if (permute)
-      div_dat = div_dat %>%
-         group_by(index, n_rare) %>%
-         mutate(group = sample(group))
+get_F_values = function(div_dat, permute = F) {
+    if (permute)
+        div_dat = div_dat %>%
+                  group_by(index, n_rare) %>%
+                  mutate(group = sample(group))
    
-   models = div_dat %>%
-      group_by(index, n_rare) %>%
-      do(mod = lm(value ~ group, data = .))
+    models = div_dat %>%
+             group_by(index, n_rare) %>%
+             do(mod = lm(value ~ group, data = .))
    
-   models = models %>% mutate(F_val = anova(mod)$F[1],
-                               mod = NULL) %>% ungroup()
+    models = models %>% 
+             mutate(F_val = anova(mod)$F[1], mod = NULL) %>%
+             ungroup()
    
-   models$F_val[!is.finite(models$F_val)] = NA
+    models$F_val[!is.finite(models$F_val)] = NA
    
-   return(models)
+    return(models)
 }
 
 # Get group-level differences 
 get_group_diff = function(abund_mat, group_bin, index, n_rare,
-                           permute = F)
-{
-   if (permute)
-      group_bin = sample(group_bin)
+                          permute = F){
+    if (permute)
+        group_bin = sample(group_bin)
    
-   abund_group = aggregate(abund_mat, by = list(group_bin), FUN = "sum")
+    abund_group = aggregate(abund_mat, by = list(group_bin), FUN = "sum")
    
-   dat_groups = calc_biodiv(abund_mat = abund_group[,-1],
+    dat_groups = calc_biodiv(abund_mat = abund_group[,-1],
                              groups = abund_group[,1],
                              index = index,
                              n_rare = n_rare)
-   delta_groups = dat_groups %>%
-      group_by(index, n_rare) %>%
-      summarise(delta = diff(value)) %>%
-      ungroup()
+    delta_groups = dat_groups %>%
+                   group_by(index, n_rare) %>%
+                   summarise(delta = diff(value)) %>%
+                   ungroup()
    
-   return(delta_groups)
+    return(delta_groups)
 }
 
 
@@ -388,45 +383,39 @@ get_group_diff = function(abund_mat, group_bin, index, n_rare,
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_group = "uninvaded", n_perm = 20, n_rare_samples = c(5,10))
 #' plot(inv_stats)
-get_mob_stats = function(mob_in,
-                         group_var,
-                         ref_group = NULL,
+get_mob_stats = function(mob_in, group_var, ref_group = NULL,
                          index = c("N","S","S_rare","S_asymp","S_PIE"),
-                         n_rare_samples = NULL,
-                         n_rare_min = 5,
-                         n_perm = 200,
-                         boot_groups = F,
-                         conf_level = 0.95
-                         )
-{
-   if (n_perm < 1) 
-       stop('Set nperm to a value greater than 1') 
+                         n_rare_samples = NULL, n_rare_min = 5,
+                         n_perm = 200, boot_groups = F, conf_level = 0.95) {
+    if (n_perm < 1) 
+        stop('Set nperm to a value greater than 1') 
    
-   INDICES = c("N", "S", "S_rare","S_asymp","PIE","S_PIE")
-   index = match.arg(index, INDICES, several.ok = TRUE)
+    INDICES = c("N", "S", "S_rare","S_asymp","PIE","S_PIE")
+    index = match.arg(index, INDICES, several.ok = TRUE)
    
-   group_id  = factor(mob_in$env[, group_var])
+    group_id  = factor(mob_in$env[, group_var])
    
-   if (is.null(ref_group))
-      ref_group = levels(group_id)[1]
+    if (is.null(ref_group))
+        ref_group = levels(group_id)[1]
    
-   if (!ref_group %in% levels(group_id))
-      stop("ref_group has to be one level in group_var!")
+    if (!ref_group %in% levels(group_id))
+        stop("ref_group has to be one level in group_var!")
    
-   group_id = relevel(group_id, ref_group)
+    #group_id = relevel(group_id, ref_group) #does not change F-value so no need to keep
    
-   # Create factor with just two levels: treatment / control
-   # for calculation of group-level differences
-   group_bin = factor(rep("control", times = length(group_id)),
-                      levels = c("control","treatment"))
-   group_bin[group_id != ref_group] = "treatment"
+    # Create factor with just two levels: treatment / control
+    # for calculation of group-level differences
+    #group_bin = factor(rep("control", times = length(group_id)),
+    #                   levels = c("control","treatment"))
+    #group_bin[group_id != ref_group] = "treatment"
+    group_bin = group_id
   
-   # # Add labels to groups
-   # group_type = c("(ctrl)",rep("(trt)", length(levels(group_id)) - 1))
-   # group_labels = paste(levels(group_id), group_type)
-   # group_id = factor(group_id, labels = group_labels) 
+    # # Add labels to groups
+    # group_type = c("(ctrl)",rep("(trt)", length(levels(group_id)) - 1))
+    # group_labels = paste(levels(group_id), group_type)
+    # group_id = factor(group_id, labels = group_labels) 
    
-   print(index)
+    print(index)
  
    # Get rarefaction level
    samples_N = rowSums(mob_in$comm) 
@@ -455,8 +444,8 @@ get_mob_stats = function(mob_in,
    # Abundance distribution pooled in groups
    abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
    
-   dat_groups = calc_biodiv(abund_mat = abund_group[,-1],
-                             groups = abund_group[,1],
+   dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
+                             groups = abund_group[ , 1],
                              index = index,
                              n_rare = n_rare_groups)
    
@@ -545,7 +534,8 @@ get_mob_stats = function(mob_in,
    
    # group level
    if (!boot_groups){
-      diff_obs = get_group_diff(mob_in$comm, group_bin, index, n_rare = n_rare_groups,                                                                 permute = F)
+      diff_obs = get_group_diff(mob_in$comm, group_bin, index,
+                                n_rare=n_rare_groups, permute=F)
       diff_rand = bind_rows(replicate(n_perm, get_group_diff(mob_in$comm, group_bin,
                                                               index,
                                                               n_rare = n_rare_groups,
