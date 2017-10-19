@@ -174,10 +174,11 @@ sphere_dist = function(long, lat){
     return(dist)
 }
 
-#' Rarefaction Species Richness
+#' Rarefied Species Richness
 #' 
 #' The expected number of species given a particular number of individuals or
 #' samples under and assumption of random sampling with replacement.
+#' 
 #' 
 #' @param x can either be a: 1) mob_in object, 2) community matrix-like
 #'  object in which rows represent plots and columns represent species, or 3)
@@ -194,11 +195,13 @@ sphere_dist = function(long, lat){
 #'   and the community data (i.e., x) under consideration. This arguement is
 #'   used to rescale the rarefation curve when estimating the effect of
 #'   individual density on group differences in richness.
-#' @param force boolean which specifies what the function should return if effort
-#'   is larger than the total number of samples (either individuals or plots).
-#'   The default behavior in which force = FALSE returns an NA when this occurs.
-#'   If force = TRUE then the total number of species in the community is
-#'   returned with a warning.
+#' @param extrapolate boolean which specifies if richness should be extrapolated
+#'   when effort is larger than the number of individuals using the chao1 method.
+#'   Defaults to FALSE in which case it returns observed richness. Extrapolation
+#'   is only implemented for individual-based rarefaction 
+#'   (i.e., \code{method = 'indiv'})
+#' @param quiet_mode boolean defaults to FALSE, if TRUE then warnings and other
+#'   non-error messages are surpressed.
 #' @inheritParams make_mob_in 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
@@ -209,17 +212,31 @@ sphere_dist = function(long, lat){
 #' to be sampled first. Each plot in the dataset is treated as a starting point
 #' and then the mean of these n possible accumulation curves is computed.
 #' 
+#' For individual-based rarefaction if effort is greater than the number of
+#' individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
+#' (Chao 1984, 1987). The code used to perform the extrapolation was ported
+#' from \code{iNext::D0.hat} found at \url{https://github.com/JohnsonHsieh/iNEXT}. 
+#' T. C. Hsieh, K. H. Ma and Anne Chao are the orginal authors of the
+#' \code{iNEXT} package. 
+#' 
+#' If effort is greater than sample size and \code{extrapolate = FALSE} then the 
+#' observed number of species is returned. 
+#' 
 #' @return A vector of rarefied species richness values
 #' @author Dan McGlinn and Xiao Xiao
-#' @references Cayuela, L., N.J. Gotelli, & R.K. Colwell (2015) Ecological and 
-#' biogeographic null hypotheses for comparing rarefaction curves. Ecological
-#' Monographs 85:437-454. Appendix A: 
-#' http://esapubs.org/archive/mono/M085/017/appendix-A.php
-#' 
+#' @references 
+#' Cayuela, L., N.J. Gotelli, & R.K. Colwell (2015) Ecological and 
+#'  biogeographic null hypotheses for com.paring rarefaction curves. Ecological
+#'  Monographs 85:437-454. Appendix A: 
+#'  http://esapubs.org/archive/mono/M085/017/appendix-A.php
+#' Chao, A. (1984) Nonparametric estimation of the number of classes in a
+#'  population. Scandinavian Journal of Statistics 11:265-270.
+#' Chao, A. (1987) Estimating the population size for capture-recapture data
+#'  with unequal catchability. Biometrics 43:783-791.
 #' Chiarucci, A., G. Bacaro, D. Rocchini, C. Ricotta, M. Palmer, & S. Scheiner 
-#' (2009) Spatially constrained rarefaction: incorporating the autocorrelated
-#' structure of biological communities into sample-based rarefaction. Community
-#' Ecology 10:209-214.
+#'  (2009) Spatially constrained rarefaction: incorporating the autocorrelated
+#'  structure of biological communities into sample-based rarefaction. Community
+#'  Ecology 10:209-214.
 #' @export
 #' @examples 
 #' data(inv_comm)
@@ -251,7 +268,7 @@ sphere_dist = function(long, lat){
 #' # the syntax is simplier if suppling a mob_in object
 #' rarefaction(inv_mob_in, method='spat')
 rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL, 
-                       dens_ratio=1, force=FALSE) {
+                       dens_ratio=1, extrapolate=FALSE, quiet_mode=FALSE) {
     if (!any(method %in% c('indiv', 'samp', 'spat')))
         stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
     if (class(x) == 'mob_in') {
@@ -288,10 +305,19 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
             effort = 1:n
     effort_names = effort
     if (any(effort > n)) {
-        warning('"effort" larger than total number of samples')
-        if (!force)
-            effort[effort > n] = NA
-    }    
+        if (method == 'indiv') {
+            if (extrapolate) 
+                if (!quiet_mode) warning('"effort" larger than total number of individuals extrapolating S using Chao1')
+            else
+                if (!quiet_mode) warning('"effort" larger than total number of individuals returing observed S')
+        } else {
+            if (extrapolate)
+                stop('Extrapolation only implemented for method = "indiv"')
+            else
+                if (!quiet_mode) warning('"effort" larger than total number of samples returing observed S')
+        }
+    } else if (extrapolate)
+        if (!quiet_mode) message('Richness was not extrapolated because effort less than or equal to the number of samples')
     if (method == 'spat') {
         # drop species with no observations  
         x = x[ , colSums(x) > 0] 
@@ -331,20 +357,38 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
             effort = effort[effort / dens_ratio <= n]
             ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
         }
-        p = matrix(0, length(effort), S)
+        p = matrix(0, sum(effort <= n), S)
+        out = rep(NA, length(effort))
+        S_ext = NULL
         for (i in seq_along(effort)) {
-            if (dens_ratio == 1) {
-                p[i, ] = ifelse(n - x < effort[i], 0, 
-                                exp(lchoose(n - x, effort[i]) - ldiv[i]))
-            } else {
-                p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
-                                exp(suppressWarnings(lgamma(n - x + 1)) -
-                                    suppressWarnings(lgamma(n - x - effort[i] /
-                                                            dens_ratio + 1)) +
-                                    ldiv[i]))
+            if (effort[i] <= n) {
+                if (dens_ratio == 1) {
+                    p[i, ] = ifelse(n - x < effort[i], 0, 
+                                    exp(lchoose(n - x, effort[i]) - ldiv[i]))
+                } else {
+                    p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
+                                    exp(suppressWarnings(lgamma(n - x + 1)) -
+                                        suppressWarnings(lgamma(n - x - effort[i] /
+                                                                dens_ratio + 1)) +
+                                        ldiv[i]))
+                }
+            } else if (extrapolate) {
+                f1 = sum(x == 1)
+                f2 = sum(x == 2)
+                # estimation of unseen species via Chao1                
+                f0_hat <- ifelse(f2 == 0, 
+                                 (n - 1) / n * f1 * (f1 - 1) / 2, 
+                                 (n - 1) / n * f1^2 / 2 / f2)
+                A = n * f0_hat / (n * f0_hat + f1)
+                S_ext = c(S_ext, ifelse(f1 == 0, S, 
+                                        S + f0_hat * (1 - A ^ (effort[i] - n))))
             }
+            else
+                S_ext = c(S_ext, S)
         }
-        out = rowSums(1 - p)
+        out = rep(NA, length(effort))
+        out[effort <= n] = rowSums(1 - p)
+        out[effort > n] = S_ext
     }
     names(out) = effort_names
     return(out)
