@@ -25,7 +25,9 @@ data should be grouped by}
    \item \code{S_asymp} ... Estimated asymptotic species richness
    
 }
-See \emph{Details} for additional information on the biodiverstiy statistics.}
+  If index is not specified then N, S, S_n, pct_rare, and S_PIE are computed
+  by default. See \emph{Details} for additional information on the
+  biodiverstiy statistics.}
 
 \item{effort_samples}{The standardized number of individuals used for the 
 calculation of rarefied species richness at the sample level. This can a be
@@ -33,16 +35,16 @@ single value or an integer vector. As default the minimum number of
 individuals found across the samples is used, when this is not smaller than
 \code{effort_min}.}
 
-\item{effort_min}{The minimum number of individuals considered for the
-calculation of rarefied richness. Samples with less individuals then
-\code{effort_min} are excluded from the analysis with a warning.
-Accordingly, when \code{effort_samples} is set by the user it has to be
-higher than \code{effort_min}.}
+\item{effort_min}{The minimum number of individuals considered for the 
+calculation of rarefied richness (Default value of 5). Samples with less
+individuals then \code{effort_min} are excluded from the analysis with a
+warning. Accordingly, when \code{effort_samples} is set by the user it has
+to be higher than \code{effort_min}.}
 
-\item{rare_thres}{The threshold for determining if a species is rare or not.
-It can ranges from (0, 1] and defaults to 0.05 which specifies that any
-species with less than or equal to 5% of the total abundance in a sample
-is considered rare}
+\item{rare_thres}{The threshold for determining if a species is rare or not. 
+It can ranges from (0, 1] and defaults to 0.05 which specifies that any 
+species with less than or equal to 5% of the total abundance in a sample is
+considered rare.}
 
 \item{n_perm}{The number of permutations to use for testing for treatment
 effects.}
@@ -89,11 +91,14 @@ the Chao1 (Chao 1984, Chao 1987) method is used to extrapolate the rarefaction c
 \strong{pct_rare: Percent of rare species} Is the ratio of the number of rare
 species to the number of observed species x 100 (McGill 2011). Species are 
 considered rare in a particular sample if they have fewer individuals than 
-\code{rare_thres * N}  where \code{rare_thres} is set by the user and
-\code{N} is the total number of individuals in the sample. The default value
-of \code{rare_thres} of 0.05 is arbitrary and was chosen because McGill
-(2011) found this metric of rarity perfomed well and was generally less
-correlated with other common metrics of biodiversity.
+\code{rare_thres * N} where \code{rare_thres} can be set by the user and 
+\code{N} is the total number of individuals in the sample. The default value 
+of \code{rare_thres} of 0.05 is arbitrary and was chosen because McGill 
+(2011) found this metric of rarity perfomed well and was generally less 
+correlated with other common metrics of biodiversity. Essentialy this metric
+attempt to estimate what proportion of the species in the same occur in the
+tail of the species abundance distribution and is therefore sensative to
+presence of rare species.
 
 \strong{PIE: Probability of intraspecific encounter} represents the probability that two randomly drawn individuals 
 belong to the same species. Here we use the definition of Hurlbert (1971),
@@ -150,17 +155,6 @@ inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
 plot(inv_stats)
 
 # multiple group catgories
-data(dune)
-data(dune.env)
-dune_mob_in = make_mob_in(dune, dune.env)
-# without bootstrap CI
-dune_stats = get_mob_stats(dune_mob_in, group_var = "Management",
-                           index="S", n_perm = 20)
-plot(dune_stats)
-# with bootstrap CI
-dune_stats = get_mob_stats(dune_mob_in, group_var = "Management",
-                           index='S', n_perm = 20, boot_groups = T)
-plot(dune_stats)
 }
 \references{
 Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved

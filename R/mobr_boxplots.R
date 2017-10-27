@@ -428,17 +428,6 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #' plot(inv_stats)
 #' 
 #' # multiple group catgories
-#' data(dune)
-#' data(dune.env)
-#' dune_mob_in = make_mob_in(dune, dune.env)
-#' # without bootstrap CI
-#' dune_stats = get_mob_stats(dune_mob_in, group_var = "Management",
-#'                            index="S", n_perm = 20)
-#' plot(dune_stats)
-#' # with bootstrap CI
-#' dune_stats = get_mob_stats(dune_mob_in, group_var = "Management",
-#'                            index='S', n_perm = 20, boot_groups = T)
-#' plot(dune_stats)
 get_mob_stats = function(mob_in, group_var, 
                          index = c("N", "S", "S_n", "pct_rare", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
