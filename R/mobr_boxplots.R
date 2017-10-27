@@ -198,13 +198,11 @@ calc_biodiv = function(abund_mat, groups, index, effort, rare_thres) {
     # Asymptotic estimates species richness -------------------------------------
     if (any(index == "S_asymp")) {
         S_asymp = try(calc_chao1(abund_mat))
-        if (class(S_asymp) == "try_error") {
+        if (class(S_asymp) == "try_error") 
             warning("The Chao richness estimator cannot be calculated for all groups.")
-        } else {
-            S_obs = rowSums(abund_mat > 0)
+        else 
             S_asymp[!is.finite(S_asymp)] = NA
-        }
-        out$value[out$index == "S_asymp"] = S_asymp - S_obs
+        out$value[out$index == "S_asymp"] = S_asymp
     }    
     
    return(out)
