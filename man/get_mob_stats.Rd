@@ -4,38 +4,45 @@
 \alias{get_mob_stats}
 \title{Calculate sample based and group based biodiversity statistics.}
 \usage{
-get_mob_stats(mob_in, group_var, index = c("N", "S", "S_rare", "S_asymp",
-  "S_PIE"), n_rare_samples = NULL, n_rare_min = 5, n_perm = 200,
-  boot_groups = F, conf_level = 0.95)
+get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "pct_rare",
+  "S_PIE"), effort_samples = NULL, effort_min = 5, rare_thres = 0.05,
+  n_perm = 200, boot_groups = F, conf_level = 0.95)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
 
-\item{group_var}{A string that specifies which field in \code{mob_in$env} the
+\item{group_var}{String that specifies which field in \code{mob_in$env} the
 data should be grouped by}
 
-\item{index}{The calculated biodiversity statistics. The options are
+\item{index}{The calculated biodiversity indices. The options are
 \itemize{
    \item \code{N} ... Number of individuals (total abundance)
    \item \code{S} ... Number of species
-   \item \code{S_rare} ... Rarefied number of species
-   \item \code{S_asymp} ... Estimated asymptotic species richness
+   \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
+   \item \code{pct_rare} ... The percent of rare species
    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
    \item \code{S_PIE} ... Effective number of species based on PIE
+   \item \code{S_asymp} ... Estimated asymptotic species richness
+   
 }
 See \emph{Details} for additional information on the biodiverstiy statistics.}
 
-\item{n_rare_samples}{The standardized number of individuals used for the 
+\item{effort_samples}{The standardized number of individuals used for the 
 calculation of rarefied species richness at the sample level. This can a be
 single value or an integer vector. As default the minimum number of
 individuals found across the samples is used, when this is not smaller than
-\code{n_rare_min}.}
+\code{effort_min}.}
 
-\item{n_rare_min}{The minimum number of individuals considered for the
+\item{effort_min}{The minimum number of individuals considered for the
 calculation of rarefied richness. Samples with less individuals then
-\code{n_rare_min} are excluded from the analysis with a warning.
-Accordingly, when \code{n_rare_samples} is set by the user it has to be
-higher than \code{n_rare_min}.}
+\code{effort_min} are excluded from the analysis with a warning.
+Accordingly, when \code{effort_samples} is set by the user it has to be
+higher than \code{effort_min}.}
+
+\item{rare_thres}{The threshold for determining if a species is rare or not.
+It can ranges from (0, 1] and defaults to 0.05 which specifies that any
+species with less than or equal to 5% of the total abundance in a sample
+is considered rare}
 
 \item{n_perm}{The number of permutations to use for testing for treatment
 effects.}
@@ -63,32 +70,38 @@ Calculate sample based and group based biodiversity statistics.
 \details{
 \strong{BIODIVERSITY INDICES}
 
-\strong{Rarefied species richness} is the expected number of species, given a
-defined number of sampled individuals (Gotelli & Colwell 2001). Rarefied
+\strong{S_n: Rarefied species richness} is the expected number of species, given a
+defined number of sampled individuals (n) (Gotelli & Colwell 2001). Rarefied
 richness at the sample level is calculated for the values provided in 
-\code{n_rare_samples} as long as these values are not smaller than the 
-user-defined minimum value \code{n_rare_min}. In this case the minimum value 
+\code{effort_samples} as long as these values are not smaller than the 
+user-defined minimum value \code{effort_min}. In this case the minimum value 
 is used and samples with less individuals are discarded. When no values for
-\code{n_rare_samples} are provided the observed minimum number of individuals
+\code{effort_samples} are provided the observed minimum number of individuals
 of the samples is used, which is the standard in rarefaction analysis
 (Gotelli & Colwell 2001). Because the number of individuals is expected to
 scale linearly with sample area or effort, at the group level the number of
 individuals for rarefaction is calculated as the minimum number of samples
-within groups times \code{n_rare_samples}. For example, when there are 10
-samples within each group, \code{n_rare_groups} equals \code{10 *
-n_rare_samples}.
+within groups multiplied by \code{effort_samples}. For example, when there are 10
+samples within each group, \code{effort_groups} equals \code{10 *
+effort_samples}. If n is larger than the number of individuals in sample then
+the Chao1 (Chao 1984, Chao 1987) method is used to extrapolate the rarefaction curve. 
 
-\strong{Asymptotic species richness} is calculated using the bias-corrected
-Chao1 estimator (Chiu et al. 2014) provided in the function
-\code{\link[vegan]{estimateR}}.
+\strong{pct_rare: Percent of rare species} Is the ratio of the number of rare
+species to the number of observed species x 100 (McGill 2011). Species are 
+considered rare in a particular sample if they have fewer individuals than 
+\code{rare_thres * N}  where \code{rare_thres} is set by the user and
+\code{N} is the total number of individuals in the sample. The default value
+of \code{rare_thres} of 0.05 is arbitrary and was chosen because McGill
+(2011) found this metric of rarity perfomed well and was generally less
+correlated with other common metrics of biodiversity.
 
-\strong{PIE} represents the probability that two randomly drawn individuals 
+\strong{PIE: Probability of intraspecific encounter} represents the probability that two randomly drawn individuals 
 belong to the same species. Here we use the definition of Hurlbert (1971),
 which considers sampling without replacement. PIE is closely related to the
 well-known Simpson diversity index, but the latter assumes sampling with
 replacement.
 
-\strong{S_PIE} represents the Effective Number of Species derived from the
+\strong{S_PIE: Effective number of species for PIE} represents the effective number of species derived from the
 PIE. This corresponds to the the number of equally abundant species (i.e. a
 perfectly even community), there would need to be to achieve the observed PIE
 (Jost 2006). This means the higher the difference between S and S_PIE the
@@ -96,7 +109,10 @@ more uneven is the observed community. An intuitive interpretation of S_PIE
 is that it corresponds to the number of dominant (highly abundant) species in
 the community.
 
-For species richness \code{S}, rarefied richness \code{S_rare}, asymptotic 
+\strong{S_asymp: Asymptotic species richness} is calculated using the Chao1 estimator
+(Chao 1984, Chao 1987). 
+ 
+For species richness \code{S}, rarefied richness \code{S_n}, asymptotic 
 richness \code{S_asymp}, and the Effective Number of Species \code{S_PIE} we
 also calculate beta-diversity using multiplicative partitioning (Whittaker
 1972, Jost 2007). That means for these indices we estimate beta-diversity as
@@ -125,12 +141,26 @@ corresponds to rarefaction to ca. 2/3 of the individuals, because the same
 samples occur several times in the resampled data sets.
 }
 \examples{
+# a binary grouping variable (uninvaded or invaded)
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
-                          n_perm = 20, n_rare_samples = c(5,10))
+                          n_perm = 20, effort_samples = c(5,10))
 plot(inv_stats)
+
+# multiple group catgories
+data(dune)
+data(dune.env)
+dune_mob_in = make_mob_in(dune, dune.env)
+# without bootstrap CI
+dune_stats = get_mob_stats(dune_mob_in, group_var = "Management",
+                           index="S", n_perm = 20)
+plot(dune_stats)
+# with bootstrap CI
+dune_stats = get_mob_stats(dune_mob_in, group_var = "Management",
+                           index='S', n_perm = 20, boot_groups = T)
+plot(dune_stats)
 }
 \references{
 Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved
@@ -151,6 +181,10 @@ Components. Ecology, 88, 2427–2439.
 
 Legendre, P. & Legendre, L.F.J. (1998). Numerical Ecology, Volume 24, 2nd
 Edition Elsevier, Amsterdam; Boston.
+
+McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological
+Diversity: Frontiers in Measurement and Assessment. eds. A.E. Magurran
+B.J. McGill.
 
 Whittaker, R.H. (1972). Evolution and Measurement of Species Diversity.
 Taxon, 21, 213-251.
