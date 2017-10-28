@@ -28,8 +28,8 @@ is assumed that column "x" is longitude and column "y" is latitude, both in
 radians.}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
-and the community data (i.e., x) under consideration. This arguement is
-used to rescale the rarefation curve when estimating the effect of
+and the community data (i.e., x) under consideration. This argument is
+used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
 \item{extrapolate}{boolean which specifies if richness should be extrapolated
@@ -39,7 +39,7 @@ is only implemented for individual-based rarefaction
 (i.e., \code{method = 'indiv'})}
 
 \item{quiet_mode}{boolean defaults to FALSE, if TRUE then warnings and other
-non-error messages are surpressed.}
+non-error messages are suppressed.}
 }
 \value{
 A vector of rarefied species richness values

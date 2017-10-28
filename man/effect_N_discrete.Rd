@@ -2,14 +2,14 @@
 % Please edit documentation in R/mobr.R
 \name{effect_N_discrete}
 \alias{effect_N_discrete}
-\title{Auxillary function for get_delta_stats()
+\title{Auxiliary function for get_delta_stats()
 Effect of N when type is "discrete"}
 \usage{
 effect_N_discrete(out, mob_in, group_levels, ref_group, groups, density_stat,
   ind_sample_size, n_perm, overall_p)
 }
 \description{
-Auxillary function for get_delta_stats()
+Auxiliary function for get_delta_stats()
 Effect of N when type is "discrete"
 }
 \keyword{internal}

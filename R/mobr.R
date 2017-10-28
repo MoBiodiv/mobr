@@ -110,7 +110,7 @@ subset.mob_in = function(mob_in, subset, type='string', drop_levels=FALSE) {
    return(mob_in)
 }
   
-#' Print a shortened verison of the mob_in object
+#' Print a shortened version of the mob_in object
 #' @keywords internal
 #' @export
 print.mob_in = function(x, nrows=6, nsp=5) {
@@ -192,8 +192,8 @@ sphere_dist = function(long, lat){
 #' @param xy_coords the spatial coordinates of the samples only required when 
 #'   using the spatial rarefaction method
 #' @param dens_ratio the ratio of individual density between a reference group
-#'   and the community data (i.e., x) under consideration. This arguement is
-#'   used to rescale the rarefation curve when estimating the effect of
+#'   and the community data (i.e., x) under consideration. This argument is
+#'   used to rescale the rarefaction curve when estimating the effect of
 #'   individual density on group differences in richness.
 #' @param extrapolate boolean which specifies if richness should be extrapolated
 #'   when effort is larger than the number of individuals using the chao1 method.
@@ -201,7 +201,7 @@ sphere_dist = function(long, lat){
 #'   is only implemented for individual-based rarefaction 
 #'   (i.e., \code{method = 'indiv'})
 #' @param quiet_mode boolean defaults to FALSE, if TRUE then warnings and other
-#'   non-error messages are surpressed.
+#'   non-error messages are suppressed.
 #' @inheritParams make_mob_in 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
@@ -436,7 +436,7 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
 #' of sampling is used  by the function \code{rarefaction}
 #' when building the spatial accumulation curves
 #' 
-#' @param xy_coords a matrix with n-dimenstional coordinates
+#' @param xy_coords a matrix with n-dimensional coordinates
 #' @return a vector of average distances for each sequential number
 #'   of accumulated nearest samples. 
 #' @export
@@ -464,7 +464,7 @@ avg_nn_dist = function(xy_coords) {
 #' 
 #' Internal function for computing the difference in species richness between 
 #' individual-based and non-spatial sample-based rarefaction curves using an 
-#' analytical approach of stretching (ref_dens > group_dens) or strinking
+#' analytical approach of stretching (ref_dens > group_dens) or shrinking
 #' (ref_dens < group_dens) the individual-based rarefaction curve to provide the
 #' non-spatial rarefaction result.
 #' 
@@ -475,7 +475,7 @@ avg_nn_dist = function(xy_coords) {
 #'   rarefaction curves for one group with the evaluation sample size (number of
 #'   individuals) defined by ref_dens, evaluated at specified points (given by
 #'   inds). The rescaling of sampling effort from number of samples to number
-#'   of individuals is acocmplished using the mean density of individuals 
+#'   of individuals is accomplished using the mean density of individuals 
 #'   per sample.
 #' @return a two column data.frame containing the number of individuals (inds)
 #'   and the difference in species richness (deltaS)
@@ -501,15 +501,15 @@ deltaS_N = function(comm, ref_dens, inds){
 #' abundance and therefore observed group N, and 2) 'swapN': the total number of
 #' individuals in a plot is shuffled and then that many individuals are drawn
 #' randomly from the group specific species-abundance distribution for each plot
-#' which provides a means of removing group differenes in the total number of
-#' individuals in a given sample. Note: The 'noagg' algorithim fixes the total number
-#' of individuals for a given species within a group and the 'swapN' algorithim does
+#' which provides a means of removing group differences in the total number of
+#' individuals in a given sample. Note: The 'noagg' algorithm fixes the total number
+#' of individuals for a given species within a group and the 'swapN' algorithm does
 #' not. 
 #' 
 #' @param comm community matrix with plots as rows and species columns.
 #' @param method either 'noagg' for random shuffling of the individuals without
-#'   mantaining the vector of sample total abundances or 'swapN' for random 
-#'   shuffling of the individuals in which sample abundances are mantained 
+#'   maintaining the vector of sample total abundances or 'swapN' for random 
+#'   shuffling of the individuals in which sample abundances are maintained 
 #' @param groups optional argument that is a vector of group ids which specify
 #'   which group each site is associated with. If is NULL then all rows of the
 #'   community matrix are assumed to be members of the same group
@@ -579,7 +579,7 @@ df_factor_to_numeric = function(dataframe, cols = NULL){
     return(dataframe)
 }
 
-# Auxillary function for get_delta_stats()
+# Auxiliary function for get_delta_stats()
 # Overall checks for input values
 get_delta_overall_checks = function(mob_in, type, group_var, env_var, 
                                     density_stat, tests){
@@ -604,7 +604,7 @@ get_delta_overall_checks = function(mob_in, type, group_var, env_var,
     return(approved_tests)
 }
 
-# Auxillary function for get_delta_stats()
+# Auxiliary function for get_delta_stats()
 # Perform checks when type is "discrete"
 get_delta_discrete_checks = function(ref_group, group_levels, group_data, env_var){
     if (is.null(ref_group)) {
@@ -618,7 +618,7 @@ get_delta_discrete_checks = function(ref_group, group_levels, group_data, env_va
         warning('Grouping variable is not a factor. A group will be defined for each unique value.')
 }
 
-# Auxillary function for get_delta_stats()
+# Auxiliary function for get_delta_stats()
 # Perform checks when type is "continuous"
 get_delta_continuous_checks = function(corr, group_levels, env_raw){
     if (!(corr %in% c('spearman', 'pearson')))
@@ -631,7 +631,7 @@ get_delta_continuous_checks = function(corr, group_levels, env_raw){
     } 
 }
 
-# Auxillary function for get_delta_stats()
+# Auxiliary function for get_delta_stats()
 # Returns a vector of abundances where individual-based rarefaction 
 # will be performed
 get_delta_ind_sample = function(group_sad, inds, log_scale){
@@ -651,7 +651,7 @@ get_delta_ind_sample = function(group_sad, inds, log_scale){
     return(ind_sample_size)
 }
 
-#' Auxillary function for get_delta_stats()
+#' Auxiliary function for get_delta_stats()
 #' Returns the "assumed" plot density given 
 #' whether min, max or mean is used
 #' @keywords internal
@@ -666,7 +666,7 @@ get_plot_dens = function(comm, density_stat){
     return(plot_dens)   
 }
 
-#' Auxillary function for effect_ functions
+#' Auxiliary function for effect_ functions
 #' Compute an overall p-value for one factor in the discrete case
 #' p-value is based on mean squared difference from zero summed across the scales
 #' @keywords internal
@@ -678,7 +678,7 @@ get_overall_p = function(effort, deltaS_emp, deltaS_null){
     return(overall_p)
 }
 
-#' Auxillary function for get_delta_stats()
+#' Auxiliary function for get_delta_stats()
 #' Obtain the swap curve and/or spatial curve for each group if asked
 #' Directly add attributes to the input "out"
 #' @keywords internal
@@ -712,7 +712,7 @@ get_sample_curves = function(mob_in, group_levels, group_data, approved_tests){
     }
 }
 
-#' Auxillary function for get_delta_stats()
+#' Auxiliary function for get_delta_stats()
 #' Effect of SAD when type is "continuous"
 #' Directly add attributes to the input "out"
 #' @keywords internal
@@ -751,7 +751,7 @@ effect_SAD_continuous = function(out, group_sad, env_levels, corr, n_perm){
     return(out)
 }
 
-#' Auxillary function for get_delta_stats()
+#' Auxiliary function for get_delta_stats()
 #' Effect of SAD when type is "discrete"
 #' @keywords internal
 effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, n_perm, 
@@ -802,7 +802,7 @@ effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, n_perm,
     return(out)
 }
 
-#' Auxillary function for get_delta_stats()
+#' Auxiliary function for get_delta_stats()
 #' Effect of N when type is "continuous"
 #' @keywords internal
 effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data, 
@@ -853,7 +853,7 @@ effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data,
     return(out_N)
 }
 
-#' Auxillary function for get_delta_stats()
+#' Auxiliary function for get_delta_stats()
 #' Effect of N when type is "discrete" 
 #' @keywords internal
 effect_N_discrete = function(out, mob_in, group_levels, ref_group, groups, 
@@ -909,7 +909,7 @@ effect_N_discrete = function(out, mob_in, group_levels, ref_group, groups,
     return(out)
 }
 
-#' Auxillary function for get_delta_stats()
+#' Auxiliary function for get_delta_stats()
 #' Effect of aggregation when type is "continuous"
 #' @keywords internal
 effect_agg_continuous = function(mob_in, sample_rare, group_plots, group_levels, 
@@ -956,7 +956,7 @@ effect_agg_continuous = function(mob_in, sample_rare, group_plots, group_levels,
     return(table_agg)
 }
 
-#' Auxillary function for get_delta_stats()
+#' Auxiliary function for get_delta_stats()
 #' Effect of aggregation when type is "discrete"
 #' @keywords internal
 effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data, 
@@ -1010,7 +1010,7 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #' 
 #' There are three tests, on effects of 1. the shape of the SAD, 2.
 #' treatment/group-level density, 3. degree of aggregation. The user can
-#' specificy to conduct one or more of these tests.
+#' specifically to conduct one or more of these tests.
 #' 
 #' @param mob_in an object of class mob_in created by make_mob_in()
 #' @param group_var a character string specifying the environmental variable in
@@ -1030,7 +1030,7 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #' @param inds effort size at which the individual-based rarefaction curves are
 #'   to be evaluated, and to which the sample-based rarefaction curves are to be
 #'   interpolated. It can take three types of values, a single integer, a vector
-#'   of intergers, and NULL. If inds = NULL (default), the curves are evaluated
+#'   of integers, and NULL. If inds = NULL (default), the curves are evaluated
 #'   at every possible effort size, from 1 to the total number of individuals
 #'   within the group (slow). If inds is a single integer, it is taken as the
 #'   number of points at which the curves are evaluated; the positions of the
@@ -1424,7 +1424,7 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
 #' @param trt_group a string that specifies the name of the treatment group  
 #' @param ref_group a string that specifies the name of the reference group
 #' @param same_scale a boolean if TRUE then the y-axis of the rarefaction and 
-#'  ddelta S plots are scaled identically accross the tested effects
+#'  ddelta S plots are scaled identically across the tested effects
 #' @param same_scale if TRUE then all three plots have the same range on the 
 #'  y-axis. 
 #' @param display argument specifies what graphics to display can be either
@@ -1665,7 +1665,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 #' @param display the type of graphic to display options include: "raw" or
 #'  "stacked" for plots of the raw effect sizes or a stacked area plot of the
 #'  absolute value of the effect sizes. 
-#' @param prop boolean if TRUE then propotions are used in the stacked area plot
+#' @param prop boolean if TRUE then proportions are used in the stacked area plot
 #' @param rescale string that specifies how to rescale number of individuals to
 #'  the number of samples. Defaults to 'max_effort' which rescales by 
 #'  setting the maximum number of individuals considered in the individual
@@ -1674,7 +1674,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 #'  rescales individuals to number of samples using the density statistic 
 #'  specified when the mob statistics where computed by \code{\link[mobr]{get_delta_stats}}. 
 #' @param common_scale boolean defaults to FALSE. If TRUE then all the effects
-#'  are trucated to only be across the same range of number of individuals.
+#'  are truncated to only be across the same range of number of individuals.
 #' @param xlabel_indiv boolean if TRUE then the top axis is 
 #'  labeled with numbers of individuals
 #' @param lty a vector of line types, see \link[graphics]{par}.
@@ -1784,7 +1784,7 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
 }
 
 #' Plot the relationship between the number of plots and the number of
-#' inviduals
+#' individuals
 #' 
 #' The MoB methods assume a linear relationship between the number of 
 #' plots and the number of individuals. This function provides a means of 

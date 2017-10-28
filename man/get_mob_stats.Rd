@@ -27,7 +27,7 @@ data should be grouped by}
 }
   If index is not specified then N, S, S_n, pct_rare, and S_PIE are computed
   by default. See \emph{Details} for additional information on the
-  biodiverstiy statistics.}
+  biodiversity statistics.}
 
 \item{effort_samples}{The standardized number of individuals used for the 
 calculation of rarefied species richness at the sample level. This can a be
@@ -94,10 +94,10 @@ considered rare in a particular sample if they have fewer individuals than
 \code{rare_thres * N} where \code{rare_thres} can be set by the user and 
 \code{N} is the total number of individuals in the sample. The default value 
 of \code{rare_thres} of 0.05 is arbitrary and was chosen because McGill 
-(2011) found this metric of rarity perfomed well and was generally less 
-correlated with other common metrics of biodiversity. Essentialy this metric
+(2011) found this metric of rarity performed well and was generally less 
+correlated with other common metrics of biodiversity. Essentially this metric
 attempt to estimate what proportion of the species in the same occur in the
-tail of the species abundance distribution and is therefore sensative to
+tail of the species abundance distribution and is therefore sensitive to
 presence of rare species.
 
 \strong{PIE: Probability of intraspecific encounter} represents the probability that two randomly drawn individuals 
@@ -133,7 +133,7 @@ labels across samples.
 
 At the group-level we aggregate the community matrix by summing across the 
 groups. Then we compute the mean difference in a given biodiversity index
-between the groups and perform a permuatation test by shuffling the treatment
+between the groups and perform a permutation test by shuffling the treatment
 group labels. .
 
 A bootstrap approach can be used to also test differences at the group level.

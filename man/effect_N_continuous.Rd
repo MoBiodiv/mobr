@@ -2,14 +2,14 @@
 % Please edit documentation in R/mobr.R
 \name{effect_N_continuous}
 \alias{effect_N_continuous}
-\title{Auxillary function for get_delta_stats()
+\title{Auxiliary function for get_delta_stats()
 Effect of N when type is "continuous"}
 \usage{
 effect_N_continuous(mob_in, S, group_levels, env_levels, group_data, plot_dens,
   plot_abd, ind_sample_size, corr, n_perm)
 }
 \description{
-Auxillary function for get_delta_stats()
+Auxiliary function for get_delta_stats()
 Effect of N when type is "continuous"
 }
 \keyword{internal}

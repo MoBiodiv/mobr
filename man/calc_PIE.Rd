@@ -26,7 +26,7 @@ of species i. This formulation uses sampling without replacement and it is
 sometimes referred to as the bias corrected formulation of PIE.
 
 The code in this function borrows heavily from the function vegan::diversity()
-but computes a different quantitiy. The function vegan::diversity() computes
+but computes a different quantity. The function vegan::diversity() computes
 PIE when sampling with replacement is assumed. The difference between the two 
 formulations will decrease as N becomes large. Jari Oksanen and Bob O'Hara are
 the original authors of the function vegan::diversity().

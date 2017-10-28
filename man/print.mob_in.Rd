@@ -2,11 +2,11 @@
 % Please edit documentation in R/mobr.R
 \name{print.mob_in}
 \alias{print.mob_in}
-\title{Print a shortened verison of the mob_in object}
+\title{Print a shortened version of the mob_in object}
 \usage{
 \method{print}{mob_in}(x, nrows = 6, nsp = 5)
 }
 \description{
-Print a shortened verison of the mob_in object
+Print a shortened version of the mob_in object
 }
 \keyword{internal}

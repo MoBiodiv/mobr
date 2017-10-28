@@ -18,7 +18,7 @@ overlap_effects(mob_out, trt_group, display = "raw", prop = FALSE,
 "stacked" for plots of the raw effect sizes or a stacked area plot of the
 absolute value of the effect sizes.}
 
-\item{prop}{boolean if TRUE then propotions are used in the stacked area plot}
+\item{prop}{boolean if TRUE then proportions are used in the stacked area plot}
 
 \item{rescale}{string that specifies how to rescale number of individuals to
 the number of samples. Defaults to 'max_effort' which rescales by 
@@ -29,7 +29,7 @@ rescales individuals to number of samples using the density statistic
 specified when the mob statistics where computed by \code{\link[mobr]{get_delta_stats}}.}
 
 \item{common_scale}{boolean defaults to FALSE. If TRUE then all the effects
-are trucated to only be across the same range of number of individuals.}
+are truncated to only be across the same range of number of individuals.}
 
 \item{xlabel_indiv}{boolean if TRUE then the top axis is 
 labeled with numbers of individuals}

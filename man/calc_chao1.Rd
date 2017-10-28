@@ -19,7 +19,7 @@ proposed in Chao (1984, 1987).
 \details{
 This function is a trimmed version of \code{iNext::ChaoRichess} found at 
 \url{https://github.com/JohnsonHsieh/iNEXT}. T. C. Hsieh, K. H. Ma and Anne
-Chao are the orginal authors of the \code{iNEXT} package.
+Chao are the original authors of the \code{iNEXT} package.
 }
 \examples{
 data(inv_comm)

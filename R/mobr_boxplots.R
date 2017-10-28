@@ -5,7 +5,7 @@
 #' 
 #' This function is a trimmed version of \code{iNext::ChaoRichess} found at 
 #' \url{https://github.com/JohnsonHsieh/iNEXT}. T. C. Hsieh, K. H. Ma and Anne
-#' Chao are the orginal authors of the \code{iNEXT} package. 
+#' Chao are the original authors of the \code{iNEXT} package. 
 #' 
 #' @param x a vector of species abundances or a site-by-species matrix
 #' 
@@ -53,7 +53,7 @@ calc_chao1 = function(x) {
 #' sometimes referred to as the bias corrected formulation of PIE. 
 #' 
 #' The code in this function borrows heavily from the function vegan::diversity()
-#' but computes a different quantitiy. The function vegan::diversity() computes
+#' but computes a different quantity. The function vegan::diversity() computes
 #' PIE when sampling with replacement is assumed. The difference between the two 
 #' formulations will decrease as N becomes large. Jari Oksanen and Bob O'Hara are
 #' the original authors of the function vegan::diversity().
@@ -268,7 +268,7 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #' }
 #'   If index is not specified then N, S, S_n, pct_rare, and S_PIE are computed
 #'   by default. See \emph{Details} for additional information on the
-#'   biodiverstiy statistics.
+#'   biodiversity statistics.
 #' 
 #' @param effort_samples The standardized number of individuals used for the 
 #'   calculation of rarefied species richness at the sample level. This can a be
@@ -324,10 +324,10 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #' \code{rare_thres * N} where \code{rare_thres} can be set by the user and 
 #' \code{N} is the total number of individuals in the sample. The default value 
 #' of \code{rare_thres} of 0.05 is arbitrary and was chosen because McGill 
-#' (2011) found this metric of rarity perfomed well and was generally less 
-#' correlated with other common metrics of biodiversity. Essentialy this metric
+#' (2011) found this metric of rarity performed well and was generally less 
+#' correlated with other common metrics of biodiversity. Essentially this metric
 #' attempt to estimate what proportion of the species in the same occur in the
-#' tail of the species abundance distribution and is therefore sensative to
+#' tail of the species abundance distribution and is therefore sensitive to
 #' presence of rare species.
 #' 
 #' \strong{PIE: Probability of intraspecific encounter} represents the probability that two randomly drawn individuals 
@@ -363,7 +363,7 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #' 
 #' At the group-level we aggregate the community matrix by summing across the 
 #' groups. Then we compute the mean difference in a given biodiversity index
-#' between the groups and perform a permuatation test by shuffling the treatment
+#' between the groups and perform a permutation test by shuffling the treatment
 #' group labels. .
 #' 
 #' A bootstrap approach can be used to also test differences at the group level.
