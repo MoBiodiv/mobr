@@ -733,7 +733,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
     else
         col_groups = col
     if (is.null(index))
-        index = as.character(unique(dune_stats$samples_stats$index))
+        index = as.character(unique(mob_stats$samples_stats$index))
     INDICES = c("N", "S", "S_n", "pct_rare", "S_asymp","PIE","S_PIE")
     
     if (multi_panel) 
