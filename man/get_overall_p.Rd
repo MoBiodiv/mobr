@@ -2,14 +2,14 @@
 % Please edit documentation in R/mobr.R
 \name{get_overall_p}
 \alias{get_overall_p}
-\title{Auxillary function for effect_ functions
+\title{Auxiliary function for effect_ functions
 Compute an overall p-value for one factor in the discrete case
 p-value is based on mean squared difference from zero summed across the scales}
 \usage{
 get_overall_p(effort, deltaS_emp, deltaS_null)
 }
 \description{
-Auxillary function for effect_ functions
+Auxiliary function for effect_ functions
 Compute an overall p-value for one factor in the discrete case
 p-value is based on mean squared difference from zero summed across the scales
 }

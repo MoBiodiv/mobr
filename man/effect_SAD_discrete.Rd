@@ -2,13 +2,13 @@
 % Please edit documentation in R/mobr.R
 \name{effect_SAD_discrete}
 \alias{effect_SAD_discrete}
-\title{Auxillary function for get_delta_stats()
+\title{Auxiliary function for get_delta_stats()
 Effect of SAD when type is "discrete"}
 \usage{
 effect_SAD_discrete(out, group_sad, group_levels, ref_group, n_perm, overall_p)
 }
 \description{
-Auxillary function for get_delta_stats()
+Auxiliary function for get_delta_stats()
 Effect of SAD when type is "discrete"
 }
 \keyword{internal}

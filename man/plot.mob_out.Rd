@@ -16,7 +16,7 @@
 \item{ref_group}{a string that specifies the name of the reference group}
 
 \item{same_scale}{a boolean if TRUE then the y-axis of the rarefaction and 
-ddelta S plots are scaled identically accross the tested effects}
+ddelta S plots are scaled identically across the tested effects}
 
 \item{display}{argument specifies what graphics to display can be either
 'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}

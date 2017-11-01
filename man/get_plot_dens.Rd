@@ -2,14 +2,14 @@
 % Please edit documentation in R/mobr.R
 \name{get_plot_dens}
 \alias{get_plot_dens}
-\title{Auxillary function for get_delta_stats()
+\title{Auxiliary function for get_delta_stats()
 Returns the "assumed" plot density given 
 whether min, max or mean is used}
 \usage{
 get_plot_dens(comm, density_stat)
 }
 \description{
-Auxillary function for get_delta_stats()
+Auxiliary function for get_delta_stats()
 Returns the "assumed" plot density given 
 whether min, max or mean is used
 }

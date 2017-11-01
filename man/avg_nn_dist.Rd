@@ -7,7 +7,7 @@
 avg_nn_dist(xy_coords)
 }
 \arguments{
-\item{xy_coords}{a matrix with n-dimenstional coordinates}
+\item{xy_coords}{a matrix with n-dimensional coordinates}
 }
 \value{
 a vector of average distances for each sequential number

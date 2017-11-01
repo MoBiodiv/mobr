@@ -3,7 +3,7 @@
 \name{plot_N}
 \alias{plot_N}
 \title{Plot the relationship between the number of plots and the number of
-inviduals}
+individuals}
 \usage{
 plot_N(comm, n_perm = 1000)
 }

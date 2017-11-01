@@ -77,7 +77,7 @@ uninvaded sites as well as the spatial xy coordinates of a plot.
 
 ## Preparing data
 
-In order to analyse the data with `mobr` the two data tables have to be combined
+In order to analyze the data with `mobr` the two data tables have to be combined
 into on single object
 
 ```{r}

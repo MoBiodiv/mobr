@@ -2,14 +2,14 @@
 % Please edit documentation in R/mobr.R
 \name{effect_agg_discrete}
 \alias{effect_agg_discrete}
-\title{Auxillary function for get_delta_stats()
+\title{Auxiliary function for get_delta_stats()
 Effect of aggregation when type is "discrete"}
 \usage{
 effect_agg_discrete(out, mob_in, ref_group, group_plots, group_data,
   group_levels, n_perm, overall_p)
 }
 \description{
-Auxillary function for get_delta_stats()
+Auxiliary function for get_delta_stats()
 Effect of aggregation when type is "discrete"
 }
 \keyword{internal}

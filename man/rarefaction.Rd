@@ -2,10 +2,10 @@
 % Please edit documentation in R/mobr.R
 \name{rarefaction}
 \alias{rarefaction}
-\title{Rarefaction Species Richness}
+\title{Rarefied Species Richness}
 \usage{
 rarefaction(x, method, effort = NULL, xy_coords = NULL, latlong = NULL,
-  dens_ratio = 1, force = FALSE)
+  dens_ratio = 1, extrapolate = FALSE, quiet_mode = FALSE)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like
@@ -28,15 +28,18 @@ is assumed that column "x" is longitude and column "y" is latitude, both in
 radians.}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
-and the community data (i.e., x) under consideration. This arguement is
-used to rescale the rarefation curve when estimating the effect of
+and the community data (i.e., x) under consideration. This argument is
+used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
-\item{force}{boolean which specifies what the function should return if effort
-is larger than the total number of samples (either individuals or plots).
-The default behavior in which force = FALSE returns an NA when this occurs.
-If force = TRUE then the total number of species in the community is
-returned with a warning.}
+\item{extrapolate}{boolean which specifies if richness should be extrapolated
+when effort is larger than the number of individuals using the chao1 method.
+Defaults to FALSE in which case it returns observed richness. Extrapolation
+is only implemented for individual-based rarefaction 
+(i.e., \code{method = 'indiv'})}
+
+\item{quiet_mode}{boolean defaults to FALSE, if TRUE then warnings and other
+non-error messages are suppressed.}
 }
 \value{
 A vector of rarefied species richness values
@@ -53,6 +56,16 @@ is computed by sampling each plot in the order of their spatial proximity. If
 plots have the same distance from the focal plot then one is chosen randomly
 to be sampled first. Each plot in the dataset is treated as a starting point
 and then the mean of these n possible accumulation curves is computed.
+
+For individual-based rarefaction if effort is greater than the number of
+individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
+(Chao 1984, 1987). The code used to perform the extrapolation was ported
+from \code{iNext::D0.hat} found at \url{https://github.com/JohnsonHsieh/iNEXT}. 
+T. C. Hsieh, K. H. Ma and Anne Chao are the orginal authors of the
+\code{iNEXT} package. 
+
+If effort is greater than sample size and \code{extrapolate = FALSE} then the 
+observed number of species is returned.
 }
 \examples{
 data(inv_comm)
@@ -86,14 +99,17 @@ rarefaction(inv_mob_in, method='spat')
 }
 \references{
 Cayuela, L., N.J. Gotelli, & R.K. Colwell (2015) Ecological and 
-biogeographic null hypotheses for comparing rarefaction curves. Ecological
-Monographs 85:437-454. Appendix A: 
-http://esapubs.org/archive/mono/M085/017/appendix-A.php
-
+ biogeographic null hypotheses for com.paring rarefaction curves. Ecological
+ Monographs 85:437-454. Appendix A: 
+ http://esapubs.org/archive/mono/M085/017/appendix-A.php
+Chao, A. (1984) Nonparametric estimation of the number of classes in a
+ population. Scandinavian Journal of Statistics 11:265-270.
+Chao, A. (1987) Estimating the population size for capture-recapture data
+ with unequal catchability. Biometrics 43:783-791.
 Chiarucci, A., G. Bacaro, D. Rocchini, C. Ricotta, M. Palmer, & S. Scheiner 
-(2009) Spatially constrained rarefaction: incorporating the autocorrelated
-structure of biological communities into sample-based rarefaction. Community
-Ecology 10:209-214.
+ (2009) Spatially constrained rarefaction: incorporating the autocorrelated
+ structure of biological communities into sample-based rarefaction. Community
+ Ecology 10:209-214.
 }
 \author{
 Dan McGlinn and Xiao Xiao

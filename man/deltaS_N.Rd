@@ -22,13 +22,13 @@ Difference between the individual and non-spatial sample-based
   rarefaction curves for one group with the evaluation sample size (number of
   individuals) defined by ref_dens, evaluated at specified points (given by
   inds). The rescaling of sampling effort from number of samples to number
-  of individuals is acocmplished using the mean density of individuals 
+  of individuals is accomplished using the mean density of individuals 
   per sample.
 }
 \details{
 Internal function for computing the difference in species richness between 
 individual-based and non-spatial sample-based rarefaction curves using an 
-analytical approach of stretching (ref_dens > group_dens) or strinking
+analytical approach of stretching (ref_dens > group_dens) or shrinking
 (ref_dens < group_dens) the individual-based rarefaction curve to provide the
 non-spatial rarefaction result.
 }

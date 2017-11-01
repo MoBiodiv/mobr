@@ -10,8 +10,8 @@ permute_comm(comm, method, groups = NULL)
 \item{comm}{community matrix with plots as rows and species columns.}
 
 \item{method}{either 'noagg' for random shuffling of the individuals without
-mantaining the vector of sample total abundances or 'swapN' for random 
-shuffling of the individuals in which sample abundances are mantained}
+maintaining the vector of sample total abundances or 'swapN' for random 
+shuffling of the individuals in which sample abundances are maintained}
 
 \item{groups}{optional argument that is a vector of group ids which specify
 which group each site is associated with. If is NULL then all rows of the
@@ -27,9 +27,9 @@ within and between plot spatial aggregation, but maintains species group
 abundance and therefore observed group N, and 2) 'swapN': the total number of
 individuals in a plot is shuffled and then that many individuals are drawn
 randomly from the group specific species-abundance distribution for each plot
-which provides a means of removing group differenes in the total number of
-individuals in a given sample. Note: The 'noagg' algorithim fixes the total number
-of individuals for a given species within a group and the 'swapN' algorithim does
+which provides a means of removing group differences in the total number of
+individuals in a given sample. Note: The 'noagg' algorithm fixes the total number
+of individuals for a given species within a group and the 'swapN' algorithm does
 not.
 }
 \examples{

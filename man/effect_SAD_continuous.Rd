@@ -2,14 +2,14 @@
 % Please edit documentation in R/mobr.R
 \name{effect_SAD_continuous}
 \alias{effect_SAD_continuous}
-\title{Auxillary function for get_delta_stats()
+\title{Auxiliary function for get_delta_stats()
 Effect of SAD when type is "continuous"
 Directly add attributes to the input "out"}
 \usage{
 effect_SAD_continuous(out, group_sad, env_levels, corr, n_perm)
 }
 \description{
-Auxillary function for get_delta_stats()
+Auxiliary function for get_delta_stats()
 Effect of SAD when type is "continuous"
 Directly add attributes to the input "out"
 }

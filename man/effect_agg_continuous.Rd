@@ -2,14 +2,14 @@
 % Please edit documentation in R/mobr.R
 \name{effect_agg_continuous}
 \alias{effect_agg_continuous}
-\title{Auxillary function for get_delta_stats()
+\title{Auxiliary function for get_delta_stats()
 Effect of aggregation when type is "continuous"}
 \usage{
 effect_agg_continuous(mob_in, sample_rare, group_plots, group_levels,
   group_data, env_levels, corr, n_perm)
 }
 \description{
-Auxillary function for get_delta_stats()
+Auxiliary function for get_delta_stats()
 Effect of aggregation when type is "continuous"
 }
 \keyword{internal}

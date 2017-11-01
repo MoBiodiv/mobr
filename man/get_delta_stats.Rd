@@ -34,7 +34,7 @@ variables and group_var or env_var (if defined).}
 \item{inds}{effort size at which the individual-based rarefaction curves are
 to be evaluated, and to which the sample-based rarefaction curves are to be
 interpolated. It can take three types of values, a single integer, a vector
-of intergers, and NULL. If inds = NULL (default), the curves are evaluated
+of integers, and NULL. If inds = NULL (default), the curves are evaluated
 at every possible effort size, from 1 to the total number of individuals
 within the group (slow). If inds is a single integer, it is taken as the
 number of points at which the curves are evaluated; the positions of the
@@ -84,7 +84,7 @@ a "mob_out" object with attributes
 \description{
 There are three tests, on effects of 1. the shape of the SAD, 2.
 treatment/group-level density, 3. degree of aggregation. The user can
-specificy to conduct one or more of these tests.
+specifically to conduct one or more of these tests.
 }
 \examples{
 data(inv_comm)
