@@ -216,7 +216,7 @@ sphere_dist = function(long, lat){
 #' individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
 #' (Chao 1984, 1987). The code used to perform the extrapolation was ported
 #' from \code{iNext::D0.hat} found at \url{https://github.com/JohnsonHsieh/iNEXT}. 
-#' T. C. Hsieh, K. H. Ma and Anne Chao are the orginal authors of the
+#' T. C. Hsieh, K. H. Ma and Anne Chao are the original authors of the
 #' \code{iNEXT} package. 
 #' 
 #' If effort is greater than sample size and \code{extrapolate = FALSE} then the 
@@ -1452,10 +1452,10 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
     if (type == 'continuous')
         stop("Currently this plot only works for mob_out object with type discrete.")
     cols = list()
-    cols$trt = rgb(255, 192, 0, maxColorValue = 255) #teal
-    cols$ref = rgb(43, 131, 186, maxColorValue = 255) #blue
-    cols$deltaS = rgb(112, 48, 160, maxColorValue = 255) #purple
-    cols$ddeltaS = rgb(103, 193, 91, maxColorValue = 255) #green
+    cols$trt = "#FFB3B5"     # light red
+    cols$ref = "#78D3EC"     # light blue
+    cols$deltaS = "#C5C0FE"  # purple
+    cols$ddeltaS = "#6BDABD" # green
     if (is.null(par_args)) {
         par_args = paste('mfrow = c(', length(display), ',',
                          length(tests), '), mgp = c(2.5, 1, 0)',  sep='')

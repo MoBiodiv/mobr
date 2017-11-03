@@ -5,7 +5,8 @@
 \title{Plot sample-level and group-level biodiversity statistics for a MoB analysis}
 \usage{
 \method{plot}{mob_stats}(mob_stats, index = NULL, multi_panel = FALSE,
-  col = c("#FFB3B5", "#9ECBFA", "#F7B0E6", "#6BDABD", "#C9CB82"), ...)
+  col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE", "#E2C288", "#F7B0E6",
+  "#AAD28C"), ...)
 }
 \arguments{
 \item{mob_stats}{a \code{mob_stats} object that has the samples and 

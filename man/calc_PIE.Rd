@@ -37,7 +37,7 @@ calc_PIE(inv_comm)
 calc_PIE(inv_comm, ENS=TRUE)
 }
 \references{
-Hurlbert, S. H. 1971. The noncept of species diversity: a critique and
+Hurlbert, S. H. 1971. The nonconcept of species diversity: a critique and
  alternative parameters. Ecology 52: 577–586.
 }
 \author{

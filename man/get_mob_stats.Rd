@@ -4,8 +4,8 @@
 \alias{get_mob_stats}
 \title{Calculate sample based and group based biodiversity statistics.}
 \usage{
-get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "pct_rare",
-  "S_PIE"), effort_samples = NULL, effort_min = 5, rare_thres = 0.05,
+get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "f_0", "S_PIE"),
+  effort_samples = NULL, effort_min = 5, rare_thres = 0.05,
   n_perm = 200, boot_groups = F, conf_level = 0.95)
 }
 \arguments{
@@ -19,10 +19,11 @@ data should be grouped by}
    \item \code{N} ... Number of individuals (total abundance)
    \item \code{S} ... Number of species
    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
+   \item \code{S_asymp} ... Estimated asymptotic species richness
+   \item \code{f_0} ... Estimated number of undetected species 
    \item \code{pct_rare} ... The percent of rare species
    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
    \item \code{S_PIE} ... Effective number of species based on PIE
-   \item \code{S_asymp} ... Estimated asymptotic species richness
    
 }
   If index is not specified then N, S, S_n, pct_rare, and S_PIE are computed
@@ -100,6 +101,17 @@ attempt to estimate what proportion of the species in the same occur in the
 tail of the species abundance distribution and is therefore sensitive to
 presence of rare species.
 
+\strong{S_asymp: Asymptotic species richness} is the expected number of 
+species given complete sampling and here it is calculated using the Chao1
+estimator (Chao 1984, Chao 1987) see \link{\code{calc_chao1}}. Note: this metric
+is typically highly correlated with S (McGill 2011).
+ 
+\strong{f_0: Undetected species richness} is the number of undetected species
+or the number of species observed 0 times which is an indicator of the degree
+of rarity in the community. If there is a greater rarity then f_0 is expected
+to increase. This metric is calculated as S_asymp - S. This metric is less 
+correlated with S than the raw S_asym metric. 
+
 \strong{PIE: Probability of intraspecific encounter} represents the probability that two randomly drawn individuals 
 belong to the same species. Here we use the definition of Hurlbert (1971),
 which considers sampling without replacement. PIE is closely related to the
@@ -114,11 +126,8 @@ more uneven is the observed community. An intuitive interpretation of S_PIE
 is that it corresponds to the number of dominant (highly abundant) species in
 the community.
 
-\strong{S_asymp: Asymptotic species richness} is calculated using the Chao1 estimator
-(Chao 1984, Chao 1987). 
- 
-For species richness \code{S}, rarefied richness \code{S_n}, asymptotic 
-richness \code{S_asymp}, and the Effective Number of Species \code{S_PIE} we
+For species richness \code{S}, rarefied richness \code{S_n}, undetected 
+richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we
 also calculate beta-diversity using multiplicative partitioning (Whittaker
 1972, Jost 2007). That means for these indices we estimate beta-diversity as
 the ratio of group-level diversity (gamma) divided by sample-level diversity

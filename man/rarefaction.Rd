@@ -61,7 +61,7 @@ For individual-based rarefaction if effort is greater than the number of
 individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
 (Chao 1984, 1987). The code used to perform the extrapolation was ported
 from \code{iNext::D0.hat} found at \url{https://github.com/JohnsonHsieh/iNEXT}. 
-T. C. Hsieh, K. H. Ma and Anne Chao are the orginal authors of the
+T. C. Hsieh, K. H. Ma and Anne Chao are the original authors of the
 \code{iNEXT} package. 
 
 If effort is greater than sample size and \code{extrapolate = FALSE} then the 
