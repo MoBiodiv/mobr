@@ -1274,12 +1274,13 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=F, log='x')
 #' plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=T, log='x')
 plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FALSE,
-                    col=NULL, lwd=1, log='', leg_loc = 'topleft') {
+                    col=NULL, lwd=3, log='', leg_loc = 'topleft') {
     env_data = mob_in$env[ , env_var]
     grps = unique(as.character(env_data))
     grps = c(ref_group, sort(grps[grps != ref_group]))
     if (is.null(col)) 
-        col = c("#FFC000", "#2B83BA", rainbow(10))[1:length(grps)]
+        col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
+                "#E2C288", "#F7B0E6", "#AAD28C")    
     else if (length(col) != length(grps))
       stop('Length of col vector must match the number of unique groups')
     title = ifelse(pooled, 'Group Scale', 'Sample Scale')
@@ -1296,15 +1297,15 @@ plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FAL
                 s_cul = 1:length(sad_sort) / length(sad_sort)
                 n_cul = sapply(1:length(sad_sort), function(x)
                                sum(sad_sort[1:x]) / sum(sad_sort))
-                lines(n_cul, s_cul, col = col_grp, lwd = 1, type = "l")
+                lines(n_cul, s_cul, col = col_grp, lwd = lwd, type = "l")
             } else {
                 for (j in 1:nrow(comm_grp)) {
                     sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0])
                     s_cul = 1:length(sad_sort) / length(sad_sort)
                     n_cul = sapply(1:length(sad_sort), function(x)
                                    sum(sad_sort[1:x]) / sum(sad_sort))
-                    lines(n_cul, s_cul, col = scales::alpha(col_grp, 0.5), lwd = 1,
-                          type = "l")
+                    lines(n_cul, s_cul, col = scales::alpha(col_grp, 0.5), 
+                          lwd = lwd, type = "l")
                 }
             }
         }
@@ -1321,19 +1322,20 @@ plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FAL
              if (pooled) {
                 sad_grp = colSums(comm_grp)
                 sad_sort = sort(sad_grp[sad_grp != 0], dec=T)
-                lines(sad_sort / sum(sad_sort), col = col_grp, lwd = 1, type = "l")
+                lines(sad_sort / sum(sad_sort), col = col_grp, lwd = lwd,
+                      type = "l")
              } else {
                  for (j in 1:nrow(comm_grp)) {
                      sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0], dec=T)
                      lines(1:length(sad_sort), sad_sort / sum(sad_sort),
                            col = scales::alpha(col_grp, 0.5),
-                           lwd = 1, type = "l")
+                           lwd = lwd, type = "l")
                  }     
              }
         }
     }
     if (!is.na(leg_loc))
-        legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
+        legend(leg_loc, legend=grps, col = col, lwd = lwd, bty='n')
 }
     
 #' Plot rarefaction curves for each treatment group
@@ -1362,7 +1364,7 @@ plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FAL
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat',
 #'                  log='xy', xy_coords = inv_mob_in$spat)                 
 plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T, 
-                            col=NULL, lwd=1, log='', leg_loc = 'topleft',
+                            col=NULL, lwd=3, log='', leg_loc = 'topleft',
                             ...) {
     if (pooled == FALSE & method != 'indiv')
         stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="indiv")')
@@ -1370,7 +1372,8 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
     grps = unique(as.character(env_data))
     grps = c(ref_group, sort(grps[grps != ref_group]))
     if (is.null(col)) 
-        col = c("#FFC000", "#2B83BA", rainbow(10))[1:length(grps)]
+        col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
+                "#E2C288", "#F7B0E6", "#AAD28C")    
     else if (length(col) != length(grps))
         stop('Length of col vector must match the number of unique groups')
     if (method == 'indiv')
@@ -1390,7 +1393,7 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
         for (i in seq_along(grps)) {
             col_grp = col[i]
             n = as.numeric(names(Srare[[i]]))
-            lines(n, Srare[[i]], col = col_grp, lwd = 1, type = "l")
+            lines(n, Srare[[i]], col = col_grp, lwd = lwd, type = "l")
         }
     } else {
         Srare = lapply(grps, function(x)
@@ -1410,12 +1413,12 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
                  n = as.numeric(names(Srare[[i]][[j]]))
                  if (n[1] > 0)
                      lines(n, Srare[[i]][[j]], col = scales::alpha(col_grp, 0.5),
-                           lwd = 1, type = 'l')
+                           lwd = lwd, type = 'l')
             }
         }
     }
     if (!is.na(leg_loc))
-        legend(leg_loc, legend=grps, col = col, lwd = 2, bty='n')
+        legend(leg_loc, legend=grps, col = col, lwd = lwd, bty='n')
 }
 
 #' Plot mob curves
@@ -1698,7 +1701,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
                            rescale='max_effort', common_scale=FALSE, 
                            xlabel_indiv=TRUE, ylim=NULL, log='', lty=1, lwd=3,
-                           col=c("#1AB2FF", "#FCD5B5", "#7030A0")) {
+                           col=c("#1AB2FF", "#FFBF80", "#7030A0")) {
     if (prop & display != 'stacked')
         stop("Proptional differences can only be used when considering stacked area graphs (i.e., display = 'stacked')")
     if (length(lty) == 1) 

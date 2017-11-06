@@ -5,7 +5,7 @@
 \title{Plot distributions of species abundance}
 \usage{
 plot_abu(mob_in, env_var, ref_group, type = c("sad", "rad"), pooled = FALSE,
-  col = NULL, lwd = 1, log = "", leg_loc = "topleft")
+  col = NULL, lwd = 3, log = "", leg_loc = "topleft")
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}

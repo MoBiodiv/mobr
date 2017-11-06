@@ -5,7 +5,7 @@
 \title{Plot rarefaction curves for each treatment group}
 \usage{
 plot_rarefaction(mob_in, env_var, ref_group, method, pooled = T, col = NULL,
-  lwd = 1, log = "", leg_loc = "topleft", ...)
+  lwd = 3, log = "", leg_loc = "topleft", ...)
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
