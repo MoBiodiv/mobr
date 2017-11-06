@@ -1,7 +1,7 @@
-[![Build Status](https://travis-ci.org/mobiodiv/mobr.png)](https://travis-ci.org/mobiodiv/mobr)
+mobr [![Build Status](https://travis-ci.org/mobiodiv/mobr.png)](https://travis-ci.org/mobiodiv/mobr)
 ============
 
-# Measurement of Biodiversity in R (mobr)
+# Measurement of Biodiversity in R 
 
 This reposititory hosts an R package that is being developed for 
 estimating biodiversity and the components of its change.
