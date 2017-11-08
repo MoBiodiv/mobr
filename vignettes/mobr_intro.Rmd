@@ -18,20 +18,6 @@ The easiest option is to install the package directly from GitHub using the pack
 ```{r, eval = F}
 install.packages('devtools')
 library(devtools)
-```
-
-The package also requires the `dplyr` package which has many dependencies. If you do 
-not already have the `dplyr` package installed we suggest you install it and 
-all of its dependencies using :
-
-```{r, eval=F}
-install.packages(c('bindrcpp','glue','pkgconfig','tibble','plyr','dplyr'))
-```
-
-Then check that `dplyr` can be loaded with `library(dplyr)`.
-Now you should be ready to go with the `mobr` install
-
-```{r, eval=F}
 install_github('MoBiodiv/mobr')
 ```
 
@@ -141,8 +127,8 @@ The metrics we have selected are:
 
 * **N - Number of individuals**
 * **S - Observed species richness**
-* **S_rarefied - Rarefied species richness (Hurlbert 1971)**
-* **S_asymptote - Estimated asymptotic species richness using biased corrected method (Chiu et al. 2014)**
+* **S_n - Rarefied species richness (Hurlbert 1971)**
+* **f_0 - The estimated number of undetected species using the Chao1 estimator (i.e., species that occur zero times) (Chao 1984, Chao 1987, Chiu et al. 2014)**
 * **PIE - Probability of Interspecific Encounter (Hurlbert 1971)**
 * **S_PIE - Effective number of species based on PIE (Jost 2007)**
 
@@ -154,13 +140,13 @@ The ratio of a given biodiversity metric at the group and sample scales
 (i.e., $\beta_S = S_{group} / S_{sample}$ can provide simple measures of
 species turnover or \(\beta\)-diversity. Depending on which metric the 
 \(\beta\)-diversity is derived from will determine what aspects of species
-turnover it is most sensitive too (e.g., $\beta_{asymptote}$ is more sensitive 
+turnover it is most sensitive too (e.g., $\beta_{f0}$ is more sensitive 
 to turnover in rare species).
 
 
 ```{r, eval = FALSE}
 inv_stats <- get_mob_stats(inv_mob_in, group_var = "group", 
-                           ref_group = 'uninvaded', n_perm = 200)
+                           n_perm = 200)
 ```
 
 ```{r, echo = FALSE}
@@ -193,17 +179,17 @@ plot(inv_stats, 'N')
 
 Clearly our intuition was correct there is a very strong negative effect of 
 invasion on N. So it appears that the changes we observed in S may be due to 
-the negative effect of invasion on N. Let's examine `S_rare` to test this:
+the negative effect of invasion on N. Let's examine `S_n` to test this:
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot(inv_stats, 'S_rare')
+plot(inv_stats, 'S_n')
 ```
 
 ```{r, fig.width = 7, fig.height = 3.5}
 plot(inv_stats, 'S_PIE')
 ```
 
-We can also plot `S_asymp` but for this dataset this metric
+We can also plot `f_0` but for this dataset this metric
 does not show strong patterns so we'll stop here for now. If you 
 want to plot all the biodiversity metrics at once you can simply use:
 
