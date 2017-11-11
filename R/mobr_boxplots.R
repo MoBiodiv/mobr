@@ -114,7 +114,7 @@ calc_PIE = function(x, ENS=FALSE) {
     return(H)
 }
 
-# generate a single bootstrap sample of group-level biodiversity indices
+# generate a single bootstrap sample of gamma-scale biodiversity indices
 boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
     # sample rows and calculate abundance vector
     sample_dat = by(abund_mat, INDICES = abund_mat$group_id, FUN = sample_frac,
@@ -232,7 +232,7 @@ get_F_values = function(div_dat, permute = F) {
     return(models)
 }
 
-# Get group-level differences 
+# Get gamma-scale differences 
 get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
                           permute = F) {
     if (permute)
@@ -275,7 +275,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #'   biodiversity statistics.
 #' 
 #' @param effort_samples The standardized number of individuals used for the 
-#'   calculation of rarefied species richness at the sample level. This can a be
+#'   calculation of rarefied species richness at the alpha-scale. This can a be
 #'   single value or an integer vector. As default the minimum number of
 #'   individuals found across the samples is used, when this is not smaller than
 #'   \code{effort_min}.
@@ -295,10 +295,10 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #'   effects.
 #'   
 #' @param boot_groups Use bootstrap resampling within groups to derive
-#'   group-level confidence intervals for all biodiversity indices. Default is
+#'   gamma-scale confidence intervals for all biodiversity indices. Default is
 #'   \code{FALSE}. See \emph{Details} for information on the bootstrap approach.
 #'   
-#' @param conf_level Confidence level used for the calculation of group-level 
+#' @param conf_level Confidence level used for the calculation of gamma-scale 
 #'   bootstrapped confidence intervals. Only used when \code{boot_groups =
 #'   TRUE}.
 #'   
@@ -308,14 +308,14 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' 
 #' \strong{S_n: Rarefied species richness} is the expected number of species, given a
 #' defined number of sampled individuals (n) (Gotelli & Colwell 2001). Rarefied
-#' richness at the sample level is calculated for the values provided in 
+#' richness at the alpha-scale is calculated for the values provided in 
 #' \code{effort_samples} as long as these values are not smaller than the 
 #' user-defined minimum value \code{effort_min}. In this case the minimum value 
 #' is used and samples with less individuals are discarded. When no values for
 #' \code{effort_samples} are provided the observed minimum number of individuals
 #' of the samples is used, which is the standard in rarefaction analysis
 #' (Gotelli & Colwell 2001). Because the number of individuals is expected to
-#' scale linearly with sample area or effort, at the group level the number of
+#' scale linearly with sample area or effort, at the gamma-scale the number of
 #' individuals for rarefaction is calculated as the minimum number of samples
 #' within groups multiplied by \code{effort_samples}. For example, when there are 10
 #' samples within each group, \code{effort_groups} equals \code{10 *
@@ -359,28 +359,28 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' is that it corresponds to the number of dominant (highly abundant) species in
 #' the community.
 #' 
-#' For species richness \code{S}, rarefied richness \code{S_n}, undetected 
-#' richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we
-#' also calculate beta-diversity using multiplicative partitioning (Whittaker
-#' 1972, Jost 2007). That means for these indices we estimate beta-diversity as
-#' the ratio of group-level diversity (gamma) divided by sample-level diversity
-#' (alpha).
+#' For species richness \code{S}, rarefied richness \code{S_n}, undetected
+#' richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
+#' calculate beta-diversity using multiplicative partitioning (Whittaker 1972,
+#' Jost 2007). That means for these indices we estimate beta-diversity as the
+#' ratio of gamma-diversity (total diversity across all plots) divided by
+#' alpha-diversity (i.e., average plot diversity).
 #' 
 #' \strong{PERMUTATION TESTS AND BOOTSTRAP}
 #' 
 #' We used permutation tests for assessing differences of the biodiversity
-#' statistics among the groups (Legendre & Legendre 1998). At the sample level,
+#' statistics among the groups (Legendre & Legendre 1998). At the alpha-scale,
 #' one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
 #' labels across samples.
 #' 
-#' At the group-level we aggregate the community matrix by summing across the 
+#' At the gamma-scale we aggregate the community matrix by summing across the 
 #' groups. Then we compute the mean difference in a given biodiversity index
 #' between the groups and perform a permutation test by shuffling the treatment
-#' group labels. .
+#' group labels.
 #' 
-#' A bootstrap approach can be used to also test differences at the group level.
-#' When \code{boot_groups = T} instead of the group-level permutation test,
-#' there will be resampling of samples within groups to derive group-level
+#' A bootstrap approach can be used to also test differences at the gamma-scale.
+#' When \code{boot_groups = T} instead of the gamma-scale permutation test,
+#' there will be resampling of samples within groups to derive gamma-scale
 #' confidence intervals for all biodiversity indices. The function output
 #' includes lower and upper confidence bounds and the median of the bootstrap
 #' samples. Please note that for the richness indices sampling with replacement
@@ -392,7 +392,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #'   group-scale biodiversity statistics, as well as the p-values for
 #'   permutation tests at both scales.
 #'   
-#'   When \code{boot_groups = TRUE} there are no p-values at the group level.
+#'   When \code{boot_groups = TRUE} there are no p-values at the gamma-scale.
 #'   Instead there is lower bound, median, and upper bound for each biodiversity
 #'   index derived from the bootstrap within groups.
 #
@@ -436,8 +436,6 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
 #'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
-#' 
-#' # multiple group catgories
 get_mob_stats = function(mob_in, group_var, 
                          index = c("N", "S", "S_n", "f_0", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
@@ -453,8 +451,6 @@ get_mob_stats = function(mob_in, group_var,
    
     group_id  = factor(mob_in$env[, group_var])
     
-    print(index)
- 
     # Get rarefaction level
     samples_N = rowSums(mob_in$comm) 
     samples_per_group = table(group_id)
@@ -561,13 +557,13 @@ get_mob_stats = function(mob_in, group_var,
    
     # Significance tests -------------------------------------------------------
    
-    # sample level
+    # alpha-scale
     F_obs = get_F_values(dat_samples, permute = F)
     F_rand = dplyr::bind_rows(replicate(n_perm, 
                  get_F_values(dat_samples, permute = T), simplify = F)) %>%
                  ungroup()
     F_obs = F_obs %>% mutate(F_val_obs = F_val, F_val = NULL)
-    F_rand = left_join(F_rand, F_obs)
+    F_rand = suppressMessages(left_join(F_rand, F_obs))
 
     samples_tests = F_rand %>% 
                    group_by(index, effort) %>%
@@ -578,7 +574,7 @@ get_mob_stats = function(mob_in, group_var,
                    ungroup()
     
    
-    # group level
+    # gamma-scale
     if (boot_groups) {
         # bootstrap sampling within groups
       
@@ -608,7 +604,7 @@ get_mob_stats = function(mob_in, group_var,
                                                      rare_thres, permute = T),
                                         simplify = F))
         delta_obs = delta_obs %>% mutate(d_obs = delta, delta = NULL)
-        delta_rand = left_join(delta_rand, delta_obs)
+        delta_rand = suppressMessages(left_join(delta_rand, delta_obs))
       
         groups_tests = delta_rand %>% 
                        group_by(index, effort) %>%
@@ -655,7 +651,7 @@ get_mob_stats = function(mob_in, group_var,
     return(out)
 }
 
-# Panel function for sample level results
+# Panel function for alpha-scale results
 samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
                            main = "Sample scale", ...) {
    label = paste0('F = ', round(samples_tests$F_stat, 2), 
@@ -666,7 +662,7 @@ samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
    mtext(label, side = 3, line = 0)  
 }
 
-# Panel function for group level results
+# Panel function for gamma-scale results
 groups_panel1 = function(group_dat, tests, col, ylab = "",
                          main = "Group scale",  ...) {
     label = substitute(paste(bar(D), ' = ', delta, ', p = ', p_val),
@@ -681,7 +677,7 @@ groups_panel1 = function(group_dat, tests, col, ylab = "",
     mtext(label, side = 3, line = 0)
 }
 
-# Panel function for group level results with confidence intervals
+# Panel function for gamma-scale results with confidence intervals
 groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...) {
     boxplot(median ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)),
@@ -691,7 +687,7 @@ groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...) {
                     sfrac = 0.02, col = col, ...)
 }
 
-#' Plot sample-level and group-level biodiversity statistics for a MoB analysis
+#' Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis
 #' 
 #' Plots a \code{mob_stats} object which is produced by the 
 #' function \code{get_mob_stats}. The p-value for each statistic
@@ -705,12 +701,12 @@ groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...) {
 #' 
 #' @param index The biodiversity statistics that should be plotted.
 #' See \code{\link{get_mob_stats}} for information on the indices. By default there
-#' is one figure for each index, with panels for sample-level and group-level results
+#' is one figure for each index, with panels for alpha- and gamma-scale results
 #' as well as for beta-diversity when applicable. 
 #' 
 #' @param multi_panel A logical variable. If \code{multi_panel = TRUE} then a 
 #' multipanel plot is produced, which shows observed, rarefied, and asymptotic 
-#' species richness and S_PIE at the sample-level and the group-level.
+#' species richness and S_PIE at the alpha- and gamma-scale.
 #' This set of variables conveys a comprehensive picture of the underlying 
 #' biodiversity changes. 
 #' 

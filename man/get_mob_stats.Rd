@@ -31,7 +31,7 @@ data should be grouped by}
   biodiversity statistics.}
 
 \item{effort_samples}{The standardized number of individuals used for the 
-calculation of rarefied species richness at the sample level. This can a be
+calculation of rarefied species richness at the alpha-scale. This can a be
 single value or an integer vector. As default the minimum number of
 individuals found across the samples is used, when this is not smaller than
 \code{effort_min}.}
@@ -51,10 +51,10 @@ considered rare.}
 effects.}
 
 \item{boot_groups}{Use bootstrap resampling within groups to derive
-group-level confidence intervals for all biodiversity indices. Default is
+gamma-scale confidence intervals for all biodiversity indices. Default is
 \code{FALSE}. See \emph{Details} for information on the bootstrap approach.}
 
-\item{conf_level}{Confidence level used for the calculation of group-level 
+\item{conf_level}{Confidence level used for the calculation of gamma-scale 
 bootstrapped confidence intervals. Only used when \code{boot_groups =
 TRUE}.}
 }
@@ -63,7 +63,7 @@ A list of class \code{mob_stats} that contains sample-scale and
   group-scale biodiversity statistics, as well as the p-values for
   permutation tests at both scales.
   
-  When \code{boot_groups = TRUE} there are no p-values at the group level.
+  When \code{boot_groups = TRUE} there are no p-values at the gamma-scale.
   Instead there is lower bound, median, and upper bound for each biodiversity
   index derived from the bootstrap within groups.
 }
@@ -75,14 +75,14 @@ Calculate sample based and group based biodiversity statistics.
 
 \strong{S_n: Rarefied species richness} is the expected number of species, given a
 defined number of sampled individuals (n) (Gotelli & Colwell 2001). Rarefied
-richness at the sample level is calculated for the values provided in 
+richness at the alpha-scale is calculated for the values provided in 
 \code{effort_samples} as long as these values are not smaller than the 
 user-defined minimum value \code{effort_min}. In this case the minimum value 
 is used and samples with less individuals are discarded. When no values for
 \code{effort_samples} are provided the observed minimum number of individuals
 of the samples is used, which is the standard in rarefaction analysis
 (Gotelli & Colwell 2001). Because the number of individuals is expected to
-scale linearly with sample area or effort, at the group level the number of
+scale linearly with sample area or effort, at the gamma-scale the number of
 individuals for rarefaction is calculated as the minimum number of samples
 within groups multiplied by \code{effort_samples}. For example, when there are 10
 samples within each group, \code{effort_groups} equals \code{10 *
@@ -126,28 +126,28 @@ more uneven is the observed community. An intuitive interpretation of S_PIE
 is that it corresponds to the number of dominant (highly abundant) species in
 the community.
 
-For species richness \code{S}, rarefied richness \code{S_n}, undetected 
-richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we
-also calculate beta-diversity using multiplicative partitioning (Whittaker
-1972, Jost 2007). That means for these indices we estimate beta-diversity as
-the ratio of group-level diversity (gamma) divided by sample-level diversity
-(alpha).
+For species richness \code{S}, rarefied richness \code{S_n}, undetected
+richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
+calculate beta-diversity using multiplicative partitioning (Whittaker 1972,
+Jost 2007). That means for these indices we estimate beta-diversity as the
+ratio of gamma-diversity (total diversity across all plots) divided by
+alpha-diversity (i.e., average plot diversity).
 
 \strong{PERMUTATION TESTS AND BOOTSTRAP}
 
 We used permutation tests for assessing differences of the biodiversity
-statistics among the groups (Legendre & Legendre 1998). At the sample level,
+statistics among the groups (Legendre & Legendre 1998). At the alpha-scale,
 one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
 labels across samples.
 
-At the group-level we aggregate the community matrix by summing across the 
+At the gamma-scale we aggregate the community matrix by summing across the 
 groups. Then we compute the mean difference in a given biodiversity index
 between the groups and perform a permutation test by shuffling the treatment
-group labels. .
+group labels.
 
-A bootstrap approach can be used to also test differences at the group level.
-When \code{boot_groups = T} instead of the group-level permutation test,
-there will be resampling of samples within groups to derive group-level
+A bootstrap approach can be used to also test differences at the gamma-scale.
+When \code{boot_groups = T} instead of the gamma-scale permutation test,
+there will be resampling of samples within groups to derive gamma-scale
 confidence intervals for all biodiversity indices. The function output
 includes lower and upper confidence bounds and the median of the bootstrap
 samples. Please note that for the richness indices sampling with replacement
@@ -162,8 +162,6 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
                           n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
-
-# multiple group catgories
 }
 \references{
 Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved
