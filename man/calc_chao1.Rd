@@ -13,13 +13,14 @@ calc_chao1(x)
 a vector of species richness estimates
 }
 \description{
-\code{calc_chao1}: estimation of species richness based on the methods
-proposed in Chao (1984, 1987).
+\code{calc_chao1} estimates the number of species at the asympotote 
+(\code{S_asymp}) of the species accumlation curve based on the methods
+proposed in Chao (1984, 1987, 2005).
 }
 \details{
-This function is a trimmed version of \code{iNext::ChaoRichess} found at 
-\url{https://github.com/JohnsonHsieh/iNEXT}. T. C. Hsieh, K. H. Ma and Anne
-Chao are the original authors of the \code{iNEXT} package.
+This function is a trimmed version of \href{https://github.com/JohnsonHsieh/iNEXT}{\code{iNext::ChaoRichess}}.
+T. C. Hsieh, K. H. Ma and Anne Chao are the original authors of the
+\code{iNEXT} package.
 }
 \examples{
 data(inv_comm)
@@ -28,6 +29,12 @@ calc_chao1(inv_comm)
 \references{
 Chao, A. (1984) Nonparametric estimation of the number of classes in a
 population. Scandinavian Journal of Statistics, 11, 265-270.
+
 Chao, A. (1987) Estimating the population size for capture-recapture data with
 unequal catchability. Biometrics, 43, 783-791.
+
+Chao, A. (2005) Species estimation and applications. Pages 7907–7916 in
+N. Balakrishnan, C. B. Read, and B. Vidakovic, editors. Encyclopedia of
+statistical sciences. Second edition, volume 12. Wiley, New York, New York,
+USA.
 }

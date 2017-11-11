@@ -6,7 +6,7 @@
 \usage{
 get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "f_0", "S_PIE"),
   effort_samples = NULL, effort_min = 5, rare_thres = 0.05,
-  n_perm = 200, boot_groups = F, conf_level = 0.95)
+  n_perm = 199, boot_groups = F, conf_level = 0.95)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -160,36 +160,36 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
-                          n_perm = 20, effort_samples = c(5,10))
+                          n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
 
 # multiple group catgories
 }
 \references{
-Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved
+Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved
 nonparametric lower bound of species richness via a modified good-turing
 frequency formula. Biometrics, 70, 671-682.
 
-Gotelli, N.J. & Colwell, R.K. (2001). Quantifying biodiversity: procedures
+Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
 and pitfalls in the measurement and comparison of species richness. Ecology
 letters, 4, 379-391.
 
-Hurlbert, S.H. (1971). The Nonconcept of Species Diversity: A Critique and
+Hurlbert, S.H. (1971) The Nonconcept of Species Diversity: A Critique and
 Alternative Parameters. Ecology, 52, 577-586.
 
-Jost, L. (2006). Entropy and diversity. Oikos, 113, 363-375.
+Jost, L. (2006) Entropy and diversity. Oikos, 113, 363-375.
 
-Jost, L. (2007). Partitioning Diversity into Independent Alpha and Beta
+Jost, L. (2007) Partitioning Diversity into Independent Alpha and Beta
 Components. Ecology, 88, 2427–2439.
 
-Legendre, P. & Legendre, L.F.J. (1998). Numerical Ecology, Volume 24, 2nd
+Legendre, P. & Legendre, L.F.J. (1998) Numerical Ecology, Volume 24, 2nd
 Edition Elsevier, Amsterdam; Boston.
 
-McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological
+McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological 
 Diversity: Frontiers in Measurement and Assessment. eds. A.E. Magurran
 B.J. McGill.
 
-Whittaker, R.H. (1972). Evolution and Measurement of Species Diversity.
+Whittaker, R.H. (1972) Evolution and Measurement of Species Diversity.
 Taxon, 21, 213-251.
 }
 \author{
