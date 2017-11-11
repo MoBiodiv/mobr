@@ -50,12 +50,14 @@ samples under and assumption of random sampling with replacement.
 }
 \details{
 The analytical formulas of Cayuela et al. (2015) are used to compute
-the random sampling expectation for the individual and sampled based
-rarefaction methods. The spatial explicit rarefaction (Chiarucci et al. 2009)
-is computed by sampling each plot in the order of their spatial proximity. If
-plots have the same distance from the focal plot then one is chosen randomly
-to be sampled first. Each plot in the dataset is treated as a starting point
-and then the mean of these n possible accumulation curves is computed.
+  the random sampling expectation for the individual and sampled based
+  rarefaction methods. The spatialy constrained rarefaction curve (Chiarucci
+  et al. 2009) also known as the sample-based accumulation curve (Gotelli and
+  Colwell 2001) is computed by sampling each plot in the order of their
+  spatial proximity. If plots have the same distance from the focal plot then
+  one is chosen randomly to be sampled first. Each plot in the dataset is
+  treated as a starting point and then the mean of these n possible
+  accumulation curves is computed.
 
 For individual-based rarefaction if effort is greater than the number of
 individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
@@ -99,17 +101,24 @@ rarefaction(inv_mob_in, method='spat')
 }
 \references{
 Cayuela, L., N.J. Gotelli, & R.K. Colwell (2015) Ecological and 
- biogeographic null hypotheses for com.paring rarefaction curves. Ecological
- Monographs 85:437-454. Appendix A: 
+ biogeographic null hypotheses for comparing rarefaction curves. Ecological
+ Monographs, 85, 437-454. Appendix A: 
  http://esapubs.org/archive/mono/M085/017/appendix-A.php
+ 
 Chao, A. (1984) Nonparametric estimation of the number of classes in a
- population. Scandinavian Journal of Statistics 11:265-270.
+ population. Scandinavian Journal of Statistics, 11, 265-270.
+ 
 Chao, A. (1987) Estimating the population size for capture-recapture data
- with unequal catchability. Biometrics 43:783-791.
+ with unequal catchability. Biometrics, 43, 783-791.
+ 
 Chiarucci, A., G. Bacaro, D. Rocchini, C. Ricotta, M. Palmer, & S. Scheiner 
  (2009) Spatially constrained rarefaction: incorporating the autocorrelated
  structure of biological communities into sample-based rarefaction. Community
- Ecology 10:209-214.
+ Ecology, 10, 209-214.
+ 
+Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
+and pitfalls in the measurement and comparison of species richness. Ecology
+Letters, 4, 379–391.
 }
 \author{
 Dan McGlinn and Xiao Xiao
