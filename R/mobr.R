@@ -138,12 +138,20 @@ print.mob_out = function(x) {
     cat('Only the first five rows of any matrices are printed\n')
     cat('\n$type\n')
     print(x$type)
+    cat('\n$tests\n')
+    print(x$tests)
     cat('\n$log_scale\n')
     print(x$log_scale)
+    cat('\n$density_stat\n')
+    print(x$density_stat)
     cat('\n$indiv_rare\n')
     print(head(x$indiv_rare))
     cat('\n$sample_rare\n')
     print(head(x$sample_rare))
+    if (!is.null(x$overall_p)) {
+        cat('\n$overall_p\n')
+        print(x$overall_p)
+    }        
     cat('\n$SAD\n')
     print(head(x$SAD))
     cat('\n$N\n')
@@ -679,12 +687,18 @@ get_plot_dens = function(comm, density_stat){
 #' Auxiliary function for effect_ functions
 #' Compute an overall p-value for one factor in the discrete case
 #' p-value is based on mean squared difference from zero summed across the scales
+#' Method developed by Loosmore and Ford 2006 but algebraic simpliciations 
+#' used as developed by Baddeley et al. 2014 Ecological Archives M084-017-A1
 #' @keywords internal
 get_overall_p = function(effort, deltaS_emp, deltaS_null){
-    delta_effort = (c(effort, 0) - c(0, effort))[1:length(effort)]
-    dev_emp = sum(deltaS_emp^2 * delta_effort)
-    dev_null = as.numeric((deltaS_null^2) %*% delta_effort)
-    overall_p = length(which(dev_null > dev_emp)) / length(dev_null)
+    delta_effort = c(effort[1], diff(effort))
+    deltaS = rbind(deltaS_emp, deltaS_null)
+    Hbarbar = apply(deltaS, 2, mean)                    # Baddeley Eq. A.10
+    m = nrow(deltaS) - 1                                # number of permutations
+    a = ((m + 1) / m)^2
+    u = a * apply(deltaS, 1, function(x) 
+                  sum((x - Hbarbar)^2 * delta_effort))  # Baddeley Eq. A.12-13
+    overall_p = sum(u >= u[1]) / (m + 1)
     return(overall_p)
 }
 
@@ -1148,8 +1162,7 @@ get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL,
     } else if (type == 'discrete') {
         get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
         if (overall_p) {
-            warning('Caution: Overall p-values depend on scales of measurement yet do not explicitly 
-reflect significance at any particular scale. Be careful in interpretation.')
+            cat('Caution: Overall p-values depend on scales of measurement yet do not explicitly reflect significance at any particular scale. Be careful in interpretation.')
             out$overall_p = as.data.frame(matrix(NA, length(group_levels) - 1, 
                                                  1 + length(approved_tests)))
             names(out$overall_p) = c('group', approved_tests)
@@ -1444,8 +1457,11 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
 #'  'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.
 #' @param lwd a single value for for line width, see \link[graphics]{par}.
 #' @param par_args optional argument that sets graphical parameters to set
+#' @param ... Other plot arguments
+#' 
 #' @return plots the effect of the SAD, the number of individuals, and spatial
 #'  aggregation on the difference in species richness
+#'  
 #' @author Xiao Xiao and Dan McGlinn
 #' @export
 #' @examples
@@ -1459,7 +1475,7 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
 #' plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
 plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE, 
                         log=NULL, display=c('rarefaction', 'delta S', 'ddelta S'),
-                        lwd=3, par_args=NULL) {
+                        lwd=3, par_args=NULL, ...) {
     type = mob_out$type
     tests = mob_out$tests
     if (type == 'continuous')
@@ -1525,7 +1541,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                    xlim = c(xmin, max(dat_group$sample_plot)),
                    ylim = ylim_rare,
                    main = 'Spatial', cex.axis = 1.5, cex.lab = 1.5,
-                   log=plot_log)
+                   log=plot_log, frame.plot=F, ...)
             else
               lines(dat_group$sample_plot, dat_group$expl_S,
                     lwd = lwd, col = cols$ref)
@@ -1546,7 +1562,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                          xlim = c(xmin, max(dat_group$sample_plot)),
                          ylim = ylim_rare,
                          main = 'Nonspatial', cex.axis = 1.5, cex.lab = 1.5,
-                         log=plot_log)
+                         log=plot_log, frame.plot=F, ...)
                 else
                     lines(dat_group$sample_plot, dat_group$impl_S,
                           lwd = lwd, col = cols$ref)
@@ -1559,7 +1575,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                lwd = lwd, type = 'l', col = cols$trt, xlab = 'Number of individuals', 
                ylab = 'Richness (S)', main = 'Individual', 
                xlim = c(xmin, max(mob_out$indiv_rare$sample)), ylim = ylim_rare, 
-               cex.axis = 1.5, cex.lab = 1.5, log=plot_log)
+               cex.axis = 1.5, cex.lab = 1.5, log=plot_log, frame.plot=F, ...)
           lines(mob_out$indiv_rare$sample, mob_out$indiv_rare[, ref_group], 
                 lwd = lwd, col = cols$ref)
         }        
@@ -1573,7 +1589,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
              ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
              cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
              col = cols$deltaS, xlab = 'Number of plots',
-             ylab = expression(Delta * 'S due to SAD, N, & agg.'))
+             ylab = expression(Delta * 'S due to SAD, N, & agg.'), frame.plot=F, ...)
         abline(h = 0, lwd = 1, lty = 2)
       }
         if ('N' %in% mob_out$tests) {
@@ -1583,7 +1599,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                  ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
                  cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
                  col = cols$deltaS, xlab = 'Number of plots', 
-                 ylab = expression(Delta * 'S due to SAD & N'))
+                 ylab = expression(Delta * 'S due to SAD & N'), frame.plot=F, ...)
             abline(h = 0, lwd = 1, lty = 2)
         }
       if ('SAD' %in% mob_out$tests) {
@@ -1594,7 +1610,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
              ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
              cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
              col = cols$deltaS, xlab = 'Number of individuals', 
-             ylab = expression(Delta * 'S due to SAD'), log=plot_log)
+             ylab = expression(Delta * 'S due to SAD'), log=plot_log,
+             frame.plot=F, ...)
         abline(h = 0, lwd = 1, lty = 2)
         
       }       
@@ -1615,7 +1632,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                 ylim = ylim_ddelta, log='',
                 cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
                 xlab = 'Number of plots', 
-                ylab = expression(Delta * 'S due to agg.'))
+                ylab = expression(Delta * 'S due to agg.'), frame.plot=F, ...)
            polygon(c(ddelta_Sspat$effort_sample,
                      rev(ddelta_Sspat$effort_sample)), 
                    c(ddelta_Sspat$ddeltaS_null_low,
@@ -1635,7 +1652,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                  ylim = ylim_ddelta, log=plot_log,
                  cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
                  xlab = 'Number of individuals', 
-                 ylab = expression(Delta * 'S due to N'))
+                 ylab = expression(Delta * 'S due to N'), frame.plot=F, ...)
             polygon(c(ddelta_Ssample$effort_sample, 
                       rev(ddelta_Ssample$effort_sample)), 
                     c(ddelta_Ssample$ddeltaS_null_low, 
@@ -1654,7 +1671,8 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
            plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
                 ylim = ylim_ddelta, log=plot_log,
                 cex.axis = 1.5, cex.lab = 1.5, type = 'n',
-                xlab = 'Number of individuals', ylab = expression(Delta * 'S due to SAD'))
+                xlab = 'Number of individuals', ylab = expression(Delta * 'S due to SAD'),
+                frame.plot=F, ...)
            polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
                    c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
                    col = '#C1CDCD', border = NA)
