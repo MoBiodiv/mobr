@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{mob_out}(mob_out, trt_group, ref_group, same_scale = FALSE,
   log = NULL, display = c("rarefaction", "delta S", "ddelta S"), lwd = 3,
-  par_args = NULL)
+  par_args = NULL, ...)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -24,6 +24,8 @@ ddelta S plots are scaled identically across the tested effects}
 \item{lwd}{a single value for for line width, see \link[graphics]{par}.}
 
 \item{par_args}{optional argument that sets graphical parameters to set}
+
+\item{...}{Other plot arguments}
 
 \item{same_scale}{if TRUE then all three plots have the same range on the 
 y-axis.}
