@@ -6,7 +6,7 @@
 \usage{
 get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "f_0", "S_PIE"),
   effort_samples = NULL, effort_min = 5, rare_thres = 0.05,
-  n_perm = 200, boot_groups = F, conf_level = 0.95)
+  n_perm = 199, boot_groups = F, conf_level = 0.95, cl = NULL, ...)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -31,7 +31,7 @@ data should be grouped by}
   biodiversity statistics.}
 
 \item{effort_samples}{The standardized number of individuals used for the 
-calculation of rarefied species richness at the sample level. This can a be
+calculation of rarefied species richness at the alpha-scale. This can a be
 single value or an integer vector. As default the minimum number of
 individuals found across the samples is used, when this is not smaller than
 \code{effort_min}.}
@@ -51,19 +51,29 @@ considered rare.}
 effects.}
 
 \item{boot_groups}{Use bootstrap resampling within groups to derive
-group-level confidence intervals for all biodiversity indices. Default is
+gamma-scale confidence intervals for all biodiversity indices. Default is
 \code{FALSE}. See \emph{Details} for information on the bootstrap approach.}
 
-\item{conf_level}{Confidence level used for the calculation of group-level 
+\item{conf_level}{Confidence level used for the calculation of gamma-scale 
 bootstrapped confidence intervals. Only used when \code{boot_groups =
 TRUE}.}
+
+\item{cl}{
+A cluster object created by \code{\link[parallel]{makeCluster}},
+or an integer to indicate number of child-processes
+(integer values are ignored on Windows) for parallel evaluations.
+}
+
+\item{...}{
+Optional arguments to \code{FUN}.
+}
 }
 \value{
-A list of class \code{mob_stats} that contains sample-scale and 
-  group-scale biodiversity statistics, as well as the p-values for
+A list of class \code{mob_stats} that contains alpha-scale and 
+  gamma-scale biodiversity statistics, as well as the p-values for
   permutation tests at both scales.
   
-  When \code{boot_groups = TRUE} there are no p-values at the group level.
+  When \code{boot_groups = TRUE} there are no p-values at the gamma-scale.
   Instead there is lower bound, median, and upper bound for each biodiversity
   index derived from the bootstrap within groups.
 }
@@ -75,14 +85,14 @@ Calculate sample based and group based biodiversity statistics.
 
 \strong{S_n: Rarefied species richness} is the expected number of species, given a
 defined number of sampled individuals (n) (Gotelli & Colwell 2001). Rarefied
-richness at the sample level is calculated for the values provided in 
+richness at the alpha-scale is calculated for the values provided in 
 \code{effort_samples} as long as these values are not smaller than the 
 user-defined minimum value \code{effort_min}. In this case the minimum value 
 is used and samples with less individuals are discarded. When no values for
 \code{effort_samples} are provided the observed minimum number of individuals
 of the samples is used, which is the standard in rarefaction analysis
 (Gotelli & Colwell 2001). Because the number of individuals is expected to
-scale linearly with sample area or effort, at the group level the number of
+scale linearly with sample area or effort, at the gamma-scale the number of
 individuals for rarefaction is calculated as the minimum number of samples
 within groups multiplied by \code{effort_samples}. For example, when there are 10
 samples within each group, \code{effort_groups} equals \code{10 *
@@ -126,28 +136,28 @@ more uneven is the observed community. An intuitive interpretation of S_PIE
 is that it corresponds to the number of dominant (highly abundant) species in
 the community.
 
-For species richness \code{S}, rarefied richness \code{S_n}, undetected 
-richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we
-also calculate beta-diversity using multiplicative partitioning (Whittaker
-1972, Jost 2007). That means for these indices we estimate beta-diversity as
-the ratio of group-level diversity (gamma) divided by sample-level diversity
-(alpha).
+For species richness \code{S}, rarefied richness \code{S_n}, undetected
+richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
+calculate beta-diversity using multiplicative partitioning (Whittaker 1972,
+Jost 2007). That means for these indices we estimate beta-diversity as the
+ratio of gamma-diversity (total diversity across all plots) divided by
+alpha-diversity (i.e., average plot diversity).
 
 \strong{PERMUTATION TESTS AND BOOTSTRAP}
 
 We used permutation tests for assessing differences of the biodiversity
-statistics among the groups (Legendre & Legendre 1998). At the sample level,
+statistics among the groups (Legendre & Legendre 1998). At the alpha-scale,
 one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
 labels across samples.
 
-At the group-level we aggregate the community matrix by summing across the 
+At the gamma-scale we aggregate the community matrix by summing across the 
 groups. Then we compute the mean difference in a given biodiversity index
 between the groups and perform a permutation test by shuffling the treatment
-group labels. .
+group labels.
 
-A bootstrap approach can be used to also test differences at the group level.
-When \code{boot_groups = T} instead of the group-level permutation test,
-there will be resampling of samples within groups to derive group-level
+A bootstrap approach can be used to also test differences at the gamma-scale.
+When \code{boot_groups = T} instead of the gamma-scale permutation test,
+there will be resampling of samples within groups to derive gamma-scale
 confidence intervals for all biodiversity indices. The function output
 includes lower and upper confidence bounds and the median of the bootstrap
 samples. Please note that for the richness indices sampling with replacement
@@ -160,36 +170,47 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
-                          n_perm = 20, effort_samples = c(5,10))
+                          n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
 
-# multiple group catgories
+\donttest{
+# Not run: 
+# parallel evaluation using the parallel package 
+# run in parallel
+library(parallel)
+cl = makeCluster(2L)
+clusterEvalQ(cl, library(mobr))
+clusterExport(cl, 'inv_mob_in')
+inv_mob_stats = get_mob_stats(inv_mob_in, 'group', n_perm=999, cl=cl)
+
+stopCluster(cl)
+}
 }
 \references{
-Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved
+Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved
 nonparametric lower bound of species richness via a modified good-turing
 frequency formula. Biometrics, 70, 671-682.
 
-Gotelli, N.J. & Colwell, R.K. (2001). Quantifying biodiversity: procedures
+Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
 and pitfalls in the measurement and comparison of species richness. Ecology
 letters, 4, 379-391.
 
-Hurlbert, S.H. (1971). The Nonconcept of Species Diversity: A Critique and
+Hurlbert, S.H. (1971) The Nonconcept of Species Diversity: A Critique and
 Alternative Parameters. Ecology, 52, 577-586.
 
-Jost, L. (2006). Entropy and diversity. Oikos, 113, 363-375.
+Jost, L. (2006) Entropy and diversity. Oikos, 113, 363-375.
 
-Jost, L. (2007). Partitioning Diversity into Independent Alpha and Beta
+Jost, L. (2007) Partitioning Diversity into Independent Alpha and Beta
 Components. Ecology, 88, 2427–2439.
 
-Legendre, P. & Legendre, L.F.J. (1998). Numerical Ecology, Volume 24, 2nd
+Legendre, P. & Legendre, L.F.J. (1998) Numerical Ecology, Volume 24, 2nd
 Edition Elsevier, Amsterdam; Boston.
 
-McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological
+McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological 
 Diversity: Frontiers in Measurement and Assessment. eds. A.E. Magurran
 B.J. McGill.
 
-Whittaker, R.H. (1972). Evolution and Measurement of Species Diversity.
+Whittaker, R.H. (1972) Evolution and Measurement of Species Diversity.
 Taxon, 21, 213-251.
 }
 \author{

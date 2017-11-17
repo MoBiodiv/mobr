@@ -2,7 +2,7 @@
 % Please edit documentation in R/mobr_boxplots.R
 \name{plot.mob_stats}
 \alias{plot.mob_stats}
-\title{Plot sample-level and group-level biodiversity statistics for a MoB analysis}
+\title{Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis}
 \usage{
 \method{plot}{mob_stats}(mob_stats, index = NULL, multi_panel = FALSE,
   col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE", "#E2C288", "#F7B0E6",
@@ -14,12 +14,12 @@ treatment level statistics}
 
 \item{index}{The biodiversity statistics that should be plotted.
 See \code{\link{get_mob_stats}} for information on the indices. By default there
-is one figure for each index, with panels for sample-level and group-level results
+is one figure for each index, with panels for alpha- and gamma-scale results
 as well as for beta-diversity when applicable.}
 
 \item{multi_panel}{A logical variable. If \code{multi_panel = TRUE} then a 
 multipanel plot is produced, which shows observed, rarefied, and asymptotic 
-species richness and S_PIE at the sample-level and the group-level.
+species richness and S_PIE at the alpha- and gamma-scale.
 This set of variables conveys a comprehensive picture of the underlying 
 biodiversity changes.}
 
@@ -42,12 +42,12 @@ all the results.
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-# without bootstrap CI for group scale
+# without bootstrap CI for gamma-scale
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
 plot(inv_stats) 
 
 plot(inv_stats, multi_panel = T)
-# with bootstrap CI for group scale
+# with bootstrap CI for gamma-scale
 inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
                                boot_groups=T)
 plot(inv_stats_boot)

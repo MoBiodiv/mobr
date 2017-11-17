@@ -1,11 +1,12 @@
 #' Estimation of species richness
 #' 
-#' \code{calc_chao1}: estimation of species richness based on the methods
-#' proposed in Chao (1984, 1987). 
+#' \code{calc_chao1} estimates the number of species at the asympotote 
+#' (\code{S_asymp}) of the species accumlation curve based on the methods
+#' proposed in Chao (1984, 1987, 2005). 
 #' 
-#' This function is a trimmed version of \code{iNext::ChaoRichess} found at 
-#' \url{https://github.com/JohnsonHsieh/iNEXT}. T. C. Hsieh, K. H. Ma and Anne
-#' Chao are the original authors of the \code{iNEXT} package. 
+#' This function is a trimmed version of \href{https://github.com/JohnsonHsieh/iNEXT}{\code{iNext::ChaoRichess}}.
+#' T. C. Hsieh, K. H. Ma and Anne Chao are the original authors of the
+#' \code{iNEXT} package. 
 #' 
 #' @param x a vector of species abundances or a site-by-species matrix
 #' 
@@ -17,8 +18,14 @@
 #' @references 
 #' Chao, A. (1984) Nonparametric estimation of the number of classes in a
 #' population. Scandinavian Journal of Statistics, 11, 265-270.
+#' 
 #' Chao, A. (1987) Estimating the population size for capture-recapture data with
 #' unequal catchability. Biometrics, 43, 783-791.
+#' 
+#' Chao, A. (2005) Species estimation and applications. Pages 7907–7916 in
+#' N. Balakrishnan, C. B. Read, and B. Vidakovic, editors. Encyclopedia of
+#' statistical sciences. Second edition, volume 12. Wiley, New York, New York,
+#' USA.
 #' 
 #' @export
 calc_chao1 = function(x) {
@@ -65,8 +72,8 @@ calc_chao1 = function(x) {
 #' @author Dan McGlinn
 #' 
 #' @references 
-#' Hurlbert, S. H. 1971. The nonconcept of species diversity: a critique and
-#'  alternative parameters. Ecology 52: 577–586.
+#' Hurlbert, S. H. (1971) The nonconcept of species diversity: a critique and
+#'  alternative parameters. Ecology 52, 577–586.
 #'
 #' @export
 #' @examples 
@@ -107,7 +114,7 @@ calc_PIE = function(x, ENS=FALSE) {
     return(H)
 }
 
-# generate a single bootstrap sample of group-level biodiversity indices
+# generate a single bootstrap sample of gamma-scale biodiversity indices
 boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
     # sample rows and calculate abundance vector
     sample_dat = by(abund_mat, INDICES = abund_mat$group_id, FUN = sample_frac,
@@ -126,12 +133,6 @@ boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
     return(dat_groups)
 }
 
-# Get group-level p-values from permutation test
-get_pval = function(rand, obs, n_samples) {
-    n_extremes = sum(rand < -abs(obs) | rand > abs(obs))
-    p_val = n_extremes/n_samples
-    return(p_val)
-}
 
 # Get biodiversity indices
 calc_biodiv = function(abund_mat, groups, index, effort, rare_thres) {
@@ -231,8 +232,8 @@ get_F_values = function(div_dat, permute = F) {
     return(models)
 }
 
-# Get group-level differences 
-get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
+# Get gamma-scale differences 
+get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
                           permute = F) {
     if (permute)
         group_id = sample(group_id)
@@ -274,7 +275,7 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #'   biodiversity statistics.
 #' 
 #' @param effort_samples The standardized number of individuals used for the 
-#'   calculation of rarefied species richness at the sample level. This can a be
+#'   calculation of rarefied species richness at the alpha-scale. This can a be
 #'   single value or an integer vector. As default the minimum number of
 #'   individuals found across the samples is used, when this is not smaller than
 #'   \code{effort_min}.
@@ -294,27 +295,29 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #'   effects.
 #'   
 #' @param boot_groups Use bootstrap resampling within groups to derive
-#'   group-level confidence intervals for all biodiversity indices. Default is
+#'   gamma-scale confidence intervals for all biodiversity indices. Default is
 #'   \code{FALSE}. See \emph{Details} for information on the bootstrap approach.
 #'   
-#' @param conf_level Confidence level used for the calculation of group-level 
+#' @param conf_level Confidence level used for the calculation of gamma-scale 
 #'   bootstrapped confidence intervals. Only used when \code{boot_groups =
 #'   TRUE}.
 #'   
+#' @inheritParams pbapply::pbreplicate
+#'
 #' @details 
 #' 
 #' \strong{BIODIVERSITY INDICES}
 #' 
 #' \strong{S_n: Rarefied species richness} is the expected number of species, given a
 #' defined number of sampled individuals (n) (Gotelli & Colwell 2001). Rarefied
-#' richness at the sample level is calculated for the values provided in 
+#' richness at the alpha-scale is calculated for the values provided in 
 #' \code{effort_samples} as long as these values are not smaller than the 
 #' user-defined minimum value \code{effort_min}. In this case the minimum value 
 #' is used and samples with less individuals are discarded. When no values for
 #' \code{effort_samples} are provided the observed minimum number of individuals
 #' of the samples is used, which is the standard in rarefaction analysis
 #' (Gotelli & Colwell 2001). Because the number of individuals is expected to
-#' scale linearly with sample area or effort, at the group level the number of
+#' scale linearly with sample area or effort, at the gamma-scale the number of
 #' individuals for rarefaction is calculated as the minimum number of samples
 #' within groups multiplied by \code{effort_samples}. For example, when there are 10
 #' samples within each group, \code{effort_groups} equals \code{10 *
@@ -358,28 +361,28 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #' is that it corresponds to the number of dominant (highly abundant) species in
 #' the community.
 #' 
-#' For species richness \code{S}, rarefied richness \code{S_n}, undetected 
-#' richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we
-#' also calculate beta-diversity using multiplicative partitioning (Whittaker
-#' 1972, Jost 2007). That means for these indices we estimate beta-diversity as
-#' the ratio of group-level diversity (gamma) divided by sample-level diversity
-#' (alpha).
+#' For species richness \code{S}, rarefied richness \code{S_n}, undetected
+#' richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
+#' calculate beta-diversity using multiplicative partitioning (Whittaker 1972,
+#' Jost 2007). That means for these indices we estimate beta-diversity as the
+#' ratio of gamma-diversity (total diversity across all plots) divided by
+#' alpha-diversity (i.e., average plot diversity).
 #' 
 #' \strong{PERMUTATION TESTS AND BOOTSTRAP}
 #' 
 #' We used permutation tests for assessing differences of the biodiversity
-#' statistics among the groups (Legendre & Legendre 1998). At the sample level,
+#' statistics among the groups (Legendre & Legendre 1998). At the alpha-scale,
 #' one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
 #' labels across samples.
 #' 
-#' At the group-level we aggregate the community matrix by summing across the 
+#' At the gamma-scale we aggregate the community matrix by summing across the 
 #' groups. Then we compute the mean difference in a given biodiversity index
 #' between the groups and perform a permutation test by shuffling the treatment
-#' group labels. .
+#' group labels.
 #' 
-#' A bootstrap approach can be used to also test differences at the group level.
-#' When \code{boot_groups = T} instead of the group-level permutation test,
-#' there will be resampling of samples within groups to derive group-level
+#' A bootstrap approach can be used to also test differences at the gamma-scale.
+#' When \code{boot_groups = T} instead of the gamma-scale permutation test,
+#' there will be resampling of samples within groups to derive gamma-scale
 #' confidence intervals for all biodiversity indices. The function output
 #' includes lower and upper confidence bounds and the median of the bootstrap
 #' samples. Please note that for the richness indices sampling with replacement
@@ -387,11 +390,11 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #' samples occur several times in the resampled data sets.
 #' 
 #' 
-#' @return A list of class \code{mob_stats} that contains sample-scale and 
-#'   group-scale biodiversity statistics, as well as the p-values for
+#' @return A list of class \code{mob_stats} that contains alpha-scale and 
+#'   gamma-scale biodiversity statistics, as well as the p-values for
 #'   permutation tests at both scales.
 #'   
-#'   When \code{boot_groups = TRUE} there are no p-values at the group level.
+#'   When \code{boot_groups = TRUE} there are no p-values at the gamma-scale.
 #'   Instead there is lower bound, median, and upper bound for each biodiversity
 #'   index derived from the bootstrap within groups.
 #
@@ -399,30 +402,30 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #' 
 #' @references 
 #' 
-#' Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved
+#' Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved
 #' nonparametric lower bound of species richness via a modified good-turing
 #' frequency formula. Biometrics, 70, 671-682.
 #' 
-#' Gotelli, N.J. & Colwell, R.K. (2001). Quantifying biodiversity: procedures
+#' Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
 #' and pitfalls in the measurement and comparison of species richness. Ecology
 #' letters, 4, 379-391.
 #' 
-#' Hurlbert, S.H. (1971). The Nonconcept of Species Diversity: A Critique and
+#' Hurlbert, S.H. (1971) The Nonconcept of Species Diversity: A Critique and
 #' Alternative Parameters. Ecology, 52, 577-586.
 #' 
-#' Jost, L. (2006). Entropy and diversity. Oikos, 113, 363-375.
+#' Jost, L. (2006) Entropy and diversity. Oikos, 113, 363-375.
 #' 
-#' Jost, L. (2007). Partitioning Diversity into Independent Alpha and Beta
+#' Jost, L. (2007) Partitioning Diversity into Independent Alpha and Beta
 #' Components. Ecology, 88, 2427–2439.
 #' 
-#' Legendre, P. & Legendre, L.F.J. (1998). Numerical Ecology, Volume 24, 2nd
+#' Legendre, P. & Legendre, L.F.J. (1998) Numerical Ecology, Volume 24, 2nd
 #' Edition Elsevier, Amsterdam; Boston.
 #' 
-#' McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological
+#' McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological 
 #' Diversity: Frontiers in Measurement and Assessment. eds. A.E. Magurran
 #' B.J. McGill.
 #' 
-#' Whittaker, R.H. (1972). Evolution and Measurement of Species Diversity.
+#' Whittaker, R.H. (1972) Evolution and Measurement of Species Diversity.
 #' Taxon, 21, 213-251.
 #' 
 #' @export
@@ -433,15 +436,28 @@ get_group_diff = function(abund_mat, group_id, index, effort, rare_thres,
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
-#'                           n_perm = 20, effort_samples = c(5,10))
+#'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
 #' 
-#' # multiple group catgories
+#' \donttest{
+#' # Not run: 
+#' # parallel evaluation using the parallel package 
+#' # run in parallel
+#' library(parallel)
+#' cl = makeCluster(2L)
+#' clusterEvalQ(cl, library(mobr))
+#' clusterExport(cl, 'inv_mob_in')
+#' inv_mob_stats = get_mob_stats(inv_mob_in, 'group', n_perm=999, cl=cl)
+#'
+#' stopCluster(cl)
+#' }
 get_mob_stats = function(mob_in, group_var, 
                          index = c("N", "S", "S_n", "f_0", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
-                         rare_thres = 0.05, n_perm = 200, 
-                         boot_groups = F, conf_level = 0.95) {
+                         rare_thres = 0.05, n_perm = 199, 
+                         boot_groups = F, conf_level = 0.95, cl=NULL, 
+                         ...) {
+    EPS <- sqrt(.Machine$double.eps)
     if (n_perm < 1) 
         stop('Set nperm to a value greater than 1') 
      
@@ -451,8 +467,6 @@ get_mob_stats = function(mob_in, group_var,
    
     group_id  = factor(mob_in$env[, group_var])
     
-    print(index)
- 
     # Get rarefaction level
     samples_N = rowSums(mob_in$comm) 
     samples_per_group = table(group_id)
@@ -547,7 +561,7 @@ get_mob_stats = function(mob_in, group_var,
         gamma = with(dat_groups, value[index == "S_PIE"])
         alpha = with(dat_samples,  value[index == "S_PIE"])
       
-        beta_S_PIE = gamma[group_id]/alpha
+        beta_S_PIE = gamma[group_id] / alpha
         beta_S_PIE[!is.finite(beta_S_PIE)] = NA
       
         dat_beta_S_PIE = data.frame(group = group_id,
@@ -557,59 +571,67 @@ get_mob_stats = function(mob_in, group_var,
         dat_samples = rbind(dat_samples, dat_beta_S_PIE)
     }
    
-    # Significance tests
+    # Significance tests -------------------------------------------------------
    
-    # sample level
+    # alpha-scale
     F_obs = get_F_values(dat_samples, permute = F)
-    F_rand = dplyr::bind_rows(replicate(n_perm, get_F_values(dat_samples, permute = T), simplify = F)) %>% ungroup()
-    F_obs = F_obs %>% mutate(F_val_obs = F_val,
-                             F_val = NULL)
-    F_rand = left_join(F_rand, F_obs)
+    cat('\nComputing null model at alpha-scale\n')
+    F_rand = dplyr::bind_rows(pbapply::pbreplicate(n_perm, 
+                                  get_F_values(dat_samples, permute = T),
+                              simplify = F, cl = cl)) %>%
+             ungroup()
+    F_obs = F_obs %>% mutate(F_val_obs = F_val, F_val = NULL)
+    F_rand = suppressMessages(left_join(F_rand, F_obs))
+
+    samples_tests = F_rand %>% 
+                   group_by(index, effort) %>%
+                   summarise(F_stat = first(F_val_obs),
+                             p_val = (sum(F_val >= F_val_obs - EPS) + 1) /
+                                     (n_perm + 1)) %>%
+                              
+                   ungroup()
+    
    
-    p_val_samples = F_rand %>% 
-                    group_by(index, effort) %>%
-                    summarise(p_val = sum(F_val_obs <= F_val) / n_perm) %>%
-                    ungroup()
-   
-    # group level
-    if (!boot_groups) {
-        diff_obs = get_group_diff(mob_in$comm, group_id, index,
-                                  effort=effort_groups, rare_thres, permute=F)
-        diff_rand = bind_rows(replicate(n_perm, 
-                                        get_group_diff(mob_in$comm, group_id,
-                                                     index, effort = effort_groups,
-                                                     rare_thres, permute = T),
-                                        simplify = F))
-        diff_obs = diff_obs %>% mutate(d_obs = delta, delta = NULL)
-        diff_rand = left_join(diff_rand, diff_obs)
-      
-        p_val_groups = diff_rand %>% 
-                       group_by(index, effort) %>%
-                       summarise(p_val = get_pval(rand = delta, obs = first(d_obs),
-                                                  n_samples = n_perm)) %>%
-                       ungroup()
-    } else {
+    # gamma-scale
+    if (boot_groups) {
         # bootstrap sampling within groups
       
         abund_dat = cbind(group_id, mob_in$comm)
-      
-        boot_repl_groups = replicate(n_perm,
-                                     boot_sample_groups(abund_dat,
-                                                        index = index,
-                                                        effort = effort_groups,
-                                                        rare_thres = rare_thres),
-                                     simplify = F)
+        cat('\nComputing bootstrap confidence intervals at the gamma-scale\n')
+        boot_repl_groups = pbapply::pbreplicate(n_perm,
+                               boot_sample_groups(abund_dat,
+                                                  index = index,
+                                                   effort = effort_groups,
+                                                  rare_thres = rare_thres),
+                            simplify = F, cl = cl)
         boot_repl_groups = bind_rows(boot_repl_groups)
       
         alpha = 1 - conf_level
-        p = c(alpha / 2, 0.5, 1 - alpha / 2)
+        probs = c(alpha / 2, 0.5, 1 - alpha / 2)
      
         dat_groups = boot_repl_groups %>% 
                      group_by(group, index, effort) %>%
-                     do(setNames(data.frame(t(quantile(.$value, p, na.rm = T))),
-                                 c("lower","median","upper")))
+                     do(setNames(data.frame(t(quantile(.$value, probs, na.rm = T))),
+                                 c("lower","median","upper")))      
+    } else {
+        delta_obs = get_group_delta(mob_in$comm, group_id, index,
+                        effort=effort_groups, rare_thres, permute=F)
+        cat('\nComputing null model at gamma-scale\n')
+        delta_rand = bind_rows(pbapply::pbreplicate(n_perm, 
+                                   get_group_delta(mob_in$comm, group_id,
+                                       index, effort = effort_groups,
+                                       rare_thres, permute = T),
+                               simplify = F, cl = cl))
+        delta_obs = delta_obs %>% mutate(d_obs = delta, delta = NULL)
+        delta_rand = suppressMessages(left_join(delta_rand, delta_obs))
+      
+        groups_tests = delta_rand %>% 
+                       group_by(index, effort) %>%
+                       summarise(delta_avg = first(d_obs),
+                                 p_val = (sum(delta >= d_obs - EPS) + 1) /
+                                         (n_perm + 1)) %>%
+                       ungroup()
     }
-
     # order output data frames by indices
     dat_samples$index = factor(dat_samples$index,
                                levels = c("N",
@@ -630,69 +652,73 @@ get_mob_stats = function(mob_in, group_var,
     #remove unused factor levels
     dat_samples$index = factor(dat_samples$index)
    
-    if (!boot_groups) {
-      
-        p_val_groups$index = factor(p_val_groups$index, levels = index)
-        p_val_groups = p_val_groups[order(p_val_groups$index), ]
+    if (boot_groups) {
+        out = list(samples_stats = dat_samples,
+                   groups_stats  = dat_groups,
+                   samples_tests  = samples_tests)
+    } else {      
+        groups_tests$index = factor(groups_tests$index, levels = index)
+        groups_tests = groups_tests[order(groups_tests$index), ]
        
         out = list(samples_stats = dat_samples,
                    groups_stats  = dat_groups,
-                   samples_pval  = p_val_samples,
-                   groups_pval   = p_val_groups,
-                   p_min         = 1 / n_perm)
-    } else {
-        out = list(samples_stats = dat_samples,
-                   groups_stats  = dat_groups,
-                   samples_pval  = p_val_samples,
-                   p_min         = 1 / n_perm)
+                   samples_tests  = samples_tests,
+                   groups_tests   = groups_tests)
     }
   
     class(out) = 'mob_stats'
     return(out)
 }
 
-# Panel function for sample level results
-samples_panel1 = function(sample_dat, p_val, p_min, col, ylab = "",
-                           main = "Sample scale", ...) {
-    if (p_val > 0 | is.na(p_val)) 
-        p_label = bquote(p == .(p_val))
-    else                          
-        p_label = bquote(p <= .(p_min))
-   
+# Panel function for alpha-scale results
+samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
+                           main = expression(alpha * "-scale"), ...) {
+   label = substitute(paste(italic(F), ' = ', Fstat, ', ', italic(p), 
+                            ' = ', pval),
+                      list(Fstat = round(samples_tests$F_stat, 2),
+                           pval = round(samples_tests$p_val, 3)))
    boxplot(value ~ group, data = sample_dat, main = main,
-           ylab =  ylab, ylim = c(0, 1.1 * max(sample_dat$value, na.rm = T)), 
-           col = col, ...)
-   mtext(p_label, side = 3, line = 0)  
+           ylab =  ylab, col = col, cex.axis=1.2, cex.main = 1.5,
+           frame.plot=F, xaxt='n', ...)
+   groups = levels(sample_dat$group)
+   axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
+   mtext(label, side = 3, line = 0)  
 }
 
-# Panel function for group level results
-groups_panel1 = function(group_dat, p_val, p_min, col, ylab = "",
-                         main = "Group scale",  ...) {
-    if (p_val > 0 | is.na(p_val))
-        p_label = bquote(p == .(p_val))
-    else
-        p_label = bquote(p <= .(p_min))
-   
+# Panel function for gamma-scale results
+groups_panel1 = function(group_dat, tests, col, ylab = "",
+                         main = expression(gamma * "-scale"),  ...) {
+    label = substitute(paste(italic(bar(D)), ' = ', delta, ', ', italic(p), 
+                             ' = ', p_val), 
+                       list(delta = round(tests$delta_avg, 2),
+                            p_val = round(tests$p_val, 3)))
     boxplot(value ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, 
             ylim = c(0, 1.1 * max(group_dat$value, na.rm = T)),
-            col = col, ...)
+            col = col, cex.axis=1.2, cex.main = 1.5, frame.plot=F,
+            xaxt = 'n', ...)
+    groups = levels(group_dat$group)
+    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
     points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2,
            col = col, ...)
-    mtext(p_label, side = 3, line = 0)
+    mtext(label, side = 3, line = 0)
 }
 
-# Panel function for group level results with confidence intervals
-groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...) {
+# Panel function for gamma-scale results with confidence intervals
+groups_panel2 = function(group_dat, col, ylab = "", 
+                         main = expression(gamma * "-scale"), ...) {
     boxplot(median ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)),
-            col = col, ...)
+            col = col, cex.axis=1.2, cex.main=1.5, frame.plot=F, 
+            xaxt = 'n', ...)
+    groups = levels(group_dat$group)
+    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
     plotrix::plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
                     ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
                     sfrac = 0.02, col = col, ...)
 }
 
-#' Plot sample-level and group-level biodiversity statistics for a MoB analysis
+#' Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis
 #' 
 #' Plots a \code{mob_stats} object which is produced by the 
 #' function \code{get_mob_stats}. The p-value for each statistic
@@ -706,12 +732,12 @@ groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...) {
 #' 
 #' @param index The biodiversity statistics that should be plotted.
 #' See \code{\link{get_mob_stats}} for information on the indices. By default there
-#' is one figure for each index, with panels for sample-level and group-level results
+#' is one figure for each index, with panels for alpha- and gamma-scale results
 #' as well as for beta-diversity when applicable. 
 #' 
 #' @param multi_panel A logical variable. If \code{multi_panel = TRUE} then a 
 #' multipanel plot is produced, which shows observed, rarefied, and asymptotic 
-#' species richness and S_PIE at the sample-level and the group-level.
+#' species richness and S_PIE at the alpha- and gamma-scale.
 #' This set of variables conveys a comprehensive picture of the underlying 
 #' biodiversity changes. 
 #' 
@@ -729,12 +755,12 @@ groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...) {
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' # without bootstrap CI for group scale
+#' # without bootstrap CI for gamma-scale
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
 #' plot(inv_stats) 
 #' 
 #' plot(inv_stats, multi_panel = T)
-#' # with bootstrap CI for group scale
+#' # with bootstrap CI for gamma-scale
 #' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
 #'                                boot_groups=T)
 #' plot(inv_stats_boot)
@@ -788,28 +814,34 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
         if (var %in% c("N", "PIE", "pct_rare")) {
       
             if (!multi_panel)
-                op = par(mfrow = c(1, 2), las = 1, cex.lab = 1.3,
-                         oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1),
-                         xpd = NA)
+                op = par(mfrow = c(1, 3), cex.lab = 1.6,
+                         oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1), xpd = NA)
+              
+                #op = par(mfrow = c(1, 2), las = 1, cex.lab = 1.3,
+                #         oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1),
+                #         xpd = NA)
+              
          
             y_label = switch(var,
-                             "N" = "Abundance, (N)",
+                             "N" = expression("Abundance (" * italic(N) * ")"),
                              "PIE" = "PIE",
                              "pct_rare" = "% of species rare")
          
             dat_samples = filter(mob_stats$samples_stats, index == var)
-            p_val = with(mob_stats$samples_pval, p_val[index == var])
-            samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                           ylab =  y_label, main = "Sample scale", col = col, ...)
+            dat_tests = filter(mob_stats$samples_tests, index == var)
+            samples_panel1(dat_samples, dat_tests, ylab = y_label,
+                           main = expression(alpha * "-scale"), col = col, ...)
+            
+            # insert blank space b/c non beta plot for these stats
+            plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='')
          
             dat_groups = filter(mob_stats$groups_stats, index == var)
          
-            if (!is.null(mob_stats$groups_pval)) {
-                p_val = with(mob_stats$groups_pval, p_val[index == var])
-                groups_panel1(dat_groups, p_val = p_val,
-                              p_min = mob_stats$p_min, col = col_groups, ...) 
-            } else {
+            if (is.null(mob_stats$groups_tests)) {
                 groups_panel2(dat_groups, col = col_groups, ...) 
+            } else {  
+                tests = filter(mob_stats$groups_tests, index == var)
+                groups_panel1(dat_groups, tests, col = col_groups, ...) 
             }
         }
       
@@ -827,17 +859,16 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
             }
          
             y_label = switch(var,
-                             "S" = expression('Richness, (' * S * ')'),
-                             "S_asymp" = expression('Asympotic richness, (' *
-                                                     S[asymp] * ')'),
-                             "f_0" = expression('Undetected richness, (' * f[0] * ')'),
-                             "S_PIE" = expression('ENS of PIE, (' * S[PIE] * ')'))
+                             "S" = expression('Richness (' * italic(S) * ')'),
+                             "S_asymp" = expression('Asympotic richness (' *
+                                                     italic(S[asymp]) * ')'),
+                             "f_0" = expression('Undetected richness (' * italic(f)[0] * ')'),
+                             "S_PIE" = expression('ENS of PIE (' * italic(S)[PIE] * ')'))
          
             dat_samples = filter(mob_stats$samples_stats, index == var)
-            p_val = with(mob_stats$samples_pval, p_val[index == var])
-            samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                           ylab =  y_label, main = "Sample scale", col = col,
-                           ...)
+            dat_tests = filter(mob_stats$samples_tests, index == var)
+            samples_panel1(dat_samples, dat_tests, p_val = dat_tests$p_val, ylab =  y_label,
+                           main = expression(alpha * "-scale"), col = col, ...)
          
            if (multi_panel) {
                if (var == "f_0") 
@@ -848,9 +879,10 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
          
            beta_var = paste("beta", var, sep = "_")
            dat_samples = filter(mob_stats$samples_stats, index == beta_var)
-           p_val = with(mob_stats$samples_pval, p_val[index == beta_var])
-           samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                          ylab =  "", main = "Beta-diversity across scales",
+           dat_tests = filter(mob_stats$samples_tests, index == beta_var)
+           samples_panel1(dat_samples, dat_tests, ylab =  "",
+                          main = expression(beta * "-diversity (=" *
+                                            gamma / alpha * ")"),
                           col = col, ...)
          
            if (multi_panel) {
@@ -862,13 +894,11 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
          
            dat_groups = filter(mob_stats$groups_stats, index == var)
          
-           if (!is.null(mob_stats$groups_pval)) {
-               p_val = with(mob_stats$groups_pval, p_val[index == var])
-               groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min,
-                             col = col_groups, ...) 
-           } 
-           else {
+           if (is.null(mob_stats$groups_tests)) {
                groups_panel2(dat_groups, col = col_groups, ...) 
+           } else {
+               tests = filter(mob_stats$groups_tests, index == var)
+               groups_panel1(dat_groups, tests, col = col_groups, ...) 
            }
         }    
       
@@ -879,7 +909,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                          oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1), xpd = NA)
             }
          
-            y_label = expression('Rarefied richness, (' * S[n] * ')')
+            y_label = expression('Rarefied richness (' * italic(S[n]) * ')')
             
             effort_samples = unique(S_n_samples$effort)
             effort_groups = unique(S_n_groups$effort)
@@ -891,45 +921,56 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                         new = T)
             
                 dat_samples = filter(S_n_samples, effort == effort_samples[i])
-                p_val = with(mob_stats$samples_pval,
-                             p_val[index == var & effort == effort_samples[i]])
+                dat_tests = filter(mob_stats$samples_tests, 
+                                   index == var & effort == effort_samples[i])
             
-               fig_title = paste("Sample scale, n = ", effort_samples[i])
+                fig_title = substitute(paste(alpha, "-scale, n = ", n),
+                                       list(n = effort_samples[i]))
             
-               samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                              ylab = y_label,
-                              main = fig_title, col = col, ...)
+                samples_panel1(dat_samples, dat_tests, 
+                               ylab = y_label,
+                               main = '', col = col, ...)
+                par(new=TRUE)
+                plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
+                     main=fig_title, cex.main=1.5)
             
-               if (multi_panel)
-                   par(fig = c(0.33, 0.67, (1 + i) / n_rows, (2 + i) / n_rows),
-                       new = T)
+                if (multi_panel)
+                    par(fig = c(0.33, 0.67, (1 + i) / n_rows, (2 + i) / n_rows),
+                        new = T)
             
-               beta_var = paste("beta", var, sep = "_")
-               dat_samples = filter(mob_stats$samples_stats, index == beta_var)
-               p_val = with(mob_stats$samples_pval,
-                            p_val[index == beta_var & effort == effort_samples[i]])
-              samples_panel1(dat_samples, p_val = p_val, p_min = mob_stats$p_min,
-                             ylab = "", main = "Beta-diversity across scales",
-                             col = col, ...)
+                beta_var = paste("beta", var, sep = "_")
+                dat_samples = filter(mob_stats$samples_stats, index == beta_var)
+                dat_tests = filter(mob_stats$samples_tests,
+                                   index == beta_var & effort == effort_samples[i])
+                samples_panel1(dat_samples, dat_tests, 
+                               ylab = "", 
+                               main = expression(beta * "-diversity (=" *
+                                                 gamma / alpha * ")"),
+                               col = col, ...)
             
-              if (multi_panel)
-                  par(fig = c(0.67, 1.0, (1 + i) / n_rows, (2 + i) / n_rows),
-                      new = T)
+                if (multi_panel)
+                    par(fig = c(0.67, 1.0, (1 + i) / n_rows, (2 + i) / n_rows),
+                        new = T)
             
-              dat_groups = filter(S_n_groups, effort == effort_groups[i])
-              fig_title = paste("Group scale, n = ", effort_groups[i])
-            
-              if (!is.null(mob_stats$groups_pval)) {
-                  pval = with(mob_stats$groups_pval,
-                              p_val[index == var & effort == effort_groups[i]])
-                  groups_panel1(dat_groups, p_val = p_val, p_min = mob_stats$p_min,
-                                ylab = "", main = fig_title, col = col_groups,
-                                ...)
-              } else {
-                  groups_panel2(dat_groups, main = fig_title, col = col_groups,
-                                ...) 
+                dat_groups = filter(S_n_groups, effort == effort_groups[i])
+                fig_title = substitute(paste(gamma, "-scale, n = ", n),
+                                       list(n = effort_groups[i]))            
+                if (is.null(mob_stats$groups_test)) {
+                    groups_panel2(dat_groups, main = '', col = col_groups,
+                                  ...) 
+                    par(new=TRUE)
+                    plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
+                         main=fig_title, cex.main=1.5)
+                } else {
+                    tests = filter(mob_stats$groups_tests, 
+                                   index == var & effort == effort_groups[i])
+                    groups_panel1(dat_groups, tests, ylab = "", main = '',
+                                  col = col_groups, ...)
+                    par(new=TRUE)
+                    plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
+                         main=fig_title, cex.main=1.5)
+                }
             }
-         }
             y_coords = (S_n_len:0) / S_n_len
         }
     }
