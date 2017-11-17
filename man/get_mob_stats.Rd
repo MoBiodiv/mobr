@@ -113,7 +113,7 @@ presence of rare species.
 
 \strong{S_asymp: Asymptotic species richness} is the expected number of 
 species given complete sampling and here it is calculated using the Chao1
-estimator (Chao 1984, Chao 1987) see \link{\code{calc_chao1}}. Note: this metric
+estimator (Chao 1984, Chao 1987) see \code{\link{calc_chao1}}. Note: this metric
 is typically highly correlated with S (McGill 2011).
  
 \strong{f_0: Undetected species richness} is the number of undetected species
