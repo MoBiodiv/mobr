@@ -6,7 +6,7 @@
 \usage{
 get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "f_0", "S_PIE"),
   effort_samples = NULL, effort_min = 5, rare_thres = 0.05,
-  n_perm = 199, boot_groups = F, conf_level = 0.95)
+  n_perm = 199, boot_groups = F, conf_level = 0.95, cl = NULL, ...)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -57,10 +57,20 @@ gamma-scale confidence intervals for all biodiversity indices. Default is
 \item{conf_level}{Confidence level used for the calculation of gamma-scale 
 bootstrapped confidence intervals. Only used when \code{boot_groups =
 TRUE}.}
+
+\item{cl}{
+A cluster object created by \code{\link[parallel]{makeCluster}},
+or an integer to indicate number of child-processes
+(integer values are ignored on Windows) for parallel evaluations.
+}
+
+\item{...}{
+Optional arguments to \code{FUN}.
+}
 }
 \value{
-A list of class \code{mob_stats} that contains sample-scale and 
-  group-scale biodiversity statistics, as well as the p-values for
+A list of class \code{mob_stats} that contains alpha-scale and 
+  gamma-scale biodiversity statistics, as well as the p-values for
   permutation tests at both scales.
   
   When \code{boot_groups = TRUE} there are no p-values at the gamma-scale.
@@ -162,6 +172,19 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
                           n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
+
+\donttest{
+# Not run: 
+# parallel evaluation using the parallel package 
+# run in parallel
+library(parallel)
+cl = makeCluster(2L)
+clusterEvalQ(cl, library(mobr))
+clusterExport(cl, 'inv_mob_in')
+inv_mob_stats = get_mob_stats(inv_mob_in, 'group', n_perm=999, cl=cl)
+
+stopCluster(cl)
+}
 }
 \references{
 Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved

@@ -302,6 +302,8 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #'   bootstrapped confidence intervals. Only used when \code{boot_groups =
 #'   TRUE}.
 #'   
+#' @inheritParams pbapply::pbreplicate
+#'
 #' @details 
 #' 
 #' \strong{BIODIVERSITY INDICES}
@@ -388,8 +390,8 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' samples occur several times in the resampled data sets.
 #' 
 #' 
-#' @return A list of class \code{mob_stats} that contains sample-scale and 
-#'   group-scale biodiversity statistics, as well as the p-values for
+#' @return A list of class \code{mob_stats} that contains alpha-scale and 
+#'   gamma-scale biodiversity statistics, as well as the p-values for
 #'   permutation tests at both scales.
 #'   
 #'   When \code{boot_groups = TRUE} there are no p-values at the gamma-scale.
@@ -436,11 +438,25 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
 #'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
+#' 
+#' \donttest{
+#' # Not run: 
+#' # parallel evaluation using the parallel package 
+#' # run in parallel
+#' library(parallel)
+#' cl = makeCluster(2L)
+#' clusterEvalQ(cl, library(mobr))
+#' clusterExport(cl, 'inv_mob_in')
+#' inv_mob_stats = get_mob_stats(inv_mob_in, 'group', n_perm=999, cl=cl)
+#'
+#' stopCluster(cl)
+#' }
 get_mob_stats = function(mob_in, group_var, 
                          index = c("N", "S", "S_n", "f_0", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
                          rare_thres = 0.05, n_perm = 199, 
-                         boot_groups = F, conf_level = 0.95) {
+                         boot_groups = F, conf_level = 0.95, cl=NULL, 
+                         ...) {
     EPS <- sqrt(.Machine$double.eps)
     if (n_perm < 1) 
         stop('Set nperm to a value greater than 1') 
@@ -559,9 +575,11 @@ get_mob_stats = function(mob_in, group_var,
    
     # alpha-scale
     F_obs = get_F_values(dat_samples, permute = F)
-    F_rand = dplyr::bind_rows(replicate(n_perm, 
-                 get_F_values(dat_samples, permute = T), simplify = F)) %>%
-                 ungroup()
+    cat('\nComputing null model at alpha-scale\n')
+    F_rand = dplyr::bind_rows(pbapply::pbreplicate(n_perm, 
+                                  get_F_values(dat_samples, permute = T),
+                              simplify = F, cl = cl)) %>%
+             ungroup()
     F_obs = F_obs %>% mutate(F_val_obs = F_val, F_val = NULL)
     F_rand = suppressMessages(left_join(F_rand, F_obs))
 
@@ -579,30 +597,31 @@ get_mob_stats = function(mob_in, group_var,
         # bootstrap sampling within groups
       
         abund_dat = cbind(group_id, mob_in$comm)
-      
-        boot_repl_groups = replicate(n_perm,
-                                     boot_sample_groups(abund_dat,
-                                                        index = index,
-                                                        effort = effort_groups,
-                                                        rare_thres = rare_thres),
-                                     simplify = F)
+        cat('\nComputing bootstrap confidence intervals at the gamma-scale\n')
+        boot_repl_groups = pbapply::pbreplicate(n_perm,
+                               boot_sample_groups(abund_dat,
+                                                  index = index,
+                                                   effort = effort_groups,
+                                                  rare_thres = rare_thres),
+                            simplify = F, cl = cl)
         boot_repl_groups = bind_rows(boot_repl_groups)
       
         alpha = 1 - conf_level
-        p = c(alpha / 2, 0.5, 1 - alpha / 2)
+        probs = c(alpha / 2, 0.5, 1 - alpha / 2)
      
         dat_groups = boot_repl_groups %>% 
                      group_by(group, index, effort) %>%
-                     do(setNames(data.frame(t(quantile(.$value, p, na.rm = T))),
+                     do(setNames(data.frame(t(quantile(.$value, probs, na.rm = T))),
                                  c("lower","median","upper")))      
     } else {
         delta_obs = get_group_delta(mob_in$comm, group_id, index,
-                                  effort=effort_groups, rare_thres, permute=F)
-        delta_rand = bind_rows(replicate(n_perm, 
-                                        get_group_delta(mob_in$comm, group_id,
-                                                     index, effort = effort_groups,
-                                                     rare_thres, permute = T),
-                                        simplify = F))
+                        effort=effort_groups, rare_thres, permute=F)
+        cat('\nComputing null model at gamma-scale\n')
+        delta_rand = bind_rows(pbapply::pbreplicate(n_perm, 
+                                   get_group_delta(mob_in$comm, group_id,
+                                       index, effort = effort_groups,
+                                       rare_thres, permute = T),
+                               simplify = F, cl = cl))
         delta_obs = delta_obs %>% mutate(d_obs = delta, delta = NULL)
         delta_rand = suppressMessages(left_join(delta_rand, delta_obs))
       
@@ -653,35 +672,47 @@ get_mob_stats = function(mob_in, group_var,
 
 # Panel function for alpha-scale results
 samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
-                           main = "Sample scale", ...) {
-   label = paste0('F = ', round(samples_tests$F_stat, 2), 
-                  ', p = ', round(samples_tests$p_val, 3))
+                           main = expression(alpha * "-scale"), ...) {
+   label = substitute(paste(italic(F), ' = ', Fstat, ', ', italic(p), 
+                            ' = ', pval),
+                      list(Fstat = round(samples_tests$F_stat, 2),
+                           pval = round(samples_tests$p_val, 3)))
    boxplot(value ~ group, data = sample_dat, main = main,
-           ylab =  ylab, ylim = c(0, 1.1 * max(sample_dat$value, na.rm = T)), 
-           col = col, ...)
+           ylab =  ylab, col = col, cex.axis=1.2, cex.main = 1.5,
+           frame.plot=F, xaxt='n', ...)
+   groups = levels(sample_dat$group)
+   axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
    mtext(label, side = 3, line = 0)  
 }
 
 # Panel function for gamma-scale results
 groups_panel1 = function(group_dat, tests, col, ylab = "",
-                         main = "Group scale",  ...) {
-    label = substitute(paste(bar(D), ' = ', delta, ', p = ', p_val),
+                         main = expression(gamma * "-scale"),  ...) {
+    label = substitute(paste(italic(bar(D)), ' = ', delta, ', ', italic(p), 
+                             ' = ', p_val), 
                        list(delta = round(tests$delta_avg, 2),
                             p_val = round(tests$p_val, 3)))
     boxplot(value ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, 
             ylim = c(0, 1.1 * max(group_dat$value, na.rm = T)),
-            col = col, ...)
+            col = col, cex.axis=1.2, cex.main = 1.5, frame.plot=F,
+            xaxt = 'n', ...)
+    groups = levels(group_dat$group)
+    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
     points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2,
            col = col, ...)
     mtext(label, side = 3, line = 0)
 }
 
 # Panel function for gamma-scale results with confidence intervals
-groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...) {
+groups_panel2 = function(group_dat, col, ylab = "", 
+                         main = expression(gamma * "-scale"), ...) {
     boxplot(median ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)),
-            col = col, ...)
+            col = col, cex.axis=1.2, cex.main=1.5, frame.plot=F, 
+            xaxt = 'n', ...)
+    groups = levels(group_dat$group)
+    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
     plotrix::plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
                     ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
                     sfrac = 0.02, col = col, ...)
@@ -724,12 +755,12 @@ groups_panel2 = function(group_dat, col, ylab = "", main = "Group scale", ...) {
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' # without bootstrap CI for group scale
+#' # without bootstrap CI for gamma-scale
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
 #' plot(inv_stats) 
 #' 
 #' plot(inv_stats, multi_panel = T)
-#' # with bootstrap CI for group scale
+#' # with bootstrap CI for gamma-scale
 #' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
 #'                                boot_groups=T)
 #' plot(inv_stats_boot)
@@ -783,19 +814,26 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
         if (var %in% c("N", "PIE", "pct_rare")) {
       
             if (!multi_panel)
-                op = par(mfrow = c(1, 2), las = 1, cex.lab = 1.3,
-                         oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1),
-                         xpd = NA)
+                op = par(mfrow = c(1, 3), cex.lab = 1.6,
+                         oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1), xpd = NA)
+              
+                #op = par(mfrow = c(1, 2), las = 1, cex.lab = 1.3,
+                #         oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1),
+                #         xpd = NA)
+              
          
             y_label = switch(var,
-                             "N" = "Abundance (N)",
+                             "N" = expression("Abundance (" * italic(N) * ")"),
                              "PIE" = "PIE",
                              "pct_rare" = "% of species rare")
          
             dat_samples = filter(mob_stats$samples_stats, index == var)
             dat_tests = filter(mob_stats$samples_tests, index == var)
-            samples_panel1(dat_samples, dat_tests, ylab =  y_label,
-                           main = "Sample scale", col = col, ...)
+            samples_panel1(dat_samples, dat_tests, ylab = y_label,
+                           main = expression(alpha * "-scale"), col = col, ...)
+            
+            # insert blank space b/c non beta plot for these stats
+            plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='')
          
             dat_groups = filter(mob_stats$groups_stats, index == var)
          
@@ -821,16 +859,16 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
             }
          
             y_label = switch(var,
-                             "S" = expression('Richness (' * S * ')'),
+                             "S" = expression('Richness (' * italic(S) * ')'),
                              "S_asymp" = expression('Asympotic richness (' *
-                                                     S[asymp] * ')'),
-                             "f_0" = expression('Undetected richness (' * f[0] * ')'),
-                             "S_PIE" = expression('ENS of PIE (' * S[PIE] * ')'))
+                                                     italic(S[asymp]) * ')'),
+                             "f_0" = expression('Undetected richness (' * italic(f)[0] * ')'),
+                             "S_PIE" = expression('ENS of PIE (' * italic(S)[PIE] * ')'))
          
             dat_samples = filter(mob_stats$samples_stats, index == var)
             dat_tests = filter(mob_stats$samples_tests, index == var)
             samples_panel1(dat_samples, dat_tests, p_val = dat_tests$p_val, ylab =  y_label,
-                           main = "Sample scale", col = col, ...)
+                           main = expression(alpha * "-scale"), col = col, ...)
          
            if (multi_panel) {
                if (var == "f_0") 
@@ -843,7 +881,9 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
            dat_samples = filter(mob_stats$samples_stats, index == beta_var)
            dat_tests = filter(mob_stats$samples_tests, index == beta_var)
            samples_panel1(dat_samples, dat_tests, ylab =  "",
-                          main = "Beta-diversity across scales", col = col, ...)
+                          main = expression(beta * "-diversity (=" *
+                                            gamma / alpha * ")"),
+                          col = col, ...)
          
            if (multi_panel) {
                if (var == "f_0")
@@ -869,7 +909,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                          oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1), xpd = NA)
             }
          
-            y_label = expression('Rarefied richness (' * S[n] * ')')
+            y_label = expression('Rarefied richness (' * italic(S[n]) * ')')
             
             effort_samples = unique(S_n_samples$effort)
             effort_groups = unique(S_n_groups$effort)
@@ -884,11 +924,15 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                 dat_tests = filter(mob_stats$samples_tests, 
                                    index == var & effort == effort_samples[i])
             
-                fig_title = paste("Sample scale, n = ", effort_samples[i])
+                fig_title = substitute(paste(alpha, "-scale, n = ", n),
+                                       list(n = effort_samples[i]))
             
                 samples_panel1(dat_samples, dat_tests, 
                                ylab = y_label,
-                               main = fig_title, col = col, ...)
+                               main = '', col = col, ...)
+                par(new=TRUE)
+                plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
+                     main=fig_title, cex.main=1.5)
             
                 if (multi_panel)
                     par(fig = c(0.33, 0.67, (1 + i) / n_rows, (2 + i) / n_rows),
@@ -899,7 +943,9 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                 dat_tests = filter(mob_stats$samples_tests,
                                    index == beta_var & effort == effort_samples[i])
                 samples_panel1(dat_samples, dat_tests, 
-                               ylab = "", main = "Beta-diversity across scales",
+                               ylab = "", 
+                               main = expression(beta * "-diversity (=" *
+                                                 gamma / alpha * ")"),
                                col = col, ...)
             
                 if (multi_panel)
@@ -907,16 +953,22 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                         new = T)
             
                 dat_groups = filter(S_n_groups, effort == effort_groups[i])
-                fig_title = paste("Group scale, n = ", effort_groups[i])
-            
+                fig_title = substitute(paste(gamma, "-scale, n = ", n),
+                                       list(n = effort_groups[i]))            
                 if (is.null(mob_stats$groups_test)) {
-                    groups_panel2(dat_groups, main = fig_title, col = col_groups,
+                    groups_panel2(dat_groups, main = '', col = col_groups,
                                   ...) 
+                    par(new=TRUE)
+                    plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
+                         main=fig_title, cex.main=1.5)
                 } else {
                     tests = filter(mob_stats$groups_tests, 
                                    index == var & effort == effort_groups[i])
-                    groups_panel1(dat_groups, tests, ylab = "", main = fig_title,
+                    groups_panel1(dat_groups, tests, ylab = "", main = '',
                                   col = col_groups, ...)
+                    par(new=TRUE)
+                    plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
+                         main=fig_title, cex.main=1.5)
                 }
             }
             y_coords = (S_n_len:0) / S_n_len

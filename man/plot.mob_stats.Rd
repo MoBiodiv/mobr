@@ -42,12 +42,12 @@ all the results.
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-# without bootstrap CI for group scale
+# without bootstrap CI for gamma-scale
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
 plot(inv_stats) 
 
 plot(inv_stats, multi_panel = T)
-# with bootstrap CI for group scale
+# with bootstrap CI for gamma-scale
 inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
                                boot_groups=T)
 plot(inv_stats_boot)
