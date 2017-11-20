@@ -672,22 +672,25 @@ get_mob_stats = function(mob_in, group_var,
 
 # Panel function for alpha-scale results
 samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
-                           main = expression(alpha * "-scale"), ...) {
+                           main = expression(alpha * "-scale"), 
+                          cex.axis=1.2, ...) {
    label = substitute(paste(italic(F), ' = ', Fstat, ', ', italic(p), 
                             ' = ', pval),
                       list(Fstat = round(samples_tests$F_stat, 2),
                            pval = round(samples_tests$p_val, 3)))
    boxplot(value ~ group, data = sample_dat, main = main,
-           ylab =  ylab, col = col, cex.axis=1.2, cex.main = 1.5,
+           ylab =  ylab, col = col, cex.axis=cex.axis, cex.main = 1.5,
            frame.plot=F, xaxt='n', ...)
    groups = levels(sample_dat$group)
-   axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
+   axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
+        cex.axis=cex.axis)
    mtext(label, side = 3, line = 0)  
 }
 
 # Panel function for gamma-scale results
 groups_panel1 = function(group_dat, tests, col, ylab = "",
-                         main = expression(gamma * "-scale"),  ...) {
+                         main = expression(gamma * "-scale"),
+                         cex.axis=1.2, ...) {
     label = substitute(paste(italic(bar(D)), ' = ', delta, ', ', italic(p), 
                              ' = ', p_val), 
                        list(delta = round(tests$delta_avg, 2),
@@ -695,10 +698,11 @@ groups_panel1 = function(group_dat, tests, col, ylab = "",
     boxplot(value ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, 
             ylim = c(0, 1.1 * max(group_dat$value, na.rm = T)),
-            col = col, cex.axis=1.2, cex.main = 1.5, frame.plot=F,
+            col = col, cex.axis=cex.axis, cex.main = 1.5, frame.plot=F,
             xaxt = 'n', ...)
     groups = levels(group_dat$group)
-    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
+    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
+         cex.axis=cex.axis)
     points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2,
            col = col, ...)
     mtext(label, side = 3, line = 0)
@@ -706,13 +710,15 @@ groups_panel1 = function(group_dat, tests, col, ylab = "",
 
 # Panel function for gamma-scale results with confidence intervals
 groups_panel2 = function(group_dat, col, ylab = "", 
-                         main = expression(gamma * "-scale"), ...) {
+                         main = expression(gamma * "-scale"),
+                         cex.axis=1.2, ...) {
     boxplot(median ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)),
-            col = col, cex.axis=1.2, cex.main=1.5, frame.plot=F, 
+            col = col, cex.axis=cex.axis, cex.main=1.5, frame.plot=F, 
             xaxt = 'n', ...)
     groups = levels(group_dat$group)
-    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE)
+    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
+         cex.axis=cex.axis)
     plotrix::plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
                     ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
                     sfrac = 0.02, col = col, ...)
@@ -741,8 +747,11 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' This set of variables conveys a comprehensive picture of the underlying 
 #' biodiversity changes. 
 #' 
-#' @param col a vector of colors for the groups, set
-#' to NA if no color is preferred
+#' @param col a vector of colors for the groups, set to NA if no color is
+#' preferred
+#' 
+#' @param cex.axis The magnification to be used for axis annotation relative to
+#' the current setting of cex. Defaults to 1.2. 
 #' 
 #' @param ... additional arguments to provide to boxplot, points, and confidence
 #' interval functions
@@ -766,7 +775,8 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' plot(inv_stats_boot)
 plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE, 
                           col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
-                                  "#E2C288", "#F7B0E6", "#AAD28C"), ...) {
+                                  "#E2C288", "#F7B0E6", "#AAD28C"), 
+                          cex.axis=1.2, ...) {
     # default colors derived with colorspace::rainbow_hcl(5, c=60, l=80)
     if (any(is.na(col)) & length(col) == 1) 
         col_groups = 1
@@ -830,7 +840,8 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
             dat_samples = filter(mob_stats$samples_stats, index == var)
             dat_tests = filter(mob_stats$samples_tests, index == var)
             samples_panel1(dat_samples, dat_tests, ylab = y_label,
-                           main = expression(alpha * "-scale"), col = col, ...)
+                           main = expression(alpha * "-scale"), col = col,
+                           cex.axis=cex.axis, ...)
             
             # insert blank space b/c non beta plot for these stats
             plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='')
@@ -838,10 +849,10 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
             dat_groups = filter(mob_stats$groups_stats, index == var)
          
             if (is.null(mob_stats$groups_tests)) {
-                groups_panel2(dat_groups, col = col_groups, ...) 
+                groups_panel2(dat_groups, col = col_groups, cex.axis=cex.axis, ...) 
             } else {  
                 tests = filter(mob_stats$groups_tests, index == var)
-                groups_panel1(dat_groups, tests, col = col_groups, ...) 
+                groups_panel1(dat_groups, tests, col = col_groups, cex.axis=cex.axis, ...) 
             }
         }
       
@@ -868,7 +879,8 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
             dat_samples = filter(mob_stats$samples_stats, index == var)
             dat_tests = filter(mob_stats$samples_tests, index == var)
             samples_panel1(dat_samples, dat_tests, p_val = dat_tests$p_val, ylab =  y_label,
-                           main = expression(alpha * "-scale"), col = col, ...)
+                           main = expression(alpha * "-scale"), col = col, 
+                           cex.axis=cex.axis, ...)
          
            if (multi_panel) {
                if (var == "f_0") 
@@ -883,7 +895,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
            samples_panel1(dat_samples, dat_tests, ylab =  "",
                           main = expression(beta * "-diversity (=" *
                                             gamma / alpha * ")"),
-                          col = col, ...)
+                          col = col, cex.axis=cex.axis, ...)
          
            if (multi_panel) {
                if (var == "f_0")
@@ -898,7 +910,8 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                groups_panel2(dat_groups, col = col_groups, ...) 
            } else {
                tests = filter(mob_stats$groups_tests, index == var)
-               groups_panel1(dat_groups, tests, col = col_groups, ...) 
+               groups_panel1(dat_groups, tests, col = col_groups, cex.axis=cex.axis,
+                             ...) 
            }
         }    
       
@@ -929,7 +942,8 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
             
                 samples_panel1(dat_samples, dat_tests, 
                                ylab = y_label,
-                               main = '', col = col, ...)
+                               main = '', col = col, cex.axis=cex.axis,
+                               ...)
                 par(new=TRUE)
                 plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
                      main=fig_title, cex.main=1.5)
@@ -946,7 +960,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                                ylab = "", 
                                main = expression(beta * "-diversity (=" *
                                                  gamma / alpha * ")"),
-                               col = col, ...)
+                               col = col, cex.axis=cex.axis, ...)
             
                 if (multi_panel)
                     par(fig = c(0.67, 1.0, (1 + i) / n_rows, (2 + i) / n_rows),
@@ -965,7 +979,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                     tests = filter(mob_stats$groups_tests, 
                                    index == var & effort == effort_groups[i])
                     groups_panel1(dat_groups, tests, ylab = "", main = '',
-                                  col = col_groups, ...)
+                                  col = col_groups, cex.axis=cex.axis, ...)
                     par(new=TRUE)
                     plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
                          main=fig_title, cex.main=1.5)

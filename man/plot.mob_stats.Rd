@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{mob_stats}(mob_stats, index = NULL, multi_panel = FALSE,
   col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE", "#E2C288", "#F7B0E6",
-  "#AAD28C"), ...)
+  "#AAD28C"), cex.axis = 1.2, ...)
 }
 \arguments{
 \item{mob_stats}{a \code{mob_stats} object that has the samples and 
@@ -23,8 +23,11 @@ species richness and S_PIE at the alpha- and gamma-scale.
 This set of variables conveys a comprehensive picture of the underlying 
 biodiversity changes.}
 
-\item{col}{a vector of colors for the groups, set
-to NA if no color is preferred}
+\item{col}{a vector of colors for the groups, set to NA if no color is
+preferred}
+
+\item{cex.axis}{The magnification to be used for axis annotation relative to
+the current setting of cex. Defaults to 1.2.}
 
 \item{...}{additional arguments to provide to boxplot, points, and confidence
 interval functions}
