@@ -13,7 +13,7 @@ plot_rarefaction(mob_in, env_var, ref_group, method, pooled = T, col = NULL,
 \item{env_var}{a string that specifies the column name in mob_in$env that 
 specifies the grouping variable.}
 
-\item{method}{either 'indiv', 'sampl', or 'spat' for individual, sample, or 
+\item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or 
 sample spatially explicit based rarefaction respectively}
 
 \item{pooled}{boolean specifying if samples should be pooled at the group

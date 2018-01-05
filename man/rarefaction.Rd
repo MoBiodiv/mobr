@@ -12,7 +12,7 @@ rarefaction(x, method, effort = NULL, xy_coords = NULL, latlong = NULL,
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{method}{either 'indiv', 'sampl', or 'spat' for individual, sample, or 
+\item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or 
 sample spatially explicit based rarefaction respectively}
 
 \item{effort}{optional argument to specify what number of individuals or 

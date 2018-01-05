@@ -191,7 +191,7 @@ sphere_dist = function(long, lat){
 #' @param x can either be a: 1) mob_in object, 2) community matrix-like
 #'  object in which rows represent plots and columns represent species, or 3)
 #'  a vector which contains the abundance of each species. 
-#' @param method either 'indiv', 'sampl', or 'spat' for individual, sample, or 
+#' @param method either 'indiv', 'samp', or 'spat' for individual, sample, or 
 #'   sample spatially explicit based rarefaction respectively
 #' @param effort optional argument to specify what number of individuals or 
 #'   number of samples depending on 'method' to compute rarefied richness as. If
@@ -321,7 +321,6 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
             effort = 0
         else
             effort = 1:n
-    effort_names = effort
     if (any(effort > n)) {
         if (method == 'indiv') {
             if (extrapolate) 
@@ -408,7 +407,7 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
         out[effort <= n] = rowSums(1 - p)
         out[effort > n] = S_ext
     }
-    names(out) = effort_names
+    names(out) = effort
     return(out)
 }
 
