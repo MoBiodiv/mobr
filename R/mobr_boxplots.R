@@ -545,15 +545,14 @@ get_mob_stats = function(mob_in, group_var,
     if ("f_0" %in% index) {
         gamma = with(dat_groups, value[index == "f_0"])
         alpha = with(dat_samples,  value[index == "f_0"])
-      
-        beta_S_asympS = gamma[group_id]/alpha
-        beta_S_asympS[!is.finite(beta_S_asympS)] = NA
+        beta_f_0 = gamma[group_id] / alpha
+        beta_f_0[!is.finite(beta_f_0)] = NA
       
         dat_beta_S_asympS = data.frame(group = group_id,
                                       index = "beta_f_0",
                                       effort = NA,
-                                      value = beta_S_asympS)
-        dat_samples = rbind(dat_samples, dat_beta_S_asympS)
+                                      value = beta_f_0)
+        dat_samples = rbind(dat_samples, dat_beta_f_0)
     }
    
     # Effective number of species based on PIE ----------------------------------
