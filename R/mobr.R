@@ -497,7 +497,6 @@ avg_nn_dist = function(xy_coords) {
 #' @return a two column data.frame containing the number of individuals (inds)
 #'   and the difference in species richness (deltaS)
 #' @author Dan McGlinn and Xiao Xiao
-#' @importFrom pracma pchip
 #' @keywords internal
 deltaS_N = function(comm, ref_dens, inds){
     nplots = nrow(comm)
