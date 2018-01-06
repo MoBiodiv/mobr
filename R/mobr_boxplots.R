@@ -218,7 +218,7 @@ get_F_values = function(div_dat, permute = F) {
         div_dat = div_dat %>%
                   group_by(index, effort) %>%
                   mutate(group = sample(group))
-   
+    
     models = div_dat %>%
              group_by(index, effort) %>%
              do(mod = lm(value ~ group, data = .))
@@ -227,6 +227,7 @@ get_F_values = function(div_dat, permute = F) {
              mutate(F_val = anova(mod)$F[1], mod = NULL) %>%
              ungroup()
    
+    
     models$F_val[!is.finite(models$F_val)] = NA
    
     return(models)
@@ -370,15 +371,20 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' 
 #' \strong{PERMUTATION TESTS AND BOOTSTRAP}
 #' 
-#' We used permutation tests for assessing differences of the biodiversity
+#' For both the alpha and gamma scale analyses we summarize effect size in each
+#' biodiveristy index by computing \code{D_bar}: the average absolute difference
+#' between the groups. At the alpha scale the indices are averaged first before
+#' computing \code{D_bar}.
+#'
+#' We used permutation tests for testing differences of the biodiversity
 #' statistics among the groups (Legendre & Legendre 1998). At the alpha-scale,
 #' one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
-#' labels across samples.
-#' 
-#' At the gamma-scale we aggregate the community matrix by summing across the 
-#' groups. Then we compute the mean difference in a given biodiversity index
-#' between the groups and perform a permutation test by shuffling the treatment
-#' group labels.
+#' labels across samples. The test statistic for this test is the F-statistic
+#' which is a pivotal statistic (Legendre & Legendre 1998). At the gamma-scale
+#' we carried out the permutation test by shuffling the treatment group labels
+#' and using \code{D_bar} as the test statistic. We could not use the
+#' F-statistic as the test statistic at the gamma scale because at this scale
+#' there are no replicates and therefore the F-statistic is undefined.
 #' 
 #' A bootstrap approach can be used to also test differences at the gamma-scale.
 #' When \code{boot_groups = T} instead of the gamma-scale permutation test,
@@ -548,7 +554,7 @@ get_mob_stats = function(mob_in, group_var,
         beta_f_0 = gamma[group_id] / alpha
         beta_f_0[!is.finite(beta_f_0)] = NA
       
-        dat_beta_S_asympS = data.frame(group = group_id,
+        dat_beta_f_0 = data.frame(group = group_id,
                                       index = "beta_f_0",
                                       effort = NA,
                                       value = beta_f_0)
@@ -573,6 +579,14 @@ get_mob_stats = function(mob_in, group_var,
     # Significance tests -------------------------------------------------------
    
     # alpha-scale
+    alpha_avg = dat_samples %>% 
+                group_by(group, index, effort) %>%
+                summarise(alpha_avg = mean(value, na.rm=T)) %>%
+                ungroup()
+    D_bar = alpha_avg %>%
+                group_by(index, effort) %>%
+                summarise(D_bar = mean(dist(alpha_avg), na.rm=T)) %>%
+                ungroup()
     F_obs = get_F_values(dat_samples, permute = F)
     cat('\nComputing null model at alpha-scale\n')
     F_rand = dplyr::bind_rows(pbapply::pbreplicate(n_perm, 
@@ -580,7 +594,7 @@ get_mob_stats = function(mob_in, group_var,
                               simplify = F, cl = cl)) %>%
              ungroup()
     F_obs = F_obs %>% mutate(F_val_obs = F_val, F_val = NULL)
-    F_rand = suppressMessages(left_join(F_rand, F_obs))
+    F_rand = left_join(F_rand, F_obs, by = c("index", "effort"))
 
     samples_tests = F_rand %>% 
                    group_by(index, effort) %>%
@@ -589,7 +603,7 @@ get_mob_stats = function(mob_in, group_var,
                                      (n_perm + 1)) %>%
                               
                    ungroup()
-    
+    samples_tests = left_join(D_bar, samples_tests, by = c("index", "effort"))
    
     # gamma-scale
     if (boot_groups) {
@@ -626,7 +640,7 @@ get_mob_stats = function(mob_in, group_var,
       
         groups_tests = delta_rand %>% 
                        group_by(index, effort) %>%
-                       summarise(delta_avg = first(d_obs),
+                       summarise(D_bar = first(d_obs),
                                  p_val = (sum(delta >= d_obs - EPS) + 1) /
                                          (n_perm + 1)) %>%
                        ungroup()
@@ -673,10 +687,10 @@ get_mob_stats = function(mob_in, group_var,
 samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
                            main = expression(alpha * "-scale"), 
                           cex.axis=1.2, ...) {
-   label = substitute(paste(italic(F), ' = ', Fstat, ', ', italic(p), 
-                            ' = ', pval),
-                      list(Fstat = round(samples_tests$F_stat, 2),
-                           pval = round(samples_tests$p_val, 3)))
+   label = substitute(paste(italic(bar(D)), ' = ', D_bar, ', ', italic(p), 
+                            ' = ', p_val),
+                      list(D_bar = round(samples_tests$D_bar, 2),
+                           p_val = round(samples_tests$p_val, 3)))
    boxplot(value ~ group, data = sample_dat, main = main,
            ylab =  ylab, col = col, cex.axis=cex.axis, cex.main = 1.5,
            frame.plot=F, xaxt='n', ...)
@@ -690,9 +704,9 @@ samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
 groups_panel1 = function(group_dat, tests, col, ylab = "",
                          main = expression(gamma * "-scale"),
                          cex.axis=1.2, ...) {
-    label = substitute(paste(italic(bar(D)), ' = ', delta, ', ', italic(p), 
+    label = substitute(paste(italic(bar(D)), ' = ', D_bar, ', ', italic(p), 
                              ' = ', p_val), 
-                       list(delta = round(tests$delta_avg, 2),
+                       list(D_bar = round(tests$D_bar, 2),
                             p_val = round(tests$p_val, 3)))
     boxplot(value ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, 
