@@ -693,7 +693,7 @@ samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
                            p_val = round(samples_tests$p_val, 3)))
    boxplot(value ~ group, data = sample_dat, main = main,
            ylab =  ylab, col = col, cex.axis=cex.axis, cex.main = 1.5,
-           frame.plot=F, xaxt='n', ...)
+           frame.plot=T, xaxt='n', ...)
    groups = levels(sample_dat$group)
    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
         cex.axis=cex.axis)
@@ -711,7 +711,7 @@ groups_panel1 = function(group_dat, tests, col, ylab = "",
     boxplot(value ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, 
             ylim = c(0, 1.1 * max(group_dat$value, na.rm = T)),
-            col = col, cex.axis=cex.axis, cex.main = 1.5, frame.plot=F,
+            col = col, cex.axis=cex.axis, cex.main = 1.5, frame.plot=T,
             xaxt = 'n', ...)
     groups = levels(group_dat$group)
     axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
