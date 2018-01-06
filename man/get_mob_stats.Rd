@@ -145,15 +145,20 @@ alpha-diversity (i.e., average plot diversity).
 
 \strong{PERMUTATION TESTS AND BOOTSTRAP}
 
-We used permutation tests for assessing differences of the biodiversity
+For both the alpha and gamma scale analyses we summarize effect size in each
+biodiveristy index by computing \code{D_bar}: the average absolute difference
+between the groups. At the alpha scale the indices are averaged first before
+computing \code{D_bar}.
+
+We used permutation tests for testing differences of the biodiversity
 statistics among the groups (Legendre & Legendre 1998). At the alpha-scale,
 one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
-labels across samples.
-
-At the gamma-scale we aggregate the community matrix by summing across the 
-groups. Then we compute the mean difference in a given biodiversity index
-between the groups and perform a permutation test by shuffling the treatment
-group labels.
+labels across samples. The test statistic for this test is the F-statistic
+which is a pivotal statistic (Legendre & Legendre 1998). At the gamma-scale
+we carried out the permutation test by shuffling the treatment group labels
+and using \code{D_bar} as the test statistic. We could not use the
+F-statistic as the test statistic at the gamma scale because at this scale
+there are no replicates and therefore the F-statistic is undefined.
 
 A bootstrap approach can be used to also test differences at the gamma-scale.
 When \code{boot_groups = T} instead of the gamma-scale permutation test,
