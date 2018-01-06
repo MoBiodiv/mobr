@@ -693,10 +693,10 @@ samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
                            p_val = round(samples_tests$p_val, 3)))
    boxplot(value ~ group, data = sample_dat, main = main,
            ylab =  ylab, col = col, cex.axis=cex.axis, cex.main = 1.5,
-           frame.plot=T, xaxt='n', ...)
+           frame.plot=T, ...)
    groups = levels(sample_dat$group)
-   axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
-        cex.axis=cex.axis)
+   #axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
+   #      cex.axis=cex.axis)
    mtext(label, side = 3, line = 0)  
 }
 
@@ -712,10 +712,8 @@ groups_panel1 = function(group_dat, tests, col, ylab = "",
             ylab = ylab, boxwex = 0, 
             ylim = c(0, 1.1 * max(group_dat$value, na.rm = T)),
             col = col, cex.axis=cex.axis, cex.main = 1.5, frame.plot=T,
-            xaxt = 'n', ...)
+            ...)
     groups = levels(group_dat$group)
-    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
-         cex.axis=cex.axis)
     points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2,
            col = col, ...)
     mtext(label, side = 3, line = 0)
@@ -727,11 +725,9 @@ groups_panel2 = function(group_dat, col, ylab = "",
                          cex.axis=1.2, ...) {
     boxplot(median ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)),
-            col = col, cex.axis=cex.axis, cex.main=1.5, frame.plot=F, 
-            xaxt = 'n', ...)
+            col = col, cex.axis=cex.axis, cex.main=1.5, frame.plot=T, 
+            ...)
     groups = levels(group_dat$group)
-    axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
-         cex.axis=cex.axis)
     plotrix::plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
                     ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
                     sfrac = 0.02, col = col, ...)
