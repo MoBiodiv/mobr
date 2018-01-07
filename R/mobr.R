@@ -464,10 +464,10 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
 #' grid = expand.grid(1:10, 1:10)
 #' avg_nn_dist(grid)
 #' par(mfrow=c(1,2)) 
-#' plot(avg_ord_dist(transect), type='o', main='transect',
+#' plot(avg_nn_dist(transect), type='o', main='transect',
 #'      xlab='# of samples', ylab='average distance')
 #' # 2-D grid spatial arrangement
-#' plot(avg_ord_dist(grid), type='o', main='grid',
+#' plot(avg_nn_dist(grid), type='o', main='grid',
 #'      xlab='# of samples', ylab='average distance')
 avg_nn_dist = function(xy_coords) {
     pair_dist = as.matrix(dist(xy_coords))
