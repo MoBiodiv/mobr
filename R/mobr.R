@@ -85,8 +85,8 @@ make_mob_in = function(comm, plot_attr, binary=FALSE, latlong=FALSE) {
 #'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #'  subset(inv_mob_in, group == 'invaded')
 #'  subset(inv_mob_in, 1:4, type='integer')
-#'  subset(inv_mob_in, 1:4, type='integer', droplevels=TRUE)
-#'  sub_log = c(T, F, T, rep(F, nrow(inv_mob_in$comm) - 3))
+#'  subset(inv_mob_in, 1:4, type='integer', drop_levels=TRUE)
+#'  sub_log = c(TRUE, FALSE, TRUE, rep(FALSE, nrow(inv_mob_in$comm) - 3))
 #'  subset(inv_mob_in, sub_log, type='logical')
 subset.mob_in = function(mob_in, subset, type='string', drop_levels=FALSE) {
     if (missing(subset))
@@ -214,7 +214,7 @@ sphere_dist = function(long, lat){
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #'   the random sampling expectation for the individual and sampled based
-#'   rarefaction methods. The spatialy constrained rarefaction curve (Chiarucci
+#'   rarefaction methods. The spatially constrained rarefaction curve (Chiarucci
 #'   et al. 2009) also known as the sample-based accumulation curve (Gotelli and
 #'   Colwell 2001) is computed by sampling each plot in the order of their
 #'   spatial proximity. If plots have the same distance from the focal plot then
@@ -422,9 +422,11 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
 #' @param n_indiv the number of individuals to evaluate the rarefaction curve
 #' at. The default behavior is to evaluate it on a log2 interval from 1 to N 
 #' @examples 
+#' \donttest{ 
 #' data(inv_comm)
 #' sad = colSums(inv_comm)
 #' ind_rare_perm(sad)
+#' }
 #' @keywords internal
 ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
     if (!is.vector(abu)) {
@@ -685,7 +687,7 @@ get_plot_dens = function(comm, density_stat){
 #' Auxiliary function for effect_ functions
 #' Compute an overall p-value for one factor in the discrete case
 #' p-value is based on mean squared difference from zero summed across the scales
-#' Method developed by Loosmore and Ford 2006 but algebraic simpliciations 
+#' Method developed by Loosmore and Ford 2006 but algebraic simplifications 
 #' used as developed by Baddeley et al. 2014 Ecological Archives M084-017-A1
 #' @keywords internal
 get_overall_p = function(effort, deltaS_emp, deltaS_null){
@@ -1292,8 +1294,8 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=F, log='x')
-#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=T, log='x')
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=FALSE, log='x')
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=TRUE, log='x')
 plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FALSE,
                     col=NULL, lwd=3, log='', leg_loc = 'topleft') {
     env_data = mob_in$env[ , env_var]

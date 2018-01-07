@@ -20,8 +20,10 @@ the individual rarefaction curve for the purposes of testing the
 performance of the function \code{rarefaction}
 }
 \examples{
+\donttest{ 
 data(inv_comm)
 sad = colSums(inv_comm)
 ind_rare_perm(sad)
+}
 }
 \keyword{internal}

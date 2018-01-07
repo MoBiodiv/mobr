@@ -13,8 +13,8 @@ calc_chao1(x)
 a vector of species richness estimates
 }
 \description{
-\code{calc_chao1} estimates the number of species at the asympotote 
-(\code{S_asymp}) of the species accumlation curve based on the methods
+\code{calc_chao1} estimates the number of species at the asymptote
+(\code{S_asymp}) of the species accumulation curve based on the methods
 proposed in Chao (1984, 1987, 2005).
 }
 \details{

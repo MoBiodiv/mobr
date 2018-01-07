@@ -36,6 +36,6 @@ Plot distributions of species abundance
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=F, log='x')
-plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=T, log='x')
+plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=FALSE, log='x')
+plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=TRUE, log='x')
 }

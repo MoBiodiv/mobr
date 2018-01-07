@@ -51,7 +51,7 @@ samples under and assumption of random sampling with replacement.
 \details{
 The analytical formulas of Cayuela et al. (2015) are used to compute
   the random sampling expectation for the individual and sampled based
-  rarefaction methods. The spatialy constrained rarefaction curve (Chiarucci
+  rarefaction methods. The spatially constrained rarefaction curve (Chiarucci
   et al. 2009) also known as the sample-based accumulation curve (Gotelli and
   Colwell 2001) is computed by sampling each plot in the order of their
   spatial proximity. If plots have the same distance from the focal plot then

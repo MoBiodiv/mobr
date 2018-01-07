@@ -49,10 +49,10 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
 plot(inv_stats) 
 
-plot(inv_stats, multi_panel = T)
+plot(inv_stats, multi_panel = TRUE)
 # with bootstrap CI for gamma-scale
 inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
-                               boot_groups=T)
+                               boot_groups=TRUE)
 plot(inv_stats_boot)
 }
 \author{

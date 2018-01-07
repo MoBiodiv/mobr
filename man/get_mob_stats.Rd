@@ -119,8 +119,8 @@ is typically highly correlated with S (McGill 2011).
 \strong{f_0: Undetected species richness} is the number of undetected species
 or the number of species observed 0 times which is an indicator of the degree
 of rarity in the community. If there is a greater rarity then f_0 is expected
-to increase. This metric is calculated as S_asymp - S. This metric is less 
-correlated with S than the raw S_asym metric. 
+to increase. This metric is calculated as \code{S_asymp - S}. This metric is less 
+correlated with S than the raw \code{S_asymp} metric. 
 
 \strong{PIE: Probability of intraspecific encounter} represents the probability that two randomly drawn individuals 
 belong to the same species. Here we use the definition of Hurlbert (1971),
@@ -161,7 +161,7 @@ F-statistic as the test statistic at the gamma scale because at this scale
 there are no replicates and therefore the F-statistic is undefined.
 
 A bootstrap approach can be used to also test differences at the gamma-scale.
-When \code{boot_groups = T} instead of the gamma-scale permutation test,
+When \code{boot_groups = TRUE} instead of the gamma-scale permutation test,
 there will be resampling of samples within groups to derive gamma-scale
 confidence intervals for all biodiversity indices. The function output
 includes lower and upper confidence bounds and the median of the bootstrap

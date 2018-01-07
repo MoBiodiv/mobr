@@ -1,7 +1,7 @@
 #' Estimation of species richness
 #' 
-#' \code{calc_chao1} estimates the number of species at the asympotote 
-#' (\code{S_asymp}) of the species accumlation curve based on the methods
+#' \code{calc_chao1} estimates the number of species at the asymptote
+#' (\code{S_asymp}) of the species accumulation curve based on the methods
 #' proposed in Chao (1984, 1987, 2005). 
 #' 
 #' This function is a trimmed version of \href{https://github.com/JohnsonHsieh/iNEXT}{\code{iNext::ChaoRichess}}.
@@ -345,8 +345,8 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' \strong{f_0: Undetected species richness} is the number of undetected species
 #' or the number of species observed 0 times which is an indicator of the degree
 #' of rarity in the community. If there is a greater rarity then f_0 is expected
-#' to increase. This metric is calculated as S_asymp - S. This metric is less 
-#' correlated with S than the raw S_asym metric. 
+#' to increase. This metric is calculated as \code{S_asymp - S}. This metric is less 
+#' correlated with S than the raw \code{S_asymp} metric. 
 #' 
 #' \strong{PIE: Probability of intraspecific encounter} represents the probability that two randomly drawn individuals 
 #' belong to the same species. Here we use the definition of Hurlbert (1971),
@@ -387,7 +387,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' there are no replicates and therefore the F-statistic is undefined.
 #' 
 #' A bootstrap approach can be used to also test differences at the gamma-scale.
-#' When \code{boot_groups = T} instead of the gamma-scale permutation test,
+#' When \code{boot_groups = TRUE} instead of the gamma-scale permutation test,
 #' there will be resampling of samples within groups to derive gamma-scale
 #' confidence intervals for all biodiversity indices. The function output
 #' includes lower and upper confidence bounds and the median of the bootstrap
@@ -589,7 +589,7 @@ get_mob_stats = function(mob_in, group_var,
                 ungroup()
     F_obs = get_F_values(dat_samples, permute = F)
     cat('\nComputing null model at alpha-scale\n')
-    F_rand = dplyr::bind_rows(pbapply::pbreplicate(n_perm, 
+    F_rand = bind_rows(pbapply::pbreplicate(n_perm, 
                                   get_F_values(dat_samples, permute = T),
                               simplify = F, cl = cl)) %>%
              ungroup()
@@ -777,10 +777,10 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
 #' plot(inv_stats) 
 #' 
-#' plot(inv_stats, multi_panel = T)
+#' plot(inv_stats, multi_panel = TRUE)
 #' # with bootstrap CI for gamma-scale
 #' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
-#'                                boot_groups=T)
+#'                                boot_groups=TRUE)
 #' plot(inv_stats_boot)
 plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE, 
                           col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
