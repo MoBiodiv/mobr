@@ -18,6 +18,10 @@
 \item{same_scale}{a boolean if TRUE then the y-axis of the rarefaction and 
 ddelta S plots are scaled identically across the tested effects}
 
+\item{log}{a character string which contains \code{"x"} if the x axis
+    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
+    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
+
 \item{display}{argument specifies what graphics to display can be either
 'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
 
@@ -26,9 +30,6 @@ ddelta S plots are scaled identically across the tested effects}
 \item{par_args}{optional argument that sets graphical parameters to set}
 
 \item{...}{Other plot arguments}
-
-\item{same_scale}{if TRUE then all three plots have the same range on the 
-y-axis.}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial

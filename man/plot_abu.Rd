@@ -13,6 +13,8 @@ plot_abu(mob_in, env_var, ref_group, type = c("sad", "rad"), pooled = FALSE,
 \item{env_var}{a string that specifies the column name in mob_in$env that 
 specifies the grouping variable.}
 
+\item{ref_group}{a string that specifies the name of the reference group}
+
 \item{type}{either 'sad' or 'rad' for species abundance vs rank abundance distribution}
 
 \item{pooled}{boolean specifying if abundances should be pooled at the group level or

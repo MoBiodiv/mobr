@@ -70,13 +70,16 @@ make_mob_in = function(comm, plot_attr, binary=FALSE, latlong=FALSE) {
 }
 
 #' Subset the rows of the mob data input object
-#' 
-#' This function subsets the rows of comm, env, and spat attributes of
-#' the mob_in object
-#' 
+#'
+#' This function subsets the rows of comm, env, and spat attributes of the
+#' mob_in object
+#'
 #' @param mob_in an object of class mob_in created by \code{\link{make_mob_in}}
-#' @param drop_levels boolean if TRUE unused levels are removed from factors
-#'  in mob_in$env
+#' @param type specifies the type of object the argument \code{subset}
+#'   specifies, may be: \code{string}, \code{integer}, or \code{logical},
+#'   defaults to \code{string}
+#' @param drop_levels boolean if TRUE unused levels are removed from factors in
+#'   mob_in$env
 #' @inheritParams base::subset
 #' @export
 #' @examples 
@@ -1287,6 +1290,7 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' @param lwd a vector of line widths, see \code{\link[graphics]{par}}.
 #' @param leg_loc the location of the legend. Defaults to 'topleft', 
 #'  see \code{\link[graphics]{legend}}. If set to NA then no legend is printed.
+#' @inheritParams plot.mob_out
 #' @inheritParams graphics::plot.default
 #' @importFrom scales alpha
 #' @export
@@ -1367,6 +1371,7 @@ plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FAL
 #'  level or not. Defaults to TRUE. This argument only applies when
 #'  the individual based rarefaction is used (i.e., method = 'indiv')
 #' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
+#' @inheritParams plot.mob_out
 #' @inheritParams plot_abu
 #' @inheritParams rarefaction
 #' @importFrom scales alpha
@@ -1451,8 +1456,6 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
 #' @param ref_group a string that specifies the name of the reference group
 #' @param same_scale a boolean if TRUE then the y-axis of the rarefaction and 
 #'  ddelta S plots are scaled identically across the tested effects
-#' @param same_scale if TRUE then all three plots have the same range on the 
-#'  y-axis. 
 #' @param display argument specifies what graphics to display can be either
 #'  'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.
 #' @param lwd a single value for for line width, see \link[graphics]{par}.
@@ -1463,6 +1466,7 @@ plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T,
 #'  aggregation on the difference in species richness
 #'  
 #' @author Xiao Xiao and Dan McGlinn
+#' @inheritParams graphics::plot.default
 #' @export
 #' @examples
 #' data(inv_comm)

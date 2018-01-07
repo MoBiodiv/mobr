@@ -13,12 +13,16 @@
 \item{subset}{logical expression indicating elements or rows to keep:
     missing values are taken as false.}
 
-\item{drop_levels}{boolean if TRUE unused levels are removed from factors
-in mob_in$env}
+\item{type}{specifies the type of object the argument \code{subset}
+specifies, may be: \code{string}, \code{integer}, or \code{logical},
+defaults to \code{string}}
+
+\item{drop_levels}{boolean if TRUE unused levels are removed from factors in
+mob_in$env}
 }
 \description{
-This function subsets the rows of comm, env, and spat attributes of
-the mob_in object
+This function subsets the rows of comm, env, and spat attributes of the
+mob_in object
 }
 \examples{
  data(inv_comm)

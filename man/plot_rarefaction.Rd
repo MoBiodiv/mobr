@@ -13,6 +13,8 @@ plot_rarefaction(mob_in, env_var, ref_group, method, pooled = T, col = NULL,
 \item{env_var}{a string that specifies the column name in mob_in$env that 
 specifies the grouping variable.}
 
+\item{ref_group}{a string that specifies the name of the reference group}
+
 \item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or 
 sample spatially explicit based rarefaction respectively}
 
@@ -22,7 +24,7 @@ the individual based rarefaction is used (i.e., method = 'indiv')}
 
 \item{col}{optional vector of colors.}
 
-\item{lwd}{a vector of line widths, see \code{\link[graphics]{par}}.}
+\item{lwd}{a single value for for line width, see \link[graphics]{par}.}
 
 \item{log}{a character string which contains \code{"x"} if the x axis
     is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
