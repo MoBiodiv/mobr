@@ -26,7 +26,7 @@ the mob_in object
  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
  subset(inv_mob_in, group == 'invaded')
  subset(inv_mob_in, 1:4, type='integer')
- subset(inv_mob_in, 1:4, type='integer', droplevels=TRUE)
- sub_log = c(T, F, T, rep(F, nrow(inv_mob_in$comm) - 3))
+ subset(inv_mob_in, 1:4, type='integer', drop_levels=TRUE)
+ sub_log = c(TRUE, FALSE, TRUE, rep(FALSE, nrow(inv_mob_in$comm) - 3))
  subset(inv_mob_in, sub_log, type='logical')
 }
