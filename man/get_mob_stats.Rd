@@ -146,7 +146,7 @@ alpha-diversity (i.e., average plot diversity).
 \strong{PERMUTATION TESTS AND BOOTSTRAP}
 
 For both the alpha and gamma scale analyses we summarize effect size in each
-biodiveristy index by computing \code{D_bar}: the average absolute difference
+biodiversity index by computing \code{D_bar}: the average absolute difference
 between the groups. At the alpha scale the indices are averaged first before
 computing \code{D_bar}.
 
