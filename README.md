@@ -32,7 +32,7 @@ install_github('MoBiodiv/mobr')
 
 # Examples
 
-The package [vignette](./vignettes/mobr_intro.html) provides a useful walkthrough
+The package [vignette](./vignettes/mobr_intro.pdf) provides a useful walkthrough
 the package tools, but below is some example code that uses the two key analyses
 and related graphics. 
 
