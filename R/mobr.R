@@ -339,8 +339,6 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
     } else if (extrapolate)
         if (!quiet_mode) message('Richness was not extrapolated because effort less than or equal to the number of samples')
     if (method == 'spat') {
-        # drop species with no observations  
-        x = x[ , colSums(x) > 0] 
         explicit_loop = matrix(0, n, n)
         if (is.null(latlong))
             stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
