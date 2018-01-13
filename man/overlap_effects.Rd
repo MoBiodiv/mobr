@@ -6,8 +6,8 @@
 \usage{
 overlap_effects(mob_out, trt_group, display = "raw", prop = FALSE,
   rescale = "max_effort", common_scale = FALSE, xlabel_indiv = TRUE,
-  ylim = NULL, log = "", lty = 1, lwd = 3, col = c("#1AB2FF",
-  "#FFBF80", "#7030A0"))
+  ylim = NULL, log = "", lty = 1, lwd = 3, col = c("#FFB3B5",
+  "#78D3EC", "#C5C0FE"))
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
