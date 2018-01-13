@@ -56,5 +56,5 @@ plot_rarefaction(inv_mob_in, 'group', 'indiv',
 plot_rarefaction(inv_mob_in, 'group', 'samp', log='xy')
 # spatial sample based rarefaction curves 
 plot_rarefaction(inv_mob_in, 'group', 'spat', log='xy',
-                 xy_coords = inv_mob_in$spat)                 
+                 coords = inv_mob_in$spat)                 
 }

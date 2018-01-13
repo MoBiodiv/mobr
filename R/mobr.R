@@ -4,27 +4,37 @@
 #' scales.
 #' 
 #' @param comm community matrix with plots as rows and species columns.
-#' @param plot_attr matrix which includes the environmental attributes and 
-#'   spatial coordinates of the plots. Environmental attributes are mandatory, 
+#' @param plot_attr matrix which includes the environmental attributes and
+#'   spatial coordinates of the plots. Environmental attributes are mandatory,
 #'   while spatial coordinates are not. If spatial coordinates are provided, the
 #'   column(s) has to have names "x" and/or "y".
-#' @param binary whether the plot by species matrix "comm" is in abundances or 
-#'   presence/absence.
-#' @param latlong whether the coordinates are in latitude-longitude. If TRUE, it
-#'   is assumed that column "x" is longitude and column "y" is latitude, both in 
-#'   radians.
-#' @return a "mob_in" object with four attributes. "comm" is the plot by species 
-#'   matrix. "env" is the environmental attribute matrix, without the spatial 
-#'   coordinates. "spat" contains the spatial coordinates (1-D or 2-D). "tests" 
-#'   specifies whether each of the three tests in the biodiversity analyses is 
+#' @param coord_names character vector with the names of the columns of
+#'   \code{plot_attr} that specify the coordinates of the samples. Defaults to
+#'   'x' and 'y'. The order the names are provided matters when working with
+#'   latitude-longitude coordinates (i.e., argument \code{latlong = TRUE}, and
+#'   it is expected that the column specifying the x-coordinate or the longitude
+#'   is provided first, y-coordinate or latitude provided second.
+#' @param binary boolean, defaults to FALSE. Whether the plot by species matrix
+#'   "comm" is in abundances or presence/absence.
+#' @param latlong boolean, defaults to FALSE. Whether the coordinates are
+#'   latitude-longitudes or not. If TRUE, distance calculations by downstream
+#'   functions are based upon great circle distances rather than Euclidean
+#'   distances. Note latitude-longitudes should be in decimal degree.
+#'   
+#' @return a "mob_in" object with four attributes. "comm" is the plot by species
+#'   matrix. "env" is the environmental attribute matrix, without the spatial
+#'   coordinates. "spat" contains the spatial coordinates (1-D or 2-D). "tests"
+#'   specifies whether each of the three tests in the biodiversity analyses is
 #'   allowed by data.
+#'   
 #' @author Dan McGlinn and Xiao Xiao
 #' @export
 #' @examples
 #'  data(inv_comm)
 #'  data(inv_plot_attr)
 #'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-make_mob_in = function(comm, plot_attr, binary=FALSE, latlong=FALSE) {
+make_mob_in = function(comm, plot_attr, coord_names=c('x', 'y'), binary=FALSE,
+                       latlong=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
     out = list()
     out$tests = list(N=T, SAD=T, agg=T)
@@ -36,7 +46,7 @@ make_mob_in = function(comm, plot_attr, binary=FALSE, latlong=FALSE) {
     }
     if (nrow(comm) != nrow(plot_attr))
         stop("Number of plots in community does not equal number of plots in plot attribute table")
-    spat_cols = which(names(plot_attr) %in% c('x', 'y'))
+    spat_cols = sapply(coord_names, function(x) which(x == names(plot_attr)))
     if (length(spat_cols) == 1 & latlong == TRUE)
         stop("Both latitude and longitude have to be specified")
     if (any(row.names(comm) != row.names(plot_attr)))
@@ -170,17 +180,21 @@ summary.mob_out = function(...) {
 #' Internal function for distance matrix assuming inputs are lat and long 
 #'   on a sphere
 #' 
-#' @param long a vector of longitudes
-#' @param lat a vector of latitudes, the same length of long
+#' @param coords a matrix with latitudes and longitudes. The longitudes should
+#' be provided in the first column (they are the x-coordinate) and the latitudes
+#' should be provided in the second column (they are the y-coordinate). 
 #' @description  Distance matrix between points on the unit (r = 1) sphere.
 #' @return a numeric value
 #' @author Xiao Xiao
 #' @keywords internal
-sphere_dist = function(long, lat){
-    delta_long = as.matrix(dist(as.matrix(long)))
-    delta_lat = as.matrix(dist(as.matrix(lat)))
-    hav = sin(delta_lat / 2)^2 + cos(lat) %*% t(cos(lat)) * 
-        sin(delta_long / 2)^2
+sphere_dist = function(coords){
+    long = coords[ , 1]
+    lat = coords[ , 2]
+    # Convert degrees to radians
+    deg2rad = function(deg) return(deg * pi / 180)
+    delta_long = as.matrix(dist(as.matrix(deg2rad(long))))
+    delta_lat = as.matrix(dist(as.matrix(deg2rad(lat))))
+    hav = sin(delta_lat / 2)^2 + cos(lat) %*% t(cos(lat)) * sin(delta_long / 2)^2
     dist = 2 * asin(sqrt(hav))
     return(dist)
 }
@@ -202,8 +216,11 @@ sphere_dist = function(long, lat){
 #'   number of samples depending on 'method' to compute rarefied richness as. If
 #'   not specified all possible values from 1 to the maximum sampling effort are
 #'   used
-#' @param xy_coords the spatial coordinates of the samples only required when 
-#'   using the spatial rarefaction method
+#' @param coords an optional matrix of geographic coordinates of the samples.  
+#'   Only required when using the spatial rarefaction method and this information
+#'   is not already supplied by \code{x}. The first column should specify 
+#'   the x-coordinate (e.g., longitude) and the second coordinate should 
+#'   specify the y-coordinate (e.g., latitude)
 #' @param dens_ratio the ratio of individual density between a reference group
 #'   and the community data (i.e., x) under consideration. This argument is
 #'   used to rescale the rarefaction curve when estimating the effect of
@@ -286,11 +303,11 @@ sphere_dist = function(long, lat){
 #' # sample based rarefaction under random sampling
 #' rarefaction(inv_comm, method='samp')
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
-#' rarefaction(inv_comm, method='spat', xy_coords=inv_plot_attr[ , c('x','y')],
+#' rarefaction(inv_comm, method='spat', coords=inv_plot_attr[ , c('x','y')],
 #'             latlong=FALSE)
 #' # the syntax is simplier if suppling a mob_in object
 #' rarefaction(inv_mob_in, method='spat')
-rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL, 
+rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
                        dens_ratio=1, extrapolate=FALSE, quiet_mode=FALSE) {
     if (!any(method %in% c('indiv', 'samp', 'spat')))
         stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
@@ -302,8 +319,8 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
         else if(latlong != x_mob_in$latlong)
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
-        if (is.null(xy_coords))
-            xy_coords = x_mob_in$spat
+        if (is.null(coords))
+            coords = x_mob_in$spat
     }
     if (method == 'samp' | method == 'spat') {
         if (is.null(dim(x)))
@@ -347,9 +364,9 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
         if (latlong){
             # Compute distance on sphere if xy are longitudes and latitudes
             # Assume x is longitude and y is latitude
-            pair_dist = sphere_dist(xy_coords$x, xy_coords$y)
+            pair_dist = sphere_dist(coords)
         } else {
-            pair_dist = as.matrix(dist(xy_coords))
+            pair_dist = as.matrix(dist(coords))
         }
         for (i in 1:n) {
             dist_to_site = pair_dist[i, ]
@@ -458,7 +475,7 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
 #' of sampling is used  by the function \code{rarefaction}
 #' when building the spatial accumulation curves
 #' 
-#' @param xy_coords a matrix with n-dimensional coordinates
+#' @param coords a matrix with n-dimensional coordinates
 #' @return a vector of average distances for each sequential number
 #'   of accumulated nearest samples. 
 #' @export
@@ -474,8 +491,8 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
 #' # 2-D grid spatial arrangement
 #' plot(avg_nn_dist(grid), type='o', main='grid',
 #'      xlab='# of samples', ylab='average distance')
-avg_nn_dist = function(xy_coords) {
-    pair_dist = as.matrix(dist(xy_coords))
+avg_nn_dist = function(coords) {
+    pair_dist = as.matrix(dist(coords))
     sort_dist = apply(pair_dist, 1, sort)
     avg_dist = apply(sort_dist, 1, mean)
     return(avg_dist)
@@ -722,8 +739,8 @@ get_sample_curves = function(mob_in, group_levels, group_data, approved_tests){
             sample_rare_level = data.frame(cbind(rep(level, length(impl_S)), 
                                                  seq(length(impl_S)), impl_S))
             if ('agg' %in% approved_tests){
-                xy_level = mob_in$spat[as.character(group_data) == level, ]
-                expl_S = rarefaction(comm_level, 'spat', xy_coords = xy_level, 
+                coords_level = mob_in$spat[as.character(group_data) == level, ]
+                expl_S = rarefaction(comm_level, 'spat', coords = coords_level, 
                                      latlong = mob_in$latlong)
                 sample_rare_level = cbind(sample_rare_level, expl_S)
             }
@@ -1389,7 +1406,7 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #' plot_rarefaction(inv_mob_in, 'group', 'samp', log='xy')
 #' # spatial sample based rarefaction curves 
 #' plot_rarefaction(inv_mob_in, 'group', 'spat', log='xy',
-#'                  xy_coords = inv_mob_in$spat)                 
+#'                  coords = inv_mob_in$spat)                 
 plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T, 
                             col=NULL, lwd=3, log='', leg_loc = 'topleft',
                             ...) {

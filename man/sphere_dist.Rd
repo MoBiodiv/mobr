@@ -5,12 +5,12 @@
 \title{Internal function for distance matrix assuming inputs are lat and long 
   on a sphere}
 \usage{
-sphere_dist(long, lat)
+sphere_dist(coords)
 }
 \arguments{
-\item{long}{a vector of longitudes}
-
-\item{lat}{a vector of latitudes, the same length of long}
+\item{coords}{a matrix with latitudes and longitudes. The longitudes should
+be provided in the first column (they are the x-coordinate) and the latitudes
+should be provided in the second column (they are the y-coordinate).}
 }
 \value{
 a numeric value

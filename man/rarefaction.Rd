@@ -4,7 +4,7 @@
 \alias{rarefaction}
 \title{Rarefied Species Richness}
 \usage{
-rarefaction(x, method, effort = NULL, xy_coords = NULL, latlong = NULL,
+rarefaction(x, method, effort = NULL, coords = NULL, latlong = NULL,
   dens_ratio = 1, extrapolate = FALSE, quiet_mode = FALSE)
 }
 \arguments{
@@ -22,12 +22,16 @@ number of samples depending on 'method' to compute rarefied richness as. If
 not specified all possible values from 1 to the maximum sampling effort are
 used}
 
-\item{xy_coords}{the spatial coordinates of the samples only required when 
-using the spatial rarefaction method}
+\item{coords}{an optional matrix of geographic coordinates of the samples.
+Only required when using the spatial rarefaction method and this information
+is not already supplied by \code{x}. The first column should specify 
+the x-coordinate (e.g., longitude) and the second coordinate should 
+specify the y-coordinate (e.g., latitude)}
 
-\item{latlong}{whether the coordinates are in latitude-longitude. If TRUE, it
-is assumed that column "x" is longitude and column "y" is latitude, both in 
-radians.}
+\item{latlong}{boolean, defaults to FALSE. Whether the coordinates are
+latitude-longitudes or not. If TRUE, distance calculations by downstream
+functions are based upon great circle distances rather than Euclidean
+distances. Note latitude-longitudes should be in decimal degree.}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
 and the community data (i.e., x) under consideration. This argument is
@@ -96,7 +100,7 @@ rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=1.5)
 # sample based rarefaction under random sampling
 rarefaction(inv_comm, method='samp')
 # sampled based rarefaction under spatially explicit nearest neighbor sampling
-rarefaction(inv_comm, method='spat', xy_coords=inv_plot_attr[ , c('x','y')],
+rarefaction(inv_comm, method='spat', coords=inv_plot_attr[ , c('x','y')],
             latlong=FALSE)
 # the syntax is simplier if suppling a mob_in object
 rarefaction(inv_mob_in, method='spat')

@@ -4,10 +4,10 @@
 \alias{avg_nn_dist}
 \title{Compute average nearest neighbor distance}
 \usage{
-avg_nn_dist(xy_coords)
+avg_nn_dist(coords)
 }
 \arguments{
-\item{xy_coords}{a matrix with n-dimensional coordinates}
+\item{coords}{a matrix with n-dimensional coordinates}
 }
 \value{
 a vector of average distances for each sequential number

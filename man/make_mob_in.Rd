@@ -4,28 +4,37 @@
 \alias{make_mob_in}
 \title{Create the 'mob_in' object.}
 \usage{
-make_mob_in(comm, plot_attr, binary = FALSE, latlong = FALSE)
+make_mob_in(comm, plot_attr, coord_names = c("x", "y"), binary = FALSE,
+  latlong = FALSE)
 }
 \arguments{
 \item{comm}{community matrix with plots as rows and species columns.}
 
-\item{plot_attr}{matrix which includes the environmental attributes and 
-spatial coordinates of the plots. Environmental attributes are mandatory, 
+\item{plot_attr}{matrix which includes the environmental attributes and
+spatial coordinates of the plots. Environmental attributes are mandatory,
 while spatial coordinates are not. If spatial coordinates are provided, the
 column(s) has to have names "x" and/or "y".}
 
-\item{binary}{whether the plot by species matrix "comm" is in abundances or 
-presence/absence.}
+\item{coord_names}{character vector with the names of the columns of
+\code{plot_attr} that specify the coordinates of the samples. Defaults to
+'x' and 'y'. The order the names are provided matters when working with
+latitude-longitude coordinates (i.e., argument \code{latlong = TRUE}, and
+it is expected that the column specifying the x-coordinate or the longitude
+is provided first, y-coordinate or latitude provided second.}
 
-\item{latlong}{whether the coordinates are in latitude-longitude. If TRUE, it
-is assumed that column "x" is longitude and column "y" is latitude, both in 
-radians.}
+\item{binary}{boolean, defaults to FALSE. Whether the plot by species matrix
+"comm" is in abundances or presence/absence.}
+
+\item{latlong}{boolean, defaults to FALSE. Whether the coordinates are
+latitude-longitudes or not. If TRUE, distance calculations by downstream
+functions are based upon great circle distances rather than Euclidean
+distances. Note latitude-longitudes should be in decimal degree.}
 }
 \value{
-a "mob_in" object with four attributes. "comm" is the plot by species 
-  matrix. "env" is the environmental attribute matrix, without the spatial 
-  coordinates. "spat" contains the spatial coordinates (1-D or 2-D). "tests" 
-  specifies whether each of the three tests in the biodiversity analyses is 
+a "mob_in" object with four attributes. "comm" is the plot by species
+  matrix. "env" is the environmental attribute matrix, without the spatial
+  coordinates. "spat" contains the spatial coordinates (1-D or 2-D). "tests"
+  specifies whether each of the three tests in the biodiversity analyses is
   allowed by data.
 }
 \description{
