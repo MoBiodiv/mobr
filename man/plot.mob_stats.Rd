@@ -29,8 +29,8 @@ preferred}
 \item{cex.axis}{The magnification to be used for axis annotation relative to
 the current setting of cex. Defaults to 1.2.}
 
-\item{...}{additional arguments to provide to boxplot, points, and confidence
-interval functions}
+\item{...}{additional arguments to provide to \code{boxplot}, \code{points},
+and confidence interval functions}
 }
 \description{
 Plots a \code{mob_stats} object which is produced by the 

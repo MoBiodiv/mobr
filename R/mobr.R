@@ -104,8 +104,8 @@ subset.mob_in = function(mob_in, subset, type='string', drop_levels=FALSE) {
         if (!is.logical(r)) 
             stop("'subset' must be logical when type = 'string'")
    } 
-   mob_in$comm = mob_in$comm[r, ]
-   mob_in$env = mob_in$env[r, ]
+   mob_in$comm = base::subset(mob_in$comm, r)
+   mob_in$env = base::subset(mob_in$env, r)
    if (drop_levels)
        mob_in$env = droplevels(mob_in$env)
    if (!is.null(mob_in$spat))
@@ -194,8 +194,10 @@ sphere_dist = function(long, lat){
 #' @param x can either be a: 1) mob_in object, 2) community matrix-like
 #'  object in which rows represent plots and columns represent species, or 3)
 #'  a vector which contains the abundance of each species. 
-#' @param method either 'indiv', 'samp', or 'spat' for individual, sample, or 
-#'   sample spatially explicit based rarefaction respectively
+#' @param method either 'indiv', 'samp', or 'spat' for individual, sample, or
+#'   sample spatially explicit based rarefaction respectively. To compute the
+#'   sample-based, non-spatial rarefaction curve specify 'indiv' method with the
+#'   appropriate \code{dens_ratio} (see Details).
 #' @param effort optional argument to specify what number of individuals or 
 #'   number of samples depending on 'method' to compute rarefied richness as. If
 #'   not specified all possible values from 1 to the maximum sampling effort are
@@ -339,8 +341,6 @@ rarefaction = function(x, method, effort=NULL, xy_coords=NULL, latlong=NULL,
     } else if (extrapolate)
         if (!quiet_mode) message('Richness was not extrapolated because effort less than or equal to the number of samples')
     if (method == 'spat') {
-        # drop species with no observations  
-        x = x[ , colSums(x) > 0] 
         explicit_loop = matrix(0, n, n)
         if (is.null(latlong))
             stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
@@ -1279,17 +1279,18 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 }
 
 #' Plot distributions of species abundance
-#' 
+#'
 #' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
-#' @param env_var a string that specifies the column name in mob_in$env that 
-#'   specifies the grouping variable. 
-#' @param type either 'sad' or 'rad' for species abundance vs rank abundance distribution
-#' @param pooled boolean specifying if abundances should be pooled at the group level or
-#'   not
+#' @param env_var a string that specifies the column name in mob_in$env that
+#'   specifies the grouping variable.
+#' @param type either 'sad' or 'rad' for species abundance vs rank abundance
+#'   distribution
+#' @param pooled boolean specifying if abundances should be pooled at the group
+#'   level or not
 #' @param col optional vector of colors.
 #' @param lwd a vector of line widths, see \code{\link[graphics]{par}}.
-#' @param leg_loc the location of the legend. Defaults to 'topleft', 
-#'  see \code{\link[graphics]{legend}}. If set to NA then no legend is printed.
+#' @param leg_loc the location of the legend. Defaults to 'topleft', see
+#'   \code{\link[graphics]{legend}}. If set to NA then no legend is printed.
 #' @inheritParams plot.mob_out
 #' @inheritParams graphics::plot.default
 #' @importFrom scales alpha
@@ -1298,13 +1299,12 @@ pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'sad', pooled=FALSE, log='x')
-#' plot_abu(inv_mob_in, 'group', 'uninvaded', 'rad', pooled=TRUE, log='x')
-plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FALSE,
-                    col=NULL, lwd=3, log='', leg_loc = 'topleft') {
+#' plot_abu(inv_mob_in, 'group', type='sad', pooled=FALSE, log='x')
+#' plot_abu(inv_mob_in, 'group', type='rad', pooled=TRUE, log='x')
+plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
+                    pooled=FALSE, col=NULL, lwd=3, log='', leg_loc = 'topleft') {
     env_data = mob_in$env[ , env_var]
-    grps = unique(as.character(env_data))
-    grps = c(ref_group, sort(grps[grps != ref_group]))
+    grps = sort(unique(as.character(env_data)))
     if (is.null(col)) 
         col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
                 "#E2C288", "#F7B0E6", "#AAD28C")    
@@ -1381,24 +1381,22 @@ plot_abu = function(mob_in, env_var, ref_group, type=c('sad', 'rad'), pooled=FAL
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' # random individual based rarefaction curves
-#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+#' plot_rarefaction(inv_mob_in, 'group', 'indiv',
 #'                  pooled=TRUE, leg_loc='bottomright')
-#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+#' plot_rarefaction(inv_mob_in, 'group', 'indiv',
 #'                  pooled=FALSE, log='x')
 #' # random sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'samp',
-#'                  log='xy')
+#' plot_rarefaction(inv_mob_in, 'group', 'samp', log='xy')
 #' # spatial sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat',
-#'                  log='xy', xy_coords = inv_mob_in$spat)                 
-plot_rarefaction = function(mob_in, env_var, ref_group, method, pooled=T, 
+#' plot_rarefaction(inv_mob_in, 'group', 'spat', log='xy',
+#'                  xy_coords = inv_mob_in$spat)                 
+plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T, 
                             col=NULL, lwd=3, log='', leg_loc = 'topleft',
                             ...) {
     if (pooled == FALSE & method != 'indiv')
         stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="indiv")')
     env_data = mob_in$env[ , env_var]
-    grps = unique(as.character(env_data))
-    grps = c(ref_group, sort(grps[grps != ref_group]))
+    grps = sort(unique(as.character(env_data)))
     if (is.null(col)) 
         col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
                 "#E2C288", "#F7B0E6", "#AAD28C")    
@@ -1733,7 +1731,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
 overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
                            rescale='max_effort', common_scale=FALSE, 
                            xlabel_indiv=TRUE, ylim=NULL, log='', lty=1, lwd=3,
-                           col=c("#1AB2FF", "#FFBF80", "#7030A0")) {
+                           col=c("#FFB3B5", "#78D3EC", "#C5C0FE")) {
     if (prop & display != 'stacked')
         stop("Proptional differences can only be used when considering stacked area graphs (i.e., display = 'stacked')")
     if (length(lty) == 1) 

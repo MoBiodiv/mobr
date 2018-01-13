@@ -26,10 +26,7 @@ pdf('./figs/inv_delta_stats.pdf')
 plot(inv_mob_out, 'invaded', 'uninvaded')
 dev.off()
 
-col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
-        "#E2C288", "#F7B0E6", "#AAD28C")
 pdf('./figs/inv_mob_stacked.pdf')
-overlap_effects(inv_mob_out, 'invaded', col = col[c(1,2,4)])
-overlap_effects(inv_mob_out, 'invaded', 'stacked', prop=T,
-                col = col[c(1,2,4)])
+overlap_effects(inv_mob_out, 'invaded')
+overlap_effects(inv_mob_out, 'invaded', 'stacked', prop=T)
 dev.off()

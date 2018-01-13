@@ -4,19 +4,24 @@
 \alias{plot_rarefaction}
 \title{Plot rarefaction curves for each treatment group}
 \usage{
-plot_rarefaction(mob_in, env_var, ref_group, method, pooled = T, col = NULL,
-  lwd = 3, log = "", leg_loc = "topleft", ...)
+plot_rarefaction(mob_in, env_var, method, dens_ratio = 1, pooled = T,
+  col = NULL, lwd = 3, log = "", leg_loc = "topleft", ...)
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
 
-\item{env_var}{a string that specifies the column name in mob_in$env that 
+\item{env_var}{a string that specifies the column name in mob_in$env that
 specifies the grouping variable.}
 
-\item{ref_group}{a string that specifies the name of the reference group}
+\item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or
+sample spatially explicit based rarefaction respectively. To compute the
+sample-based, non-spatial rarefaction curve specify 'indiv' method with the
+appropriate \code{dens_ratio} (see Details).}
 
-\item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or 
-sample spatially explicit based rarefaction respectively}
+\item{dens_ratio}{the ratio of individual density between a reference group
+and the community data (i.e., x) under consideration. This argument is
+used to rescale the rarefaction curve when estimating the effect of
+individual density on group differences in richness.}
 
 \item{pooled}{boolean specifying if samples should be pooled at the group
 level or not. Defaults to TRUE. This argument only applies when
@@ -30,8 +35,8 @@ the individual based rarefaction is used (i.e., method = 'indiv')}
     is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
     and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
 
-\item{leg_loc}{the location of the legend. Defaults to 'topleft', 
-see \code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
+\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
+\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
 
 \item{...}{other arguments to provide to \code{\link[mobr]{rarefaction}}}
 }
@@ -43,14 +48,13 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 # random individual based rarefaction curves
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+plot_rarefaction(inv_mob_in, 'group', 'indiv',
                  pooled=TRUE, leg_loc='bottomright')
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv',
+plot_rarefaction(inv_mob_in, 'group', 'indiv',
                  pooled=FALSE, log='x')
 # random sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'samp',
-                 log='xy')
+plot_rarefaction(inv_mob_in, 'group', 'samp', log='xy')
 # spatial sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat',
-                 log='xy', xy_coords = inv_mob_in$spat)                 
+plot_rarefaction(inv_mob_in, 'group', 'spat', log='xy',
+                 xy_coords = inv_mob_in$spat)                 
 }

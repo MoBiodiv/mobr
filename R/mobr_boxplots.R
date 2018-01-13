@@ -762,8 +762,8 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' @param cex.axis The magnification to be used for axis annotation relative to
 #' the current setting of cex. Defaults to 1.2. 
 #' 
-#' @param ... additional arguments to provide to boxplot, points, and confidence
-#' interval functions
+#' @param ... additional arguments to provide to \code{boxplot}, \code{points},
+#'   and confidence interval functions
 #' 
 #' @author Felix May, Xiao Xiao, and Dan McGlinn 
 #' 
