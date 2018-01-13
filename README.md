@@ -31,14 +31,21 @@ install_github('MoBiodiv/mobr')
 ```
 
 # Examples
+
+The package [vignette](./vignettes/mobr_intro.html) provides a useful walkthrough
+the package tools, but below is some example code that uses the two key analyses
+and related graphics. 
+
 ```r
 library(mobr)
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                              type='discrete', log_scale=TRUE, n_perm=100)
-plot(inv_mob_out, 'invaded', 'uninvaded')
+inv_stats = get_mob_stats(inv_mob_in, 'group')
+plot(inv_stats)
+inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+                              type='discrete', log_scale=TRUE)
+plot(inv_deltaS, 'invaded', 'uninvaded')
 ```
 
 

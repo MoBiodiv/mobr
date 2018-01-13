@@ -12,8 +12,10 @@ rarefaction(x, method, effort = NULL, xy_coords = NULL, latlong = NULL,
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or 
-sample spatially explicit based rarefaction respectively}
+\item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or
+sample spatially explicit based rarefaction respectively. To compute the
+sample-based, non-spatial rarefaction curve specify 'indiv' method with the
+appropriate \code{dens_ratio} (see Details).}
 
 \item{effort}{optional argument to specify what number of individuals or 
 number of samples depending on 'method' to compute rarefied richness as. If

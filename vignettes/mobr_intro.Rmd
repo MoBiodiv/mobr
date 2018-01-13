@@ -2,8 +2,8 @@
 title: "Analysis of scale-dependent biodiversity changes with mobr"
 author: "Felix May and Dan McGlinn"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
+output: 
+vignette: rmarkdown::html_vignette
   %\VignetteIndexEntry{Analysis of scale-dependent biodiversity changes with mobr}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
@@ -79,7 +79,7 @@ First let's look at the spatial rarefaction curve in which samples are
 added depending on their spatial proximity. 
 
 ```{r, fig.width = 5, fig.height = 5}
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'spat', lwd=4)
+plot_rarefaction(inv_mob_in, 'group', 'spat', lwd=4)
 ```
 
 We can see that invasion decreases richness and that the magnitude of the effect
@@ -91,9 +91,9 @@ only reflect the shape of the SAD (i.e., no individual density or aggregation ef
 
 ```{r, fig.width = 7, fig.height=4}
 par(mfrow=c(1,2))
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv', pooled=F, lwd=2,
+plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=F, lwd=2,
                  leg_loc='topright')
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'indiv', pooled=T, lwd=4,
+plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=T, lwd=4,
                  leg_loc=NA)
 ```
 
@@ -105,8 +105,8 @@ We can directly examine the species abundance distribution (SAD):
 
 ```{r, fig.width = 7, fig.height=4}
 par(mfrow=c(1,2))
-plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', pooled=F, log='x')
-plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', pooled=T, log='x')
+plot_abu(inv_mob_in, 'group', type='rad', pooled=F, log='x')
+plot_abu(inv_mob_in, 'group', type='rad', pooled=T, log='x')
 ```
 
 The SADs suggest that there are differences in the SADs where the invaded
@@ -226,7 +226,7 @@ at least 200 are recommended for actual applications.
 
 ```{r, eval=FALSE}
 inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                             type='discrete', log_scale=TRUE, n_perm = 20)
+                             type='discrete', log_scale=TRUE, n_perm = 199)
 ```
 
 ```{r, echo=FALSE}
