@@ -734,8 +734,12 @@ get_sample_curves = function(mob_in, group_levels, group_data, approved_tests){
             comm_level = mob_in$comm[as.character(group_data) == level, ]
             nplots = nrow(comm_level)
             level_dens = sum(comm_level) / nplots
-            samp_effort = round((1:nplots) * level_dens)
-            impl_S = rarefaction(comm_level, 'indiv', samp_effort)
+            samp_effort = 1:nplots * level_dens
+            # here we harness the gamma formulation so that non-integer
+            # effort can be used this is done by specifying dens_ratio is 
+            # barely larger than 1
+            impl_S = rarefaction(comm_level, 'indiv', samp_effort, 
+                                 dens_ratio = 1 + 1e-14)
             sample_rare_level = data.frame(cbind(rep(level, length(impl_S)), 
                                                  seq(length(impl_S)), impl_S))
             if ('agg' %in% approved_tests){
