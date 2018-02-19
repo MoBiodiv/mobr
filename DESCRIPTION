@@ -14,7 +14,8 @@ Depends:
     pracma,
     scales,
     dplyr,
-    pbapply
+    pbapply,
+    shiny
 Imports:
     plotrix
 Suggests:
