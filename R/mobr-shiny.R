@@ -1,3 +1,5 @@
+library(shiny)
+library(mobr)
 
 # Module UI function
 csvFileInput <- function(id, label = "CSV file") {
@@ -5,13 +7,7 @@ csvFileInput <- function(id, label = "CSV file") {
   ns <- NS(id)
 
   tagList(
-    fileInput(ns("file"), label),
-    checkboxInput(ns("heading"), "Has heading"),
-    selectInput(ns("quote"), "Quote", c(
-      "None" = "",
-      "Double quote" = "\"",
-      "Single quote" = "'"
-    ))
+    fileInput(ns("file"), label)
   )
 }
 
@@ -27,8 +23,7 @@ csvFile <- function(input, output, session, stringsAsFactors = TRUE) {
   # The user's data, parsed into a data frame
   dataframe <- reactive({
     read.csv(userFile()$datapath,
-      header = input$heading,
-      quote = input$quote,
+      header = TRUE,
       stringsAsFactors = stringsAsFactors)
   })
 
@@ -46,7 +41,7 @@ csvFile <- function(input, output, session, stringsAsFactors = TRUE) {
 ui <- fluidPage(
 
     # App title ----
-    titlePanel("Uploading Files"),
+    titlePanel("MoB-R"),
 
     # Sidebar layout with input and output definitions ----
     sidebarLayout(
@@ -61,19 +56,15 @@ ui <- fluidPage(
             tags$hr(),
 
             # Input: Select a file ----
-            csvFileInput("plot_attr", "Upload plot attribute data (.csv format)")
+            csvFileInput("plot_attr", "Upload plot attribute data (.csv format)"),
+            
+            selectInput("graphType", "Select Graph Type",
+                        c("Spacial Rarefaction", "Individual Rarefaction - Unpooled", "Individual Rarefaction - Pooled", "Unpooled Abundance", "Pooled Abundance", "All MoB Metrics", "MoB Metrics - S", "MoB Metrics - N", "MoB Metrics - S_n", "MoB Metrics - S_PIE", "MoB Delta Stats"))
         ),
+        
         # Main panel for displaying outputs ----
-        mainPanel(
-            tabsetPanel(type = "tabs",
-                        tabPanel("Data",
-                                 htmlOutput("mob_in")),
-                        tabPanel("MoB Metrics", 
-                                 plotOutput("mob_stats")),
-                        tabPanel("MoB Delta Stats",
-                                plotOutput("delta_stats"))
-            )
-        )
+        mainPanel(plotOutput('plot',height="700px"))
+        
     )
 )
 
@@ -85,21 +76,53 @@ server <- function(input, output) {
     plot_attr <- callModule(csvFile, "plot_attr")
     
     mob_in <- reactive(make_mob_in(comm(), plot_attr()))
-        
+         
     output$mob_in <- renderPrint(mob_in())
             
-    output$mob_stats <- renderPlot({
-        mob_stats <- get_mob_stats(mob_in(), 'group')
-        plot(mob_stats)
-    })
-    
-    output$delta_stats <- renderPlot({
+    output$plot <- renderPlot({
+      if(input$graphType == "Spacial Rarefaction"){
+        plot_rarefaction(mob_in(), 'group', 'spat', lwd = 4, leg_loc = 'topright')
+      }
+      else if(input$graphType == "Individual Rarefaction - Unpooled"){
+        plot_rarefaction(mob_in(), 'group', 'indiv', pooled = F, lwd = 2)
+      }
+      else if(input$graphType == "Individual Rarefaction - Pooled"){
+        plot_rarefaction(mob_in(), 'group', 'indiv', pooled = T, lwd = 2)
+      }
+      else if(input$graphType == "Unpooled Abundance"){
+        plot_abu(mob_in(), 'group', type = 'rad', pooled = F, log='x')
+      }
+      else if(input$graphType == "Pooled Abundance"){
+        plot_abu(mob_in(), 'group', type = 'rad', pooled = T, log='x')
+      }
+      else if(input$graphType == "MoB Delta Stats"){
         delta_stats <- get_delta_stats(mob_in(), 'group',
                                        ref_group = 'uninvaded',
                                        type='discrete', log_scale=TRUE,
                                        n_perm=20)
         plot(delta_stats, 'invaded', 'uninvaded')
-    })
+      }
+      else if(input$graphType == "MoB Metrics - S"){
+        mob_stats <- get_mob_stats(mob_in(), 'group')
+        plot(mob_stats, 'S')
+      }
+      else if(input$graphType == "MoB Metrics - N"){
+        mob_stats <- get_mob_stats(mob_in(), 'group')
+        plot(mob_stats, 'N')
+      }
+      else if(input$graphType == "MoB Metrics - S_n"){
+        mob_stats <- get_mob_stats(mob_in(), 'group')
+        plot(mob_stats, 'S_n')
+      }
+      else if(input$graphType == "MoB Metrics - S_PIE"){
+        mob_stats <- get_mob_stats(mob_in(), 'group')
+        plot(mob_stats, 'S_PIE')
+      }
+      else if(input$graphType == "All MoB Metrics"){
+        mob_stats <- get_mob_stats(mob_in(), 'group')
+        plot(mob_stats, multi_panel = TRUE)
+      }
+})
 }
 
 
