@@ -57,12 +57,22 @@ ui <- fluidPage(
             
             selectInput("graphType", "Select Graph Type",
                         c("Spacial Rarefaction", "Individual Rarefaction - Unpooled", "Individual Rarefaction - Pooled", "Unpooled Abundance", "Pooled Abundance", "All MoB Metrics", "MoB Metrics - S", "MoB Metrics - N", "MoB Metrics - S_n", "MoB Metrics - S_PIE", "MoB Delta Stats"))
+            
+            #textInput("filename", "Enter filename:"),
+            
+            #downloadLink("downloadData", "Download Graph"),
+        
+            #actionButton("do", "Submit")
         ),
         
         # Main panel for displaying outputs ----
-        mainPanel(plotOutput('plot',height="700px"))
-        
+        mainPanel(
+          tabsetPanel(
+            tabPanel("Plot", plotOutput('plot')),
+            tabPanel("Stats", verbatimTextOutput('stats'))
+          )
     )
+  )
 )
 
 # define the server for the mobr application
@@ -120,6 +130,73 @@ server <- function(input, output) {
         plot(mob_stats, multi_panel = TRUE)
       }
 })
+    
+    output$stats = renderPrint({
+      if(input$graphType == "MoB Delta Stats"){
+        invisible(capture.output(stats = get_delta_stats(mob_in(), 'group',
+                                                         ref_group = 'uninvaded',
+                                                         type='discrete', log_scale=TRUE,
+                                                         n_perm=20)))
+        #Large outputs - showing null
+        
+        list("Indiv_rare", stats$indiv_rare,
+        "Sample_rare", stats$sample_rare,
+        "SAD", stats$SAD,
+        "N", stats$N,
+        "Agg", stats$agg)
+      }
+      else if(input$graphType == "MoB Metrics - S" 
+              || input$graphType == "MoB Metrics - N"
+              || input$graphType == "MoB Metrics - S_n"
+              || input$graphType == "MoB Metrics - S_PIE"
+              || input$graphType == "All MoB Metrics"){
+        invisible(capture.output(stats = get_mob_stats(mob_in(), 'group')))
+        list("Group Stats", stats$groups_stats,
+             "Samples Tests", stats$samples_tests,
+             "Group Tests", stats$groups_tests)
+      }
+      
+      else(
+        "There are no associated stats for this model"
+      )
+      
+      # else if(input$graphType == "MoB Metrics - N"){
+      #   stats = get_mob_stats(mob_in(), 'group')
+      #   stats$groups_stats
+      #   stats$samples_tests
+      #   stats$groups_tests
+      # }
+      # else if(input$graphType == "MoB Metrics - S_n"){
+      #   stats = get_mob_stats(mob_in(), 'group')
+      #   stats$groups_stats
+      #   stats$samples_tests
+      #   stats$groups_tests
+      # }
+      # else if(input$graphType == "MoB Metrics - S_PIE"){
+      #   stats = get_mob_stats(mob_in(), 'group')
+      #   stats$groups_stats
+      #   stats$samples_tests
+      #   stats$groups_tests
+      # }
+      # else if(input$graphType == "All MoB Metrics"){
+      #   stats = get_mob_stats(mob_in(), 'group')
+      #   stats$groups_stats
+      #   stats$samples_tests
+      #   stats$groups_tests
+      # }
+      
+    })
+    
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste(input$filename, '.png', sep='')
+      },
+      content=function(file){
+        png(file)
+        print(plot_rarefaction(mob_in(), 'group', 'spat', lwd = 4, leg_loc = 'topright'))
+        dev.off()
+      },
+      contentType='image/png')
 }
 
 
