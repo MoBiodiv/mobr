@@ -5,8 +5,8 @@
 \title{Plot mob curves}
 \usage{
 \method{plot}{mob_out}(mob_out, trt_group, ref_group, same_scale = FALSE,
-  log = NULL, display = c("rarefaction", "delta S", "ddelta S"), lwd = 3,
-  par_args = NULL, ...)
+  log = "", display = c("rarefaction", "delta S", "ddelta S"), lwd = 3,
+  leg_loc = "topleft", par_args = NULL, ...)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -22,10 +22,14 @@ ddelta S plots are scaled identically across the tested effects}
     is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
     and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
 
-\item{display}{argument specifies what graphics to display can be either
+\item{display}{a string that specifies what graphics to display can be either
 'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
 
-\item{lwd}{a single value for for line width, see \link[graphics]{par}.}
+\item{lwd}{the line width, a single positive number, defaults to \code{3},
+see \code{\link[graphics]{par}} for more information.}
+
+\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
+\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
 
 \item{par_args}{optional argument that sets graphical parameters to set}
 
