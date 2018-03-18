@@ -6,8 +6,8 @@
 \usage{
 overlap_effects(mob_out, trt_group, display = "raw", prop = FALSE,
   rescale = "max_effort", common_scale = FALSE, xlabel_indiv = TRUE,
-  ylim = NULL, log = "", lty = 1, lwd = 3, col = c("#FFB3B5",
-  "#78D3EC", "#C5C0FE"))
+  ylim = NULL, log = "", lty = 1, lwd = 3, leg_loc = "topleft",
+  col = c("#FFB3B5", "#78D3EC", "#C5C0FE"))
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -42,7 +42,11 @@ labeled with numbers of individuals}
 
 \item{lty}{a vector of line types, see \link[graphics]{par}.}
 
-\item{lwd}{a single value for for line width, see \link[graphics]{par}.}
+\item{lwd}{the line width, a single positive number, defaults to \code{3},
+see \code{\link[graphics]{par}} for more information.}
+
+\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
+\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
 
 \item{col}{the colors for lines. Three colors can be specified so that each
 line can be given its own color with the curves ordered as SAD, N, and
@@ -62,7 +66,7 @@ data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                               type='discrete', log_scale=TRUE, n_perm=2)
-overlap_effects(inv_mob_out, 'invaded')
+overlap_effects(inv_mob_out, 'invaded', leg_loc=NA)
 overlap_effects(inv_mob_out, 'invaded', display='stacked')
 overlap_effects(inv_mob_out, 'invaded', display='stacked', prop=TRUE)
 }

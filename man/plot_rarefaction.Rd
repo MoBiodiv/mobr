@@ -29,7 +29,8 @@ the individual based rarefaction is used (i.e., method = 'indiv')}
 
 \item{col}{optional vector of colors.}
 
-\item{lwd}{a single value for for line width, see \link[graphics]{par}.}
+\item{lwd}{the line width, a single positive number, defaults to \code{3},
+see \code{\link[graphics]{par}} for more information.}
 
 \item{log}{a character string which contains \code{"x"} if the x axis
     is to be logarithmic, \code{"y"} if the y axis is to be logarithmic

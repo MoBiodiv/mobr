@@ -21,7 +21,8 @@ level or not}
 
 \item{col}{optional vector of colors.}
 
-\item{lwd}{a vector of line widths, see \code{\link[graphics]{par}}.}
+\item{lwd}{the line width, a single positive number, defaults to \code{3},
+see \code{\link[graphics]{par}} for more information.}
 
 \item{log}{a character string which contains \code{"x"} if the x axis
     is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
