@@ -6,6 +6,14 @@ mobr [![Build Status](https://travis-ci.org/MoBiodiv/mobr.png)](https://travis-c
 This reposititory hosts an R package that is being developed for 
 estimating biodiversity and the components of its change.
 
+The concepts and methods behind this R package are described in two preprints that are both currently in review. 
+
+McGlinn, D.J. X. Xiao, F. May, S. Blowes, J. Chase, N. Gotelli, T. Knight, B. McGill, and O. Purschke. preprint. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. *bioRxiv* 244103. doi: https://doi.org/10.1101/244103.
+
+
+Chase, J.M., B. McGill, D.J. McGlinn, F. May, S.A. Blowes, X. Xiao, T. Knight. prepint. Embracing scale-dependence to achieve a deeper understanding of biodiversity and its change across communities. *bioRxiv* 275701. doi: https://doi.org/10.1101/275701
+
+
 # How to install mobr
 
 The easiest option is to install the package directly from GitHub using the package `devtools`. If you do not already have `devtools` installed then need to install it.
