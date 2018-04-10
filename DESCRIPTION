@@ -15,7 +15,11 @@ Depends:
     scales,
     dplyr,
     pbapply,
-    shiny
+    shiny,
+    shinydashboard,
+    shinyjqui,
+    tidyverse,
+    shinycssloaders
 Imports:
     plotrix
 Suggests:
