@@ -37,7 +37,7 @@ csvFile <- function(input, output, session, stringsAsFactors = TRUE) {
 ui <- dashboardPage(
   dashboardHeader(title = "MoB-R"),
 
-  
+  # tabs in sidebar
   dashboardSidebar(
     sidebarMenu(style = "position: fixed; overflow: visible;",
       menuItem("Home", tabName = "Home", icon = icon("home")),
@@ -53,11 +53,13 @@ ui <- dashboardPage(
                href = "https://github.com/MoBiodiv/mobr/issues")
     )
   ),
+  
+  # body of tabs
   dashboardBody(
     
     
     tabItems(
-      # First tab content
+      # Home tab content
       tabItem(tabName = "Home",
               h2("Welcome to the MoB-R App!"),
               h4("NOTE: Graphics work best if viewed in full window OR when side panel is closed"),
@@ -124,7 +126,7 @@ ui <- dashboardPage(
                 
               )
       ),
-      
+      # Data tab content
       tabItem(tabName = "DataTab",
               h2("Enter your data below in CSV file format:"),
               # Input: Select a file ----
@@ -138,7 +140,7 @@ ui <- dashboardPage(
               
       ),
       
-      # Second tab content
+      # Plot rarefaction tab content
       tabItem(tabName = "plot_rarefaction",
               h2("Plot Rarefaction"),
               h4("SR = Spacial Rarefaction, IR = Indiviudal Rarefaction, Abu = Abundance"),
@@ -169,6 +171,7 @@ ui <- dashboardPage(
               )
       ),
       
+      # All Mob Metrics Tab
       tabItem(tabName = "all_mob_tab",
               h2("All MoB Metrics"),
               fluidRow(
@@ -188,7 +191,7 @@ ui <- dashboardPage(
               )
         ),
               
-      
+      # Indiviudal Mob stats tab
       tabItem(tabName = "ind_mob_tab",
               h2("MoB Metrics"),
               fluidRow(
@@ -210,19 +213,35 @@ ui <- dashboardPage(
                 ),
                 box(
                   title = "Samples Tests",
-                  width = 4,
+                  width = 5,
                   withSpinner(verbatimTextOutput('mob_samples_tests'))
+                )
                 ),
+              fluidRow(
                 box(
                   title = "Groups Tests",
                   width = 4,
                   withSpinner(verbatimTextOutput('mob_groups_tests'))
+                ),
+                box(
+                  title = "Download MoB Data to CSV",
+                  width = 5,
+                  downloadButton('download_GS', "Download Groups Stats Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_ST', "Download Samples Test Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_GT', "Download Groups Tests Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_SS', "Download Samples Stats Data")
                 )
               ),
               fluidRow(
                 tabBox(
                   title = "MoB Metrics Code",
-                  side = "left", width = "10",
+                  side = "left", width = 8,
                   selected = "S",
                   tabPanel("S", withSpinner(htmlOutput('s_code'))),
                   tabPanel("N", withSpinner(htmlOutput('n_code'))),
@@ -233,7 +252,7 @@ ui <- dashboardPage(
               )
       ),
       
-      # Forth tab content
+      # Delta stats tab content
       tabItem(tabName = "delta_stats",
               h2("Delta Stats"),
               fluidRow(
@@ -242,6 +261,27 @@ ui <- dashboardPage(
                   width = 8,
                   withSpinner(plotOutput('delta_plot'))
                   
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Download Delta Stats Tests Data to CSV",
+                  width = 4,
+                  downloadButton('download_delta_SAD', "Download SAD Test Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_delta_N', "Download N Test Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_delta_agg', "Download agg Test Data")
+                ),
+                box(
+                  title = "Download Delta Stats Rarefaction Data to CSV",
+                  width = 4,
+                  downloadButton('download_rare_ind', "Download Individual Rarefaction Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_rare_sample', "Download Sample Rarefaction Data")
                 )
               ),
               fluidRow(
@@ -261,6 +301,7 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
 
+  # Initial set up of reactive variables
   comm <- callModule(csvFile, "comm")
   
   plot_attr <- callModule(csvFile, "plot_attr")
@@ -269,6 +310,13 @@ server <- function(input, output) {
 
   mob_stats <- reactive(get_mob_stats(mob_in(), 'group'))
   
+  delta_stats <- reactive(get_delta_stats(mob_in(), 'group',
+                                   ref_group = 'uninvaded',
+                                   type='discrete', 
+                                   log_scale=TRUE,
+                                   n_perm=20))
+  
+  # Mob Metrics plot functions
   output$mob_s <- renderPlot({
       #mob_stats <- get_mob_stats(mob_in(), 'group')
       plot(mob_stats(), 'S')
@@ -291,60 +339,103 @@ server <- function(input, output) {
   })
   
   
+  # Mob Stats statistical output
   output$mob_groups_stats = renderPrint({
     #invisible(capture.output(stats = get_mob_stats(mob_in(), 'group')))
     mob_stats()$groups_stats
   })
+  
+  output$download_GS <- downloadHandler(
+    filename = "mob_groups_stats.csv",
+    content = function(file) {
+      write.csv(mob_stats()$groups_stats, file)
+    }
+  )
   
   output$mob_samples_tests = renderPrint({
     #invisible(capture.output(stats = get_mob_stats(mob_in(), 'group')))
     mob_stats()$samples_tests
   })
   
+  output$download_ST <- downloadHandler(
+    filename = "mob_samples_tests.csv",
+    content = function(file) {
+      write.csv(mob_stats()$samples_tests, file)
+    }
+  )
+  
   output$mob_groups_tests = renderPrint({
     #invisible(capture.output(stats = get_mob_stats(mob_in(), 'group')))
     mob_stats()$groups_tests
   })
   
+  output$download_GT <- downloadHandler(
+    filename = "mob_groups_tests.csv",
+    content = function(file) {
+      write.csv(mob_stats()$groups_tests, file)
+    }
+  )
+  
+  output$download_SS <- downloadHandler(
+    filename = "mob_samples_stats.csv",
+    content = function(file) {
+      write.csv(mob_stats()$samples_stats, file)
+    }
+  )
+ 
+  
+  
+  # Mob metric code
   output$s_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "mob_stats <- get_mob_stats(mob_in(), 'group')",
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
           "<br>",
           "plot(mob_stats, 'S')")
   })
   output$n_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "mob_stats <- get_mob_stats(mob_in(), 'group')",
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
           "<br>",
           "plot(mob_stats, 'N')")
   })
   output$sn_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
-          "<br>", 
-          "mob_stats <- get_mob_stats(mob_in(), 'group')",
+          "<br>",
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
           "<br>",
           "plot(mob_stats, 'S_n')")
   })
   output$spie_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "mob_stats <- get_mob_stats(mob_in(), 'group')",
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
           "<br>",
           "plot(mob_stats, 'S_PIE')")
   
   })
-  
   output$all_mob_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "mob_stats <- get_mob_stats(mob_in(), 'group')",
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
           "<br>",
           "plot(mob_stats, multi_panel = TRUE)")
     
   })
   
+  
+  # rarefaction Plot output
   output$s_rare <- renderPlot({
     plot_rarefaction(mob_in(), 'group', 'spat', lwd = 4, leg_loc = 'topright')
   })
@@ -366,48 +457,89 @@ server <- function(input, output) {
   })
   
   
+  # rarefaction code output
   output$s_rare_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "plot_rarefaction(mob_in(), 'group', 'spat', lwd = 4, leg_loc = 'topright')")
+          "<br>",
+          "plot_rarefaction(mob_in, 'group', 'spat', lwd = 4, leg_loc = 'topright')")
   })
   output$ir_up_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "plot_rarefaction(mob_in(), 'group', 'indiv', pooled = F, lwd = 2)")
+          "<br>",
+          "plot_rarefaction(mob_in, 'group', 'indiv', pooled = F, lwd = 2)")
   })
   output$ir_p_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "plot_rarefaction(mob_in(), 'group', 'indiv', pooled = T, lwd = 2)")
+          "<br>",
+          "plot_rarefaction(mob_in, 'group', 'indiv', pooled = T, lwd = 2)")
   })
   output$up_abu_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "plot_abu(mob_in(), 'group', type = 'rad', pooled = F, log='x')")
+          "<br>",
+          "plot_abu(mob_in, 'group', type = 'rad', pooled = F, log='x')")
     
   })
   output$p_abu_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
-          "plot_abu(mob_in(), 'group', type = 'rad', pooled = T, log='x')")
+          "<br>",
+          "plot_abu(mob_in, 'group', type = 'rad', pooled = T, log='x')")
     
   })
   
   
+  # delta stats plot output
   output$delta_plot <- renderPlot({
-    delta_stats <- get_delta_stats(mob_in(), 'group',
-                                   ref_group = 'uninvaded',
-                                   type='discrete', log_scale=TRUE,
-                                   n_perm=20)
-    plot(delta_stats, 'invaded', 'uninvaded')
+    plot(delta_stats(), 'invaded', 'uninvaded')
     
   })
   
+  output$download_delta_SAD <- downloadHandler(
+    filename = "delta_SAD_test.csv",
+    content = function(file) {
+      write.csv(delta_stats()$SAD, file)
+    }
+  )
+  
+  output$download_delta_N <- downloadHandler(
+    filename = "delta_N_test.csv",
+    content = function(file) {
+      write.csv(delta_stats()$N, file)
+    }
+  )
+  
+  output$download_delta_agg <- downloadHandler(
+    filename = "delta_agg_test.csv",
+    content = function(file) {
+      write.csv(delta_stats()$agg, file)
+    }
+  )
+  
+  output$download_rare_ind <- downloadHandler(
+    filename = "delta_indiv_rare.csv",
+    content = function(file) {
+      write.csv(delta_stats()$indiv_rare, file)
+    }
+  )
+  
+  output$download_rare_sample <- downloadHandler(
+    filename = "delta_sample_rare.csv",
+    content = function(file) {
+      write.csv(delta_stats()$sample_rare, file)
+    }
+  )
+  
+   # delta stats code output
   output$delta_code <- renderText({
     paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
           "<br>", 
+          "<br>",
           "delta_stats <- get_delta_stats(mob_in, 'group', ref_group = 'uninvaded', type='discrete', log_scale=TRUE, n_perm=20)",
+          "<br>",
           "<br>",
           "plot(delta_stats, 'invaded', 'uninvaded')")
     
