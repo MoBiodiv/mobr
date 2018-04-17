@@ -2,7 +2,7 @@
 csvFileInput <- function(id, label = "CSV file") {
   # Create a namespace function using the provided id
   ns <- NS(id)
-
+  
   tagList(
     fileInput(ns("file"), label)
   )
@@ -16,189 +16,536 @@ csvFile <- function(input, output, session, stringsAsFactors = TRUE) {
     validate(need(input$file, message = FALSE))
     input$file
   })
-
+  
   # The user's data, parsed into a data frame
   dataframe <- reactive({
     read.csv(userFile()$datapath,
-      header = TRUE,
-      stringsAsFactors = stringsAsFactors)
+             header = TRUE,
+             stringsAsFactors = stringsAsFactors)
   })
-
+  
   # We can run observers in here if we want to
   observe({
     msg <- sprintf("File %s was uploaded", userFile()$name)
     cat(msg, "\n")
   })
-
+  
   # Return the reactive that yields the data frame
   return(dataframe)
 }
 
-# Define UI for the mobr application
-ui <- fluidPage(
+ui <- dashboardPage(
+  dashboardHeader(title = "MoB-R"),
 
-    # App title ----
-    titlePanel("MoB-R"),
-
-    # Sidebar layout with input and output definitions ----
-    sidebarLayout(
-
-        # Sidebar panel for inputs ----
-        sidebarPanel(
-
-            # Input: Select a file ----
-            csvFileInput("comm", "Upload community data (.csv format)"),
-        
-            # Horizontal line ----
-            tags$hr(),
-
-            # Input: Select a file ----
-            csvFileInput("plot_attr", "Upload plot attribute data (.csv format)"),
-            
-            selectInput("graphType", "Select Graph Type",
-                        c("Spacial Rarefaction", "Individual Rarefaction - Unpooled", "Individual Rarefaction - Pooled", "Unpooled Abundance", "Pooled Abundance", "All MoB Metrics", "MoB Metrics - S", "MoB Metrics - N", "MoB Metrics - S_n", "MoB Metrics - S_PIE", "MoB Delta Stats"))
-            
-            #textInput("filename", "Enter filename:"),
-            
-            #downloadLink("downloadData", "Download Graph"),
-        
-            #actionButton("do", "Submit")
-        ),
-        
-        # Main panel for displaying outputs ----
-        mainPanel(
-          tabsetPanel(
-            tabPanel("Plot", plotOutput('plot')),
-            tabPanel("Stats", verbatimTextOutput('stats'))
-          )
+  # tabs in sidebar
+  dashboardSidebar(
+    sidebarMenu(style = "position: fixed; overflow: visible;",
+      menuItem("Home", tabName = "Home", icon = icon("home")),
+      menuItem("Data Tab", tabName = "DataTab", icon = icon("table")),
+      menuItem("Plot Rarefaction", tabName = "plot_rarefaction", icon = icon("angle-right")),
+      menuItem("MoB Metrics", tabName = "mob_metrics", icon = icon("angle-right"),
+        menuSubItem("All MoB Metrics", tabName = "all_mob_tab", icon = icon("angle-right")),
+        menuSubItem("Individual MoB Metrics", tabName = "ind_mob_tab", icon = icon("angle-right"))),
+      menuItem("Delta Stats", tabName = "delta_stats", icon = icon("angle-right")),
+      menuItem("MoB-R GitHub Page", icon = icon("github"), 
+               href = "https://github.com/MoBiodiv/mobr"),
+      menuItem("Got an Issue? Submit it!", icon = icon("exclamation-triangle"), 
+               href = "https://github.com/MoBiodiv/mobr/issues")
     )
-  )
-)
-
-# define the server for the mobr application
-server <- function(input, output) {
-        
-    comm <- callModule(csvFile, "comm")
+  ),
+  
+  # body of tabs
+  dashboardBody(
     
-    plot_attr <- callModule(csvFile, "plot_attr")
     
-    mob_in <- reactive(make_mob_in(comm(), plot_attr()))
-         
-    output$mob_in <- renderPrint(mob_in())
-            
-    output$plot <- renderPlot({
-      if(input$graphType == "Spacial Rarefaction"){
-        plot_rarefaction(mob_in(), 'group', 'spat', lwd = 4, leg_loc = 'topright')
-      }
-      else if(input$graphType == "Individual Rarefaction - Unpooled"){
-        plot_rarefaction(mob_in(), 'group', 'indiv', pooled = F, lwd = 2)
-      }
-      else if(input$graphType == "Individual Rarefaction - Pooled"){
-        plot_rarefaction(mob_in(), 'group', 'indiv', pooled = T, lwd = 2)
-      }
-      else if(input$graphType == "Unpooled Abundance"){
-        plot_abu(mob_in(), 'group', type = 'rad', pooled = F, log='x')
-      }
-      else if(input$graphType == "Pooled Abundance"){
-        plot_abu(mob_in(), 'group', type = 'rad', pooled = T, log='x')
-      }
-      else if(input$graphType == "MoB Delta Stats"){
-        delta_stats <- get_delta_stats(mob_in(), 'group',
-                                       ref_group = 'uninvaded',
-                                       type='discrete', log_scale=TRUE,
-                                       n_perm=20)
-        plot(delta_stats, 'invaded', 'uninvaded')
-      }
-      else if(input$graphType == "MoB Metrics - S"){
-        mob_stats <- get_mob_stats(mob_in(), 'group')
-        plot(mob_stats, 'S')
-      }
-      else if(input$graphType == "MoB Metrics - N"){
-        mob_stats <- get_mob_stats(mob_in(), 'group')
-        plot(mob_stats, 'N')
-      }
-      else if(input$graphType == "MoB Metrics - S_n"){
-        mob_stats <- get_mob_stats(mob_in(), 'group')
-        plot(mob_stats, 'S_n')
-      }
-      else if(input$graphType == "MoB Metrics - S_PIE"){
-        mob_stats <- get_mob_stats(mob_in(), 'group')
-        plot(mob_stats, 'S_PIE')
-      }
-      else if(input$graphType == "All MoB Metrics"){
-        mob_stats <- get_mob_stats(mob_in(), 'group')
-        plot(mob_stats, multi_panel = TRUE)
-      }
-})
-    
-    output$stats = renderPrint({
-      if(input$graphType == "MoB Delta Stats"){
-        invisible(capture.output(stats = get_delta_stats(mob_in(), 'group',
-                                                         ref_group = 'uninvaded',
-                                                         type='discrete', log_scale=TRUE,
-                                                         n_perm=20)))
-        #Large outputs - showing null
-        
-        list("Indiv_rare", stats$indiv_rare,
-        "Sample_rare", stats$sample_rare,
-        "SAD", stats$SAD,
-        "N", stats$N,
-        "Agg", stats$agg)
-      }
-      else if(input$graphType == "MoB Metrics - S" 
-              || input$graphType == "MoB Metrics - N"
-              || input$graphType == "MoB Metrics - S_n"
-              || input$graphType == "MoB Metrics - S_PIE"
-              || input$graphType == "All MoB Metrics"){
-        invisible(capture.output(stats = get_mob_stats(mob_in(), 'group')))
-        list("Group Stats", stats$groups_stats,
-             "Samples Tests", stats$samples_tests,
-             "Group Tests", stats$groups_tests)
-      }
+    tabItems(
+      # Home tab content
+      tabItem(tabName = "Home",
+              h2("Welcome to the MoB-R App!"),
+              h4("NOTE: Graphics work best if viewed in full window OR when side panel is closed"),
+              fluidRow(
+              box(
+                hieght = "300px",
+                width = 6,
+                h3(icon("globe"), "Navigation Tabs"),
+                #tags$b(h3("Navigation")),
+                br(),
+                h4(icon("table"),"DataTab"),
+                "- Where you will enter you Community Matrix and Plot Data as CSV files", 
+                br(), 
+                br(), 
+                h4(icon("angle-right"),"Plot Rarefaction"),
+                "- Graphs and Code for Plot Rarefaction data",
+                br(),
+                br(), 
+                h4(icon("angle-right"),"MoB Metrics"),
+                "- A pull down tab containing 'All MoB Metrics' and 'Individual MoB Metrics'", 
+                br(), 
+                "- Stats for both can be found in the 'Individual MoB Metrics' tab",
+                br(),
+                br(), 
+                h4(icon("angle-right"),"Delta Stats"),
+                "- Graph and Code for Delta Stats data"
+              ),
+              box(
+                width = 5,
+                h3(icon("link"), "Link Tabs"),
+                #tags$b(h3("Link Tabs")),
+                br(),
+                "The last two tabs represent links to the MoB-R Github page",
+                br(),
+                h3(icon("github")),
+                "If you want to learn more about MoB-R fromthe source check out the first link. It will take you to MoB-R's main GitHub page.",
+                br(),
+                br(),
+                h4(icon("exclamation-triangle")),
+                "If you run into a problem while using this app, please let the developers know! Use the second link to navigate to the issues page on the MoB-R GitHub.",
+                br(),
+                "There you can submit an issue describing your problem. We appreciate your feedback!"
+              )
+              ),
+              fluidRow(
+                box(
+                  width = 4,
+                  h3(icon("users"), "The people behind MoB-R:"),
+                  tags$b("Author and Creator: "),
+                  br(),
+                  "Xiao Xiao - email: xiao@weecology.org",
+                  br(),
+                  tags$b("Authors: "),
+                  br(),
+                  "Daniel McGlinn - email: danmcglinn@gmail.com",
+                  br(),
+                  "Felix May - email: felix.may@idiv.de",
+                  br(),
+                  "Caroline Oliver - email: olivercs@g.cofc.edu"
+                )
+               #box(
+               #   imageOutput("image")
+               # )
+                
+              )
+      ),
+      # Data tab content
+      tabItem(tabName = "DataTab",
+              h2("Enter your data below in CSV file format:"),
+              # Input: Select a file ----
+              csvFileInput("comm", "Upload community data"),
+              
+              # Horizontal line ----
+              tags$hr(),
+              
+              # Input: Select a file ----
+              csvFileInput("plot_attr", "Upload plot attribute data")
+              
+      ),
       
-      else(
-        "There are no associated stats for this model"
+      # Plot rarefaction tab content
+      tabItem(tabName = "plot_rarefaction",
+              h2("Plot Rarefaction"),
+              h4("SR = Spacial Rarefaction, IR = Indiviudal Rarefaction, Abu = Abundance"),
+              fluidRow(
+                tabBox(
+                  title = "Plot Rarefaction",
+                  side = "left", width = "10",
+                  selected = "SR",
+                  tabPanel("SR", withSpinner(plotOutput('s_rare'))),
+                  tabPanel("IR Unpooled", withSpinner(plotOutput('i_rare_up'))),
+                  tabPanel("IR Pooled", withSpinner(plotOutput('i_rare_p'))),
+                  tabPanel("Unpooled Abu", withSpinner(plotOutput('up_abu'))),
+                  tabPanel("Pooled Abu", withSpinner(plotOutput('p_abu')))
+                )
+              ),
+              fluidRow(
+                tabBox(
+                  title = "Plot Rarefaction Code",
+                  side = "left", width = "10",
+                  selected = "SR",
+                  tabPanel("SR", withSpinner(htmlOutput('s_rare_code'))),
+                  tabPanel("IR Unpooled", withSpinner(htmlOutput('ir_up_code'))),
+                  tabPanel("IR Pooled", withSpinner(htmlOutput('ir_p_code'))),
+                  tabPanel("Unpooled Abu", withSpinner(htmlOutput('up_abu_code'))),
+                  tabPanel("Pooled Abu", withSpinner(htmlOutput('p_abu_code')))
+                )
+                
+              )
+      ),
+      
+      # All Mob Metrics Tab
+      tabItem(tabName = "all_mob_tab",
+              h2("All MoB Metrics"),
+              fluidRow(
+                box(
+                  width = 7,
+                  height = "750px",
+                  title = "All MoB Metrics",
+                  withSpinner(plotOutput('mob_all', height = "695px"))
+                ),
+                fluidRow(
+                  box(
+                    width = 7,
+                    title = "All MoB Metrics Code",
+                    withSpinner(htmlOutput('all_mob_code'))
+                  )
+                )
+              )
+        ),
+              
+      # Indiviudal Mob stats tab
+      tabItem(tabName = "ind_mob_tab",
+              h2("MoB Metrics"),
+              fluidRow(
+                tabBox(
+                  title = "Individual MoB Metrics",
+                  side = "left", width = "10",
+                  selected = "S",
+                  tabPanel("S", withSpinner(plotOutput('mob_s'))),
+                  tabPanel("N", withSpinner(plotOutput('mob_n'))),
+                  tabPanel("S_n", withSpinner(plotOutput('mob_Sn'))),
+                  tabPanel("S_PIE", withSpinner(plotOutput('mob_Spie')))
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Groups Stats",
+                  width = 4,
+                  withSpinner(verbatimTextOutput('mob_groups_stats'))
+                ),
+                box(
+                  title = "Samples Tests",
+                  width = 5,
+                  withSpinner(verbatimTextOutput('mob_samples_tests'))
+                )
+                ),
+              fluidRow(
+                box(
+                  title = "Groups Tests",
+                  width = 4,
+                  withSpinner(verbatimTextOutput('mob_groups_tests'))
+                ),
+                box(
+                  title = "Download MoB Data to CSV",
+                  width = 5,
+                  downloadButton('download_GS', "Download Groups Stats Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_ST', "Download Samples Test Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_GT', "Download Groups Tests Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_SS', "Download Samples Stats Data")
+                )
+              ),
+              fluidRow(
+                tabBox(
+                  title = "MoB Metrics Code",
+                  side = "left", width = 8,
+                  selected = "S",
+                  tabPanel("S", withSpinner(htmlOutput('s_code'))),
+                  tabPanel("N", withSpinner(htmlOutput('n_code'))),
+                  tabPanel("S_n", withSpinner(htmlOutput('sn_code'))),
+                  tabPanel("S_PIE", withSpinner(htmlOutput('spie_code')))
+                )
+                
+              )
+      ),
+      
+      # Delta stats tab content
+      tabItem(tabName = "delta_stats",
+              h2("Delta Stats"),
+              fluidRow(
+                box(
+                  title = "Delta Stats",
+                  width = 8,
+                  withSpinner(plotOutput('delta_plot'))
+                  
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Download Delta Stats Tests Data to CSV",
+                  width = 4,
+                  downloadButton('download_delta_SAD', "Download SAD Test Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_delta_N', "Download N Test Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_delta_agg', "Download agg Test Data")
+                ),
+                box(
+                  title = "Download Delta Stats Rarefaction Data to CSV",
+                  width = 4,
+                  downloadButton('download_rare_ind', "Download Individual Rarefaction Data"),
+                  br(),
+                  br(),
+                  downloadButton('download_rare_sample', "Download Sample Rarefaction Data")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Delta Stats Code",
+                  width = 8,
+                  withSpinner(htmlOutput('delta_code'))
+                )
+              )
       )
-      
-      # else if(input$graphType == "MoB Metrics - N"){
-      #   stats = get_mob_stats(mob_in(), 'group')
-      #   stats$groups_stats
-      #   stats$samples_tests
-      #   stats$groups_tests
-      # }
-      # else if(input$graphType == "MoB Metrics - S_n"){
-      #   stats = get_mob_stats(mob_in(), 'group')
-      #   stats$groups_stats
-      #   stats$samples_tests
-      #   stats$groups_tests
-      # }
-      # else if(input$graphType == "MoB Metrics - S_PIE"){
-      #   stats = get_mob_stats(mob_in(), 'group')
-      #   stats$groups_stats
-      #   stats$samples_tests
-      #   stats$groups_tests
-      # }
-      # else if(input$graphType == "All MoB Metrics"){
-      #   stats = get_mob_stats(mob_in(), 'group')
-      #   stats$groups_stats
-      #   stats$samples_tests
-      #   stats$groups_tests
-      # }
-      
-    })
-    
-    output$downloadData <- downloadHandler(
-      filename = function() {
-        paste(input$filename, '.png', sep='')
-      },
-      content=function(file){
-        png(file)
-        print(plot_rarefaction(mob_in(), 'group', 'spat', lwd = 4, leg_loc = 'topright'))
-        dev.off()
-      },
-      contentType='image/png')
-}
+    )
+    )
+)
+  
 
+
+
+server <- function(input, output) {
+
+  # Initial set up of reactive variables
+  comm <- callModule(csvFile, "comm")
+  
+  plot_attr <- callModule(csvFile, "plot_attr")
+  
+  mob_in <- reactive(make_mob_in(comm(), plot_attr()))
+
+  mob_stats <- reactive(get_mob_stats(mob_in(), 'group'))
+  
+  delta_stats <- reactive(get_delta_stats(mob_in(), 'group',
+                                   ref_group = 'uninvaded',
+                                   type='discrete', 
+                                   log_scale=TRUE,
+                                   n_perm=20))
+  
+  # Mob Metrics plot functions
+  output$mob_s <- renderPlot({
+      #mob_stats <- get_mob_stats(mob_in(), 'group')
+      plot(mob_stats(), 'S')
+  })
+  output$mob_n <- renderPlot({
+    #mob_stats <- get_mob_stats(mob_in(), 'group')
+    plot(mob_stats(), 'N')
+  })
+  output$mob_Sn <- renderPlot({
+    #mob_stats <- get_mob_stats(mob_in(), 'group')
+    plot(mob_stats(), 'S_n')
+  })
+  output$mob_Spie <- renderPlot({
+    #mob_stats <- get_mob_stats(mob_in(), 'group')
+    plot(mob_stats(), 'S_PIE')
+  })
+  output$mob_all <- renderPlot({
+    #mob_stats <- get_mob_stats(mob_in(), 'group')
+    plot(mob_stats(), multi_panel = TRUE)
+  })
+  
+  
+  # Mob Stats statistical output
+  output$mob_groups_stats = renderPrint({
+    #invisible(capture.output(stats = get_mob_stats(mob_in(), 'group')))
+    mob_stats()$groups_stats
+  })
+  
+  output$download_GS <- downloadHandler(
+    filename = "mob_groups_stats.csv",
+    content = function(file) {
+      write.csv(mob_stats()$groups_stats, file)
+    }
+  )
+  
+  output$mob_samples_tests = renderPrint({
+    #invisible(capture.output(stats = get_mob_stats(mob_in(), 'group')))
+    mob_stats()$samples_tests
+  })
+  
+  output$download_ST <- downloadHandler(
+    filename = "mob_samples_tests.csv",
+    content = function(file) {
+      write.csv(mob_stats()$samples_tests, file)
+    }
+  )
+  
+  output$mob_groups_tests = renderPrint({
+    #invisible(capture.output(stats = get_mob_stats(mob_in(), 'group')))
+    mob_stats()$groups_tests
+  })
+  
+  output$download_GT <- downloadHandler(
+    filename = "mob_groups_tests.csv",
+    content = function(file) {
+      write.csv(mob_stats()$groups_tests, file)
+    }
+  )
+  
+  output$download_SS <- downloadHandler(
+    filename = "mob_samples_stats.csv",
+    content = function(file) {
+      write.csv(mob_stats()$samples_stats, file)
+    }
+  )
+ 
+  
+  
+  # Mob metric code
+  output$s_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
+          "<br>",
+          "plot(mob_stats, 'S')")
+  })
+  output$n_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
+          "<br>",
+          "plot(mob_stats, 'N')")
+  })
+  output$sn_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>",
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
+          "<br>",
+          "plot(mob_stats, 'S_n')")
+  })
+  output$spie_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
+          "<br>",
+          "plot(mob_stats, 'S_PIE')")
+  
+  })
+  output$all_mob_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "mob_stats <- get_mob_stats(mob_in, 'group')",
+          "<br>",
+          "<br>",
+          "plot(mob_stats, multi_panel = TRUE)")
+    
+  })
+  
+  
+  # rarefaction Plot output
+  output$s_rare <- renderPlot({
+    plot_rarefaction(mob_in(), 'group', 'spat', lwd = 4, leg_loc = 'topright')
+  })
+  
+  output$i_rare_up <- renderPlot({
+    plot_rarefaction(mob_in(), 'group', 'indiv', pooled = F, lwd = 2)
+  })
+  
+  output$i_rare_p <- renderPlot({
+    plot_rarefaction(mob_in(), 'group', 'indiv', pooled = T, lwd = 2)
+  })
+  
+  output$up_abu <- renderPlot({
+    plot_abu(mob_in(), 'group', type = 'rad', pooled = F, log='x')
+  })
+  
+  output$p_abu <- renderPlot({
+    plot_abu(mob_in(), 'group', type = 'rad', pooled = T, log='x')
+  })
+  
+  
+  # rarefaction code output
+  output$s_rare_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "plot_rarefaction(mob_in, 'group', 'spat', lwd = 4, leg_loc = 'topright')")
+  })
+  output$ir_up_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "plot_rarefaction(mob_in, 'group', 'indiv', pooled = F, lwd = 2)")
+  })
+  output$ir_p_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "plot_rarefaction(mob_in, 'group', 'indiv', pooled = T, lwd = 2)")
+  })
+  output$up_abu_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "plot_abu(mob_in, 'group', type = 'rad', pooled = F, log='x')")
+    
+  })
+  output$p_abu_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "plot_abu(mob_in, 'group', type = 'rad', pooled = T, log='x')")
+    
+  })
+  
+  
+  # delta stats plot output
+  output$delta_plot <- renderPlot({
+    plot(delta_stats(), 'invaded', 'uninvaded')
+    
+  })
+  
+  output$download_delta_SAD <- downloadHandler(
+    filename = "delta_SAD_test.csv",
+    content = function(file) {
+      write.csv(delta_stats()$SAD, file)
+    }
+  )
+  
+  output$download_delta_N <- downloadHandler(
+    filename = "delta_N_test.csv",
+    content = function(file) {
+      write.csv(delta_stats()$N, file)
+    }
+  )
+  
+  output$download_delta_agg <- downloadHandler(
+    filename = "delta_agg_test.csv",
+    content = function(file) {
+      write.csv(delta_stats()$agg, file)
+    }
+  )
+  
+  output$download_rare_ind <- downloadHandler(
+    filename = "delta_indiv_rare.csv",
+    content = function(file) {
+      write.csv(delta_stats()$indiv_rare, file)
+    }
+  )
+  
+  output$download_rare_sample <- downloadHandler(
+    filename = "delta_sample_rare.csv",
+    content = function(file) {
+      write.csv(delta_stats()$sample_rare, file)
+    }
+  )
+  
+   # delta stats code output
+  output$delta_code <- renderText({
+    paste("mob_in <- make_mob_in(community_matrix_FILENAMEHERE, plot_attribute_FILENAMEHERE)",
+          "<br>", 
+          "<br>",
+          "delta_stats <- get_delta_stats(mob_in, 'group', ref_group = 'uninvaded', type='discrete', log_scale=TRUE, n_perm=20)",
+          "<br>",
+          "<br>",
+          "plot(delta_stats, 'invaded', 'uninvaded')")
+    
+  })
+  
+}
 
 # Create a Shiny app object
 #shinyApp(ui = ui, server = server)
