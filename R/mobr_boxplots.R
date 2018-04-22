@@ -57,7 +57,13 @@ calc_chao1 = function(x) {
 #' 
 #' where N is the total number of individuals and \eqn{p_i} is the relative abundance
 #' of species i. This formulation uses sampling without replacement and it is
-#' sometimes referred to as the bias corrected formulation of PIE. 
+#' sometimes referred to as the bias corrected formulation of PIE.
+#' For ENS = TRUE, S_PIE will be returned which represents the species richness of
+#' a hypothetical community with equally-abundant species and infinitely many individuals
+#' corresponding to the same value of PIE as the real community. S_PIE is undefined for
+#' communities with exactly one individual per species.
+#' Otherwise, it will be computed as \eqn{S_PIE = 1 /(1 - PIE)}, which is equal to an
+#' asymptotic estimator for Hill numbers of diversity order 2 (Chao et al, 2014).
 #' 
 #' The code in this function borrows heavily from the function vegan::diversity()
 #' but computes a different quantity. The function vegan::diversity() computes
@@ -100,7 +106,7 @@ calc_PIE = function(x, ENS=FALSE) {
     } else {
         H = sum(x, na.rm = TRUE)
         }
-    # Calculate PIE without replacement (for total >= 2)
+    # calculate PIE without replacement (for total >= 2)
     H = ifelse(total < 2, NA, (total / (total - 1) * (1 - H)))
     if (ENS) {
         # convert to effective number of species (except for PIE == 1)
@@ -400,12 +406,11 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' replacement.
 #' 
 #' \strong{S_PIE: Effective number of species for PIE} represents the effective number of species derived from the
-#' PIE. This corresponds to the the number of equally abundant species (i.e. a
-#' perfectly even community), there would need to be to achieve the observed PIE
-#' (Jost 2006). This means the higher the difference between S and S_PIE the
-#' more uneven is the observed community. An intuitive interpretation of S_PIE
-#' is that it corresponds to the number of dominant (highly abundant) species in
-#' the community.
+#' PIE. It is calculated using the asymptotic estimator for Hill numbers of diversity order 2 (Chao et al, 2014).
+#' S_PIE represents the species richness of a hypothetical community with equally-abundant species
+#' and infinitely many individuals corresponding to the same value of PIE as the real community.
+#' An intuitive interpretation of S_PIE is that it corresponds to the number of
+#' dominant (highly abundant) species in the species pool.
 #' 
 #' For species richness \code{S}, rarefied richness \code{S_n}, undetected
 #' richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
