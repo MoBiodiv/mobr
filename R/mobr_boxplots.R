@@ -81,37 +81,32 @@ calc_chao1 = function(x) {
 #' calc_PIE(inv_comm)
 #' calc_PIE(inv_comm, ENS=TRUE)
 calc_PIE = function(x, ENS=FALSE) {
-  if (class(x) == 'mob_in') {
-    x = x_mob_in$comm
-  }
-  x = drop(as.matrix(x))
-  if (any(x < 0, na.rm = TRUE)) 
-    stop("input data must be non-negative")
-  if (length(dim(x)) > 1) {
-    total = apply(x, 1, sum)
-    x = sweep(x, 1, total, "/")
-  }
-  else {
-    total = sum(x)
-    x = x / total
-  }
-  x = x * x
-  if (length(dim(x)) > 1) 
-    H = rowSums(x, na.rm = TRUE)
-  else 
-    H = sum(x, na.rm = TRUE)
-  
-  # correct for sampling with replacement
-  H = total / (total - 1) * (1 - H)
-  # check NA in data
-  if (any(NAS = is.na(total)))
-    H[NAS] = NA
-  if (ENS) {
-    # convert to effective number of species
-    H = 1 / (1-H)
-  }      
-  H[!is.finite(H) | total == 0] = NA # set NA, when total == 0 or total == S_obs
-  return(H)
+    if (class(x) == 'mob_in') {
+        x = x_mob_in$comm
+    }
+    x = drop(as.matrix(x))
+    if (any(x < 0, na.rm = TRUE)) 
+        stop("input data must be non-negative")
+    if (length(dim(x)) > 1) {
+        total = apply(x, 1, sum)
+        x = sweep(x, 1, total, "/")
+    } else {
+        total = sum(x)
+        x = x / total
+    }
+    x = x * x
+    if (length(dim(x)) > 1) {
+        H = rowSums(x, na.rm = TRUE)
+    } else {
+        H = sum(x, na.rm = TRUE)
+        }
+    # Calculate PIE without replacement (for total >= 2)
+    H = ifelse(total < 2, NA, (total / (total - 1) * (1 - H)))
+    if (ENS) {
+        # convert to effective number of species (except for PIE == 1)
+        H = ifelse(H==1, NA, (1/ (1-H)))
+    }     
+    return(H)
 }
 
 # generate a single bootstrap sample of gamma-scale biodiversity indices
