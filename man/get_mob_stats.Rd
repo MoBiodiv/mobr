@@ -129,12 +129,11 @@ well-known Simpson diversity index, but the latter assumes sampling with
 replacement.
 
 \strong{S_PIE: Effective number of species for PIE} represents the effective number of species derived from the
-PIE. This corresponds to the the number of equally abundant species (i.e. a
-perfectly even community), there would need to be to achieve the observed PIE
-(Jost 2006). This means the higher the difference between S and S_PIE the
-more uneven is the observed community. An intuitive interpretation of S_PIE
-is that it corresponds to the number of dominant (highly abundant) species in
-the community.
+PIE. It is calculated using the asymptotic estimator for Hill numbers of diversity order 2 (Chao et al, 2014).
+S_PIE represents the species richness of a hypothetical community with equally-abundant species
+and infinitely many individuals corresponding to the same value of PIE as the real community.
+An intuitive interpretation of S_PIE is that it corresponds to the number of
+dominant (highly abundant) species in the species pool.
 
 For species richness \code{S}, rarefied richness \code{S_n}, undetected
 richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
