@@ -516,7 +516,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' stopCluster(cl)
 #' }
 get_mob_stats = function(mob_in, group_var, 
-                         index = c("N", "S", "S_n", "f_0", "S_PIE"),
+                         index = c("N", "S", "S_n", "pct_rare", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
                          rare_thres = 0.05, n_perm = 199, 
                          boot_groups = F, conf_level = 0.95, cl=NULL, 
