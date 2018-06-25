@@ -226,7 +226,9 @@ calc_biodiv = function(abund_mat, groups, index, effort, rare_thres) {
     # Percent rare ------------------------------------------------------------
     if (any(index == "pct_rare")) {
         pct_rare = function(x, rare_thres)
-            100 * sum(x[x > 0] <= (rare_thres * sum(x))) / sum(x > 0)
+            ifelse(sum(x) > 0,
+                   100 * sum(x[x > 0] <= (rare_thres * sum(x))) / sum(x > 0),
+                   0)
         out$value[out$index == "pct_rare"] = apply(abund_mat, 1, pct_rare, rare_thres)
     }
  
@@ -528,7 +530,7 @@ get_mob_stats = function(mob_in, group_var,
     INDICES = c("N", "S", "S_n", "S_asymp", "f_0",
                 "pct_rare", "PIE", "S_PIE")
     index = match.arg(index, INDICES, several.ok = TRUE)
-   
+    
     group_id  = factor(mob_in$env[, group_var])
     
     # Get rarefaction level
@@ -577,14 +579,14 @@ get_mob_stats = function(mob_in, group_var,
         gamma = with(dat_groups, value[index == "S"])
         alpha = with(dat_samples,  value[index == "S"])
       
-        beta_S = gamma[group_id]/alpha
+        beta_S = gamma[group_id] / alpha
         beta_S[!is.finite(beta_S)] = NA
       
-        dat_betaS = data.frame(group = group_id,
+        dat_beta_S = data.frame(group = group_id,
                                index = "beta_S",
                                effort = NA,
                                value = beta_S)
-        dat_samples = rbind(dat_samples, dat_betaS)
+        dat_samples = rbind(dat_samples, dat_beta_S)
     }  
    
     # Rarefied richness ---------------------------------------------------------
@@ -605,6 +607,22 @@ get_mob_stats = function(mob_in, group_var,
         }
     } # end rarefied richness
 
+    # Number of rare species ---------------------------------------------------------
+    if (any(index == "pct_rare")) {
+      gamma = with(dat_groups, value[index == "pct_rare"])
+      alpha = with(dat_samples,  value[index == "pct_rare"])
+      
+      beta_pct_rare = gamma[group_id] / alpha
+      beta_pct_rare[!is.finite(beta_pct_rare)] = NA
+      
+      dat_beta_pct_rare = data.frame(group = group_id,
+                                     index = "beta_pct_rare",
+                                     effort = NA,
+                                     value = beta_pct_rare)
+      dat_samples = rbind(dat_samples, dat_beta_pct_rare)
+    }  
+    
+    
     # Asymptotic estimates species richness -------------------------------------
     if ("f_0" %in% index) {
         gamma = with(dat_groups, value[index == "f_0"])
@@ -710,7 +728,7 @@ get_mob_stats = function(mob_in, group_var,
                                           "S_n", "beta_S_n",
                                           "S_asymp", "beta_S_asympS",
                                           "f_0", "beta_f_0",
-                                          "pct_rare",
+                                          "pct_rare", "beta_pct_rare",
                                           "PIE",
                                           "S_PIE", "beta_S_PIE"))
     dat_samples = dat_samples[order(dat_samples$index, dat_samples$effort,
@@ -736,7 +754,8 @@ get_mob_stats = function(mob_in, group_var,
                    samples_tests  = samples_tests,
                    groups_tests   = groups_tests)
     }
-  
+    if ("pct_rare" %in% index)
+        out$rare_thres = rare_thres
     class(out) = 'mob_stats'
     return(out)
 }
@@ -853,9 +872,8 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
         index = as.character(unique(mob_stats$samples_stats$index))
     INDICES = c("N", "S", "S_n", "S_asymp", "f_0", 
                 "pct_rare", "PIE", "S_PIE")
-    
     if (multi_panel) 
-        index = c("S","S_n","f_0","S_PIE")
+        index = c("S","S_n","pct_rare","S_PIE")
     index = match.arg(index, INDICES, several.ok = TRUE)
    
     var_names = levels(mob_stats$samples_stats$index)
@@ -888,7 +906,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
    
     for (var in index_match) {
       
-        if (var %in% c("N", "PIE", "pct_rare")) {
+        if (var == "N") {
       
             if (!multi_panel)
                 op = par(mfrow = c(1, 3), cex.lab = 1.6,
@@ -901,8 +919,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
          
             y_label = switch(var,
                              "N" = expression("Abundance (" * italic(N) * ")"),
-                             "PIE" = "PIE",
-                             "pct_rare" = "% of species rare")
+                             "PIE" = "PIE")
          
             dat_samples = filter(mob_stats$samples_stats, index == var)
             dat_tests = filter(mob_stats$samples_tests, index == var)
@@ -923,7 +940,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
             }
         }
       
-        if (var %in% c("S", "S_asymp", "f_0", "S_PIE")) {
+        if (var %in% c("S", "S_asymp", "pct_rare", "f0", "PIE", "S_PIE")) {
          
             if (!multi_panel)
                 op = par(mfrow = c(1, 3), cex.lab = 1.6,
@@ -935,11 +952,14 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                 if (var == "S_PIE") 
                     par(fig = c(0, 0.33, 0         , 1 / n_rows), new = T)
             }
-         
+            
             y_label = switch(var,
                              "S" = expression('Richness (' * italic(S) * ')'),
                              "S_asymp" = expression('Asympotic richness (' *
-                                                     italic(S[asymp]) * ')'),
+                                                      italic(S[asymp]) * ')'),
+                             "pct_rare" = paste("Richness in lower",
+                                               mob_stats$rare_thres * 100, 
+                                               "% of abundance"),
                              "f_0" = expression('Undetected richness (' * italic(f)[0] * ')'),
                              "S_PIE" = expression('ENS of PIE (' * italic(S)[PIE] * ')'))
          
@@ -950,7 +970,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                            cex.axis=cex.axis, ...)
          
            if (multi_panel) {
-               if (var == "f_0") 
+               if (var == "pct_rare") 
                    par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = T)
                if (var == "S_PIE") 
                    par(fig = c(0.33, 0.67, 0       , 1/n_rows), new = T)
@@ -965,7 +985,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                           col = col, cex.axis=cex.axis, ...)
          
            if (multi_panel) {
-               if (var == "f_0")
+               if (var == "pct_rare")
                    par(fig = c(0.67, 1.0, 1 / n_rows, 2 / n_rows), new = T)
                if (var == "S_PIE")
                    par(fig = c(0.67, 1.0, 0         , 1 / n_rows), new = T)
