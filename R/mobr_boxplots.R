@@ -280,10 +280,10 @@ get_F_values = function(div_dat, permute = F) {
     
     models = div_dat %>%
              group_by(index, effort) %>%
-             do(mod = lm(value ~ group, data = .))
+             do(mod = try(lm(value ~ group, data = .), silent=TRUE))
    
     models = models %>% 
-             mutate(F_val = anova(mod)$F[1], mod = NULL) %>%
+             mutate(F_val = ifelse(class(mod) == 'lm', anova(mod)$F[1], NA)) %>%
              ungroup()
    
     
