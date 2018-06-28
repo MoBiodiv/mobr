@@ -1,3 +1,6 @@
+### NOTE: the Fire_lat_longs data file from the mobr data folder must be uploaded and in ones current working directory for
+### the following code to run since the file is used in testing.
+
 context("Testing of the sphere_dist function")
 
 test_that("matrix values are accurate provided 2 columns of lat and longs data", {
