@@ -832,8 +832,6 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
                            type='discrete', inds = NULL, log_scale = FALSE,
                            min_plots = NULL, density_stat ='mean',
                            n_perm=1000, overall_p = FALSE) {
-    require(purrr)
-    require(tidyr)
     #approved_tests = get_delta_overall_checks(mob_in, type, group_var, env_var, 
     #                                          density_stat, tests)
     S = ncol(mob_in$comm)
