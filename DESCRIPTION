@@ -1,9 +1,9 @@
 Package: mobr
 Title: Measurement of Biodiversity in R
-Version: 1.0
-Authors@R: c(person("Xiao", "Xiao", email = "xiao@weecology.org", 
+Version: 1.5
+Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
                     role = c("aut", "cre")),
-             person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
+             person("Xiao", "Xiao", email = "xiao@weecology.org", 
                     role = "aut"),
              person("Felix", "May", email = "felix.may@idiv.de", 
                     role = "aut"),
@@ -17,6 +17,8 @@ Depends:
     pracma,
     scales,
     dplyr,
+    purrr,
+    tidyr,
     pbapply
 Imports:
     plotrix

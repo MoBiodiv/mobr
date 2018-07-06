@@ -4,20 +4,16 @@
 \alias{get_delta_stats}
 \title{Conduct the MoB tests on drivers of biodiversity across scales.}
 \usage{
-get_delta_stats(mob_in, group_var, env_var = NULL, ref_group = NULL,
-  tests = c("SAD", "N", "agg"), type = "discrete", inds = NULL,
-  log_scale = FALSE, min_plots = NULL, density_stat = "mean",
-  corr = "spearman", n_perm = 1000, overall_p = FALSE)
+get_delta_stats(mob_in, group_var, ref_group = NULL, tests = c("SAD", "N",
+  "agg"), type = "discrete", inds = NULL, log_scale = FALSE,
+  min_plots = NULL, density_stat = "mean", n_perm = 1000,
+  overall_p = FALSE)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
 
 \item{group_var}{a character string specifying the environmental variable in
 mob_in$env used for grouping plots}
-
-\item{env_var}{an optional character string specifying a environmental variable
-in mob_in$env which is used in correlation analysis in the continuous case. 
-It is not needed if "type" is discrete or group_var is used in correlation.}
 
 \item{ref_group}{a character string used to define the reference group to
 which all other groups are compared with when "type" is discrete. It is not
@@ -66,17 +62,21 @@ all plots within the two groups for each pair-wise comparison when "type"
 is "discrete") are used. If it is "min" or "max", the minimum/maximum
 plot-level density is used.}
 
-\item{corr}{which kind of correlation to use when "type" is "continuous". It
-can take two values, "spearman" or "pearson". "spearman" (default) is
-generally recommended because the relationship between the response and
-"env_var" may not be linear.}
-
 \item{n_perm}{number of iterations to run for null tests, defaults to 1000.}
 
 \item{overall_p}{boolean defaults to FALSE specifies if overall across scale 
 p-values for the null tests. This should be interpreted with caution because
 the overall p-values depend on scales of measurement yet do not explicitly 
 reflect significance at any particular scale.}
+
+\item{env_var}{an optional character string specifying a environmental variable
+in mob_in$env which is used in correlation analysis in the continuous case. 
+It is not needed if "type" is discrete or group_var is used in correlation.}
+
+\item{corr}{which kind of correlation to use when "type" is "continuous". It
+can take two values, "spearman" or "pearson". "spearman" (default) is
+generally recommended because the relationship between the response and
+"env_var" may not be linear.}
 }
 \value{
 a "mob_out" object with attributes
