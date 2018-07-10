@@ -2,13 +2,13 @@
 % Please edit documentation in R/mobr_data.r
 \name{inv_comm}
 \alias{inv_comm}
-\alias{inv_comm_attr}
+\alias{inv_plot_attr}
 \title{Invasive plants dataset}
 \description{
 Plant species counts in invaded and unvaded sites.
 }
 \details{
-\code{inv_comm} is a site-by-species matrix with species counts.
+\code{inv_comm} is a site-by-species matrix with individual counts.
 
 \code{inv_plot_attr} is a data frame with corresponding site variables. 
 The column \code{group} specifies whether a site is "invaded" or "uninvaded". This variable is considered a "treatment" in the mob framework.
@@ -25,3 +25,5 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 Powell, K. I., Chase, J. M., & Knight, T. M. (2013). Invasive plants have scale-dependent effects on diversity by altering species-area relationships. science, 339(6117), 316-318.
 }
 \keyword{data}
+\keyword{invaded}
+\keyword{invasion}
