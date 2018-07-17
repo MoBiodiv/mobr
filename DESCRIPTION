@@ -7,9 +7,9 @@ Authors@R: c(person("Xiao", "Xiao", email = "xiao@weecology.org",
                     role = "aut"),
              person("Felix", "May", email = "felix.may@idiv.de", 
                     role = "aut"),
-             person("Caroline", "Oliver", email = "olivercs@g.cofc.edu",
+             person("Thor", "Engel", email = "thore.engel@idiv.de",
                     role = "aut"))
-Date: 2017
+Date: 2018
 Description: This package is designed to help measure biodiversity and its
     changes across scales.
 Depends:
@@ -17,8 +17,7 @@ Depends:
     pracma,
     scales,
     dplyr,
-    pbapply,
-    shiny
+    pbapply
 Imports:
     plotrix
 Suggests:
