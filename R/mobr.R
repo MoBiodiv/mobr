@@ -500,11 +500,12 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
         stop('If N effect to be calculated ind_dens must be specified')
     if (any(c('N', 'agg') %in% tests) & class(x) != 'mob_in')
         stop('If N or agg effects to be computed x must be a mob_in object')
-    out = list(NULL)
+    out = list()
     if ('SAD' %in% tests) {
         S_SAD = rarefaction(x, 'indiv', inds)
         out$SAD = data.frame(test = 'SAD', sample = 'indiv',
-                             effort = inds, S = S_SAD, effect = S_SAD)
+                             effort = inds, S = S_SAD, effect = S_SAD,
+                             stringsAsFactors = FALSE)
     }
     if ('N' %in% tests) {
         comm_dens = sum(x$comm) / nrow(x$comm)
@@ -514,7 +515,8 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
             S_SAD = rarefaction(x, 'indiv', inds)
         effect = S_N - S_SAD
         out$N = data.frame(test = 'N', sample = 'indiv', 
-                           effort = inds, S = S_N, effect)
+                           effort = inds, S = S_N, effect,
+                           stringsAsFactors = FALSE)
     }
     if ('agg' %in% tests) {
         S_agg = rarefaction(x, 'spat')
@@ -524,7 +526,8 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
         effect = S_agg - S_N
         out$agg = data.frame(test = 'agg', sample = 'plot', 
                              effort = as.numeric(names(S_agg)),
-                             S = S_agg, effect)
+                             S = S_agg, effect, 
+                             stringsAsFactors = FALSE)
     }
     return(flatten_dfr(tibble(out)))
 }
@@ -849,7 +852,7 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     groups = mob_in$env[ , group_var]
     if (type == 'discrete') {
         if (class(groups) != 'factor') {
-            warning(paste("Converting", group_var, "to a factor because the argument type = 'discrete'"))
+            warning(paste("Converting", group_var, "to a factor with the default contrats because the argument type = 'discrete'."))
             groups = as.factor(groups)
         }
     } else if (type == 'continuous') {
@@ -861,7 +864,10 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
         stop('The argument "type" must be either "discrete" or "continuous"')
     #TODO if ref_group specified then the contrats of the group_var
     # need to be set so that the reference group is treated the y-intercept
-    # 
+    # Additionally it needs to be clear which beta coefficients apply to 
+    # which factor level - this is likely most easily accomplished by appending
+    # a variable name to the beta column or adding an additional column
+    #
     #if (is.null(env_var)){
     #    env_levels = as.numeric(names(sad_groups))
     #} else {
@@ -938,7 +944,7 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
                                n_perm) {
         for (k in seq_along(tests)) {
             null_results = vector('list', length = n_perm)
-            cat(paste('\nComputing null model for', tests[k], 'SAD effect\n'))
+            cat(paste('\nComputing null model for', tests[k], 'effect\n'))
             pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
             for (i in 1:n_perm) {
                 mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
