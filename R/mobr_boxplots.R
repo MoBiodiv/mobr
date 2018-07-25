@@ -159,7 +159,7 @@ boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
 #'    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
 #'    \item \code{S_asymp} ... Estimated asymptotic species richness
 #'    \item \code{f_0} ... Estimated number of undetected species 
-#'    \item \code{pct_rare} ... The percent of rare species
+#'    \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
 #'    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
 #'    \item \code{S_PIE} ... Effective number of species based on PIE
 #' }
@@ -171,10 +171,12 @@ boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
 #'   calculation of rarefied species richness. This can a be
 #'   single value or an integer vector. 
 #'   
-#' @param rare_thres The threshold for determining if a species is rare or not. 
-#'   It can ranges from (0, 1] and defaults to 0.05 which specifies that any 
+#' @param rare_thres The threshold that determines how pct_rare is computed.
+#'   It can range from (0, 1] and defaults to 0.05 which specifies that any 
 #'   species with less than or equal to 5% of the total abundance in a sample is
-#'   considered rare. 
+#'   considered rare. It can also be specified as "N/S" which results in using
+#'   average abundance as the threshold which McGill (2011) found to have the 
+#'   best small sample behavior. 
 #'   
 #' @details This function is primarily intended as auxiliary function used in
 #' \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
@@ -188,12 +190,16 @@ boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
 #'    (NA for the other indices)
 #'    \item \code{value} ... Value of the biodiversity index
 #' }
-#' 
 #'   
 #' @author Felix May and Dan McGlinn
 #' 
-#' @export
+#' @references 
 #' 
+#' McGill, B. J. 2011. Species abundance distributions. Pages 105–122 Biological
+#' Diversity: Frontiers in Measurement and Assessment, eds. A.E. Magurran and
+#' B.J. McGill.
+#'
+#' @export
 calc_biodiv = function(abund_mat, groups, index, effort, rare_thres) {
     out = expand.grid(group = groups,
                       index = index[index != "S_n"],
@@ -225,10 +231,18 @@ calc_biodiv = function(abund_mat, groups, index, effort, rare_thres) {
     
     # Percent rare ------------------------------------------------------------
     if (any(index == "pct_rare")) {
-        pct_rare = function(x, rare_thres)
-            ifelse(sum(x) > 0,
-                   100 * sum(x[x > 0] <= (rare_thres * sum(x))) / sum(x > 0),
-                   0)
+        pct_rare = function(x, rare_thres) {
+            S = sum(x > 0)
+            if (S > 0) {
+                N = sum(x)
+                if (rare_thres == "N/S") {
+                    rare_thres = N / S
+                    100 * (sum(x[x > 0] <= rare_thres) / S)
+                } else 
+                    100 * (sum(x[x > 0] <= (rare_thres * N)) / S)
+            } else
+              0
+        }
         out$value[out$index == "pct_rare"] = apply(abund_mat, 1, pct_rare, rare_thres)
     }
  
@@ -348,10 +362,12 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #'   warning. Accordingly, when \code{effort_samples} is set by the user it has
 #'   to be higher than \code{effort_min}.
 #'   
-#' @param rare_thres The threshold for determining if a species is rare or not. 
-#'   It can ranges from (0, 1] and defaults to 0.05 which specifies that any 
+#' @param rare_thres The threshold that determines how pct_rare is computed.
+#'   It can range from (0, 1] and defaults to 0.05 which specifies that any 
 #'   species with less than or equal to 5% of the total abundance in a sample is
-#'   considered rare. 
+#'   considered rare. It can also be specified as "N/S" which results in using
+#'   average abundance as the threshold which McGill (2011) found to have the 
+#'   best small sample behavior. 
 #'   
 #' @param n_perm The number of permutations to use for testing for treatment
 #'   effects.
@@ -957,8 +973,10 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                              "S" = expression('Richness (' * italic(S) * ')'),
                              "S_asymp" = expression('Asympotic richness (' *
                                                       italic(S[asymp]) * ')'),
-                             "pct_rare" = paste("Richness in lower",
-                                               mob_stats$rare_thres * 100, 
+                             "pct_rare" = paste("% of species in lower",
+                                               ifelse(is.character(mob_stats$rare_thres),
+                                                      mob_stats$rare_thres,
+                                                      mob_stats$rare_thres * 100),
                                                "% of abundance"),
                              "f_0" = expression('Undetected richness (' * italic(f)[0] * ')'),
                              "S_PIE" = expression('ENS of PIE (' * italic(S)[PIE] * ')'))

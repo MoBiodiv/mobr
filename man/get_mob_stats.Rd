@@ -42,10 +42,12 @@ individuals then \code{effort_min} are excluded from the analysis with a
 warning. Accordingly, when \code{effort_samples} is set by the user it has
 to be higher than \code{effort_min}.}
 
-\item{rare_thres}{The threshold for determining if a species is rare or not. 
-It can ranges from (0, 1] and defaults to 0.05 which specifies that any 
+\item{rare_thres}{The threshold that determines how pct_rare is computed.
+It can range from (0, 1] and defaults to 0.05 which specifies that any 
 species with less than or equal to 5% of the total abundance in a sample is
-considered rare.}
+considered rare. It can also be specified as "N/S" which results in using
+average abundance as the threshold which McGill (2011) found to have the 
+best small sample behavior.}
 
 \item{n_perm}{The number of permutations to use for testing for treatment
 effects.}
