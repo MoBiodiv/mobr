@@ -81,7 +81,7 @@ plot_delta_con = function(mob_out, trt_group, ref_group, same_scale=FALSE,
            type = 'n', xlab = 'Number of plots',
            ylab = 'Richness (S)', col = cols$trt,
            ylim = ylim_rare,
-           main = 'Spatial', cex.axis = 1.5, cex.lab = 1.5,
+           main = 'sSBR', cex.axis = 1.5, cex.lab = 1.5,
            log=log, frame.plot=F)
       polygon(c(N1, rev(N2)), c(S1, rev(S2)), border=NA,
               col = cols$deltaS)            
@@ -100,7 +100,7 @@ plot_delta_con = function(mob_out, trt_group, ref_group, same_scale=FALSE,
            lwd = lwd, type = 'n', xlab = 'Number of plots',
            ylab = 'Richness (S)', col = cols$trt, 
            ylim = ylim_rare,
-           main = 'Nonspatial', cex.axis = 1.5, cex.lab = 1.5,
+           main = 'nsSBR', cex.axis = 1.5, cex.lab = 1.5,
            log = log, frame.plot=F)
       polygon(c(N1, rev(N2)), c(S1, rev(S2)), border=NA,
               col = cols$deltaS)            
@@ -116,7 +116,7 @@ plot_delta_con = function(mob_out, trt_group, ref_group, same_scale=FALSE,
       S2 = mob_out$indiv_rare$uninvaded          
       plot(N1, S1,
            lwd = lwd, type = 'n', col = cols$trt, xlab = 'Number of individuals', 
-           ylab = 'Richness (S)', main = 'Individual', 
+           ylab = 'Richness (S)', main = 'IBR', 
            cex.axis = 1.5, cex.lab = 1.5, log=log, frame.plot=F)
       polygon(c(N1, rev(N2)), c(S1, rev(S2)), border=NA,
               col = cols$deltaS)            

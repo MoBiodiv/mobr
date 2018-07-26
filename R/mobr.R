@@ -1551,7 +1551,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                    ylab = 'Richness (S)', col = cols$trt,
                    xlim = c(x_axis_min, max(dat_group$sample_plot)),
                    ylim = ylim_rare,
-                   main = 'Spatial', cex.axis = 1.5, cex.lab = 1.5,
+                   main = 'sSBR', cex.axis = 1.5, cex.lab = 1.5,
                    log=log, frame.plot=F, ...)
             else
               lines(dat_group$sample_plot, dat_group$expl_S,
@@ -1573,7 +1573,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
                          ylab = 'Richness (S)', col = cols$trt, 
                          xlim = c(x_axis_min, max(dat_group$sample_plot)),
                          ylim = ylim_rare,
-                         main = 'Nonspatial', cex.axis = 1.5, cex.lab = 1.5,
+                         main = 'nsSBR', cex.axis = 1.5, cex.lab = 1.5,
                          log=log, frame.plot=F, ...)
                 else
                     lines(dat_group$sample_plot, dat_group$impl_S,
@@ -1585,7 +1585,7 @@ plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE,
             ylim_rare = range(mob_out$indiv_rare[, -1])
           plot(mob_out$indiv_rare$sample, mob_out$indiv_rare[, trt_group], 
                lwd = lwd, type = 'l', col = cols$trt, xlab = 'Number of individuals', 
-               ylab = 'Richness (S)', main = 'Individual', 
+               ylab = 'Richness (S)', main = 'IBR', 
                xlim = c(x_axis_min, max(mob_out$indiv_rare$sample)), ylim = ylim_rare, 
                cex.axis = 1.5, cex.lab = 1.5, log=log, frame.plot=F, ...)
           lines(mob_out$indiv_rare$sample, mob_out$indiv_rare[, ref_group], 
