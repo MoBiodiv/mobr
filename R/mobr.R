@@ -230,6 +230,11 @@ sphere_dist = function(coords){
 #'   Defaults to FALSE in which case it returns observed richness. Extrapolation
 #'   is only implemented for individual-based rarefaction 
 #'   (i.e., \code{method = 'indiv'})
+#' @param return_NA boolean defaults to FALSE in which the function returns the
+#'   observed S when \code{effort} is larger than the number of individuals or
+#'   number of samples (depending on the method of rarefaction). If set to TRUE
+#'   then NA is returned. Note that this argument is only relevant when
+#'   \code{extrapolate = FALSE}.
 #' @param quiet_mode boolean defaults to FALSE, if TRUE then warnings and other
 #'   non-error messages are suppressed.
 #' @inheritParams make_mob_in 
@@ -308,7 +313,8 @@ sphere_dist = function(coords){
 #' # the syntax is simplier if suppling a mob_in object
 #' rarefaction(inv_mob_in, method='spat')
 rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
-                       dens_ratio=1, extrapolate=FALSE, quiet_mode=FALSE) {
+                       dens_ratio=1, extrapolate=FALSE, return_NA = FALSE, 
+                       quiet_mode=FALSE) {
     if (!any(method %in% c('indiv', 'samp', 'spat')))
         stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
     if (class(x) == 'mob_in') {
@@ -344,19 +350,22 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         else
             effort = 1:n
     if (any(effort > n)) {
-        if (method == 'indiv') {
-            if (extrapolate) 
-                if (!quiet_mode) warning('"effort" larger than total number of individuals extrapolating S using Chao1')
-            else
-                if (!quiet_mode) warning('"effort" larger than total number of individuals returing observed S')
-        } else {
+        if (extrapolate & return_NA)
+            stop('It does not make sense to set "extrapolate" and "return_NA" to both be TRUE, see documentation')
+        if (!quiet_mode) {
+            warning_mess = paste('"effort" larger than total number of',
+                                 ifelse(method == 'indiv', 'individuals', 'samples'),
+                                 'returning')
             if (extrapolate)
-                stop('Extrapolation only implemented for method = "indiv"')
+                warning(paste(warning_mess, 'extrapolated S using Chao1'))
+            else if (return_NA)
+                warning(paste(warning_mess, 'NA'))
             else
-                if (!quiet_mode) warning('"effort" larger than total number of samples returing observed S')
+                warning(paste(warning_mess, 'S'))
         }
     } else if (extrapolate)
-        if (!quiet_mode) message('Richness was not extrapolated because effort less than or equal to the number of samples')
+        if (!quiet_mode) 
+            message('Richness was not extrapolated because effort less than or equal to the number of samples')
     if (method == 'spat') {
         explicit_loop = matrix(0, n, n)
         if (is.null(latlong))
@@ -420,7 +429,9 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                 S_ext = c(S_ext, ifelse(f1 == 0, S, 
                                         S + f0_hat * (1 - A ^ (effort[i] - n))))
             }
-            else
+            else if (return_NA)
+                S_ext = c(S_ext, NA)
+            else 
                 S_ext = c(S_ext, S)
         }
         out = rep(NA, length(effort))

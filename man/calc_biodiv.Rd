@@ -4,7 +4,8 @@
 \alias{calc_biodiv}
 \title{Calculate biodiversity statistics from sites by species table.}
 \usage{
-calc_biodiv(abund_mat, groups, index, effort, rare_thres)
+calc_biodiv(abund_mat, groups, index, effort, extrapolate, return_NA,
+  rare_thres)
 }
 \arguments{
 \item{abund_mat}{Sites by species table with species abundances
@@ -32,6 +33,10 @@ biodiversity indices.}
 \item{effort}{The standardized number of individuals used for the 
 calculation of rarefied species richness. This can a be
 single value or an integer vector.}
+
+\item{extrapolate}{boolean which specifies if richness should be extrapolated
+when effort is larger than the number of individuals using the chao1
+method.}
 
 \item{rare_thres}{The threshold that determines how pct_rare is computed.
 It can range from (0, 1] and defaults to 0.05 which specifies that any 
