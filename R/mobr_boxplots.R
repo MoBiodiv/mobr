@@ -1111,8 +1111,6 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                                        list(n = effort_samples[i]))
                 samples_panel1(dat_samples, dat_tests, main = '',
                                ylab = "", col = col, cex.axis=cex.axis, ...)
-                #main = expression(beta * "-diversity (=" *
-                #                                 gamma / alpha * "), n=" * )
 
                 par(new=TRUE)
                 plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
