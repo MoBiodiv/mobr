@@ -231,12 +231,10 @@ calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
                                  index = 'S_n',
                                  effort = effort, value = NA)
         out = rbind(out, dat_S_n)
-      
-        out$value[out$index == "S_n"] = apply(abund_mat, 1, rarefaction,
-                                              method = 'indiv', effort = effort,
-                                              extrapolate = extrapolate,
-                                              return_NA = return_NA, 
-                                              quiet_mode = TRUE)
+        S_n  = apply(abund_mat, 1, rarefaction, method = 'indiv', effort = effort,
+                     extrapolate = extrapolate, return_NA = return_NA,
+                     quiet_mode = TRUE)
+        out$value[out$index == "S_n"] = as.numeric(t(S_n))
     } 
     
     # Percent rare ------------------------------------------------------------
