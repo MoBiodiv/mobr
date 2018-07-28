@@ -1,6 +1,6 @@
 context("Testing of the rarefaction function")
 
-test_that("Test mobr rarefaction values against true/accepted values", {
+test_that("mobr rarefaction function values are equivalent to true/accepted values", {
   
   # INDIVIDUAL BASED RAREFACTION TESTING (EXPECTATIONS 1 THROUGH 5)
   # Caluculate SAD values that should be equivalent to the SAD values provided in Table 2 of Stuart H. Huberts 
