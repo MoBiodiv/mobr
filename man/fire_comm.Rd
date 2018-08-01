@@ -5,14 +5,16 @@
 \alias{fire_plot_attr}
 \title{Fire data set}
 \description{
-Woody plant species counts in burned and unburned forest sites.
+Woody plant species counts in burned and unburned forest sites
+  in the Missouri Ozarks, USA.
 }
 \details{
 \code{fire_comm} is a site-by-species matrix with individual counts.
 
-\code{fire_plot_attr} is a data frame with corresponding site variables. 
-The column \code{group} specifies whether a site is "burned" or "unburned". This variable is considered a "treatment" in the mob framework.
-The columns \code{x} and \code{y} contain the spatial coordinates of the sites.
+\code{fire_plot_attr} is a data frame with corresponding site variables. The
+column \code{group} specifies whether a site is "burned" or "unburned". This
+variable is considered a "treatment" in the mob framework. The columns
+\code{x} and \code{y} contain the spatial coordinates of the sites.
 
 The data were adapted from Myers et al (2015).
 }
@@ -22,7 +24,9 @@ data(fire_plot_attr)
 fire_mob_in = make_mob_in(fire_comm, fire_plot_attr)
 }
 \references{
-Myers, J. A., Chase, J. M., Crandall, R. M., & Jiménez, I. (2015). Disturbance alters beta‐diversity but not the relative importance of community assembly mechanisms. Journal of Ecology, 103(5), 1291-1299.
+Myers, J. A., Chase, J. M., Crandall, R. M., & Jiménez, I.
+(2015). Disturbance alters beta‐diversity but not the relative importance of
+community assembly mechanisms. Journal of Ecology, 103: 1291-1299.
 }
 \keyword{burned}
 \keyword{data}

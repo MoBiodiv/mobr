@@ -13,8 +13,6 @@ inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 # create graphics
 pdf('./figs/inv_mob_stats.pdf', height = 7*0.5)
 plot(inv_mob_stats)
-# additional plot of f0 without outline
-plot(inv_mob_stats, 'f_0', outline = F)
 dev.off()
 
 pdf('./figs/inv_mob_stats_multi.pdf', width = 7*1.25, height = 7*2)

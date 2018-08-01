@@ -349,7 +349,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #'    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
 #'    \item \code{S_asymp} ... Estimated asymptotic species richness
 #'    \item \code{f_0} ... Estimated number of undetected species 
-#'    \item \code{pct_rare} ... The percent of rare species
+#'    \item \code{pct_rare} ... The percent of rare species as defined by \code{rare_thres}
 #'    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
 #'    \item \code{S_PIE} ... Effective number of species based on PIE
 #'    
@@ -552,7 +552,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #' stopCluster(cl)
 #' }
 get_mob_stats = function(mob_in, group_var, 
-                         index = c("N", "S", "S_n", "pct_rare", "S_PIE"),
+                         index = c("N", "S", "S_n", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
                          extrapolate = TRUE, return_NA = FALSE, 
                          rare_thres = 0.05, n_perm = 199, 
