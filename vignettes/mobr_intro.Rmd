@@ -82,7 +82,7 @@ The package `mobr` offers functions for exploratory data analysis and visualizat
 First let's look at the spatial, sample-based rarefaction (sSBR) in which samples are
 added depending on their spatial proximity. 
 
-```{r plot rarefaction, fig.width = 5, fig.height = 5}
+```{r, fig.width = 5, fig.height = 5}
 plot_rarefaction(inv_mob_in, 'group', 'spat', lwd=4)
 ```
 
@@ -198,7 +198,7 @@ want to plot all the biodiversity metrics at once you can simply use:
 plot(inv_stats)
 ```
 
-# Continuous scale analysis
+# Multi-scale analysis
 
 The continuous scale analysis using `mobr` aims at disentangling the 
 consequences of three biodiversity components on observed changes in species
@@ -260,8 +260,8 @@ their effects using the function `overlap_effects`
 
 ```{r, fig.width=7, fig.height=4}
 par(mfrow=c(1,2))
-overlap_effects(inv_deltaS, 'invaded', display='raw')
-overlap_effects(inv_deltaS, 'invaded', display='stacked', prop=T)
+overlap_effects(inv_deltaS, 'invaded', display='raw', leg_loc = 'bottomleft')
+overlap_effects(inv_deltaS, 'invaded', display='stacked', prop=T, leg_loc = NA)
 ```
 
 # Herbaceous woodland plants response to fire
