@@ -5,9 +5,9 @@
 \title{Conduct the MoB tests on drivers of biodiversity across scales.}
 \usage{
 get_delta_stats(mob_in, group_var, ref_group = NULL, tests = c("SAD", "N",
-  "agg"), type = "discrete", inds = NULL, log_scale = FALSE,
-  min_plots = NULL, density_stat = "mean", n_perm = 1000,
-  overall_p = FALSE)
+  "agg"), type = c("continuous", "discrete"), stats = NULL, inds = NULL,
+  log_scale = FALSE, min_plots = NULL, density_stat = c("mean", "max",
+  "min"), n_perm = 1000, overall_p = FALSE)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -26,6 +26,15 @@ are to be performed. Default is to include all three tests.}
 are conducted between all other groups and the reference group. If
 "continuous", a correlation analysis is conducted between the response
 variables and group_var or env_var (if defined).}
+
+\item{stats}{a vector of character strings that specifies what statistics to
+sumamrize effect sizes with. Options include: \code{c('betas', 'r2',
+'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
+r-squared, F-statistic, and p-value respectively. The default value of
+\code{NULL} will result in only betas being calculated when \code{type ==
+'discrete'} and all possible stats being computed when \code{type ==
+'continuous'}. Note that for a discrete analysis all non-betas stats are
+meaningless because the model has zero degrees of freedom in this context.}
 
 \item{inds}{effort size at which the individual-based rarefaction curves are
 to be evaluated, and to which the sample-based rarefaction curves are to be
