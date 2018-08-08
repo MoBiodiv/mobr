@@ -702,17 +702,17 @@ get_ind_dens = function(comm, density_stat){
 #' Method developed by Loosmore and Ford 2006 but algebraic simplifications 
 #' used as developed by Baddeley et al. 2014 Ecological Archives M084-017-A1
 #' @keywords internal
-get_overall_p = function(effort, deltaS_emp, deltaS_null){
-    delta_effort = c(effort[1], diff(effort))
-    deltaS = rbind(deltaS_emp, deltaS_null)
-    Hbarbar = apply(deltaS, 2, mean)                    # Baddeley Eq. A.10
-    m = nrow(deltaS) - 1                                # number of permutations
+get_overall_p = function(effort, perm, value){
+    delta_effort = c(effort[1], diff(effort))[perm == 0]
+    Hbarbar = tapply(value, effort, mean)  # Baddeley Eq. A.10
+    m = max(as.numeric(perm))              # number of permutations
     a = ((m + 1) / m)^2
-    u = a * apply(deltaS, 1, function(x) 
-                  sum((x - Hbarbar)^2 * delta_effort))  # Baddeley Eq. A.12-13
+    u = tapply(value, perm, function(x)    # Baddeley Eq. A.12-13
+               a * sum((x - Hbarbar)^2 * delta_effort)) 
     overall_p = sum(u >= u[1]) / (m + 1)
     return(overall_p)
 }
+
 
 #' @keywords internal
 mod_sum = function(x, stats = c('betas', 'r2', 'r2adj', 'f', 'p')) {
@@ -797,14 +797,17 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, type, stats=NULL) 
 
 #' @keywords internal
 run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
-                           n_perm) {
+                           n_perm, overall_p) {
+    if (overall_p)
+        p_val = vector('list', length(tests))
     for (k in seq_along(tests)) {
         null_results = vector('list', length = n_perm)
         cat(paste('\nComputing null model for', tests[k], 'effect\n'))
         pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
         for (i in 1:n_perm) {
-            mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
-            null_results[[i]] = get_results(mob_in, groups, tests[k], inds,
+            null_mob_in = mob_in
+            null_mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
+            null_results[[i]] = get_results(null_mob_in, groups, tests[k], inds,
                                             ind_dens, type, stats)$mod_df
             setTxtProgressBar(pb, i)
         }
@@ -814,15 +817,28 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
         null_df = flatten_dfr(null_results, .id = "perm")
         # compute quantiles
         null_qt = null_df %>%
-        group_by(test, sample, effort, index) %>%
-        summarize(low_value = quantile(value, 0.025, na.rm=T),
-                  med_value = quantile(value, 0.5, na.rm=T), 
-                  high_value = quantile(value, 0.975, na.rm=T))
+                  group_by(test, sample, effort, index) %>%
+                  summarize(low_value = quantile(value, 0.025, na.rm=T),
+                            med_value = quantile(value, 0.5, na.rm=T), 
+                            high_value = quantile(value, 0.975, na.rm=T))
         if (k == 1) 
             out = null_qt
         else 
             out = rbind(out, null_qt)
+        # to compute p-value we need to also calculate the observed
+        # results then the funct must be distributed across the
+        # various stats and tests
+        if (overall_p) {
+            obs_df = get_results(mob_in, groups, tests[k], inds, ind_dens,
+                                 type, stats)$mod_df
+            obs_df = data.frame(perm = 0, obs_df)          
+            null_df = rbind(obs_df, null_df)
+            p_val[[k]] = null_df %>% 
+                         group_by(test, index) %>% 
+                         summarize(p = get_overall_p(effort, perm, value))
+        }
     }
+    attr(out, "p") = bind_rows(p_val)
     return(out)
 }
 
@@ -905,7 +921,6 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
 #' inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                            type='discrete', log_scale=TRUE, n_perm=20)
-
 get_delta_stats = function(mob_in, group_var, ref_group = NULL, 
                            tests = c('SAD', 'N', 'agg'),
                            type = c('continuous', 'discrete'),
@@ -978,10 +993,12 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
                  get_results(mob_in, groups, tests, inds, ind_dens, type, stats))
 
     null_results = run_null_models(mob_in, groups, tests, inds, ind_dens,
-                                   type, stats, n_perm)
+                                   type, stats, n_perm, overall_p)
     # merge the null_results into the model data.frame
     out$mod_df = left_join(out$mod_df, null_results, 
                            by = c("test", "sample", "effort", "index"))
+    if (overall_p)
+        out$p = attr(null_results, "p")
     class(out) = 'mob_out'
     return(out)
 }
