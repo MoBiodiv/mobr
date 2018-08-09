@@ -528,6 +528,9 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #' Whittaker, R.H. (1972) Evolution and Measurement of Species Diversity.
 #' Taxon, 21, 213-251.
 #' 
+#' @import dplyr
+#' @importFrom pbapply pbreplicate
+#' 
 #' @export
 #' 
 #' @examples 
@@ -721,9 +724,9 @@ get_mob_stats = function(mob_in, group_var,
                 ungroup()
     F_obs = get_F_values(dat_samples, permute = F)
     cat('\nComputing null model at alpha-scale\n')
-    F_rand = bind_rows(pbapply::pbreplicate(n_perm, 
-                                  get_F_values(dat_samples, permute = T),
-                              simplify = F, cl = cl)) %>%
+    F_rand = bind_rows(pbreplicate(n_perm,
+                                   get_F_values(dat_samples, permute = T),
+                                   simplify = F, cl = cl)) %>%
              ungroup()
     F_obs = F_obs %>% mutate(F_val_obs = F_val, F_val = NULL)
     F_rand = left_join(F_rand, F_obs, by = c("index", "effort"))
@@ -743,7 +746,7 @@ get_mob_stats = function(mob_in, group_var,
       
         abund_dat = cbind(group_id, mob_in$comm)
         cat('\nComputing bootstrap confidence intervals at the gamma-scale\n')
-        boot_repl_groups = pbapply::pbreplicate(n_perm,
+        boot_repl_groups = pbreplicate(n_perm,
                                boot_sample_groups(abund_dat,
                                                   index = index,
                                                    effort = effort_groups,
@@ -835,7 +838,8 @@ samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
    mtext(label, side = 3, line = 0)  
 }
 
-# Panel function for gamma-scale results
+#' Panel function for gamma-scale results
+#' @keywords internal
 groups_panel1 = function(group_dat, tests, col, ylab = "",
                          main = expression(gamma * "-scale"),
                          cex.axis=1.2, ...) {
@@ -854,7 +858,9 @@ groups_panel1 = function(group_dat, tests, col, ylab = "",
     mtext(label, side = 3, line = 0)
 }
 
-# Panel function for gamma-scale results with confidence intervals
+#' Panel function for gamma-scale results with confidence intervals
+#' @importFrom plotrix plotCI
+#' @keywords internal
 groups_panel2 = function(group_dat, col, ylab = "", 
                          main = expression(gamma * "-scale"),
                          cex.axis=1.2, ...) {
@@ -863,9 +869,9 @@ groups_panel2 = function(group_dat, col, ylab = "",
             col = col, cex.axis=cex.axis, cex.main=1.5, frame.plot=T, 
             ...)
     groups = levels(group_dat$group)
-    plotrix::plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
-                    ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
-                    sfrac = 0.02, col = col, ...)
+    plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
+           ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
+           sfrac = 0.02, col = col, ...)
 }
 
 #' Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis

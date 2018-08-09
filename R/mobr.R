@@ -491,6 +491,7 @@ avg_nn_dist = function(coords) {
 #' @param tests what effects to compute defaults to 'SAD', 'N', and 'agg'
 #' @param ind_dens the density of individuals to compare against for computing
 #'  N effect
+#' @importFrom tibble tibble
 #' @keywords internal
 get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
                             inds=NULL, ind_dens=NULL) {
@@ -564,6 +565,8 @@ get_rand_sad = function(rad, N) {
 #'   community matrix are assumed to be members of the same group
 #'   
 #' @return a site-by-species matrix
+#' @import purrr
+#' @import dplyr
 #' @export
 #' @examples 
 #' S = 3
@@ -617,46 +620,10 @@ get_null_comm = function(comm, tests, groups = NULL) {
 }
 
 
-# Convert specified columns of a dataframe from factors to numeric
-df_factor_to_numeric = function(dataframe, cols = NULL){
-    if (is.null(cols)) cols = 1:ncol(dataframe)
-    for (col in cols){
-        if ('factor' %in% class(dataframe[, col]))
-            dataframe[, col] = as.numeric(levels(dataframe[, col]))[dataframe[, col]]
-    }
-    return(dataframe)
-}
-
-# Auxiliary function for get_delta_stats()
-# Perform checks when type is "discrete"
-get_delta_discrete_checks = function(ref_group, group_levels, group_data, env_var){
-    if (is.null(ref_group)) {
-        stop('For a discrete analysis you must specify a ref_group to compare groups to')
-    } else if (!(as.character(ref_group) %in% group_levels)) {
-        stop('Reference group does not exist.')
-    }
-    if (!is.null(env_var))
-        warning('Environmental variable is not used in the discrete analysis.')
-    if (!('factor' %in% class(group_data))) 
-        warning('Grouping variable is not a factor. A group will be defined for each unique value.')
-}
-
-# Auxiliary function for get_delta_stats()
-# Perform checks when type is "continuous"
-get_delta_continuous_checks = function(corr, group_levels, env_raw){
-    if (!(corr %in% c('spearman', 'pearson')))
-        stop('corr has to be spearman or pearson.')
-    if ('factor' %in% class(env_raw)) {
-        env_vals = data.frame(groups = group_levels, 
-                              values = as.numeric(env_raw)[match(group_levels, env_raw)])
-        warning('Variable of interest is a factor but will be treated as a continous variable for the analysis with the above values')
-        print(env_vals)
-    } 
-}
-
-# Auxiliary function for get_delta_stats()
-# Returns a vector of abundances where individual-based rarefaction 
-# will be performed
+#' Auxiliary function for get_delta_stats()
+#' Returns a vector of abundances where individual-based rarefaction 
+#' will be performed
+#' @keywords internal
 get_inds = function(N_max, inds = NULL, log_scale = FALSE) {
     # across the groups what is the smallest total number of
     # individuals - this will be the largest N we can compute to
@@ -713,14 +680,8 @@ get_overall_p = function(effort, perm, value){
     return(overall_p)
 }
 
-
 #' @keywords internal
 mod_sum = function(x, stats = c('betas', 'r2', 'r2adj', 'f', 'p')) {
-    # this is not the most memory efficient 
-    # summary of the model as it does not use
-    # cross-tabs however this will make it easy to play with
-    # downstream I think when it comes to 
-    # adding in null model results
     summary_lm = summary(x)
     out = list()
     if ('betas' %in% stats) 
@@ -746,6 +707,9 @@ mod_sum = function(x, stats = c('betas', 'r2', 'r2adj', 'f', 'p')) {
     out
 }
 
+#' @import purrr
+#' @import dplyr 
+#' @importFrom tidyr nest unnest
 #' @keywords internal 
 get_results = function(mob_in, groups, tests, inds, ind_dens, type, stats=NULL) {
   
@@ -785,16 +749,20 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, type, stats=NULL) 
     }
     mod_df = S_df %>%
              group_by(test, sample, effort) %>%
-             tidyr::nest() %>%
+             nest() %>%
              mutate(fit = map(data, delta_mod)) %>%
              mutate(sum = map(fit, mod_sum, stats)) %>%
              select(test, sample, effort, sum) %>% 
-             tidyr::unnest(sum) %>%
+             unnest(sum) %>%
              mutate_if(is.factor, as.character)
     
     return(list(S_df = S_df, mod_df = mod_df))
 }
 
+#' @import purrr
+#' @import dplyr
+#' @importFrom tibble tibble
+#' @importFrom utils txtProgressBar setTxtProgressBar
 #' @keywords internal
 run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
                            n_perm, overall_p) {
@@ -838,7 +806,8 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
                          summarize(p = get_overall_p(effort, perm, value))
         }
     }
-    attr(out, "p") = bind_rows(p_val)
+    if (overall_p)
+        attr(out, "p") = bind_rows(p_val)
     return(out)
 }
 
@@ -903,10 +872,6 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
 #'   all plots within the two groups for each pair-wise comparison when "type"
 #'   is "discrete") are used. If it is "min" or "max", the minimum/maximum
 #'   plot-level density is used.
-#' @param corr which kind of correlation to use when "type" is "continuous". It
-#'   can take two values, "spearman" or "pearson". "spearman" (default) is
-#'   generally recommended because the relationship between the response and
-#'   "env_var" may not be linear.
 #' @param n_perm number of iterations to run for null tests, defaults to 1000.
 #' @param overall_p boolean defaults to FALSE specifies if overall across scale 
 #'  p-values for the null tests. This should be interpreted with caution because
@@ -914,6 +879,8 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
 #'  reflect significance at any particular scale. 
 #' @return a "mob_out" object with attributes
 #' @author Xiao Xiao and Dan McGlinn
+#' @import dplyr
+#' @import purrr
 #' @export
 #' @examples
 #' data(inv_comm)
@@ -921,6 +888,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
 #' inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                            type='discrete', log_scale=TRUE, n_perm=20)
+#' plot(inv_mob_out, 'b1')
 get_delta_stats = function(mob_in, group_var, ref_group = NULL, 
                            tests = c('SAD', 'N', 'agg'),
                            type = c('continuous', 'discrete'),
@@ -1001,98 +969,6 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
         out$p = attr(null_results, "p")
     class(out) = 'mob_out'
     return(out)
-}
-
-table_effect_on_S = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
-  # Returns a data frame with the effects of SAD, N, and aggregation on diversity
-  # across scales
-  # not b/c of spatial ties the values will change every time 
-  # this is calculated therefore best pratice may be
-  # tst = replicate(20, table_effect_on_S(dat_sp, dat_plot, groups, ScaleBy), simplify=FALSE)
-  # plyr::aaply(plyr::laply(tst, as.matrix), c(2, 3), mean)
-  nplots = table(dat_plot$group)
-  explicit_sample = sapply(groups, function(x) 
-    rarefy_sample_explicit(dat_sp, dat_plot, x, 1:min(nplots)))
-  overall = as.numeric(na.omit(explicit_sample[ , 2] - explicit_sample[ , 1]))
-  deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
-  deltaSN = get_deltaSN(dat_sp, dat_plot, groups, ScaleBy) # why is this call diff
-  deltaSagg = get_deltaSagg(dat_sp, dat_plot, groups)
-  # Rarefy to desired abundances
-  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
-  max_level = floor(log10(avg_dens * min(nplots)))
-  out = as.data.frame(matrix(NA, 4, max_level))
-  row.names(out) = c("overall", "SAD", "N", "aggregation")
-  names(out) = as.character(10^(1:max_level))
-  for (row in c(2, 3)) {
-    deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
-    out[row, ] = sapply(10^(1:max_level), function(x) 
-      ifelse(length(deltaS) >= x, deltaS[x], NA))
-  }
-  for (row in c(1, 4)) {
-    deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
-    out_row = pracma::pchip(xi=(0:length(deltaS)) * avg_dens, yi=c(0, deltaS), 
-                    x=10^(1:min(max_level, floor(log10(length(deltaS) * avg_dens)))))
-    out[row, 1:length(out_row)] = out_row
-  }
-  out = cbind(out, c(overall[length(overall)], deltaSsad[length(deltaSsad)], 
-                     deltaSN[length(deltaSN)], deltaSagg[length(deltaSagg)]))
-  names(out)[max_level + 1] = length(deltaSsad)
-  return(out)
-}
-
-pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
-  dat_plot_grps = dat_plot[dat_plot$group %in% groups, ]
-  dat_sp = dat_sp[match(dat_plot_grps$plot, row.names(dat_sp)), ]
-  S_list = rowSums(dat_sp > 0)
-  N_list = rowSums(dat_sp)
-  PIE_list = sapply(1:nrow(dat_sp), function(x) 
-    N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, ]/N_list[x])^2)))
-  if (is.na(lower_N)) {
-    rarefied_S_list = apply(dat_sp, 1, function(x) 
-      rarefaction(x, 'indiv', effort = 1:min(N_list)))
-  } else {
-    # Remove plots with abundance below lower_N in the analysis of rarefied S
-    rarefied_S_list = apply(dat_sp, 1, function(x) 
-      if (sum(x) < lower_N)
-        rep(NA, lower_N)
-      else 
-        rarefaction(x, 'indiv', effort = 1:lower_N))
-    if (any(is.na(rarefied_S_list))) 
-      print("Warning: some plots are removed in rarefaction.")
-  }
-  out = as.data.frame(matrix(NA, 5, 4))
-  stats_list = list(rarefied_S_list, N_list, PIE_list, S_list)
-  for (i in 1:length(stats_list)) {
-    stat = unlist(stats_list[i])
-    stat_1 = stat[dat_plot$group == groups[1]]
-    stat_2 = stat[dat_plot$group == groups[2]]
-    stat_1 = stat_1[!is.na(stat_1)]
-    stat_2 = stat_2[!is.na(stat_2)]
-    out[ , i] = c(mean(stat_1), sd(stat_1), 
-                  mean(stat_2), sd(stat_2), 
-                  t.test(stat_1, stat_2)$p.val)
-  }
-  names(out) = c("S_rarefied", "N", "PIE", "S_raw")
-  row.names(out) = c(paste(groups[1], "(mean)", sep = ""), 
-                     paste(groups[1], "(sd)", sep = ""), 
-                     paste(groups[2], "(mean)", sep = ""), 
-                     paste(groups[2], "(sd)", sep = ""), "p_value")
-  # Boxplots
-  par(mfrow = c(2, 2))  # This is not ideal but I cannot get layout to work in Rstudio
-  plot_names = c(paste("Rarified S at N=", 
-                       ifelse(is.na(lower_N), min(N_list), lower_N), sep = ""),
-                 "N", "PIE", "Raw S")
-  plot_names = sapply(1:4, function(x) 
-    paste(plot_names[x], " (p=", round(out[5, x], 6), ")", sep = ""))
-  for (i in 1:length(stats_list)) {
-    stat = unlist(stats_list[i])
-    stat_1 = stat[dat_plot$group == groups[1]]
-    stat_2 = stat[dat_plot$group == groups[2]]
-    stat_1 = stat_1[!is.na(stat_1)]
-    stat_2 = stat_2[!is.na(stat_2)]
-    boxplot(stat_1, stat_2, names = c(groups[1], groups[2]), main = plot_names[i])
-  }
-  return(out)
 }
 
 #' Plot distributions of species abundance
@@ -1282,6 +1158,8 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #'  
 #' @author Xiao Xiao and Dan McGlinn
 #' @inheritParams graphics::plot.default
+#' @import ggplot2 
+#' @importFrom gridExtra grid.arrange
 #' @export
 #' @examples
 #' data(inv_comm)

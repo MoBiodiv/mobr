@@ -81,11 +81,6 @@ reflect significance at any particular scale.}
 \item{env_var}{an optional character string specifying a environmental variable
 in mob_in$env which is used in correlation analysis in the continuous case. 
 It is not needed if "type" is discrete or group_var is used in correlation.}
-
-\item{corr}{which kind of correlation to use when "type" is "continuous". It
-can take two values, "spearman" or "pearson". "spearman" (default) is
-generally recommended because the relationship between the response and
-"env_var" may not be linear.}
 }
 \value{
 a "mob_out" object with attributes
@@ -101,6 +96,7 @@ data(inv_plot_attr)
 inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                            type='discrete', log_scale=TRUE, n_perm=20)
+plot(inv_mob_out, 'b1')
 }
 \author{
 Xiao Xiao and Dan McGlinn
