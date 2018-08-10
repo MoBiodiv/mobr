@@ -640,11 +640,15 @@ get_inds = function(N_max, inds = NULL, log_scale = FALSE) {
             ind_sample_size = floor(seq(1, N_max, length.out = inds))
     }
     if (length(inds) > 1) { # if user specified a vector
+        if (max(inds) > N_max) 
+            warning(paste('Sample size is higher than abundance of at least one group, only n up to',
+                          N_max, 'will be used'))
         ind_sample_size = inds
-        if (max(inds) > N_max)
-            warning('Sample size is higher than abundance of at least one group!')
-        ind_sample_size = unique(c(1, ind_sample_size)) # Force (1, 1) to be included
     }
+    # ensure that no more than N_max individuals considered
+    ind_sample_size = unique(c(ind_sample_size[ind_sample_size < N_max], N_max))
+    # Force (1, 1) to be included
+    ind_sample_size = unique(c(1, ind_sample_size))
     return(ind_sample_size)
 }
 
