@@ -60,77 +60,43 @@ test_that("mobr rarefaction function values are equivalent to true/accepted valu
   # Calculated rarefaction value has been rounded to nearest tenth to match table value
   expect_equal(round(sad5DF$`rarefaction(sad5, "indiv", 100)`, digits = 1), 10.9)
   
-  # SAMPLE-BASED RAREFACTION TESTING (EXPECTATIONS 6 THROUGH 9)
-  # Compare mobr sample-based rarefaction function against the vegan:specaccum rarefaction function
+  # SPACIAL-BASED RAREFACTION TESTING (EXPECTATIONS 6 THROUGH 9)
+  # Compare mobr spacial-based rarefaction function against hand calculated values
   
-  # Read in files for the next 4 expectations
-  # Files are located in the testthat folder
-  load("~/Mobr/tests/testthat/tank_comm.rda")
-  load("~/Mobr/tests/testthat/inv_comm.rda")
-  load("~/Mobr/tests/testthat/fire_comm.rda")
-  coffee_comm = read.csv("~/Mobr/tests/testthat/coffee_comm.csv")
+  # Community matrix used for calculation
+  comms = cbind(
+    c(1, 1, 1, 0, 0, 0),
+    c(0, 1, 1, 1, 0, 0),
+    c(0, 0, 1, 1, 1, 0),
+    c(0, 0, 0, 0, 1, 1),
+    c(0, 0, 1, 0, 1, 0),
+    c(0, 0, 0, 0, 1, 1),
+    c(0, 0, 0, 0, 0, 1))
   
-  # mobr sample-based rarefaction value calculation & set up
-  # tank_comm
-  mobrRareTank = as.data.frame(rarefaction(tank_comm, "samp"))
-  mobrRareTankVal = mobrRareTank$`rarefaction(tank_comm, "samp")`[30]       
+  # Calculate rarefaction values using mobr rarefaction function
+  # Convert values to dataframe for easy referencing in test functions
+  rarefaction_values = as.data.frame(rarefaction(comms, 'spat', coords = 1:6, latlong=F))
   
-  # inv_comm
-  mobrRareInv = as.data.frame(rarefaction(inv_comm, "samp"))
-  mobrRareInvVal = mobrRareInv$`rarefaction(inv_comm, "samp")`[100] 
-  
-  # fire_comm
-  mobrRareFire = as.data.frame(rarefaction(fire_comm, "samp"))
-  mobrRareFireVal = mobrRareFire$`rarefaction(fire_comm, "samp")`[52]       
-  
-  # coffee_comm
-  mobrRareCoffee = as.data.frame(rarefaction(coffee_comm[2:length(coffee_comm)], "samp"))
-  mobrRareCoffeeVal = mobrRareCoffee$`rarefaction(coffee_comm[2:length(coffee_comm)], "samp")`[6]
-  
-  # Vegan::specaccum value calculation & set up
-  # tank_comm
-  specRareTank = vegan::specaccum(tank_comm, method = "rarefaction")
-  specRareTankVal = specRareTank[[4]][30]
-  
-  # inv_comm
-  specRareInv = vegan::specaccum(inv_comm, method = "rarefaction")
-  specRareInvVal = specRareInv[[4]][100]
-  
-  # fire_comm
-  specRareFire = vegan::specaccum(fire_comm, method = "rarefaction")
-  specRareFireVal = specRareFire[[4]][52]
-  
-  # coffee_comm
-  specRareCoffee = vegan::specaccum(coffee_comm[2:length(coffee_comm)], method = "rarefaction")
-  specRareCoffeeVal = specRareCoffee[[4]][6]
+  # NOTE:
+  # Rarefaction values to compare are at indeces: 1, 3, 5, and 6
+  # Calculations for these values should remain constant with no deviation from the specified double/integer value
   
   # EXPECTATION 6
-  # Check equivalence of LAST richness value given for mobr and vegan::specaccum rarefaction function
-  # tank_comm richness value for last (30th) value should equal 47.000
-  # value has been rounded to 3 decimal points
-  expect_equal(round(mobrRareTankVal, digits = 3), 
-               round(specRareTankVal, digits = 3))
+  # Check equivalence of rarefaction function generated value at index 1 to the decimal: 2.667 
+  # Rounding was done to 3 decimal places
+  expect_equal(round(rarefaction_values[1,1], digits = 3), 2.667)
   
   # EXPECTATION 7
-  # Check equivalence of LAST richness value given for mobr and vegan::specaccum rarefaction function
-  # inv_comm richness value for last (100th) value should equal 111.000
-  # value has been rounded to 3 decimal points
-  expect_equal(round(mobrRareInvVal, digits = 3), 
-               round(specRareInvVal, digits = 3))
+  # Check equivalence of rarefaction function generated value at index 3 to the integer: 5 
+  expect_equal(rarefaction_values[3,1], 5)
   
   # EXPECTATION 8
-  # Check equivalence of LAST richness value given for mobr and vegan::specaccum rarefaction function
-  # tank_comm richness value for last (52nd) value should equal 21.000
-  # value has been rounded to 3 decimal points
-  expect_equal(round(mobrRareFireVal, digits = 3), 
-               round(specRareFireVal, digits = 3))
+  # Check equivalence of rarefaction function generated value at index 5 to the double: 6.500 
+  # Rounding was done to 3 decimal places
+  expect_equal(round(rarefaction_values[5,1], digits = 3), 6.500)
   
   # EXPECTATION 9
-  # Check equivalence of LAST richness value given for mobr and vegan::specaccum rarefaction function
-  # inv_comm richness value for last (6th) value should equal 21.000
-  # value has been rounded to 3 decimal points
-  expect_equal(round(mobrRareCoffeeVal, digits = 3), 
-               round(specRareCoffeeVal, digits = 3))
-
+  # Check equivalence of rarefaction function generated value at index 6 to the integer: 7 
+  expect_equal(rarefaction_values[6,1], 7)
 
 })
