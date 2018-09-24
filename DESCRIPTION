@@ -22,7 +22,8 @@ Imports:
     plotrix
 Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat
 License: MIT
 LazyData: true
 RoxygenNote: 6.0.1
