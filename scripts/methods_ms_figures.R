@@ -10,14 +10,14 @@ inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                               type='discrete', log_scale=TRUE, n_perm=999,
                               overall_p=TRUE)
 
+cols = c(rgb(0, 37, 112, maxColorValue = 255),    # dark navy
+         rgb(0, 177, 240, maxColorValue = 255),   # royal blue
+         rgb(0, 160, 73, maxColorValue = 255))    # green
+
+
 # create graphics
 pdf('./figs/inv_mob_stats.pdf', height = 7*0.5)
-plot(inv_mob_stats)
-dev.off()
-
-pdf('./figs/inv_mob_stats_multi.pdf', width = 7*1.25, height = 7*2)
-plot(inv_mob_stats, multi_panel = T)
-plot(inv_mob_stats, multi_panel = T, outline = F)
+plot(inv_mob_stats, col = cols[2:3])
 dev.off()
 
 pdf('./figs/inv_delta_stats.pdf')
@@ -25,8 +25,10 @@ plot(inv_mob_out, 'invaded', 'uninvaded', leg_loc = 'bottomright')
 dev.off()
 
 pdf('./figs/inv_mob_stacked.pdf')
-overlap_effects(inv_mob_out, 'invaded', leg_loc = NA)
-overlap_effects(inv_mob_out, 'invaded', 'stacked', prop=T, leg_loc = NA)
+overlap_effects(inv_mob_out, 'invaded', leg_loc = NA,
+                col = cols)
+overlap_effects(inv_mob_out, 'invaded', 'stacked', prop=T, leg_loc = NA,
+                col = cols)
 dev.off()
 
 
@@ -40,10 +42,11 @@ plot_delta_con = function(mob_out, trt_group, ref_group, same_scale=FALSE,
   if (type == 'continuous')
     stop("Currently this plot only works for mob_out object with type discrete.")
   cols = list()
-  cols$trt = "#FFB3B5"     # light red
-  cols$ref = "#78D3EC"     # light blue
-  cols$deltaS = "#C5C0FE"  # purple
-  cols$ddeltaS = "#6BDABD" # green
+  cols$trt = "#00B1F0"     # blue
+  cols$ref = "#00A049"     # green
+  cols$deltaS = rgb(179, 216, 160, maxColorValue = 255) # light green
+  cols$ddeltaS = rgb(213, 239, 252, maxColorValue = 255) # light blue
+  cols$ddeltaSline = rgb(197, 233, 251, maxColorValue = 255) #light blue but darker
   if (is.null(par_args)) {
     par_args = paste('mfrow = c(', length(display) + 1, ',',
                      length(tests), '), mgp = c(2.5, 1, 0)',  sep='')
@@ -229,7 +232,7 @@ plot_delta_con = function(mob_out, trt_group, ref_group, same_scale=FALSE,
               col = '#C1CDCD', border = NA)
       abline(h = 0, lwd = 1, lty = 2)
       lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
-            lwd = lwd, col = cols$ddeltaS)
+            lwd = lwd, col = cols$ddeltaSline)
     }
     if ('N' %in% mob_out$tests) {
       mob_out$N[, -1] = lapply(mob_out$N[, -1], function(x)
@@ -250,7 +253,7 @@ plot_delta_con = function(mob_out, trt_group, ref_group, same_scale=FALSE,
               col = '#C1CDCD', border = NA)
       abline(h = 0, lwd = 1, lty = 2)
       lines(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
-            lwd = lwd, col = cols$ddeltaS)
+            lwd = lwd, col = cols$ddeltaSline)
     }
     if ('SAD' %in% mob_out$tests) {
       mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
@@ -268,7 +271,7 @@ plot_delta_con = function(mob_out, trt_group, ref_group, same_scale=FALSE,
               col = '#C1CDCD', border = NA)
       abline(h = 0, lwd = 1, lty = 2)
       lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
-            lwd = lwd, col = cols$ddeltaS)
+            lwd = lwd, col = cols$ddeltaSline)
     }         
     
   }
