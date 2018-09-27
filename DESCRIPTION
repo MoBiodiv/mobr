@@ -1,9 +1,9 @@
 Package: mobr
 Title: Measurement of Biodiversity in R
-Version: 1.0
-Authors@R: c(person("Xiao", "Xiao", email = "xiao@weecology.org", 
+Version: 1.5
+Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
                     role = c("aut", "cre")),
-             person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
+             person("Xiao", "Xiao", email = "xiao@weecology.org", 
                     role = "aut"),
              person("Felix", "May", email = "felix.may@idiv.de", 
                     role = "aut"),
@@ -13,13 +13,17 @@ Date: 2018
 Description: This package is designed to help measure biodiversity and its
     changes across scales.
 Depends:
-    R (>= 3.0.2),
+    R (>= 3.0.2)
+Imports:
+    plotrix,
     pracma,
     scales,
     dplyr,
-    pbapply
-Imports:
-    plotrix
+    purrr,
+    tidyr,
+    pbapply,
+    ggplot2,
+    gridExtra
 Suggests:
     knitr,
     rmarkdown

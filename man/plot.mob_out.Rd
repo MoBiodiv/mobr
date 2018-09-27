@@ -4,12 +4,14 @@
 \alias{plot.mob_out}
 \title{Plot mob curves}
 \usage{
-\method{plot}{mob_out}(mob_out, trt_group, ref_group, same_scale = FALSE,
-  log = "", display = c("rarefaction", "delta S", "ddelta S"), lwd = 3,
-  leg_loc = "topleft", par_args = NULL, ...)
+\method{plot}{mob_out}(mob_out, stat, log = "")
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
+
+\item{log}{a character string which contains \code{"x"} if the x axis
+    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
+    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
 
 \item{trt_group}{a string that specifies the name of the treatment group}
 
@@ -17,10 +19,6 @@
 
 \item{same_scale}{a boolean if TRUE then the y-axis of the rarefaction and 
 ddelta S plots are scaled identically across the tested effects}
-
-\item{log}{a character string which contains \code{"x"} if the x axis
-    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
-    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
 
 \item{display}{a string that specifies what graphics to display can be either
 'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
@@ -48,9 +46,7 @@ data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                               type='discrete', log_scale=TRUE, n_perm=2)
-plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
-plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
-plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
+plot(inv_mob_out, 'b1')
 }
 \author{
 Xiao Xiao and Dan McGlinn

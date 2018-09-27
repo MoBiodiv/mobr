@@ -5,14 +5,16 @@
 \alias{tank_plot_attr}
 \title{Cattle tank data set}
 \description{
-Species counts from experimental freshwater ponds ("cattle tanks") with two different nutrient treatments.
+Species counts of aquatic macro-invertebrates from experimental
+  freshwater ponds ("cattle tanks") with two different nutrient treatments.
 }
 \details{
 \code{tank_comm} is a site-by-species matrix with individual counts.
 
-\code{tank_plot_attr} is a data frame with corresponding site variables. 
-The column \code{group} specifies whether a pond has received a "high" or "low" nutrient treatment.
-The columns \code{x} and \code{y} contain the spatial coordinates of the sites.
+\code{tank_plot_attr} is a data frame with corresponding site variables. The
+column \code{group} specifies whether a pond has received a "high" or "low"
+nutrient treatment. The columns \code{x} and \code{y} contain the spatial
+coordinates of the sites.
 
 The data were adapted from Chase (2010).
 }
@@ -22,7 +24,8 @@ data(tank_plot_attr)
 tank_mob_in = make_mob_in(tank_comm, tank_plot_attr)
 }
 \references{
-Chase, J. M. (2010). Stochastic community assembly causes higher biodiversity in more productive environments. science, 1187820.
+Chase, J. M. (2010). Stochastic community assembly causes higher
+  biodiversity in more productive environments. Science. 328:1388-1391.
 }
 \keyword{cattle}
 \keyword{data}

@@ -51,9 +51,9 @@ data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_stats = get_mob_stats(inv_mob_in, 'group')
 plot(inv_stats)
-inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                              type='discrete', log_scale=TRUE)
-plot(inv_deltaS, 'invaded', 'uninvaded')
+inv_deltaS = get_delta_stats(inv_mob_in, 'group',ref_group='uninvaded',
+                             type='discrete', log_scale=TRUE, n_perm = 100)
+plot(inv_deltaS, 'b1')
 ```
 
 

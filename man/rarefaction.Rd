@@ -5,7 +5,8 @@
 \title{Rarefied Species Richness}
 \usage{
 rarefaction(x, method, effort = NULL, coords = NULL, latlong = NULL,
-  dens_ratio = 1, extrapolate = FALSE, quiet_mode = FALSE)
+  dens_ratio = 1, extrapolate = FALSE, return_NA = FALSE,
+  quiet_mode = FALSE)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like
@@ -43,6 +44,12 @@ when effort is larger than the number of individuals using the chao1 method.
 Defaults to FALSE in which case it returns observed richness. Extrapolation
 is only implemented for individual-based rarefaction 
 (i.e., \code{method = 'indiv'})}
+
+\item{return_NA}{boolean defaults to FALSE in which the function returns the
+observed S when \code{effort} is larger than the number of individuals or
+number of samples (depending on the method of rarefaction). If set to TRUE
+then NA is returned. Note that this argument is only relevant when
+\code{extrapolate = FALSE}.}
 
 \item{quiet_mode}{boolean defaults to FALSE, if TRUE then warnings and other
 non-error messages are suppressed.}

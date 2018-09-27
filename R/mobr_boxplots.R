@@ -124,7 +124,8 @@ calc_PIE = function(x, ENS=FALSE) {
 }
 
 # generate a single bootstrap sample of gamma-scale biodiversity indices
-boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
+boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
+                              rare_thres) {
     # sample rows and calculate abundance vector
     sample_dat = by(abund_mat, INDICES = abund_mat$group_id, FUN = sample_frac,
                     replace = T)
@@ -138,6 +139,8 @@ boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
     dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
                              groups = abund_group[ , 1],
                              index = index, effort = effort,
+                             extrapolate = extrapolate,
+                             return_NA = return_NA, 
                              rare_thres = rare_thres)
     return(dat_groups)
 }
@@ -159,7 +162,7 @@ boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
 #'    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
 #'    \item \code{S_asymp} ... Estimated asymptotic species richness
 #'    \item \code{f_0} ... Estimated number of undetected species 
-#'    \item \code{pct_rare} ... The percent of rare species
+#'    \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
 #'    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
 #'    \item \code{S_PIE} ... Effective number of species based on PIE
 #' }
@@ -171,10 +174,16 @@ boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
 #'   calculation of rarefied species richness. This can a be
 #'   single value or an integer vector. 
 #'   
-#' @param rare_thres The threshold for determining if a species is rare or not. 
-#'   It can ranges from (0, 1] and defaults to 0.05 which specifies that any 
+#' @param extrapolate boolean which specifies if richness should be extrapolated
+#'   when effort is larger than the number of individuals using the chao1
+#'   method.
+#'   
+#' @param rare_thres The threshold that determines how pct_rare is computed.
+#'   It can range from (0, 1] and defaults to 0.05 which specifies that any 
 #'   species with less than or equal to 5% of the total abundance in a sample is
-#'   considered rare. 
+#'   considered rare. It can also be specified as "N/S" which results in using
+#'   average abundance as the threshold which McGill (2011) found to have the 
+#'   best small sample behavior. 
 #'   
 #' @details This function is primarily intended as auxiliary function used in
 #' \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
@@ -188,13 +197,18 @@ boot_sample_groups = function(abund_mat, index, effort, rare_thres) {
 #'    (NA for the other indices)
 #'    \item \code{value} ... Value of the biodiversity index
 #' }
-#' 
 #'   
 #' @author Felix May and Dan McGlinn
 #' 
-#' @export
+#' @references 
 #' 
-calc_biodiv = function(abund_mat, groups, index, effort, rare_thres) {
+#' McGill, B. J. 2011. Species abundance distributions. Pages 105–122 Biological
+#' Diversity: Frontiers in Measurement and Assessment, eds. A.E. Magurran and
+#' B.J. McGill.
+#'
+#' @export
+calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
+                       rare_thres) {
     out = expand.grid(group = groups,
                       index = index[index != "S_n"],
                       effort = NA, value = NA)
@@ -217,18 +231,26 @@ calc_biodiv = function(abund_mat, groups, index, effort, rare_thres) {
                                  index = 'S_n',
                                  effort = effort, value = NA)
         out = rbind(out, dat_S_n)
-      
-        out$value[out$index == "S_n"] = apply(abund_mat, 1, rarefaction,
-                                                 method = 'indiv', effort = effort,
-                                                 extrapolate = T, quiet_mode = T)
+        S_n  = apply(abund_mat, 1, rarefaction, method = 'indiv', effort = effort,
+                     extrapolate = extrapolate, return_NA = return_NA,
+                     quiet_mode = TRUE)
+        out$value[out$index == "S_n"] = as.numeric(t(S_n))
     } 
     
     # Percent rare ------------------------------------------------------------
     if (any(index == "pct_rare")) {
-        pct_rare = function(x, rare_thres)
-            ifelse(sum(x) > 0,
-                   100 * sum(x[x > 0] <= (rare_thres * sum(x))) / sum(x > 0),
-                   0)
+        pct_rare = function(x, rare_thres) {
+            S = sum(x > 0)
+            if (S > 0) {
+                N = sum(x)
+                if (rare_thres == "N/S") {
+                    rare_thres = N / S
+                    100 * (sum(x[x > 0] <= rare_thres) / S)
+                } else 
+                    100 * (sum(x[x > 0] <= (rare_thres * N)) / S)
+            } else
+              0
+        }
         out$value[out$index == "pct_rare"] = apply(abund_mat, 1, pct_rare, rare_thres)
     }
  
@@ -295,8 +317,8 @@ get_F_values = function(div_dat, permute = F) {
 }
 
 # Get gamma-scale differences 
-get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
-                          permute = F) {
+get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
+                           return_NA, rare_thres, permute = F) {
     if (permute)
         group_id = sample(group_id)
    
@@ -305,7 +327,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
     dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
                              groups = abund_group[ , 1],
                              index = index, effort = effort, 
-                             rare_thres = rare_thres)
+                             extrapolate, return_NA, rare_thres = rare_thres)
     delta_groups = dat_groups %>%
                    group_by(index, effort) %>%
                    summarise(delta = mean(dist(value))) %>%
@@ -327,7 +349,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #'    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
 #'    \item \code{S_asymp} ... Estimated asymptotic species richness
 #'    \item \code{f_0} ... Estimated number of undetected species 
-#'    \item \code{pct_rare} ... The percent of rare species
+#'    \item \code{pct_rare} ... The percent of rare species as defined by \code{rare_thres}
 #'    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
 #'    \item \code{S_PIE} ... Effective number of species based on PIE
 #'    
@@ -347,11 +369,22 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #'   individuals then \code{effort_min} are excluded from the analysis with a
 #'   warning. Accordingly, when \code{effort_samples} is set by the user it has
 #'   to be higher than \code{effort_min}.
+#'  
+#' @param extrapolate extrapolate	boolean which specifies if richness should be
+#'   extrapolated when \code{effort_samples} is larger than the number of
+#'   individuals using the chao1 method. Defaults to TRUE. 
 #'   
-#' @param rare_thres The threshold for determining if a species is rare or not. 
-#'   It can ranges from (0, 1] and defaults to 0.05 which specifies that any 
+#' @param return_NA boolean defaults to FALSE in which the rarefaction function
+#'   returns the observed S when \code{effort} is larger than the number of
+#'   individuals . If set to TRUE then NA is returned. Note that this argument
+#'   is only relevant when \code{extrapolate = FALSE}.
+#'     
+#' @param rare_thres The threshold that determines how pct_rare is computed.
+#'   It can range from (0, 1] and defaults to 0.05 which specifies that any 
 #'   species with less than or equal to 5% of the total abundance in a sample is
-#'   considered rare. 
+#'   considered rare. It can also be specified as "N/S" which results in using
+#'   average abundance as the threshold which McGill (2011) found to have the 
+#'   best small sample behavior. 
 #'   
 #' @param n_perm The number of permutations to use for testing for treatment
 #'   effects.
@@ -383,8 +416,9 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' individuals for rarefaction is calculated as the minimum number of samples
 #' within groups multiplied by \code{effort_samples}. For example, when there are 10
 #' samples within each group, \code{effort_groups} equals \code{10 *
-#' effort_samples}. If n is larger than the number of individuals in sample then
-#' the Chao1 (Chao 1984, Chao 1987) method is used to extrapolate the rarefaction curve. 
+#' effort_samples}. If n is larger than the number of individuals in sample and
+#' \code{extrapolate = TRUE} then the Chao1 (Chao 1984, Chao 1987) method is
+#' used to extrapolate the rarefaction curve.
 #' 
 #' \strong{pct_rare: Percent of rare species} Is the ratio of the number of rare
 #' species to the number of observed species x 100 (McGill 2011). Species are 
@@ -494,6 +528,9 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' Whittaker, R.H. (1972) Evolution and Measurement of Species Diversity.
 #' Taxon, 21, 213-251.
 #' 
+#' @import dplyr
+#' @importFrom pbapply pbreplicate
+#' 
 #' @export
 #' 
 #' @examples 
@@ -518,8 +555,9 @@ get_group_delta = function(abund_mat, group_id, index, effort, rare_thres,
 #' stopCluster(cl)
 #' }
 get_mob_stats = function(mob_in, group_var, 
-                         index = c("N", "S", "S_n", "pct_rare", "S_PIE"),
+                         index = c("N", "S", "S_n", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
+                         extrapolate = TRUE, return_NA = FALSE, 
                          rare_thres = 0.05, n_perm = 199, 
                          boot_groups = F, conf_level = 0.95, cl=NULL, 
                          ...) {
@@ -555,7 +593,7 @@ get_mob_stats = function(mob_in, group_var,
     }
   
     # Group-level indices
-    effort_groups = effort_samples*min(samples_per_group)
+    effort_groups = c(effort_samples, effort_samples * min(samples_per_group))
    
     # Abundance distribution pooled in groups
     abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
@@ -564,12 +602,16 @@ get_mob_stats = function(mob_in, group_var,
                              groups = abund_group[ , 1],
                              index = index, 
                              effort = effort_groups, 
+                             extrapolate = extrapolate,
+                             return_NA = return_NA,
                              rare_thres = rare_thres)
    
     dat_samples = calc_biodiv(abund_mat = mob_in$comm,
                               groups = group_id,
                               index = index,
                               effort = effort_samples, 
+                              extrapolate = extrapolate,
+                              return_NA = return_NA,
                               rare_thres = rare_thres)
    
     # beta-diversity
@@ -605,6 +647,8 @@ get_mob_stats = function(mob_in, group_var,
                                           value = beta_S_n)
              dat_samples = rbind(dat_samples, dat_beta_S_n)
         }
+        # clean up dat_groups by removing S_n computed using alpha n-value
+        dat_groups = subset(dat_groups, !(effort %in% effort_samples))
     } # end rarefied richness
 
     # Number of rare species ---------------------------------------------------------
@@ -624,6 +668,21 @@ get_mob_stats = function(mob_in, group_var,
     
     
     # Asymptotic estimates species richness -------------------------------------
+    if ("S_asymp" %in% index) {
+        gamma = with(dat_groups, value[index == "S_asymp"])
+        alpha = with(dat_samples,  value[index == "S_asymp"])
+        beta_S_asymp = gamma[group_id] / alpha
+        beta_S_asymp[!is.finite(beta_S_asymp)] = NA
+      
+        dat_beta_S_asymp = data.frame(group = group_id,
+                                      index = "beta_S_asymp",
+                                      effort = NA,
+                                      value = beta_S_asymp)
+        dat_samples = rbind(dat_samples, dat_beta_S_asymp)
+    }
+    
+    
+    # Estimated # of missing species richness -------------------------------------
     if ("f_0" %in% index) {
         gamma = with(dat_groups, value[index == "f_0"])
         alpha = with(dat_samples,  value[index == "f_0"])
@@ -665,9 +724,9 @@ get_mob_stats = function(mob_in, group_var,
                 ungroup()
     F_obs = get_F_values(dat_samples, permute = F)
     cat('\nComputing null model at alpha-scale\n')
-    F_rand = bind_rows(pbapply::pbreplicate(n_perm, 
-                                  get_F_values(dat_samples, permute = T),
-                              simplify = F, cl = cl)) %>%
+    F_rand = bind_rows(pbreplicate(n_perm,
+                                   get_F_values(dat_samples, permute = T),
+                                   simplify = F, cl = cl)) %>%
              ungroup()
     F_obs = F_obs %>% mutate(F_val_obs = F_val, F_val = NULL)
     F_rand = left_join(F_rand, F_obs, by = c("index", "effort"))
@@ -687,10 +746,12 @@ get_mob_stats = function(mob_in, group_var,
       
         abund_dat = cbind(group_id, mob_in$comm)
         cat('\nComputing bootstrap confidence intervals at the gamma-scale\n')
-        boot_repl_groups = pbapply::pbreplicate(n_perm,
+        boot_repl_groups = pbreplicate(n_perm,
                                boot_sample_groups(abund_dat,
                                                   index = index,
                                                    effort = effort_groups,
+                                                   extrapolate = extrapolate,
+                                                   return_NA = return_NA, 
                                                   rare_thres = rare_thres),
                             simplify = F, cl = cl)
         boot_repl_groups = bind_rows(boot_repl_groups)
@@ -704,12 +765,13 @@ get_mob_stats = function(mob_in, group_var,
                                  c("lower","median","upper")))      
     } else {
         delta_obs = get_group_delta(mob_in$comm, group_id, index,
-                        effort=effort_groups, rare_thres, permute=F)
+                                    effort_groups, extrapolate,
+                                    return_NA, rare_thres, permute=F)
         cat('\nComputing null model at gamma-scale\n')
         delta_rand = bind_rows(pbapply::pbreplicate(n_perm, 
                                    get_group_delta(mob_in$comm, group_id,
-                                       index, effort = effort_groups,
-                                       rare_thres, permute = T),
+                                       index, effort_groups, extrapolate,
+                                       return_NA, rare_thres, permute = T),
                                simplify = F, cl = cl))
         delta_obs = delta_obs %>% mutate(d_obs = delta, delta = NULL)
         delta_rand = suppressMessages(left_join(delta_rand, delta_obs))
@@ -740,7 +802,6 @@ get_mob_stats = function(mob_in, group_var,
    
     #remove unused factor levels
     dat_samples$index = factor(dat_samples$index)
-   
     if (boot_groups) {
         out = list(samples_stats = dat_samples,
                    groups_stats  = dat_groups,
@@ -777,7 +838,8 @@ samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
    mtext(label, side = 3, line = 0)  
 }
 
-# Panel function for gamma-scale results
+#' Panel function for gamma-scale results
+#' @keywords internal
 groups_panel1 = function(group_dat, tests, col, ylab = "",
                          main = expression(gamma * "-scale"),
                          cex.axis=1.2, ...) {
@@ -796,7 +858,9 @@ groups_panel1 = function(group_dat, tests, col, ylab = "",
     mtext(label, side = 3, line = 0)
 }
 
-# Panel function for gamma-scale results with confidence intervals
+#' Panel function for gamma-scale results with confidence intervals
+#' @importFrom plotrix plotCI
+#' @keywords internal
 groups_panel2 = function(group_dat, col, ylab = "", 
                          main = expression(gamma * "-scale"),
                          cex.axis=1.2, ...) {
@@ -805,9 +869,9 @@ groups_panel2 = function(group_dat, col, ylab = "",
             col = col, cex.axis=cex.axis, cex.main=1.5, frame.plot=T, 
             ...)
     groups = levels(group_dat$group)
-    plotrix::plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
-                    ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
-                    sfrac = 0.02, col = col, ...)
+    plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
+           ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
+           sfrac = 0.02, col = col, ...)
 }
 
 #' Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis
@@ -957,8 +1021,10 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                              "S" = expression('Richness (' * italic(S) * ')'),
                              "S_asymp" = expression('Asympotic richness (' *
                                                       italic(S[asymp]) * ')'),
-                             "pct_rare" = paste("Richness in lower",
-                                               mob_stats$rare_thres * 100, 
+                             "pct_rare" = paste("% of species in lower",
+                                               ifelse(is.character(mob_stats$rare_thres),
+                                                      mob_stats$rare_thres,
+                                                      mob_stats$rare_thres * 100),
                                                "% of abundance"),
                              "f_0" = expression('Undetected richness (' * italic(f)[0] * ')'),
                              "S_PIE" = expression('ENS of PIE (' * italic(S)[PIE] * ')'))
@@ -1043,12 +1109,17 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
                 dat_samples = filter(mob_stats$samples_stats, index == beta_var)
                 dat_tests = filter(mob_stats$samples_tests,
                                    index == beta_var & effort == effort_samples[i])
-                samples_panel1(dat_samples, dat_tests, 
-                               ylab = "", 
-                               main = expression(beta * "-diversity (=" *
-                                                 gamma / alpha * ")"),
-                               col = col, cex.axis=cex.axis, ...)
-            
+                n = effort_samples[i]
+                fig_title = substitute(paste(beta, "-diversity (=", gamma / alpha,
+                                             "), n = ", n), 
+                                       list(n = effort_samples[i]))
+                samples_panel1(dat_samples, dat_tests, main = '',
+                               ylab = "", col = col, cex.axis=cex.axis, ...)
+
+                par(new=TRUE)
+                plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
+                     main=fig_title, cex.main=1.5)
+                                
                 if (multi_panel)
                     par(fig = c(0.67, 1.0, (1 + i) / n_rows, (2 + i) / n_rows),
                         new = T)

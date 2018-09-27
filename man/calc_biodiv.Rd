@@ -4,7 +4,8 @@
 \alias{calc_biodiv}
 \title{Calculate biodiversity statistics from sites by species table.}
 \usage{
-calc_biodiv(abund_mat, groups, index, effort, rare_thres)
+calc_biodiv(abund_mat, groups, index, effort, extrapolate, return_NA,
+  rare_thres)
 }
 \arguments{
 \item{abund_mat}{Sites by species table with species abundances
@@ -21,7 +22,7 @@ sites by species table.}
    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
    \item \code{S_asymp} ... Estimated asymptotic species richness
    \item \code{f_0} ... Estimated number of undetected species 
-   \item \code{pct_rare} ... The percent of rare species
+   \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
    \item \code{S_PIE} ... Effective number of species based on PIE
 }
@@ -33,10 +34,16 @@ biodiversity indices.}
 calculation of rarefied species richness. This can a be
 single value or an integer vector.}
 
-\item{rare_thres}{The threshold for determining if a species is rare or not. 
-It can ranges from (0, 1] and defaults to 0.05 which specifies that any 
+\item{extrapolate}{boolean which specifies if richness should be extrapolated
+when effort is larger than the number of individuals using the chao1
+method.}
+
+\item{rare_thres}{The threshold that determines how pct_rare is computed.
+It can range from (0, 1] and defaults to 0.05 which specifies that any 
 species with less than or equal to 5% of the total abundance in a sample is
-considered rare.}
+considered rare. It can also be specified as "N/S" which results in using
+average abundance as the threshold which McGill (2011) found to have the 
+best small sample behavior.}
 }
 \value{
 A dataframe with four columns:
@@ -54,6 +61,11 @@ Calculate biodiversity statistics from sites by species table.
 \details{
 This function is primarily intended as auxiliary function used in
 \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
+}
+\references{
+McGill, B. J. 2011. Species abundance distributions. Pages 105–122 Biological
+Diversity: Frontiers in Measurement and Assessment, eds. A.E. Magurran and
+B.J. McGill.
 }
 \author{
 Felix May and Dan McGlinn

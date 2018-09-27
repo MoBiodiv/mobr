@@ -4,9 +4,10 @@
 \alias{get_mob_stats}
 \title{Calculate sample based and group based biodiversity statistics.}
 \usage{
-get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "pct_rare",
-  "S_PIE"), effort_samples = NULL, effort_min = 5, rare_thres = 0.05,
-  n_perm = 199, boot_groups = F, conf_level = 0.95, cl = NULL, ...)
+get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "S_PIE"),
+  effort_samples = NULL, effort_min = 5, extrapolate = TRUE,
+  return_NA = FALSE, rare_thres = 0.05, n_perm = 199, boot_groups = F,
+  conf_level = 0.95, cl = NULL, ...)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -21,7 +22,7 @@ data should be grouped by}
    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
    \item \code{S_asymp} ... Estimated asymptotic species richness
    \item \code{f_0} ... Estimated number of undetected species 
-   \item \code{pct_rare} ... The percent of rare species
+   \item \code{pct_rare} ... The percent of rare species as defined by \code{rare_thres}
    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
    \item \code{S_PIE} ... Effective number of species based on PIE
    
@@ -42,10 +43,21 @@ individuals then \code{effort_min} are excluded from the analysis with a
 warning. Accordingly, when \code{effort_samples} is set by the user it has
 to be higher than \code{effort_min}.}
 
-\item{rare_thres}{The threshold for determining if a species is rare or not. 
-It can ranges from (0, 1] and defaults to 0.05 which specifies that any 
+\item{extrapolate}{extrapolate    boolean which specifies if richness should be
+extrapolated when \code{effort_samples} is larger than the number of
+individuals using the chao1 method. Defaults to TRUE.}
+
+\item{return_NA}{boolean defaults to FALSE in which the rarefaction function
+returns the observed S when \code{effort} is larger than the number of
+individuals . If set to TRUE then NA is returned. Note that this argument
+is only relevant when \code{extrapolate = FALSE}.}
+
+\item{rare_thres}{The threshold that determines how pct_rare is computed.
+It can range from (0, 1] and defaults to 0.05 which specifies that any 
 species with less than or equal to 5% of the total abundance in a sample is
-considered rare.}
+considered rare. It can also be specified as "N/S" which results in using
+average abundance as the threshold which McGill (2011) found to have the 
+best small sample behavior.}
 
 \item{n_perm}{The number of permutations to use for testing for treatment
 effects.}
@@ -96,8 +108,9 @@ scale linearly with sample area or effort, at the gamma-scale the number of
 individuals for rarefaction is calculated as the minimum number of samples
 within groups multiplied by \code{effort_samples}. For example, when there are 10
 samples within each group, \code{effort_groups} equals \code{10 *
-effort_samples}. If n is larger than the number of individuals in sample then
-the Chao1 (Chao 1984, Chao 1987) method is used to extrapolate the rarefaction curve. 
+effort_samples}. If n is larger than the number of individuals in sample and
+\code{extrapolate = TRUE} then the Chao1 (Chao 1984, Chao 1987) method is
+used to extrapolate the rarefaction curve.
 
 \strong{pct_rare: Percent of rare species} Is the ratio of the number of rare
 species to the number of observed species x 100 (McGill 2011). Species are 
