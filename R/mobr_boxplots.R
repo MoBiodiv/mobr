@@ -103,11 +103,11 @@ calc_PIE = function(x, ENS=FALSE) {
         stop("input data must be non-negative")
     if (length(dim(x)) > 1) {
         total = apply(x, 1, sum)
-        S = apply(x, 1, function(x) return(length(x[x>0])))
+        S = apply(x, 1, function(x) return(sum(x > 0)))
         x = sweep(x, 1, total, "/")
     } else {
         total = sum(x)
-        S = length(x[x>0])
+        S = sum(x > 0)
         x = x / total
     }
     x = x * x
