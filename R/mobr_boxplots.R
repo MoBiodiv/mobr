@@ -103,9 +103,11 @@ calc_PIE = function(x, ENS=FALSE) {
         stop("input data must be non-negative")
     if (length(dim(x)) > 1) {
         total = apply(x, 1, sum)
+        S = apply(x, 1, function(x) return(sum(x > 0)))
         x = sweep(x, 1, total, "/")
     } else {
         total = sum(x)
+        S = sum(x > 0)
         x = x / total
     }
     x = x * x
@@ -118,7 +120,7 @@ calc_PIE = function(x, ENS=FALSE) {
     H = ifelse(total < 2, NA, (total / (total - 1) * (1 - H)))
     if (ENS) {
         # convert to effective number of species (except for PIE == 1)
-        H = ifelse(H==1, NA, (1/ (1-H)))
+        H = ifelse(H==1| S == total, NA, (1/ (1-H)))
     }     
     return(H)
 }
