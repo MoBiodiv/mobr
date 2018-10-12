@@ -1,6 +1,9 @@
 centroid_accumulate<-function(x,focal_sample= 1, n=dim(x$comm)[1]){
   require(rgeos)
   require(maptools)
+  require(pracma)
+  rownames(x$comm)<-NULL
+  rownames(x$spat)<-NULL
   sites<-x$comm
   included=focal_sample
   S_accumulated=as.numeric()
@@ -9,11 +12,9 @@ centroid_accumulate<-function(x,focal_sample= 1, n=dim(x$comm)[1]){
     coordinates(accumulated_plots)<-x$spat[included,]
     S_accumulated[i]<-vegan::specnumber(colSums(sites[included,,drop=F]))
     centroid<-gCentroid(accumulated_plots)@coords
-    rownames(centroid)<-"centroid"
     candidates<-x$spat[-included,]
-    
-    closest<-candidates[order(as.matrix(dist(rbind(centroid,candidates)))[-1,1],  runif(dim(candidates)[1]) )[1],]
-    if(rownames(closest)=="NA") break
+    if(dim(candidates)[1]==0) break
+    closest<-candidates[order(distmat(centroid, as.matrix(candidates)),  runif(dim(candidates)[1]) )[1],]
     included=c(included, as.numeric(rownames(closest)))
   }
   return(S_accumulated)
@@ -37,3 +38,4 @@ compare_curves<-function(x){
   lines(spatcurve, col=3)
   legend("bottomright", legend = c("sample based", "k-NCN","k-NN"), col=1:3, lty=1)
 }
+
