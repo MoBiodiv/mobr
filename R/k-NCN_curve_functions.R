@@ -36,7 +36,7 @@ kNCN_average<-function(x, n=NULL, coords=NULL){
   if(is.null(n)) n=dim(sites)[1]
   samples=1:n
   require(pbapply)
-  out<-pbsapply(samples,function(sample)  mobr:::centroid_accumulate(x = x,focal_sample = sample, coords = coords) )
+  out<-pbsapply(samples,function(sample)  centroid_accumulate(x = x,focal_sample = sample, coords = coords) )
   return(rowMeans(out))
 }
 
