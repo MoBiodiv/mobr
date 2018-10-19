@@ -367,8 +367,33 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         if (!quiet_mode) 
             message('Richness was not extrapolated because effort less than or equal to the number of samples')
     if (method == 'spat') {
-        out = kNCN_average(x_mob_in)
+        explicit_loop = matrix(0, n, n)
+        if (is.null(latlong))
+            stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
+        if (latlong){
+            # Compute distance on sphere if xy are longitudes and latitudes
+            # Assume x is longitude and y is latitude
+            pair_dist = sphere_dist(coords)
         } else {
+            pair_dist = as.matrix(dist(coords))
+        }
+        for (i in 1:n) {
+            dist_to_site = pair_dist[i, ]
+            # Shuffle plots, so that tied grouping is not biased by original order.
+            new_order = sample(1:n)  
+            dist_new = dist_to_site[new_order]
+            new_order = new_order[order(dist_new)]
+            # Move focal site to the front
+            new_order = c(i, new_order[new_order != i])
+            comm_ordered = x[new_order, ]
+            # 1 for absence, 0 for presence
+            comm_bool = as.data.frame((comm_ordered == 0) * 1) 
+            rich = cumprod(comm_bool)
+            explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+        }
+        out = apply(explicit_loop, 1, mean)[effort]
+    } 
+    else {
         # drop species with no observations  
         x = x[x > 0] 
         S = length(x)
