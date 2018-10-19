@@ -1,18 +1,24 @@
-centroid_accumulate<-function(x,focal_sample= 1, n=dim(x$comm)[1]){
+centroid_accumulate<-function(x,focal_sample= 1, n=NULL, coords=NULL){
   require(rgeos)
   require(maptools)
   require(pracma)
-  rownames(x$comm)<-NULL
-  rownames(x$spat)<-NULL
-  sites<-x$comm
+  require(sp)
+  if(class(x)== "mob_in"){
+      sites=x$comm
+      coords=x$spat
+  }else{sites=x}
+  sites<-as.data.frame(sites)
+  rownames(sites)=NULL
+  rownames(coords)=NULL
+  if(is.null(n)) n=dim(sites)[1]
   included=focal_sample
   S_accumulated=as.numeric()
   for(i in 1:n){
     accumulated_plots<-sites[included,]
-    coordinates(accumulated_plots)<-x$spat[included,]
+    coordinates(accumulated_plots)<-coords[included,]
     S_accumulated[i]<-vegan::specnumber(colSums(sites[included,,drop=F]))
     centroid<-gCentroid(accumulated_plots)@coords
-    candidates<-x$spat[-included,]
+    candidates<-coords[-included,]
     if(dim(candidates)[1]==0) break
     closest<-candidates[order(distmat(centroid, as.matrix(candidates)),  runif(dim(candidates)[1]) )[1],]
     included=c(included, as.numeric(rownames(closest)))
@@ -20,10 +26,17 @@ centroid_accumulate<-function(x,focal_sample= 1, n=dim(x$comm)[1]){
   return(S_accumulated)
 }
 
-kNCN_average<-function(x, n=dim(x$comm)[1]){
+kNCN_average<-function(x, n=NULL, coords=NULL){
+  if(class(x)== "mob_in"){
+    sites=x$comm
+    coords=x$spat
+  }else{sites=x}
+  rownames(sites)=NULL
+  rownames(coords)=NULL
+  if(is.null(n)) n=dim(sites)[1]
   samples=1:n
   require(pbapply)
-  out<-pbsapply(samples,function(sample)  centroid_accumulate(x = x,focal_sample = sample,n = n) )
+  out<-pbsapply(samples,function(sample)  mobr:::centroid_accumulate(x = x,focal_sample = sample, coords = coords) )
   return(rowMeans(out))
 }
 
