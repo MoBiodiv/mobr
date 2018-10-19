@@ -8,7 +8,7 @@ p-value is based on mean squared difference from zero summed across the scales
 Method developed by Loosmore and Ford 2006 but algebraic simplifications 
 used as developed by Baddeley et al. 2014 Ecological Archives M084-017-A1}
 \usage{
-get_overall_p(effort, deltaS_emp, deltaS_null)
+get_overall_p(effort, perm, value)
 }
 \description{
 Auxiliary function for effect_ functions

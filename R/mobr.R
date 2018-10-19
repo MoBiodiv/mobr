@@ -36,8 +36,7 @@
 make_mob_in = function(comm, plot_attr, coord_names=c('x', 'y'), binary=FALSE,
                        latlong=FALSE) {
     # possibly make group_var and ref_group mandatory arguments
-    out = list()
-    out$tests = list(N=T, SAD=T, agg=T)
+    out = list(tests = list(N=TRUE, SAD=TRUE, agg=TRUE))
     # carry out some basic checks
     if (nrow(comm) < 5) {
         warning("Number of plots in community is less than five therefore only individual rarefaction will be computed")
@@ -142,35 +141,8 @@ print.mob_in = function(x, nrows=6, nsp=5) {
     print(head(x$env, nrows))
     cat('\n$spat\n')
     print(head(x$spat, nrows))
-}
-
-#' Print a shortened version of the mob_out object
-#' @keywords internal
-#' @export
-print.mob_out = function(x) {
-    cat('Only the first five rows of any matrices are printed\n')
-    cat('\n$type\n')
-    print(x$type)
-    cat('\n$tests\n')
-    print(x$tests)
-    cat('\n$log_scale\n')
-    print(x$log_scale)
-    cat('\n$density_stat\n')
-    print(x$density_stat)
-    cat('\n$indiv_rare\n')
-    print(head(x$indiv_rare))
-    cat('\n$sample_rare\n')
-    print(head(x$sample_rare))
-    if (!is.null(x$overall_p)) {
-        cat('\n$overall_p\n')
-        print(x$overall_p)
-    }        
-    cat('\n$SAD\n')
-    print(head(x$SAD))
-    cat('\n$N\n')
-    print(head(x$N))
-    cat('\n$agg\n')
-    print(head(x$agg))
+    cat('\n$latlong\n')
+    print(x$latlong)
 }
 
 summary.mob_out = function(...) {
@@ -487,40 +459,68 @@ avg_nn_dist = function(coords) {
 }
 
 
-#' Difference in S due to N
-#' 
-#' Internal function for computing the difference in species richness between 
-#' individual-based and non-spatial sample-based rarefaction curves using an 
-#' analytical approach of stretching (ref_dens > group_dens) or shrinking
-#' (ref_dens < group_dens) the individual-based rarefaction curve to provide the
-#' non-spatial rarefaction result.
-#' 
-#' @param comm community matrix with plots as rows and species columns.
-#' @param ref_dens the reference density
-#' @param inds the number of individuals to sample over
-#' @description  Difference between the individual and non-spatial sample-based
-#'   rarefaction curves for one group with the evaluation sample size (number of
-#'   individuals) defined by ref_dens, evaluated at specified points (given by
-#'   inds). The rescaling of sampling effort from number of samples to number
-#'   of individuals is accomplished using the mean density of individuals 
-#'   per sample.
-#' @return a two column data.frame containing the number of individuals (inds)
-#'   and the difference in species richness (deltaS)
-#' @author Dan McGlinn and Xiao Xiao
+#' Auxiliary function for computing S and the effect on S of 
+#' the three components of community structure: SAD, N, and aggregation
+#' @param x can either be a: 1) mob_in object or 2) a vector which contains
+#'  the abundance of each species (i.e., the SAD). All effects can be computed
+#'  when x is a mob_in object but only the SAD effect can be computed when
+#'  x is a vector of species abundances. 
+#' @param tests what effects to compute defaults to 'SAD', 'N', and 'agg'
+#' @param ind_dens the density of individuals to compare against for computing
+#'  N effect
+#' @importFrom tibble tibble
 #' @keywords internal
-deltaS_N = function(comm, ref_dens, inds){
-    nplots = nrow(comm)
-    group_dens = sum(comm) / nplots
-    dens_ratio = ref_dens / group_dens
-    S_rescaled = rarefaction(comm, 'indiv', inds, dens_ratio=dens_ratio)
-    S_raw = rarefaction(comm, 'indiv', inds)
-    deltaS = S_rescaled - S_raw
-    out = data.frame(inds = inds, deltaS = deltaS)
-    return(out)
+get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
+                            inds=NULL, ind_dens=NULL) {
+    if (is.null(inds) & any(c('SAD', 'N') %in% tests))
+        stop('If SAD or N effect to be calculated inds must be specified')
+    if (is.null(ind_dens) & 'N' %in% tests)
+        stop('If N effect to be calculated ind_dens must be specified')
+    if (any(c('N', 'agg') %in% tests) & class(x) != 'mob_in')
+        stop('If N or agg effects to be computed x must be a mob_in object')
+    out = list()
+    if ('SAD' %in% tests) {
+        S_SAD = rarefaction(x, 'indiv', inds)
+        out$SAD = data.frame(test = 'SAD', sample = 'indiv',
+                             effort = inds, S = S_SAD, effect = S_SAD,
+                             stringsAsFactors = FALSE)
+    }
+    if ('N' %in% tests) {
+        comm_dens = sum(x$comm) / nrow(x$comm)
+        dens_ratio = ind_dens / comm_dens
+        S_N = rarefaction(x, 'indiv', inds, dens_ratio = dens_ratio)
+        if (!('SAD' %in% tests))
+            S_SAD = rarefaction(x, 'indiv', inds)
+        effect = S_N - S_SAD
+        out$N = data.frame(test = 'N', sample = 'indiv', 
+                           effort = inds, S = S_N, effect,
+                           stringsAsFactors = FALSE)
+    }
+    if ('agg' %in% tests) {
+        S_agg = rarefaction(x, 'spat')
+        n_plots = nrow(x$comm)
+        samp_effort = round((1:n_plots * sum(x$comm)) / n_plots)
+        S_N = rarefaction(x, 'indiv', samp_effort)
+        effect = S_agg - S_N
+        out$agg = data.frame(test = 'agg', sample = 'plot', 
+                             effort = as.numeric(names(S_agg)),
+                             S = S_agg, effect, 
+                             stringsAsFactors = FALSE)
+    }
+    return(flatten_dfr(tibble(out)))
+}
+        
+
+#' @keywords internal
+get_rand_sad = function(rad, N) {
+  rand_samp = sample(1:length(rad), N, replace = T, prob = rad)
+  rand_sad = table(factor(rand_samp, levels = 1:length(rad)))
+  return(as.numeric(rand_sad))
 }
 
-#' Permute community matrix within groups
+#' Generate a null community matrix 
 #' 
+#' ## To DO: update this documentation
 #' Two types of permutation can be carried out: 1) 'noagg': each individual of
 #' each species is reassigned a plot randomly which removes any patterns due to
 #' within and between plot spatial aggregation, but maintains species group
@@ -532,15 +532,18 @@ deltaS_N = function(comm, ref_dens, inds){
 #' of individuals for a given species within a group and the 'swapN' algorithm does
 #' not. 
 #' 
+#' Replaces depreciated function `permute_comm`
+#' 
 #' @param comm community matrix with plots as rows and species columns.
-#' @param method either 'noagg' for random shuffling of the individuals without
-#'   maintaining the vector of sample total abundances or 'swapN' for random 
-#'   shuffling of the individuals in which sample abundances are maintained 
+#' @param tests 'SAD', 'N', or 'agg' for a null model that nullifies 
+#' the given component
 #' @param groups optional argument that is a vector of group ids which specify
 #'   which group each site is associated with. If is NULL then all rows of the
 #'   community matrix are assumed to be members of the same group
 #'   
-#' @return a permuted site-by-species matrix
+#' @return a site-by-species matrix
+#' @import purrr
+#' @import dplyr
 #' @export
 #' @examples 
 #' S = 3
@@ -551,145 +554,94 @@ deltaS_N = function(comm, ref_dens, inds){
 #' comm
 #' groups = rep(1:2, each=2)
 #' groups
-#' permute_comm(comm, 'noagg')
-#' permute_comm(comm, 'noagg', groups)
-#' permute_comm(comm, 'swapN')
-#' permute_comm(comm, 'swapN', groups)
-permute_comm = function(comm, method, groups=NULL) {
+#' get_null_comm(comm, 'noagg')
+#' get_null_comm(comm, 'noagg', groups)
+#' get_null_comm(comm, 'swapN')
+#' get_null_comm(comm, 'swapN', groups)
+get_null_comm = function(comm, tests, groups = NULL) {
+    # the main component of all the null models is random sampling 
+    # from a pooled or group-specific SAD
     if (!(is.matrix(comm) | is.data.frame(comm)))
         stop('comm must be a matrix or data.frame')
     if (is.null(groups))
-        groups = rep(1, nrow(comm)) 
-    group_levels = unique(groups)
-    S = ncol(comm)
-    N = rowSums(comm)
-    comm_group_perm = matrix(0, ncol=S, nrow=nrow(comm))
-    if (method == 'swapN')
-        swapN = sample(N)
-    for(i in seq_along(group_levels)) {
-        row_indices = groups == group_levels[i]
-        group_comm = comm[row_indices, ]
-        sp_abu = colSums(group_comm)
-        sp_freq = sp_abu[sp_abu > 0] / sum(sp_abu)
-        plot_ids = 1:nrow(group_comm)
-        if (method == 'noagg') {
-            Ngroup = N[row_indices]
-        } else if (method == 'swapN') {
-            Ngroup = swapN[row_indices]
-        }
-        else 
-            stop('The argument swap must be either "noagg" or "swapN"')
-        sp_draws = sapply(plot_ids, function(x)
-            sample(1:length(sp_freq), size=Ngroup[x], 
-                   replace=T, prob=sp_freq))
-        tmp_comm = t(sapply(plot_ids, function(x)
-            table(c(sp_draws[[x]], 1:length(sp_freq))) - 1 ))
-        # The following lines are necessary because tmp_comm may have more
-        # columns than comm_group_perm
-        comm_new = matrix(0, nrow = nrow(comm_group_perm), 
-                          ncol = max(ncol(comm_group_perm), ncol(tmp_comm)))
-        comm_new[, 1:ncol(comm_group_perm)] = comm_group_perm
-        comm_new[row_indices, 1:ncol(tmp_comm)] = tmp_comm
-        comm_group_perm = comm_new
+        groups = rep(1, nrow(comm))   
+  
+    # compute N at each plot across groups
+    N_plots = rowSums(comm)
+    if (tests == "N") # shuffle these abundances in the N null model
+        N_plots = sample(N_plots)
+    if (tests == "SAD") {
+        # compute relative abundance distribution of the species pool
+        rad_pool = colSums(comm) / sum(comm)
+        # randomly sample N individuals from the pool with replacement
+        null_sads = map(N_plots, ~ get_rand_sad(rad_pool, .x))
+        names(null_sads) = 1:length(null_sads)
+    } else if (tests == "N" | tests == "agg") {
+        # compute rad for each group
+        rad_groups = data.frame(comm, groups) %>%
+                     group_by(groups) %>%
+                     summarize_all(sum) %>%
+                     select(-one_of("groups")) %>%
+                     t %>% as_tibble %>%
+                     map(~ .x / sum(.x))
+        # replicate these rads so that you have one rad for every
+        # plot in the dataset
+        rad_plots = rep(rad_groups, table(groups))
+        names(rad_plots) = 1:length(rad_plots)
+        # draw random sads 
+        null_sads = map2(rad_plots, N_plots, get_rand_sad)
     }  
-    return(comm_group_perm)
+    # now convert sads to a new community matrix
+    null_comm = null_sads %>% tibble %>% flatten_dfr %>% t  
+    return(null_comm)
 }
 
-# Convert specified columns of a dataframe from factors to numeric
-df_factor_to_numeric = function(dataframe, cols = NULL){
-    if (is.null(cols)) cols = 1:ncol(dataframe)
-    for (col in cols){
-        if ('factor' %in% class(dataframe[, col]))
-            dataframe[, col] = as.numeric(levels(dataframe[, col]))[dataframe[, col]]
+
+#' Auxiliary function for get_delta_stats()
+#' Returns a vector of abundances where individual-based rarefaction 
+#' will be performed
+#' @keywords internal
+get_inds = function(N_max, inds = NULL, log_scale = FALSE) {
+    # across the groups what is the smallest total number of
+    # individuals - this will be the largest N we can compute to
+    if (is.null(inds)) {
+        if (log_scale)
+            ind_sample_size = unique(c(2^seq(0, floor(log2(N_max))), N_max))
+        else 
+            ind_sample_size = seq(N_max)
     }
-    return(dataframe)
-}
-
-# Auxiliary function for get_delta_stats()
-# Overall checks for input values
-get_delta_overall_checks = function(mob_in, type, group_var, env_var, 
-                                    density_stat, tests){
-    if (!(type %in% c('continuous', 'discrete')))
-        stop('Type has to be discrete or continuous.')
-    if (!(density_stat %in% c('mean', 'max', 'min')))
-        stop('density_stat has to be set to min, max, or mean.')
-    if (!(group_var %in% names(mob_in$env)))
-        stop('group_var has to be one of the environmental variables in mob_in$env.')
-    if (!(is.null(env_var)))
-        if (!(env_var %in% names(mob_in$env)))
-            stop('If env_var is defined, it has to be one of the environmental
-                 variables in comm.')
-    test_status = sapply(tests, function(x) 
-        eval(parse(text = paste('mob_in$tests$', x, sep = ''))))
-    approved_tests = tests[which(test_status == TRUE)]
-    if (length(approved_tests) < length(tests)) {
-        tests_string = paste(approved_tests, collapse=' and ')
-        cat(paste('Based upon the attributes of the community object only the 
-                  following tests will be performed:', tests_string))
+    if (length(inds) == 1) { # if user specified an integer
+        if (log_scale)  
+            ind_sample_size = floor(exp(seq(inds) * log2(N_max) / inds))
+        else 
+            ind_sample_size = floor(seq(1, N_max, length.out = inds))
     }
-    return(approved_tests)
-}
-
-# Auxiliary function for get_delta_stats()
-# Perform checks when type is "discrete"
-get_delta_discrete_checks = function(ref_group, group_levels, group_data, env_var){
-    if (is.null(ref_group)) {
-        stop('For a discrete analysis you must specify a ref_group to compare groups to')
-    } else if (!(as.character(ref_group) %in% group_levels)) {
-        stop('Reference group does not exist.')
-    }
-    if (!is.null(env_var))
-        warning('Environmental variable is not used in the discrete analysis.')
-    if (!('factor' %in% class(group_data))) 
-        warning('Grouping variable is not a factor. A group will be defined for each unique value.')
-}
-
-# Auxiliary function for get_delta_stats()
-# Perform checks when type is "continuous"
-get_delta_continuous_checks = function(corr, group_levels, env_raw){
-    if (!(corr %in% c('spearman', 'pearson')))
-        stop('corr has to be spearman or pearson.')
-    if ('factor' %in% class(env_raw)) {
-        env_vals = data.frame(groups = group_levels, 
-                              values = as.numeric(env_raw)[match(group_levels, env_raw)])
-        warning('Variable of interest is a factor but will be treated as a continous variable for the analysis with the above values')
-        print(env_vals)
-    } 
-}
-
-# Auxiliary function for get_delta_stats()
-# Returns a vector of abundances where individual-based rarefaction 
-# will be performed
-get_delta_ind_sample = function(group_sad, inds, log_scale){
-    group_minN = min(rowSums(group_sad))
-    if (is.null(inds)){
-        ind_sample_size = seq(group_minN)
-    } else if (length(inds) > 1) {
+    if (length(inds) > 1) { # if user specified a vector
+        if (max(inds) > N_max) 
+            warning(paste('Sample size is higher than abundance of at least one group, only n up to',
+                          N_max, 'will be used'))
         ind_sample_size = inds
-        if (max(inds) > group_minN)
-            warning('Sample size is higher than abundance of at least one group!')
-    } else if (log_scale == T){
-        ind_sample_size = floor(exp(seq(inds) * log(group_minN) / inds))
-    } else {
-        ind_sample_size = floor(seq(inds) * group_minN / inds)
     }
-    ind_sample_size = unique(c(1, ind_sample_size)) # Force (1, 1) to be included
+    # ensure that no more than N_max individuals considered
+    ind_sample_size = unique(c(ind_sample_size[ind_sample_size < N_max], N_max))
+    # Force (1, 1) to be included
+    ind_sample_size = unique(c(1, ind_sample_size))
     return(ind_sample_size)
 }
 
 #' Auxiliary function for get_delta_stats()
-#' Returns the "assumed" plot density given 
-#' whether min, max or mean is used
+#' Returns the "assumed" density of individuals in 
+#' a plot given whether min, max or mean is used
 #' @keywords internal
-get_plot_dens = function(comm, density_stat){
+get_ind_dens = function(comm, density_stat){
     if (density_stat == 'mean') {
-        plot_dens = sum(comm) / nrow(comm)
+        ind_dens = sum(comm) / nrow(comm)
     } else if (density_stat == 'max') {
-        plot_dens = max(rowSums(comm))
+        ind_dens = max(rowSums(comm))
     } else {
-        plot_dens = min(rowSums(comm))
+        ind_dens = min(rowSums(comm))
     }
-    return(plot_dens)   
+    return(ind_dens)
 }
 
 #' Auxiliary function for effect_ functions
@@ -698,345 +650,148 @@ get_plot_dens = function(comm, density_stat){
 #' Method developed by Loosmore and Ford 2006 but algebraic simplifications 
 #' used as developed by Baddeley et al. 2014 Ecological Archives M084-017-A1
 #' @keywords internal
-get_overall_p = function(effort, deltaS_emp, deltaS_null){
-    delta_effort = c(effort[1], diff(effort))
-    deltaS = rbind(deltaS_emp, deltaS_null)
-    Hbarbar = apply(deltaS, 2, mean)                    # Baddeley Eq. A.10
-    m = nrow(deltaS) - 1                                # number of permutations
+get_overall_p = function(effort, perm, value){
+    delta_effort = c(effort[1], diff(effort))[perm == 0]
+    Hbarbar = tapply(value, effort, mean)  # Baddeley Eq. A.10
+    m = max(as.numeric(perm))              # number of permutations
     a = ((m + 1) / m)^2
-    u = a * apply(deltaS, 1, function(x) 
-                  sum((x - Hbarbar)^2 * delta_effort))  # Baddeley Eq. A.12-13
+    u = tapply(value, perm, function(x)    # Baddeley Eq. A.12-13
+               a * sum((x - Hbarbar)^2 * delta_effort)) 
     overall_p = sum(u >= u[1]) / (m + 1)
     return(overall_p)
 }
 
-#' Auxiliary function for get_delta_stats()
-#' Obtain the swap curve and/or spatial curve for each group if asked
-#' Directly add attributes to the input "out"
 #' @keywords internal
-get_sample_curves = function(mob_in, group_levels, group_data, approved_tests){
-    if ('N' %in% approved_tests | 'agg' %in% approved_tests){
-        sample_rare = data.frame(matrix(0, nrow = 0, ncol = 4), 
-                                 stringsAsFactors = F)
-        for (level in group_levels){
-            comm_level = mob_in$comm[as.character(group_data) == level, ]
-            nplots = nrow(comm_level)
-            level_dens = sum(comm_level) / nplots
-            samp_effort = round((1:nplots) * level_dens)
-            impl_S = rarefaction(comm_level, 'indiv', samp_effort)
-            sample_rare_level = data.frame(cbind(rep(level, length(impl_S)), 
-                                                 seq(length(impl_S)), impl_S))
-            if ('agg' %in% approved_tests){
-                coords_level = mob_in$spat[as.character(group_data) == level, ]
-                expl_S = rarefaction(comm_level, 'spat', coords = coords_level, 
-                                     latlong = mob_in$latlong)
-                sample_rare_level = cbind(sample_rare_level, expl_S)
-            }
-            sample_rare = rbind(sample_rare, sample_rare_level)
-        }
-        names(sample_rare)[1:3] = c('group', 'sample_plot', 'impl_S')
-        sample_rare = df_factor_to_numeric(sample_rare, 2:ncol(sample_rare))
-        if ('agg' %in% approved_tests){
-            names(sample_rare)[4] = 'expl_S'
-            sample_rare$deltaS_agg = sample_rare$expl_S - sample_rare$impl_S
-        }
-        return(sample_rare)
+mod_sum = function(x, stats = c('betas', 'r2', 'r2adj', 'f', 'p')) {
+    summary_lm = summary(x)
+    out = list()
+    if ('betas' %in% stats) 
+        out$betas = coef(x)
+    if ('r2' %in% stats)
+        out$r2 = summary_lm$r.squared
+    if ('r2adj' %in% stats)
+        out$r2adj = summary_lm$adj.r.squared
+    if ('f' %in% stats)
+        out$f = summary_lm$fstatistic[1]
+    if ('p' %in% stats){ # interpreted as overall model p-value
+        f = summary_lm$fstatistic
+        out$p = unname(pf(f[1],f[2],f[3],lower.tail=F))
     }
+    if ('betas' %in% stats)
+        coef_type = c(paste0('b', 0:(length(out$betas) - 1)),
+                      stats[stats != 'betas'])
+    else 
+        coef_type = stats
+    out = data.frame(coef_type, unlist(out))
+    names(out) = c('index', 'value')
+    row.names(out) = NULL
+    out
 }
 
-#' Auxiliary function for get_delta_stats()
-#' Effect of SAD when type is "continuous"
-#' Directly add attributes to the input "out"
-#' @keywords internal
-effect_SAD_continuous = function(out, group_sad, env_levels, corr, n_perm){
-    ind_sample_size = out$indiv_rare[, 1]
-    ind_rare = out$indiv_rare[, -1]
-    ind_cor = apply(ind_rare, 1, function(x) 
-        cor(x, env_levels, method=corr))
-    # Null test
-    overall_sad_lumped = as.numeric(colSums(group_sad))
-    sp_freq = overall_sad_lumped[overall_sad_lumped > 0] / sum(overall_sad_lumped)
-    null_ind_r_mat = matrix(NA, n_perm, length(ind_sample_size))
-    cat('\nComputing null model for SAD effect\n')
-    pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
-    for (i in 1:n_perm){
-        # Note: necessary to convert sample to factor, so that zero counts are kept
-        sad_perm = sapply(rowSums(group_sad), function(x)
-            data.frame(table(factor(sample(1:length(sp_freq), x, replace = T,
-                                           prob = sp_freq), 
-                                    levels = 1:length(sp_freq))))[, 2])
-        perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
-            rarefaction(x, 'indiv', ind_sample_size))
-        null_ind_r_mat[i, ] = apply(perm_ind_rare, 1, function(x)
-            cor(x, env_levels, method = corr))
-        setTxtProgressBar(pb, i)
-    }
-    close(pb)
+#' @import purrr
+#' @import dplyr 
+#' @importFrom tidyr nest unnest
+#' @keywords internal 
+get_results = function(mob_in, groups, tests, inds, ind_dens, type, stats=NULL) {
+  
+    # the approach taken here to get results for each group
+    # is to first break the dataset up into a list of lists 
+    # where this is one list per group - this is likely not 
+    # the best pratice for memory but it makes the code much 
+    # easier to follow - we may need to revisit this. 
+    group_levels = unique(groups)
+    group_rows = map(group_levels, ~ which(groups == .x))
+    mob_in_groups = map(group_rows, ~ subset(mob_in, .x, type = 'integer'))
+    names(mob_in_groups) = group_levels
+  
+    S_df = map_dfr(mob_in_groups, get_delta_curves, tests, inds, ind_dens,
+                   .id = "group")
     
-    ind_r_null_CI = apply(null_ind_r_mat, 2, function(x)
-        quantile(x, c(0.025, 0.5, 0.975), na.rm = T)) # 95% CI
-    out$continuous$SAD = data.frame(cbind(ind_sample_size, ind_cor, 
-                                            t(ind_r_null_CI)))
-    names(out$continuous$SAD) = c('effort_ind', 'r_emp', 'r_null_low', 
-                                    'r_null_median', 'r_null_high')
-    out$continuous$SAD = df_factor_to_numeric(out$continuous$SAD)
-    return(out)
-}
-
-#' Auxiliary function for get_delta_stats()
-#' Effect of SAD when type is "discrete"
-#' @keywords internal
-effect_SAD_discrete = function(out, group_sad, group_levels, ref_group, n_perm, 
-                               overall_p){
-    ind_sample_size = out$indiv_rare[, 1]
-    ref_sad = group_sad[which(group_levels == as.character(ref_group)), ]
-    out$SAD = data.frame(matrix(0, nrow = 0, ncol = 6), 
-                                stringsAsFactors = F)
-
-    cat('\nComputing null model for SAD effect\n')
-    pb <- txtProgressBar(min = 0, max = n_perm * (length(group_levels) - 1), 
-                         style = 3)
-    k = 1
-    for (level in group_levels[group_levels != ref_group]){
-        deltaS = out$indiv_rare[, level] - out$indiv_rare[, as.character(ref_group)]
-        level_sad = group_sad[which(group_levels == level), ]
-        comp_sad_lumped = as.numeric(colSums(rbind(ref_sad, level_sad)))
-        sp_freq = comp_sad_lumped[comp_sad_lumped > 0] / sum(comp_sad_lumped)
-        
-        null_ind_deltaS_mat = matrix(NA, n_perm, length(ind_sample_size))
-        for (i in 1:n_perm){
-            sad_perm = sapply(c(sum(level_sad), sum(ref_sad)), function(x)
-                data.frame(table(factor(sample(1:length(sp_freq),x, replace = T,
-                                               prob = sp_freq),
-                                        levels = 1:length(sp_freq))))[, 2])
-            perm_ind_rare = apply(sad_perm, MARGIN = 2, function(x)
-                rarefaction(x, 'indiv', ind_sample_size))
-            null_ind_deltaS_mat[i, ] = perm_ind_rare[, 1] - perm_ind_rare[, 2]
-            setTxtProgressBar(pb, k)
-            k = k + 1
-        }
-        ind_deltaS_null_CI = apply(null_ind_deltaS_mat, 2, function(x)
-            quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-        ind_level = data.frame(cbind(rep(level,length(ind_sample_size)),
-                                     ind_sample_size, deltaS, t(ind_deltaS_null_CI)))
-        out$SAD = rbind(out$SAD, ind_level)
-        if (overall_p){
-            p_level = get_overall_p(out$indiv_rare[, 'sample'], 
-                                    deltaS, null_ind_deltaS_mat)
-            out$overall_p$SAD[out$overall_p$group == level] = p_level
-        }
-    }
-    close(pb)
-    out$SAD = df_factor_to_numeric(out$SAD, 2:ncol(out$SAD))
-    names(out$SAD) = c('group', 'effort_ind', 'deltaS_emp',
-                              'deltaS_null_low', 'deltaS_null_median',
-                              'deltaS_null_high')
-    return(out)
-}
-
-#' Auxiliary function for get_delta_stats()
-#' Effect of N when type is "continuous"
-#' @keywords internal
-effect_N_continuous = function(mob_in, S, group_levels, env_levels, group_data, 
-                               plot_dens, plot_abd, ind_sample_size, corr, 
-                               n_perm){
-    # TODO: checks?
-    effect_N_by_group = data.frame(matrix(NA, ncol = length(group_levels) + 1,
-                                          nrow = length(ind_sample_size)))
-    effect_N_by_group[, 1] = ind_sample_size
-    for (i in 1:length(group_levels)){
-        level = group_levels[i]
-        comm_level = mob_in$comm[which(as.character(group_data) == level), ]
-        group_effect_N = deltaS_N(comm_level, plot_dens, ind_sample_size)
-        effect_N_by_group[, i + 1] = group_effect_N$deltaS
-    }
-    effect_N_by_group = effect_N_by_group[complete.cases(effect_N_by_group), ]
-    r_emp = apply(effect_N_by_group[ , -1], 1, function(x)
-        cor(x, env_levels, method = corr))
+    S_df = S_df %>% mutate_if(is.factor, as.character)
     
-    null_N_r_mat = matrix(NA, n_perm, length(r_emp))
-    cat('\nComputing null model for N effect\n')
-    pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
-    for (i in 1:n_perm){
-        comm_perm = permute_comm(mob_in$comm, 'swapN', group_data)
-        effect_N_perm = data.frame(matrix(NA, ncol = length(group_levels),
-                                          nrow = length(ind_sample_size)))
-        for (j in 1:length(group_levels)){
-            level_perm = group_levels[j]
-            comm_level_perm = comm_perm[which(as.character(group_data) == level_perm), ]
-            group_effect_N_perm = deltaS_N(comm_level_perm, plot_dens, 
-                                           ind_sample_size[ind_sample_size <= sum(comm_level_perm)])
-            # Ensure the column has the right length (filled with NA's if needed)
-            effect_N_perm[, j] = group_effect_N_perm$deltaS[1:nrow(effect_N_perm)]
-        }
-        effect_N_perm = effect_N_perm[complete.cases(effect_N_perm), ]
-        # If the output is not long enough, fill it with NA's
-        null_N_r_mat[i, ] = apply(effect_N_perm, 1, function(x)
-            cor(x, env_levels, method = corr))[1:ncol(null_N_r_mat)]
-        setTxtProgressBar(pb, i)
+    if (type == 'discrete')
+        S_df$group = factor(S_df$group, levels = levels(groups))
+    if (type == 'continuous')
+        S_df$group = as.numeric(S_df$group)
+    S_df = as_tibble(S_df)
+  
+    # now that S and effects computed across scale compute
+    # summary statistics at each scale 
+  
+    delta_mod = function(df) {
+        lm(effect ~ group, data = df)
     }
-    close(pb)
-    N_r_null_CI = apply(null_N_r_mat, 2, function(x) 
-        quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-    out_N = data.frame(cbind(effect_N_by_group[, 1], r_emp, t(N_r_null_CI)))
-    out_N = df_factor_to_numeric(out_N)
-    names(out_N) = c('effort_ind', 'r_emp', 'r_null_low', 'r_null_median', 
-                     'r_null_high')
-    return(out_N)
+    
+    if (is.null(stats)) {
+        if (type == 'discrete')
+            stats = 'betas'
+        else
+            stats = c('betas', 'r2', 'r2adj', 'f', 'p')
+    }
+    mod_df = S_df %>%
+             group_by(test, sample, effort) %>%
+             nest() %>%
+             mutate(fit = map(data, delta_mod)) %>%
+             mutate(sum = map(fit, mod_sum, stats)) %>%
+             select(test, sample, effort, sum) %>% 
+             unnest(sum) %>%
+             mutate_if(is.factor, as.character)
+    
+    return(list(S_df = S_df, mod_df = mod_df))
 }
 
-#' Auxiliary function for get_delta_stats()
-#' Effect of N when type is "discrete" 
+#' @import purrr
+#' @import dplyr
+#' @importFrom tibble tibble
+#' @importFrom utils txtProgressBar setTxtProgressBar
 #' @keywords internal
-effect_N_discrete = function(out, mob_in, group_levels, ref_group, groups, 
-                             density_stat, ind_sample_size, n_perm, overall_p){
-    out_N = NULL
+run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
+                           n_perm, overall_p) {
     if (overall_p)
-        overallp_N = data.frame(matrix(0, nrow = 0, ncol = 2), 
-                                stringsAsFactors = F)
-    cat('\nComputing null model for N effect\n')
-    pb <- txtProgressBar(min = 0, max = n_perm * (length(group_levels) - 1), 
-                         style = 3)
-    k = 1
-    for (level in group_levels[group_levels != as.character(ref_group)]){
-        row_bool = level == groups | as.character(ref_group) == groups
-        comm_levels = mob_in$comm[row_bool, ]
-        plot_dens_level = get_plot_dens(comm_levels, density_stat)
-        plot_levels = groups[row_bool]
-        N_eff = sapply(c(as.character(ref_group), level), function(x)
-            deltaS_N(comm_levels[plot_levels == x, ], plot_dens_level, 
-                     ind_sample_size)$deltaS)
-        ddeltaS_level = N_eff[, 2] - N_eff[, 1]
-        null_N_deltaS_mat = matrix(NA, n_perm, length(ddeltaS_level))
-        for (i in 1:n_perm){
-            # swap plot abu between group 1 and each other group
-            comm_perm = permute_comm(comm_levels, 'swapN', plot_levels)  
-            min_N = min(sum(comm_perm[plot_levels == as.character(ref_group), ]), 
-                        sum(comm_perm[plot_levels == level, ]))
-            N_eff_perm = sapply(c(as.character(ref_group), level), function(x) 
-                deltaS_N(comm_perm[plot_levels == x, ], plot_dens_level, 
-                         ind_sample_size[ind_sample_size <= min_N])$deltaS)
-            ddeltaS_perm = N_eff_perm[ , 2] - N_eff_perm[ , 1]
-            # Ensure the row has the right length (filled with NA's if needed)
-            null_N_deltaS_mat[i, ] = ddeltaS_perm[1:ncol(null_N_deltaS_mat)]
-            setTxtProgressBar(pb, k)
-            k = k + 1
+        p_val = vector('list', length(tests))
+    for (k in seq_along(tests)) {
+        null_results = vector('list', length = n_perm)
+        cat(paste('\nComputing null model for', tests[k], 'effect\n'))
+        pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
+        for (i in 1:n_perm) {
+            null_mob_in = mob_in
+            null_mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
+            null_results[[i]] = get_results(null_mob_in, groups, tests[k], inds,
+                                            ind_dens, type, stats)$mod_df
+            setTxtProgressBar(pb, i)
         }
-        N_deltaS_null_CI = apply(null_N_deltaS_mat, 2, function(x)
-            quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-        N_level = data.frame(level, ind_sample_size, ddeltaS_level,
-                             t(N_deltaS_null_CI))
-        out_N = rbind(out_N, N_level)
-        if (overall_p){
-            p_level = get_overall_p(ind_sample_size, ddeltaS_level, 
-                                    null_N_deltaS_mat)
-            out$overall_p$N[out$overall_p$group == level] = p_level
+        close(pb)    
+        # rbind across the null_results adding a permutation index
+        null_results = tibble(null_results)
+        null_df = flatten_dfr(null_results, .id = "perm")
+        # compute quantiles
+        null_qt = null_df %>%
+                  group_by(test, sample, effort, index) %>%
+                  summarize(low_value = quantile(value, 0.025, na.rm=T),
+                            med_value = quantile(value, 0.5, na.rm=T), 
+                            high_value = quantile(value, 0.975, na.rm=T))
+        if (k == 1) 
+            out = null_qt
+        else 
+            out = rbind(out, null_qt)
+        # to compute p-value we need to also calculate the observed
+        # results then the funct must be distributed across the
+        # various stats and tests
+        if (overall_p) {
+            obs_df = get_results(mob_in, groups, tests[k], inds, ind_dens,
+                                 type, stats)$mod_df
+            obs_df = data.frame(perm = 0, obs_df)          
+            null_df = rbind(obs_df, null_df)
+            p_val[[k]] = null_df %>% 
+                         group_by(test, index) %>% 
+                         summarize(p = get_overall_p(effort, perm, value))
         }
     }
-    close(pb)
-    out_N = df_factor_to_numeric(out_N, 2:ncol(out_N))
-    names(out_N) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
-                     'ddeltaS_null_median', 'ddeltaS_null_high')
-    out$N = out_N
+    if (overall_p)
+        attr(out, "p") = bind_rows(p_val)
     return(out)
 }
 
-#' Auxiliary function for get_delta_stats()
-#' Effect of aggregation when type is "continuous"
-#' @keywords internal
-effect_agg_continuous = function(mob_in, sample_rare, group_plots, group_levels, 
-                                 group_data, env_levels, corr, n_perm){
-    min_plot_level = min(group_plots$Freq)
-    r_emp = c()
-    for (iplot in seq(min_plot_level)){
-        deltaS_i = sample_rare$deltaS_agg[sample_rare$sample_plot == iplot]
-        groups_i = as.character(sample_rare$group[sample_rare$sample_plot 
-                                                  == iplot])
-        env_i = env_levels[which(group_levels == groups_i)]
-        r_emp = c(r_emp, cor(deltaS_i, env_i, method = corr))
-    }
-
-    null_agg_r_mat = matrix(NA, n_perm, min_plot_level)
-    cat('\nComputing null model for aggregation effect\n')
-    pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
-    for (i in 1:n_perm){
-        comm_perm = comm
-        comm_perm$comm = permute_comm(mob_in$comm, 'noagg', group_data)
-        sample_rare_perm = get_sample_curves(comm_perm, group_levels, group_data, 
-                                             c('N', 'agg'))
-        r_perm = c()
-        for (iplot in seq(min_plot_level)){
-            deltaS_i = sample_rare_perm$deltaS_agg[sample_rare_perm$sample_plot 
-                                                   == iplot]
-            groups_i = as.character(sample_rare_perm$group[sample_rare_perm$sample_plot 
-                                                      == iplot])
-            env_i = env_levels[which(group_levels == groups_i)]
-            r_perm = c(r_perm, cor(deltaS_i, env_i, method = corr))
-        }
-        null_agg_r_mat[i, ] = r_perm
-        setTxtProgressBar(pb, i)
-    }
-    close(pb)
-    plot_levels = which(!is.na(r_emp))
-    null_agg_r_mat = null_agg_r_mat[, plot_levels]
-    agg_r_null_CI = apply(null_agg_r_mat, 2, function(x) 
-        quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-    table_agg = data.frame(cbind(plot_levels, r_emp[plot_levels], 
-                                 t(agg_r_null_CI)))
-    names(table_agg) = c('effort_sample', 'r_emp', 'r_null_low', 
-                         'r_null_median', 'r_null_high')
-    return(table_agg)
-}
-
-#' Auxiliary function for get_delta_stats()
-#' Effect of aggregation when type is "discrete"
-#' @keywords internal
-effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data, 
-                               group_levels, n_perm, overall_p){
-    sample_rare = out$sample_rare
-    ref_sample = sample_rare[which(sample_rare$group == 
-                                       as.character(ref_group)), ]
-    table_agg = data.frame(matrix(NA, nrow = 0, ncol = 6))
-    cat('\nComputing null model for aggregation effect\n')
-    pb <- txtProgressBar(min = 0, max = n_perm * (length(group_levels) - 1), 
-                         style = 3)
-    k = 1
-    for (level in group_levels[group_levels != as.character(ref_group)]){
-        min_plot_level = min(group_plots$Freq[which(group_plots$groups %in%
-                                                        c(ref_group, level))])
-        ddeltaS_level = sample_rare$deltaS_agg[sample_rare$group == level][1:min_plot_level] - 
-            sample_rare$deltaS_agg[sample_rare$group == ref_group][1:min_plot_level]
-        
-        null_agg_deltaS_mat = matrix(NA, n_perm, min_plot_level)
-        for (i in 1:n_perm){
-            comm_perm = mob_in
-            comm_perm$comm = permute_comm(mob_in$comm, 'noagg', group_data)
-            sample_rare_perm = get_sample_curves(comm_perm, group_levels, group_data, 
-                                                 c('N', 'agg'))
-            ddeltaS_perm = sample_rare_perm$deltaS_agg[sample_rare_perm$group == level][1:min_plot_level] - 
-                sample_rare_perm$deltaS_agg[sample_rare_perm$group == ref_group][1:min_plot_level]
-            null_agg_deltaS_mat[i, ] = ddeltaS_perm
-            setTxtProgressBar(pb, k)
-            k = k + 1
-        }
-        agg_deltaS_null_CI = apply(null_agg_deltaS_mat, 2, function(x) 
-            quantile(x, c(0.025, 0.5, 0.975), na.rm = T))
-        agg_level = data.frame(cbind(rep(level, min_plot_level), 1:min_plot_level, 
-                                     ddeltaS_level, t(agg_deltaS_null_CI)))
-        table_agg = rbind(table_agg, agg_level)
-        if (overall_p){
-            p_level = get_overall_p(1:min_plot_level, ddeltaS_level, 
-                                    null_agg_deltaS_mat)
-            out$overall_p$agg[out$overall_p$group == level] = p_level
-        }
-    }
-    close(pb)
-    table_agg = df_factor_to_numeric(table_agg, 2:ncol(table_agg))
-    names(table_agg) = c('group', 'effort_sample', 'ddeltaS_emp', 'ddeltaS_null_low', 
-                         'ddeltaS_null_median', 'ddeltaS_null_high')
-    out$agg = table_agg
-    return(out)
-}
 
 #' Conduct the MoB tests on drivers of biodiversity across scales.
 #' 
@@ -1059,6 +814,14 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #'   are conducted between all other groups and the reference group. If
 #'   "continuous", a correlation analysis is conducted between the response
 #'   variables and group_var or env_var (if defined).
+#' @param stats a vector of character strings that specifies what statistics to
+#'   sumamrize effect sizes with. Options include: \code{c('betas', 'r2',
+#'   'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
+#'   r-squared, F-statistic, and p-value respectively. The default value of
+#'   \code{NULL} will result in only betas being calculated when \code{type ==
+#'   'discrete'} and all possible stats being computed when \code{type ==
+#'   'continuous'}. Note that for a discrete analysis all non-betas stats are
+#'   meaningless because the model has zero degrees of freedom in this context.
 #' @param inds effort size at which the individual-based rarefaction curves are
 #'   to be evaluated, and to which the sample-based rarefaction curves are to be
 #'   interpolated. It can take three types of values, a single integer, a vector
@@ -1090,10 +853,6 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #'   all plots within the two groups for each pair-wise comparison when "type"
 #'   is "discrete") are used. If it is "min" or "max", the minimum/maximum
 #'   plot-level density is used.
-#' @param corr which kind of correlation to use when "type" is "continuous". It
-#'   can take two values, "spearman" or "pearson". "spearman" (default) is
-#'   generally recommended because the relationship between the response and
-#'   "env_var" may not be linear.
 #' @param n_perm number of iterations to run for null tests, defaults to 1000.
 #' @param overall_p boolean defaults to FALSE specifies if overall across scale 
 #'  p-values for the null tests. This should be interpreted with caution because
@@ -1101,6 +860,8 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #'  reflect significance at any particular scale. 
 #' @return a "mob_out" object with attributes
 #' @author Xiao Xiao and Dan McGlinn
+#' @import dplyr
+#' @import purrr
 #' @export
 #' @examples
 #' data(inv_comm)
@@ -1108,179 +869,87 @@ effect_agg_discrete = function(out, mob_in, ref_group, group_plots, group_data,
 #' inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                            type='discrete', log_scale=TRUE, n_perm=20)
-
-get_delta_stats = function(mob_in, group_var, env_var = NULL, ref_group = NULL, 
+#' plot(inv_mob_out, 'b1')
+get_delta_stats = function(mob_in, group_var, ref_group = NULL, 
                            tests = c('SAD', 'N', 'agg'),
-                           type='discrete', inds = NULL, log_scale = FALSE,
-                           min_plots = NULL, density_stat ='mean',
-                           corr='spearman', n_perm=1000, overall_p = FALSE) {
-    
-    approved_tests = get_delta_overall_checks(mob_in, type, group_var, env_var, 
-                                              density_stat, tests)
-    
-    S = ncol(mob_in$comm)
-    plot_abd = rowSums(mob_in$comm)
-    group_data = mob_in$env[, group_var]
-    groups = as.character(group_data)
-    group_plots = data.frame(table(groups)) # Number of plots within each group
-    
-    group_sad = aggregate(mob_in$comm, by=list(group_data), sum)
-    # Distinguish between group_levels, the grouping factor, and env_levels, 
-    # the levels of the environmental factor for each group used for correlation
-    # Make sure that the orders match!
-    if (is.null(env_var)){
-        env_raw = group_sad[, 1]
-        if ('factor' %in% class(env_raw)){
-            env_levels = as.numeric(env_raw)
-        } else {
-            env_levels = env_raw
-        }
-    } else {
-        env_levels = tapply(mob_in$env[, env_var], list(group_data), mean)
+                           type = c('continuous', 'discrete'),
+                           stats = NULL, inds = NULL,
+                           log_scale = FALSE, min_plots = NULL,
+                           density_stat = c('mean', 'max', 'min'),
+                           n_perm=1000, overall_p = FALSE) {
+    # perform preliminary checks and variable assignments
+    if (class(mob_in) != "mob_in")
+        stop('mob_in must be output of function make_mob_in (i.e., of class mob_in')
+    if (!(group_var %in% names(mob_in$env)))
+        stop('group_var has to be one of the environmental variables in mob_in$env.')
+    tests = match.arg(tests, several.ok = TRUE)
+    test_status = tests %in% names(unlist(mob_in$tests)) 
+    approved_tests = tests[test_status]
+    if (length(approved_tests) < length(tests)) {
+        tests_string = paste(approved_tests, collapse=' and ')
+        warning(paste('Based upon the attributes of the community object only the following tests will be performed:',
+                  tests_string))
+        tests = approved_tests
     }
-    group_levels = as.character(group_sad[, 1])
-    group_sad = group_sad[, -1]
-    ind_sample_size = get_delta_ind_sample(group_sad, inds, log_scale)
-    plot_dens = get_plot_dens(mob_in$comm, density_stat)
+    type = match.arg(type)
+    density_stat = match.arg(density_stat)
+    
+    groups = mob_in$env[ , group_var]
+    if (type == 'discrete') {
+        if (class(groups) != 'factor') {
+            warning(paste("Converting", group_var, "to a factor with the default contrats because the argument type = 'discrete'."))
+            groups = as.factor(groups)
+        }
+        if (!is.null(ref_group)) { # need to ensure that contrasts on the reference group set
+            group_levs = levels(groups) 
+            if (ref_group %in% group_levs) {
+                if (group_levs[1] != ref_group)
+                    groups = factor(groups, 
+                                    levels = c(ref_group, 
+                                               group_levs[group_levs != ref_group]))
+            } else
+                stop(paste(ref_group, "is not in", group_var))
+        }    
+    } else if (type == 'continuous') {
+        if (!is.numeric(groups)) {
+            warning(paste("Converting", group_var, "to numeric because the argument type = 'continuous'"))
+            groups = as.numeric(as.character(groups))
+        }
+        if (!is.null(ref_group))
+            stop('Defining a reference group (i.e., ref_group) only makes sense when doing a discrete analysis (i.e., type = "discrete")')
+    }
+    #TODO It needs to be clear which beta coefficients apply to 
+    # which factor level - this is likely most easily accomplished by appending
+    # a variable name to the beta column or adding an additional column
+    #
+    #if (is.null(env_var)){
+    #    env_levels = as.numeric(names(sad_groups))
+    #} else {
+    #    env_levels = tapply(mob_in$env[, env_var],
+    #                        list(groups), mean)
+    #}
+    N_max = min(tapply(rowSums(mob_in$comm), list(groups), sum))
+    inds = get_inds(N_max, inds, log_scale)
+    ind_dens = get_ind_dens(mob_in$comm, density_stat)
 
     out = list()
     out$type = type
-    out$tests = approved_tests
+    out$tests = tests
     out$log_scale = log_scale
-    out$density_stat = list(density_stat = density_stat, plot_dens = plot_dens)
-    ind_rare = data.frame(apply(group_sad, 1, function(x) 
-        rarefaction(x, 'indiv', ind_sample_size)))
-    out$indiv_rare = cbind(ind_sample_size, ind_rare)
-    names(out$indiv_rare) = c('sample', group_levels)
-    out$sample_rare = get_sample_curves(mob_in, group_levels, group_data, 
-                                        approved_tests)
-    
-    if (type == 'continuous'){
-        get_delta_continuous_checks(corr, group_levels, env_raw)
-        if ('SAD' %in% approved_tests)
-            out = effect_SAD_continuous(out, group_sad, env_levels, corr, n_perm)
-        if ('N' %in% approved_tests)
-            out = effect_N_continuous(out, mob_in, S, group_levels, env_levels, 
-                                        group_data, plot_dens, plot_abd, 
-                                        ind_sample_size, corr, n_perm)
-        if ('agg' %in% approved_tests)
-            out$agg = effect_agg_continuous(mob_in, out$sample_rare,
-                                            group_plots, group_levels, 
-                                            group_data, env_levels, corr, n_perm)
-    } else if (type == 'discrete') {
-        get_delta_discrete_checks(ref_group, group_levels, group_data, env_var)
-        if (overall_p) {
-            cat('Caution: Overall p-values depend on scales of measurement yet do not explicitly reflect significance at any particular scale. Be careful in interpretation.')
-            out$overall_p = as.data.frame(matrix(NA, length(group_levels) - 1, 
-                                                 1 + length(approved_tests)))
-            names(out$overall_p) = c('group', approved_tests)
-            out$overall_p$group = group_levels[group_levels != ref_group]
-        }
-        if ('SAD' %in% approved_tests)
-            out = effect_SAD_discrete(out, group_sad, group_levels, ref_group,
-                                      n_perm, overall_p)
-        if ('N' %in% approved_tests)
-            out = effect_N_discrete(out, mob_in, group_levels, ref_group, groups,
-                                    density_stat,ind_sample_size, n_perm, overall_p)
-        if ('agg' %in% approved_tests)
-            out = effect_agg_discrete(out, mob_in, ref_group, group_plots, 
-                                      group_data, group_levels, n_perm, overall_p)
-    } else 
-        stop('The argument "type" must be either "discrete" or "continuous"')
+    out$density_stat = list(density_stat = density_stat,
+                            ind_dens = ind_dens)
+    out = append(out, 
+                 get_results(mob_in, groups, tests, inds, ind_dens, type, stats))
+
+    null_results = run_null_models(mob_in, groups, tests, inds, ind_dens,
+                                   type, stats, n_perm, overall_p)
+    # merge the null_results into the model data.frame
+    out$mod_df = left_join(out$mod_df, null_results, 
+                           by = c("test", "sample", "effort", "index"))
+    if (overall_p)
+        out$p = attr(null_results, "p")
     class(out) = 'mob_out'
     return(out)
-}
-
-table_effect_on_S = function(dat_sp, dat_plot, groups, ScaleBy = NA) {
-  # Returns a data frame with the effects of SAD, N, and aggregation on diversity
-  # across scales
-  # not b/c of spatial ties the values will change every time 
-  # this is calculated therefore best pratice may be
-  # tst = replicate(20, table_effect_on_S(dat_sp, dat_plot, groups, ScaleBy), simplify=FALSE)
-  # plyr::aaply(plyr::laply(tst, as.matrix), c(2, 3), mean)
-  nplots = table(dat_plot$group)
-  explicit_sample = sapply(groups, function(x) 
-    rarefy_sample_explicit(dat_sp, dat_plot, x, 1:min(nplots)))
-  overall = as.numeric(na.omit(explicit_sample[ , 2] - explicit_sample[ , 1]))
-  deltaSsad = get_deltaSsad(dat_sp, dat_plot, groups)
-  deltaSN = get_deltaSN(dat_sp, dat_plot, groups, ScaleBy) # why is this call diff
-  deltaSagg = get_deltaSagg(dat_sp, dat_plot, groups)
-  # Rarefy to desired abundances
-  avg_dens = get_avg_dens(dat_sp, dat_plot, ScaleBy)
-  max_level = floor(log10(avg_dens * min(nplots)))
-  out = as.data.frame(matrix(NA, 4, max_level))
-  row.names(out) = c("overall", "SAD", "N", "aggregation")
-  names(out) = as.character(10^(1:max_level))
-  for (row in c(2, 3)) {
-    deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
-    out[row, ] = sapply(10^(1:max_level), function(x) 
-      ifelse(length(deltaS) >= x, deltaS[x], NA))
-  }
-  for (row in c(1, 4)) {
-    deltaS = unlist(list(overall, deltaSsad, deltaSN, deltaSagg)[row])
-    out_row = pracma::pchip(xi=(0:length(deltaS)) * avg_dens, yi=c(0, deltaS), 
-                    x=10^(1:min(max_level, floor(log10(length(deltaS) * avg_dens)))))
-    out[row, 1:length(out_row)] = out_row
-  }
-  out = cbind(out, c(overall[length(overall)], deltaSsad[length(deltaSsad)], 
-                     deltaSN[length(deltaSN)], deltaSagg[length(deltaSagg)]))
-  names(out)[max_level + 1] = length(deltaSsad)
-  return(out)
-}
-
-pairwise_t = function(dat_sp, dat_plot, groups, lower_N = NA) {
-  dat_plot_grps = dat_plot[dat_plot$group %in% groups, ]
-  dat_sp = dat_sp[match(dat_plot_grps$plot, row.names(dat_sp)), ]
-  S_list = rowSums(dat_sp > 0)
-  N_list = rowSums(dat_sp)
-  PIE_list = sapply(1:nrow(dat_sp), function(x) 
-    N_list[x]/(N_list[x] - 1) * (1 - sum((dat_sp[x, ]/N_list[x])^2)))
-  if (is.na(lower_N)) {
-    rarefied_S_list = apply(dat_sp, 1, function(x) 
-      rarefaction(x, 'indiv', effort = 1:min(N_list)))
-  } else {
-    # Remove plots with abundance below lower_N in the analysis of rarefied S
-    rarefied_S_list = apply(dat_sp, 1, function(x) 
-      if (sum(x) < lower_N)
-        rep(NA, lower_N)
-      else 
-        rarefaction(x, 'indiv', effort = 1:lower_N))
-    if (any(is.na(rarefied_S_list))) 
-      print("Warning: some plots are removed in rarefaction.")
-  }
-  out = as.data.frame(matrix(NA, 5, 4))
-  stats_list = list(rarefied_S_list, N_list, PIE_list, S_list)
-  for (i in 1:length(stats_list)) {
-    stat = unlist(stats_list[i])
-    stat_1 = stat[dat_plot$group == groups[1]]
-    stat_2 = stat[dat_plot$group == groups[2]]
-    stat_1 = stat_1[!is.na(stat_1)]
-    stat_2 = stat_2[!is.na(stat_2)]
-    out[ , i] = c(mean(stat_1), sd(stat_1), 
-                  mean(stat_2), sd(stat_2), 
-                  t.test(stat_1, stat_2)$p.val)
-  }
-  names(out) = c("S_rarefied", "N", "PIE", "S_raw")
-  row.names(out) = c(paste(groups[1], "(mean)", sep = ""), 
-                     paste(groups[1], "(sd)", sep = ""), 
-                     paste(groups[2], "(mean)", sep = ""), 
-                     paste(groups[2], "(sd)", sep = ""), "p_value")
-  # Boxplots
-  par(mfrow = c(2, 2))  # This is not ideal but I cannot get layout to work in Rstudio
-  plot_names = c(paste("Rarified S at N=", 
-                       ifelse(is.na(lower_N), min(N_list), lower_N), sep = ""),
-                 "N", "PIE", "Raw S")
-  plot_names = sapply(1:4, function(x) 
-    paste(plot_names[x], " (p=", round(out[5, x], 6), ")", sep = ""))
-  for (i in 1:length(stats_list)) {
-    stat = unlist(stats_list[i])
-    stat_1 = stat[dat_plot$group == groups[1]]
-    stat_2 = stat[dat_plot$group == groups[2]]
-    stat_1 = stat_1[!is.na(stat_1)]
-    stat_2 = stat_2[!is.na(stat_2)]
-    boxplot(stat_1, stat_2, names = c(groups[1], groups[2]), main = plot_names[i])
-  }
-  return(out)
 }
 
 #' Plot distributions of species abundance
@@ -1470,6 +1139,8 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #'  
 #' @author Xiao Xiao and Dan McGlinn
 #' @inheritParams graphics::plot.default
+#' @import ggplot2 
+#' @importFrom gridExtra grid.arrange
 #' @export
 #' @examples
 #' data(inv_comm)
@@ -1477,202 +1148,39 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=2)
-#' plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
-#' plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
-#' plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
-plot.mob_out = function(mob_out, trt_group, ref_group, same_scale=FALSE, 
-                        log='', display=c('rarefaction', 'delta S', 'ddelta S'),
-                        lwd=3, leg_loc='topleft', par_args=NULL, ...) {
+#' plot(inv_mob_out, 'b1')
+plot.mob_out = function(mob_out, stat, log='') {
     type = mob_out$type
-    tests = mob_out$tests
+    # p1 is only used when type is continuous
+    p1 = ggplot(mob_out$S_df, aes(group, S)) +
+      geom_line(aes(group = effort, color = effort)) +
+      facet_grid(. ~ test)
+    
+    p2 = ggplot(mob_out$S_df, aes(effort, S, log=log)) +
+      geom_line(aes(group = group, color = group)) +
+      facet_grid(. ~ test, scales = "free_x")
+    
+    p3 = ggplot(subset(mob_out$mod_df, index == stat),
+                aes(effort, value, log=log)) + 
+      geom_ribbon(aes(ymin = low_value, ymax = high_value),
+                  fill = "grey70") +
+      geom_line(aes(group = index), color = 'red') +
+      geom_hline(yintercept = 0, linetype = 'dashed') + 
+      facet_grid(. ~ test, scales = "free_x")
+
+    if (grepl('x', log)) {
+        p2 = p2 + scale_x_continuous(trans='log2')
+        p3 = p3 + scale_x_continuous(trans='log2')
+    }
+    if (grepl('y', log)) {
+        p2 = p2 + scale_y_continuous(trans='log2')
+        p3 = p3 + scale_y_continuous(trans='log2')
+    }
     if (type == 'continuous')
-        stop("Currently this plot only works for mob_out object with type discrete.")
-    cols = list()
-    cols$trt = "#FFB3B5"     # light red
-    cols$ref = "#78D3EC"     # light blue
-    cols$deltaS = "#C5C0FE"  # purple
-    cols$ddeltaS = "#6BDABD" # green
-    if (is.null(par_args)) {
-        par_args = paste('mfrow = c(', length(display), ',',
-                         length(tests), '), mgp = c(2.5, 1, 0)',  sep='')
-        
-    } 
-    eval(parse(text=paste('par(', par_args, ')')))
-    if (same_scale) {
-        # not currently implemented for the delta S plots
-        if ('rarefaction' %in% display) {
-            if ('agg' %in% tests) 
-                S_cols = c('impl_S', 'expl_S')
-            else
-                S_cols = 'impl_S'
-            ylim_rare = range(list(mob_out$indiv_rare[ , -1],
-                                   mob_out$sample_rare[ , S_cols]))
-        }
-    }
-    x_axis_min = 1
-    mob_out$sample_rare[, -1] = lapply(mob_out$sample_rare[, -1], function(x)
-                                       as.numeric(as.character(x)))
-    sample_rare_group = mob_out$sample_rare[mob_out$sample_rare == trt_group, ]
-    sample_rare_ref = mob_out$sample_rare[mob_out$sample_rare == ref_group, ]
-    groups = c(trt_group, ref_group)
-    if ('rarefaction' %in% display) {
-        if ('agg' %in% mob_out$tests) {
-          if (!same_scale)
-            ylim_rare = c(0, max(mob_out$sample_rare$expl_S))
-          for (i in 1:length(groups)){
-            group = groups[i]
-            dat_group = mob_out$sample_rare[mob_out$sample_rare$group == group, ]
-            if (i == 1)
-              plot(dat_group$sample_plot, dat_group$expl_S, lwd = lwd,
-                   type = 'l', xlab = 'Number of plots',
-                   ylab = 'Richness (S)', col = cols$trt,
-                   xlim = c(x_axis_min, max(dat_group$sample_plot)),
-                   ylim = ylim_rare,
-                   main = 'sSBR', cex.axis = 1.5, cex.lab = 1.5,
-                   log=log, frame.plot=F, ...)
-            else
-              lines(dat_group$sample_plot, dat_group$expl_S,
-                    lwd = lwd, col = cols$ref)
-          }
-          if (!is.na(leg_loc))
-              legend(leg_loc, legend=as.character(groups),
-                     col=as.character(unlist(cols)), lty=1, lwd=lwd, bty='n')
-        }
-        if ('N' %in% mob_out$tests) {
-            if (!same_scale)
-                ylim_rare = c(0, max(mob_out$sample_rare$impl_S))
-            for (i in 1:length(groups)){
-                group = groups[i]
-                dat_group = mob_out$sample_rare[mob_out$sample_rare$group == group, ]
-                if (i == 1)
-                    plot(dat_group$sample_plot, dat_group$impl_S,
-                         lwd = lwd, type = 'l', xlab = 'Number of plots',
-                         ylab = 'Richness (S)', col = cols$trt, 
-                         xlim = c(x_axis_min, max(dat_group$sample_plot)),
-                         ylim = ylim_rare,
-                         main = 'nsSBR', cex.axis = 1.5, cex.lab = 1.5,
-                         log=log, frame.plot=F, ...)
-                else
-                    lines(dat_group$sample_plot, dat_group$impl_S,
-                          lwd = lwd, col = cols$ref)
-            }
-        }
-        if ('SAD' %in% mob_out$tests) {
-          if (!same_scale)
-            ylim_rare = range(mob_out$indiv_rare[, -1])
-          plot(mob_out$indiv_rare$sample, mob_out$indiv_rare[, trt_group], 
-               lwd = lwd, type = 'l', col = cols$trt, xlab = 'Number of individuals', 
-               ylab = 'Richness (S)', main = 'IBR', 
-               xlim = c(x_axis_min, max(mob_out$indiv_rare$sample)), ylim = ylim_rare, 
-               cex.axis = 1.5, cex.lab = 1.5, log=log, frame.plot=F, ...)
-          lines(mob_out$indiv_rare$sample, mob_out$indiv_rare[, ref_group], 
-                lwd = lwd, col = cols$ref)
-        }        
-    }    
-    if ('delta S' %in% display) {
-      minN = min(nrow(sample_rare_group), nrow(sample_rare_ref))
-      if ('agg' %in% mob_out$tests) {
-        delta_Sspat = sample_rare_group$expl_S[1:minN] - 
-          sample_rare_ref$expl_S[1:minN]
-        plot(seq(minN), delta_Sspat, 
-             ylim = c(min(delta_Sspat, 0), max(delta_Sspat, 0)),
-             cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
-             col = cols$deltaS, xlab = 'Number of plots',
-             ylab = expression(Delta * 'S due to SAD, N, & agg.'), frame.plot=F, ...)
-        abline(h = 0, lwd = 1, lty = 2)
-      }
-        if ('N' %in% mob_out$tests) {
-            delta_Ssample = sample_rare_group$impl_S[1:minN] - 
-                            sample_rare_ref$impl_S[1:minN]
-            plot(seq(minN), delta_Ssample, 
-                 ylim = c(min(delta_Ssample, 0), max(delta_Ssample, 0)),
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
-                 col = cols$deltaS, xlab = 'Number of plots', 
-                 ylab = expression(Delta * 'S due to SAD & N'), frame.plot=F, ...)
-            abline(h = 0, lwd = 1, lty = 2)
-        }
-      if ('SAD' %in% mob_out$tests) {
-        # Create the plots for the three delta-S between groups
-        deltaS_Sind = mob_out$indiv_rare[[trt_group]] - 
-          mob_out$indiv_rare[[ref_group]]
-        plot(mob_out$indiv_rare$sample, deltaS_Sind,
-             ylim = c(min(deltaS_Sind, 0), max(deltaS_Sind, 0)),
-             cex.axis = 1.5, cex.lab = 1.5, type = 'l', lwd = lwd,
-             col = cols$deltaS, xlab = 'Number of individuals', 
-             ylab = expression(Delta * 'S due to SAD'), log=log,
-             frame.plot=F, ...)
-        abline(h = 0, lwd = 1, lty = 2)
-        
-      }       
-
-    }
-    if ('ddelta S' %in% display) {
-        # Create the plots for the three ddelta S
-         ylim_ddelta = range(lapply(mob_out[tests], function(x)
-                              lapply(x[ , -(1:2)], function(y)
-                                     as.numeric(as.character(y)))))
-         if ('agg' %in% mob_out$tests) {
-           mob_out$agg[, -1] = lapply(mob_out$agg[, -1], function(x)
-             as.numeric(as.character(x))) 
-           ddelta_Sspat = mob_out$agg[which(as.character(mob_out$agg$group) == as.character(trt_group)), ]
-           if (!same_scale)
-             ylim = range(ddelta_Sspat[ , -(1:2)])
-           plot(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp,
-                ylim = ylim_ddelta, log=log,
-                cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
-                xlab = 'Number of plots', 
-                ylab = expression(Delta * 'S due to agg.'), frame.plot=F, ...)
-           polygon(c(ddelta_Sspat$effort_sample,
-                     rev(ddelta_Sspat$effort_sample)), 
-                   c(ddelta_Sspat$ddeltaS_null_low,
-                     rev(ddelta_Sspat$ddeltaS_null_high)),
-                   col = '#C1CDCD', border = NA)
-           abline(h = 0, lwd = 1, lty = 2)
-           lines(ddelta_Sspat$effort_sample, ddelta_Sspat$ddeltaS_emp, 
-                 lwd = lwd, col = cols$ddeltaS)
-         }
-         if ('N' %in% mob_out$tests) {
-            mob_out$N[, -1] = lapply(mob_out$N[, -1], function(x)
-                                     as.numeric(as.character(x))) 
-            ddelta_Ssample = mob_out$N[which(as.character(mob_out$N$group) == as.character(trt_group)), ]
-            if (!same_scale)
-                ylim = range(ddelta_Ssample[ , -(1:2)])
-            plot(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
-                 ylim = ylim_ddelta, log=log,
-                 cex.axis = 1.5, cex.lab = 1.5, type = 'n', 
-                 xlab = 'Number of individuals', 
-                 ylab = expression(Delta * 'S due to N'), frame.plot=F, ...)
-            polygon(c(ddelta_Ssample$effort_sample, 
-                      rev(ddelta_Ssample$effort_sample)), 
-                    c(ddelta_Ssample$ddeltaS_null_low, 
-                      rev(ddelta_Ssample$ddeltaS_null_high)),
-                    col = '#C1CDCD', border = NA)
-            abline(h = 0, lwd = 1, lty = 2)
-            lines(ddelta_Ssample$effort_sample, ddelta_Ssample$ddeltaS_emp,
-                  lwd = lwd, col = cols$ddeltaS)
-        }
-         if ('SAD' %in% mob_out$tests) {
-           mob_out$ind[, -1] = lapply(mob_out$ind[, -1], function(x)
-             as.numeric(as.character(x))) 
-           delta_Sind = mob_out$SAD[which(as.character(mob_out$SAD$group) == as.character(trt_group)), ]
-           if (!same_scale)
-             ylim = range(delta_Sind[ , -(1:2)])
-           plot(delta_Sind$effort_ind, delta_Sind$deltaS_emp, 
-                ylim = ylim_ddelta, log=log,
-                cex.axis = 1.5, cex.lab = 1.5, type = 'n',
-                xlab = 'Number of individuals', ylab = expression(Delta * 'S due to SAD'),
-                frame.plot=F, ...)
-           polygon(c(delta_Sind$effort_ind, rev(delta_Sind$effort_ind)), 
-                   c(delta_Sind$deltaS_null_low, rev(delta_Sind$deltaS_null_high)),
-                   col = '#C1CDCD', border = NA)
-           abline(h = 0, lwd = 1, lty = 2)
-           lines(delta_Sind$effort_ind, delta_Sind$deltaS_emp,
-                 lwd = lwd, col = cols$ddeltaS)
-         }         
-
-    }
+        gridExtra::grid.arrange(p1, p2, p3, nrow = 3)
+    else 
+        gridExtra::grid.arrange(p2, p3, nrow = 2)
 }
-
 
 #' Plot summary graphics of the effect on species richness
 #' 
@@ -1740,10 +1248,10 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
     } else if (rescale == 'density_stat'){
         N_plots = max(agg$effort)
         N_indiv = max(SAD$effort)
-        plot_dens = mob_out$density_stat$plot_dens
+        ind_dens = mob_out$density_stat$ind_dens
         # the next line assumes that the density stat is average (may need to generalize)
         effort = min(agg$effort) : round(N_indiv / N_plots)
-        virt_effort = effort * plot_dens
+        virt_effort = effort * ind_dens
     } else
         stop('rescale must be specified as "max_effort" or "density_stat" see documentation')
     SAD_interp = pracma::pchip(SAD$effort, SAD$effect, virt_effort)
@@ -1824,10 +1332,10 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
 #' plot_N(inv_comm)
 plot_N = function(comm, n_perm=1000) {
     N = rowSums(comm)
-    plot_dens = mean(N)
+    ind_dens = mean(N)
     N_sum = apply(replicate(n_perm, cumsum(sample(N))), 1, mean)
     plot(N_sum, xlab='Number of plots', ylab='Number of Individuals')
-    abline(a=0, b=plot_dens, col='red')
+    abline(a=0, b=ind_dens, col='red')
     legend('topleft', 'Expected line', lty=1, bty='n', col='red')
 }
 
