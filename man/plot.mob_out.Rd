@@ -4,34 +4,25 @@
 \alias{plot.mob_out}
 \title{Plot mob curves}
 \usage{
-\method{plot}{mob_out}(mob_out, stat, log = "")
+\method{plot}{mob_out}(mob_out, stat, log2 = "", scale_by = NULL)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
 
-\item{log}{a character string which contains \code{"x"} if the x axis
-    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
-    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
+\item{stat}{a character string that specifies what statistic should be 
+used in the effect size plots. Options include: \code{c('betas', 'r2',
+'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
+r-squared, F-statistic, and p-value respectively.}
 
-\item{trt_group}{a string that specifies the name of the treatment group}
+\item{log2}{a character string specifying if the x- or y-axis should be
+rescale by log base 2. Options include: \code{c('', 'x', 'y', 'xy')} for 
+no rescaling, x-axis, y-axis, and both x and y-axes respectively.}
 
-\item{ref_group}{a string that specifies the name of the reference group}
-
-\item{same_scale}{a boolean if TRUE then the y-axis of the rarefaction and 
-ddelta S plots are scaled identically across the tested effects}
-
-\item{display}{a string that specifies what graphics to display can be either
-'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
-
-\item{lwd}{the line width, a single positive number, defaults to \code{3},
-see \code{\link[graphics]{par}} for more information.}
-
-\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
-\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
-
-\item{par_args}{optional argument that sets graphical parameters to set}
-
-\item{...}{Other plot arguments}
+\item{scale_by}{a character string specifying if sampling effort should be
+rescaled. Options include: \code{NULL}, \code{'indiv'}, or \code{'plot'} 
+for no rescaling, rescaling to number of individuals, or rescaling
+to number of plots respectively. The rescaling is carried out using 
+\code{mob_out$density_stat}.}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial
@@ -47,6 +38,8 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                               type='discrete', log_scale=TRUE, n_perm=2)
 plot(inv_mob_out, 'b1')
+plot(inv_mob_out, 'b1', log2 = 'x')
+plot(inv_mob_out, 'b1', scale_by = 'indiv')
 }
 \author{
 Xiao Xiao and Dan McGlinn

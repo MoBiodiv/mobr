@@ -6,8 +6,8 @@
 \usage{
 get_mob_stats(mob_in, group_var, index = c("N", "S", "S_n", "S_PIE"),
   effort_samples = NULL, effort_min = 5, extrapolate = TRUE,
-  return_NA = FALSE, rare_thres = 0.05, n_perm = 199, boot_groups = F,
-  conf_level = 0.95, cl = NULL, ...)
+  return_NA = FALSE, rare_thres = 0.05, n_perm = 199,
+  boot_groups = F, conf_level = 0.95, cl = NULL, ...)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -73,7 +73,8 @@ TRUE}.}
 \item{cl}{
 A cluster object created by \code{\link[parallel]{makeCluster}},
 or an integer to indicate number of child-processes
-(integer values are ignored on Windows) for parallel evaluations.
+(integer values are ignored on Windows) for parallel evaluations
+(see Details on performance).
 }
 
 \item{...}{
