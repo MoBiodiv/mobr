@@ -776,6 +776,12 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
     for (k in seq_along(tests)) {
         null_results = vector('list', length = n_perm)
         cat(paste('\nComputing null model for', tests[k], 'effect\n'))
+        # need to parallelize this process optionally
+        # in get_mob_stats we have the following:
+        #   F_rand = bind_rows(pbreplicate(n_perm,
+        #             get_F_values(dat_samples, permute = T),
+        #              simplify = F, cl = cl)) %>%
+        #             ungroup()
         pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
         for (i in 1:n_perm) {
             null_mob_in = mob_in
@@ -1158,6 +1164,8 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #'   for no rescaling, rescaling to number of individuals, or rescaling
 #'   to number of plots respectively. The rescaling is carried out using 
 #'   \code{mob_out$density_stat}.
+#' @param display a string that specifies what graphics to display can be either
+#'  'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.
 #' 
 #' @return plots the effect of the SAD, the number of individuals, and spatial
 #'  aggregation on the difference in species richness
@@ -1172,10 +1180,14 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=2)
+#' plot(inv_mob_out, 'b1', display = 'rarefaction')
+#' plot(inv_mob_out, 'b1', display = c('rarefaction', 'effect_size'))
 #' plot(inv_mob_out, 'b1')
 #' plot(inv_mob_out, 'b1', log2 = 'x')
 #' plot(inv_mob_out, 'b1', scale_by = 'indiv')
-plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL) {
+plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL, 
+                        display=c('gradient', 'rarefaction', 'effect_size')) {
+    if (
     type = mob_out$type
     if (!is.null(scale_by)) {
         if (scale_by == 'indiv') {
@@ -1202,20 +1214,17 @@ plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL) {
     }
   
     # S vs gradient 
-    # p1 is only used when type is continuous
     p1 = ggplot(mob_out$S_df, aes(group, S)) +
       geom_line(aes(group = effort, color = effort)) +
       labs(x = mob_out$group_var) +
       facet_grid(. ~ test)
     if (!is.null(scale_by)) # change title of legend
         p1 = p1 + labs(color = scale_by)
-  
-    # S vs effort 
+    # rarefaction curve: S vs effort 
     p2 = ggplot(mob_out$S_df, aes(effort, S)) +
       geom_line(aes(group = group, color = group)) +
       facet_grid(. ~ test, scales = "free_x") +
       theme(legend.title = element_blank())
-  
     # effect size vs effort 
     p3 = ggplot(subset(mob_out$mod_df, index == stat),
       aes(effort, value)) + 
@@ -1226,7 +1235,6 @@ plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL) {
       labs(y = 'effect size') +
       scale_color_manual(name = element_blank(), values = c(observed = 'red')) +
       scale_fill_manual(name = element_blank(), values = c(null = 'grey70'))
-  
     if (grepl('x', log2)) {
         p2 = p2 + scale_x_continuous(trans = 'log2')
         p3 = p3 + scale_x_continuous(trans = 'log2')
@@ -1236,11 +1244,20 @@ plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL) {
         p2 = p2 + scale_y_continuous(trans = 'log2')
         p3 = p3 + scale_y_continuous(trans = 'log2')
     }
-  
-    if (type == 'continuous')
+    if (all(c('gradient', 'rarefaction', 'effect_size') %in% display))
         egg::ggarrange(p1, p2, p3)
-    else 
+    else if (all(c('rarefaction', 'effect_size') %in% display))
         egg::ggarrange(p2, p3)
+    else if (all(c('gradient', 'rarefaction') %in% display))
+        egg::ggarrange(p1, p2)
+    else if (all(c('gradient', 'effect_size') %in% display))
+        egg::ggarrange(p1, p3)
+    else if (display == 'gradient')
+        p1
+    else if (display == 'rarefaction')
+        p2
+    else if (display == 'effect_size')
+        p3
 }
 
 #' Plot summary graphics of the effect on species richness
