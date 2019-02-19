@@ -1187,7 +1187,6 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' plot(inv_mob_out, 'b1', scale_by = 'indiv')
 plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL, 
                         display=c('gradient', 'rarefaction', 'effect_size')) {
-    if (
     type = mob_out$type
     if (!is.null(scale_by)) {
         if (scale_by == 'indiv') {
@@ -1215,16 +1214,19 @@ plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL,
   
     # S vs gradient 
     p1 = ggplot(mob_out$S_df, aes(group, S)) +
-      geom_line(aes(group = effort, color = effort)) +
+      geom_point(aes(group = effort, color = effort)) +
       labs(x = mob_out$group_var) +
-      facet_grid(. ~ test)
-    if (!is.null(scale_by)) # change title of legend
-        p1 = p1 + labs(color = scale_by)
+      facet_grid(. ~ test) 
+#      geom_smooth(data = subset(mob_out$S_df, effort == max(effort)), 
+#                  aes(group = effort, color = effort),
+#                  method = lm, se=FALSE)
+    
     # rarefaction curve: S vs effort 
     p2 = ggplot(mob_out$S_df, aes(effort, S)) +
       geom_line(aes(group = group, color = group)) +
       facet_grid(. ~ test, scales = "free_x") +
-      theme(legend.title = element_blank())
+      labs(color = mob_out$group_var)
+    
     # effect size vs effort 
     p3 = ggplot(subset(mob_out$mod_df, index == stat),
       aes(effort, value)) + 
@@ -1235,6 +1237,13 @@ plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL,
       labs(y = 'effect size') +
       scale_color_manual(name = element_blank(), values = c(observed = 'red')) +
       scale_fill_manual(name = element_blank(), values = c(null = 'grey70'))
+        
+    if (!is.null(scale_by)) { # change title of legend
+        p1 = p1 + labs(color = scale_by)
+        p2 = p2 + labs(x = scale_by)
+        p3 = p3 + labs(x = scale_by)
+    }
+    
     if (grepl('x', log2)) {
         p2 = p2 + scale_x_continuous(trans = 'log2')
         p3 = p3 + scale_x_continuous(trans = 'log2')
