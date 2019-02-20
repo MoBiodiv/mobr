@@ -23,7 +23,7 @@ Imports:
     tidyr,
     pbapply,
     ggplot2,
-    gridExtra
+    egg
 Suggests:
     knitr,
     rmarkdown
