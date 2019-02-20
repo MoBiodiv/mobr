@@ -236,21 +236,15 @@ The best way to examine the contents of this object is to plot it.
 First let's examine the three rarefaction curves:
 
 ```{r, fig.width=7, fig.height=3.5}
-plot(inv_deltaS, 'invaded', 'uninvaded', display='rarefaction')
+plot(inv_deltaS, stat = 'b1', scale_by = 'indiv', display='rarefaction')
 ```
 
-Now let's consider the differences between each set of curves:
+Now let's consider the effect sizes as a function of scale
 
 ```{r, fig.width=7, fig.height=3.5}
-plot(inv_deltaS, 'invaded', 'uninvaded', display='delta S')
+plot(inv_deltaS, stat = 'b1', scale_by = 'indiv', display='effect_sizes')
 ```
 
-Lastly, we can isolate the individual effects of each component by taking one
-more difference between the curves:
-
-```{r, fig.width=7, fig.height=3.5}
-plot(inv_deltaS, 'invaded', 'uninvaded', display='ddelta S')
-```
 
 The grey polygons above represent the 95% quantile for the null models of
 no treatment effect. 
