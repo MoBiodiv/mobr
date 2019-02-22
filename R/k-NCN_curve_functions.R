@@ -9,21 +9,26 @@ centroid_accumulate<-function(x,focal_sample= 1, n=NULL, coords=NULL){
       sites=x$comm
       coords=x$spat
   }else{sites=x}
-  sites<-as.data.frame(sites)
+  sites<-as.matrix(sites)
+  coords<-as.matrix(coords)
   rownames(sites)=NULL
   rownames(coords)=NULL
   if(is.null(n)) n=dim(sites)[1]
   included=focal_sample
+  pool= colSums(sites[included,,drop=F])
   S_accumulated=as.numeric()
+  sp_object<-SpatialPoints(coords)
+  candidates<-cbind(coords, 1:dim(sites)[1])
   for(i in 1:n){
-    accumulated_plots<-sites[included,]
-    coordinates(accumulated_plots)<-coords[included,]
-    S_accumulated[i]<-vegan::specnumber(colSums(sites[included,,drop=F]))
+    S_accumulated[i]<-vegan::specnumber(pool)
+    if(i==n) break() 
+    accumulated_plots<-sp_object[included,]
     centroid<-gCentroid(accumulated_plots)@coords
-    candidates<-coords[-included,]
-    if(dim(candidates)[1]==0) break
-    closest<-candidates[order(distmat(centroid, as.matrix(candidates)),  runif(dim(candidates)[1]) )[1],]
-    included=c(included, as.numeric(rownames(closest)))
+    candidates2<-candidates[-included,, drop=F]
+    closest<-candidates2[order(distmat(centroid, candidates2[,-3, drop=F]),  runif(dim(candidates2)[1]) )[1],3,drop=T]
+    included=c(included, closest)
+    pool<- pool + sites[closest,]
+    
   }
   return(S_accumulated)
 }
