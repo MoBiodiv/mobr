@@ -5,8 +5,8 @@
 \title{Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis}
 \usage{
 \method{plot}{mob_stats}(mob_stats, index = NULL, multi_panel = FALSE,
-  col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE", "#E2C288", "#F7B0E6",
-  "#AAD28C"), cex.axis = 1.2, ...)
+  col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE", "#E2C288",
+  "#F7B0E6", "#AAD28C"), cex.axis = 1.2, ...)
 }
 \arguments{
 \item{mob_stats}{a \code{mob_stats} object that has the samples and 
