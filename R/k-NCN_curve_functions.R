@@ -1,3 +1,5 @@
+# Internal function for kNCN_average (). k-NCN algorithm starting with a specified focal sample
+
 centroid_accumulate<-function(x,focal_sample= 1, n=NULL, coords=NULL){
   require(rgeos)
   require(maptools)
@@ -26,6 +28,20 @@ centroid_accumulate<-function(x,focal_sample= 1, n=NULL, coords=NULL){
   return(S_accumulated)
 }
 
+#' Construct spatially constrained sample-based rarefaction (sSBR) curve using the k-Nearest-Centroid-neighbour (k-NCN) algorithm 
+#'
+#' This function accumulates samples according their proximity to all previously included samples (their centroid) as opposed
+#' to the proximity to the inital focal sample. This ensures that included samples mutually close to each other and not all over the place.
+#' 
+#' Internally the function constructs one curve per sample whereby each sample serves as the initial sample once. Finally, the average curve is returned.
+#' @param x a mob_in object or a sites x species matrix
+#' @param n number of sites to include. 
+#' @param coords spatial coordinates of the samples. If x is a mob_in object, the fuction uses its "spat" table as coords.
+#'
+#' @return a numeric vector of estimated species richness
+#' @export
+#'
+#' @examples
 kNCN_average<-function(x, n=NULL, coords=NULL){
   if(class(x)== "mob_in"){
     sites=x$comm
@@ -41,6 +57,16 @@ kNCN_average<-function(x, n=NULL, coords=NULL){
 }
 
 
+#' Compare all sample-based curves (random, spatiallyconstrained-k-NN, spatially constrained-k-NCN)
+#'
+#'This is just plotting all curves.
+#'
+#' @param x a mob_in object
+#'
+#' @return a plot 
+#' @export
+#'
+#' @examples
 compare_curves<-function(x){
   
   centroid_curve<-kNCN_average(x)
