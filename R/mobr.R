@@ -287,8 +287,8 @@ sphere_dist = function(coords){
 rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
                        dens_ratio=1, extrapolate=FALSE, return_NA = FALSE, 
                        quiet_mode=FALSE) {
-    if (!any(method %in% c('indiv', 'samp', 'spat')))
-        stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
+    if (!any(method %in% c('indiv', 'samp', 'spat', 'kNCN')))
+        stop('method must be "indiv", "samp", or "spat", "kNCN" for random individual, random sample, and spatial sample-based rarefaction, k-nearest centroid neighbour sSBR, respectively')
     if (class(x) == 'mob_in') {
         x_mob_in = x
         x = x_mob_in$comm
@@ -300,7 +300,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         if (is.null(coords))
             coords = x_mob_in$spat
     }
-    if (method == 'samp' | method == 'spat') {
+    if (method == 'samp' | method == 'spat' | method == 'kNCN') {
         if (is.null(dim(x)))
             stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
         else {
