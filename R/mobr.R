@@ -320,6 +320,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
           coords = x_mob_in$spat
         }
     }
+    if (method == 'spat') method = 'kNCN'
     if (method == 'samp' | method == 'spat' | method == 'kNCN') {
         if (is.null(dim(x)))
             stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
