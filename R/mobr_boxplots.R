@@ -1,3 +1,18 @@
+betadiv = function(x, groups){ 
+    alpha = rowSums(x > 0)
+    comm_group = aggregate(x, list(groups), sum)[, -1]
+    gamma = rowSums(comm_group > 0)
+    avg_alpha = tapply(alpha, list(groups), mean)
+    beta_avg = gamma / avg_alpha
+    beta_mob = gamma[groups] / alpha
+    beta_mob = ifelse(is.infinite(beta_mob), NA, beta_mob)
+    beta_mob_avg = tapply(beta_mob, list(groups), mean, na.rm=T)
+    return(list(betas = cbind(beta_avg, beta_mob_avg), 
+                raw = data.frame(groups, gamma = gamma[groups], alpha,
+                                 beta_avg = beta_avg[groups], 
+                                 beta_mob)))
+}
+
 #' Estimation of species richness
 #' 
 #' \code{calc_chao1} estimates the number of species at the asymptote
