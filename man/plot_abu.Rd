@@ -21,15 +21,9 @@ level or not}
 
 \item{col}{optional vector of colors.}
 
-\item{lwd}{the line width, a single positive number, defaults to \code{3},
-see \code{\link[graphics]{par}} for more information.}
-
 \item{log}{a character string which contains \code{"x"} if the x axis
     is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
     and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
-
-\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
-\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
 }
 \description{
 Plot distributions of species abundance

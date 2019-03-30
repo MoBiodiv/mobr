@@ -12,8 +12,6 @@ overlap_effects(mob_out, trt_group, display = "raw", prop = FALSE,
 \arguments{
 \item{mob_out}{a mob_out class object}
 
-\item{trt_group}{a string that specifies the name of the treatment group}
-
 \item{display}{the type of graphic to display options include: "raw" or
 "stacked" for plots of the raw effect sizes or a stacked area plot of the
 absolute value of the effect sizes.}
@@ -41,12 +39,6 @@ labeled with numbers of individuals}
     and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
 
 \item{lty}{a vector of line types, see \link[graphics]{par}.}
-
-\item{lwd}{the line width, a single positive number, defaults to \code{3},
-see \code{\link[graphics]{par}} for more information.}
-
-\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
-\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
 
 \item{col}{the colors for lines. Three colors can be specified so that each
 line can be given its own color with the curves ordered as SAD, N, and

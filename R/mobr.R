@@ -193,6 +193,7 @@ sphere_dist = function(coords){
 #'   is not already supplied by \code{x}. The first column should specify 
 #'   the x-coordinate (e.g., longitude) and the second coordinate should 
 #'   specify the y-coordinate (e.g., latitude)
+#' @param latlong boolean if coordinates are latitude-longitude 
 #' @param dens_ratio the ratio of individual density between a reference group
 #'   and the community data (i.e., x) under consideration. This argument is
 #'   used to rescale the rarefaction curve when estimating the effect of
@@ -775,6 +776,12 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
     for (k in seq_along(tests)) {
         null_results = vector('list', length = n_perm)
         cat(paste('\nComputing null model for', tests[k], 'effect\n'))
+        # need to parallelize this process optionally
+        # in get_mob_stats we have the following:
+        #   F_rand = bind_rows(pbreplicate(n_perm,
+        #             get_F_values(dat_samples, permute = T),
+        #              simplify = F, cl = cl)) %>%
+        #             ungroup()
         pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
         for (i in 1:n_perm) {
             null_mob_in = mob_in
@@ -956,6 +963,7 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     ind_dens = get_ind_dens(mob_in$comm, density_stat)
 
     out = list()
+    out$group_var = group_var
     out$type = type
     out$tests = tests
     out$log_scale = log_scale
@@ -1144,26 +1152,27 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' Plot mob curves
 #' 
 #' @param mob_out a mob_out class object
-#' @param trt_group a string that specifies the name of the treatment group  
-#' @param ref_group a string that specifies the name of the reference group
-#' @param same_scale a boolean if TRUE then the y-axis of the rarefaction and 
-#'  ddelta S plots are scaled identically across the tested effects
+#' @param stat a character string that specifies what statistic should be 
+#'   used in the effect size plots. Options include: \code{c('betas', 'r2',
+#'   'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
+#'   r-squared, F-statistic, and p-value respectively.
+#' @param log2 a character string specifying if the x- or y-axis should be
+#'   rescale by log base 2. Options include: \code{c('', 'x', 'y', 'xy')} for 
+#'   no rescaling, x-axis, y-axis, and both x and y-axes respectively.
+#' @param scale_by a character string specifying if sampling effort should be
+#'   rescaled. Options include: \code{NULL}, \code{'indiv'}, or \code{'plot'} 
+#'   for no rescaling, rescaling to number of individuals, or rescaling
+#'   to number of plots respectively. The rescaling is carried out using 
+#'   \code{mob_out$density_stat}.
 #' @param display a string that specifies what graphics to display can be either
 #'  'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.
-#' @param lwd the line width, a single positive number, defaults to \code{3},
-#'  see \code{\link[graphics]{par}} for more information.
-#' @param leg_loc the location of the legend. Defaults to 'topleft', see
-#'   \code{\link[graphics]{legend}}. If set to NA then no legend is printed.
-#' @param par_args optional argument that sets graphical parameters to set
-#' @param ... Other plot arguments
 #' 
 #' @return plots the effect of the SAD, the number of individuals, and spatial
 #'  aggregation on the difference in species richness
 #'  
 #' @author Xiao Xiao and Dan McGlinn
-#' @inheritParams graphics::plot.default
 #' @import ggplot2 
-#' @importFrom gridExtra grid.arrange
+#' @importFrom egg ggarrange
 #' @export
 #' @examples
 #' data(inv_comm)
@@ -1171,38 +1180,93 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=2)
+#' plot(inv_mob_out, 'b1', display = 'rarefaction')
+#' plot(inv_mob_out, 'b1', display = c('rarefaction', 'effect_size'))
 #' plot(inv_mob_out, 'b1')
-plot.mob_out = function(mob_out, stat, log='') {
+#' plot(inv_mob_out, 'b1', log2 = 'x')
+#' plot(inv_mob_out, 'b1', scale_by = 'indiv')
+plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL, 
+                        display=c('gradient', 'rarefaction', 'effect_size')) {
     type = mob_out$type
-    # p1 is only used when type is continuous
+    if (!is.null(scale_by)) {
+        if (scale_by == 'indiv') {
+            mob_out$S_df = mutate(mob_out$S_df, 
+                             effort = ifelse(sample == 'plot', 
+                                             effort * mob_out$density_stat$ind_dens,
+                                             effort))
+            mob_out$mod_df = mutate(mob_out$mod_df, 
+                               effort = ifelse(sample == 'plot', 
+                                               effort * mob_out$density_stat$ind_dens,
+                                               effort))
+      
+        }     
+        if (scale_by == 'plot') {
+            mob_out$S_df = mutate(mob_out$S_df, 
+                             effort = ifelse(sample == 'indiv', 
+                                             effort / mob_out$density_stat$ind_dens,
+                                             effort))
+            mob_out$mod_df = mutate(mob_out$mod_df, 
+                               effort = ifelse(sample == 'indiv', 
+                                               effort / mob_out$density_stat$ind_dens,
+                                               effort))
+        } 
+    }
+  
+    # S vs gradient 
     p1 = ggplot(mob_out$S_df, aes(group, S)) +
-      geom_line(aes(group = effort, color = effort)) +
-      facet_grid(. ~ test)
+      geom_point(aes(group = effort, color = effort)) +
+      labs(x = mob_out$group_var) +
+      facet_grid(. ~ test) 
+#      geom_smooth(data = subset(mob_out$S_df, effort == max(effort)), 
+#                  aes(group = effort, color = effort),
+#                  method = lm, se=FALSE)
     
-    p2 = ggplot(mob_out$S_df, aes(effort, S, log=log)) +
+    # rarefaction curve: S vs effort 
+    p2 = ggplot(mob_out$S_df, aes(effort, S)) +
       geom_line(aes(group = group, color = group)) +
-      facet_grid(. ~ test, scales = "free_x")
+      facet_grid(. ~ test, scales = "free_x") +
+      labs(color = mob_out$group_var)
     
+    # effect size vs effort 
     p3 = ggplot(subset(mob_out$mod_df, index == stat),
-                aes(effort, value, log=log)) + 
-      geom_ribbon(aes(ymin = low_value, ymax = high_value),
-                  fill = "grey70") +
-      geom_line(aes(group = index), color = 'red') +
+      aes(effort, value)) + 
+      geom_ribbon(aes(ymin = low_value, ymax = high_value, fill = 'null')) +
+      geom_line(aes(group = index, color = 'observed')) +
       geom_hline(yintercept = 0, linetype = 'dashed') + 
-      facet_grid(. ~ test, scales = "free_x")
-
-    if (grepl('x', log)) {
-        p2 = p2 + scale_x_continuous(trans='log2')
-        p3 = p3 + scale_x_continuous(trans='log2')
+      facet_grid(. ~ test, scales = "free_x") +
+      labs(y = 'effect size') +
+      scale_color_manual(name = element_blank(), values = c(observed = 'red')) +
+      scale_fill_manual(name = element_blank(), values = c(null = 'grey70'))
+        
+    if (!is.null(scale_by)) { # change title of legend
+        p1 = p1 + labs(color = scale_by)
+        p2 = p2 + labs(x = scale_by)
+        p3 = p3 + labs(x = scale_by)
     }
-    if (grepl('y', log)) {
-        p2 = p2 + scale_y_continuous(trans='log2')
-        p3 = p3 + scale_y_continuous(trans='log2')
+    
+    if (grepl('x', log2)) {
+        p2 = p2 + scale_x_continuous(trans = 'log2')
+        p3 = p3 + scale_x_continuous(trans = 'log2')
     }
-    if (type == 'continuous')
-        gridExtra::grid.arrange(p1, p2, p3, nrow = 3)
-    else 
-        gridExtra::grid.arrange(p2, p3, nrow = 2)
+  
+    if (grepl('y', log2)) {
+        p2 = p2 + scale_y_continuous(trans = 'log2')
+        p3 = p3 + scale_y_continuous(trans = 'log2')
+    }
+    if (all(c('gradient', 'rarefaction', 'effect_size') %in% display))
+        egg::ggarrange(p1, p2, p3)
+    else if (all(c('rarefaction', 'effect_size') %in% display))
+        egg::ggarrange(p2, p3)
+    else if (all(c('gradient', 'rarefaction') %in% display))
+        egg::ggarrange(p1, p2)
+    else if (all(c('gradient', 'effect_size') %in% display))
+        egg::ggarrange(p1, p3)
+    else if (display == 'gradient')
+        p1
+    else if (display == 'rarefaction')
+        p2
+    else if (display == 'effect_size')
+        p3
 }
 
 #' Plot summary graphics of the effect on species richness
