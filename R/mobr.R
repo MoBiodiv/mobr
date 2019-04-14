@@ -312,8 +312,12 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         else if(latlong != x_mob_in$latlong)
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
-        if (is.null(coords))
-            coords = x_mob_in$spat
+        if (is.null(coords)){
+          if(is.null(x_mob_in$spat)){
+            stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
+            }
+          coords = x_mob_in$spat
+        }
     }
     if (method == 'samp' | method == 'spat') {
         if (is.null(dim(x)))
