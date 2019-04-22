@@ -4,10 +4,11 @@
 \alias{get_delta_stats}
 \title{Conduct the MoB tests on drivers of biodiversity across scales.}
 \usage{
-get_delta_stats(mob_in, group_var, ref_group = NULL, tests = c("SAD", "N",
-  "agg"), type = c("continuous", "discrete"), stats = NULL, inds = NULL,
-  log_scale = FALSE, min_plots = NULL, density_stat = c("mean", "max",
-  "min"), n_perm = 1000, overall_p = FALSE)
+get_delta_stats(mob_in, group_var, ref_group = NULL, tests = c("SAD",
+  "N", "agg"), type = c("continuous", "discrete"), stats = NULL,
+  inds = NULL, log_scale = FALSE, min_plots = NULL,
+  density_stat = c("mean", "max", "min"), n_perm = 1000,
+  overall_p = FALSE)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}

@@ -4,8 +4,8 @@
 \alias{groups_panel1}
 \title{Panel function for gamma-scale results}
 \usage{
-groups_panel1(group_dat, tests, col, ylab = "", main = expression(gamma *
-  "-scale"), cex.axis = 1.2, ...)
+groups_panel1(group_dat, tests, col, ylab = "", main = expression(gamma
+  * "-scale"), cex.axis = 1.2, ...)
 }
 \description{
 Panel function for gamma-scale results

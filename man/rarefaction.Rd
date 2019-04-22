@@ -29,10 +29,7 @@ is not already supplied by \code{x}. The first column should specify
 the x-coordinate (e.g., longitude) and the second coordinate should 
 specify the y-coordinate (e.g., latitude)}
 
-\item{latlong}{boolean, defaults to FALSE. Whether the coordinates are
-latitude-longitudes or not. If TRUE, distance calculations by downstream
-functions are based upon great circle distances rather than Euclidean
-distances. Note latitude-longitudes should be in decimal degree.}
+\item{latlong}{boolean if coordinates are latitude-longitude}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
 and the community data (i.e., x) under consideration. This argument is
