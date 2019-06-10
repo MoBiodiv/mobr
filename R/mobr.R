@@ -303,8 +303,8 @@ sphere_dist = function(coords){
 rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
                        dens_ratio=1, extrapolate=FALSE, return_NA = FALSE, 
                        quiet_mode=FALSE) {
-    if (!any(method %in% c('indiv', 'samp', 'spat')))
-        stop('method must be "indiv", "samp", or "spat" for random individual, random sample, and spatial sample-based rarefaction, respectively')
+    if (!any(method %in% c('indiv', 'samp', 'spat', 'kNCN')))
+        stop('method must be "indiv", "samp", or "spat", "kNCN" for random individual, random sample, and spatial sample-based rarefaction, k-nearest centroid neighbour sSBR, respectively')
     if (class(x) == 'mob_in') {
         x_mob_in = x
         x = x_mob_in$comm
@@ -320,7 +320,8 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
           coords = x_mob_in$spat
         }
     }
-    if (method == 'samp' | method == 'spat') {
+    if (method == 'spat') method = 'kNCN'
+    if (method == 'samp' | method == 'spat' | method == 'kNCN') {
         if (is.null(dim(x)))
             stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
         else {
@@ -359,76 +360,84 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         if (!quiet_mode) 
             message('Richness was not extrapolated because effort less than or equal to the number of samples')
     if (method == 'spat') {
-        explicit_loop = matrix(0, n, n)
-        if (is.null(latlong))
-            stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
-        if (latlong){
-            # Compute distance on sphere if xy are longitudes and latitudes
-            # Assume x is longitude and y is latitude
-            pair_dist = sphere_dist(coords)
-        } else {
-            pair_dist = as.matrix(dist(coords))
-        }
-        for (i in 1:n) {
-            dist_to_site = pair_dist[i, ]
-            # Shuffle plots, so that tied grouping is not biased by original order.
-            new_order = sample(1:n)  
-            dist_new = dist_to_site[new_order]
-            new_order = new_order[order(dist_new)]
-            # Move focal site to the front
-            new_order = c(i, new_order[new_order != i])
-            comm_ordered = x[new_order, ]
-            # 1 for absence, 0 for presence
-            comm_bool = as.data.frame((comm_ordered == 0) * 1) 
-            rich = cumprod(comm_bool)
-            explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
-        }
-        out = apply(explicit_loop, 1, mean)[effort]
-    } 
+      
+      explicit_loop = matrix(0, n, n)
+      if (is.null(latlong))
+        stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
+      if (latlong){
+        # Compute distance on sphere if xy are longitudes and latitudes
+        # Assume x is longitude and y is latitude
+        pair_dist = sphere_dist(coords)
+      } else {
+        pair_dist = as.matrix(dist(coords))
+      }
+      for (i in 1:n) {
+        dist_to_site = pair_dist[i, ]
+        # Shuffle plots, so that tied grouping is not biased by original order.
+        new_order = sample(1:n)  
+        dist_new = dist_to_site[new_order]
+        new_order = new_order[order(dist_new)]
+        # Move focal site to the front
+        new_order = c(i, new_order[new_order != i])
+        comm_ordered = x[new_order, ]
+        # 1 for absence, 0 for presence
+        comm_bool = as.data.frame((comm_ordered == 0) * 1) 
+        rich = cumprod(comm_bool)
+        explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+      }
+      out = apply(explicit_loop, 1, mean)[effort]
+      
+        
+    }
     else {
+      if( method == "kNCN"){
+        out = kNCN_average(x=x,coords=coords)[effort]
+      } else{
         # drop species with no observations  
         x = x[x > 0] 
         S = length(x)
         if (dens_ratio == 1) {
-            ldiv = lchoose(n, effort)
+          ldiv = lchoose(n, effort)
         } else {
-            effort = effort[effort / dens_ratio <= n]
-            ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
+          effort = effort[effort / dens_ratio <= n]
+          ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
         }
         p = matrix(0, sum(effort <= n), S)
         out = rep(NA, length(effort))
         S_ext = NULL
         for (i in seq_along(effort)) {
-            if (effort[i] <= n) {
-                if (dens_ratio == 1) {
-                    p[i, ] = ifelse(n - x < effort[i], 0, 
-                                    exp(lchoose(n - x, effort[i]) - ldiv[i]))
-                } else {
-                    p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
-                                    exp(suppressWarnings(lgamma(n - x + 1)) -
-                                        suppressWarnings(lgamma(n - x - effort[i] /
-                                                                dens_ratio + 1)) +
-                                        ldiv[i]))
-                }
-            } else if (extrapolate) {
-                f1 = sum(x == 1)
-                f2 = sum(x == 2)
-                # estimation of unseen species via Chao1                
-                f0_hat <- ifelse(f2 == 0, 
-                                 (n - 1) / n * f1 * (f1 - 1) / 2, 
-                                 (n - 1) / n * f1^2 / 2 / f2)
-                A = n * f0_hat / (n * f0_hat + f1)
-                S_ext = c(S_ext, ifelse(f1 == 0, S, 
-                                        S + f0_hat * (1 - A ^ (effort[i] - n))))
+          if (effort[i] <= n) {
+            if (dens_ratio == 1) {
+              p[i, ] = ifelse(n - x < effort[i], 0, 
+                              exp(lchoose(n - x, effort[i]) - ldiv[i]))
+            } else {
+              p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
+                              exp(suppressWarnings(lgamma(n - x + 1)) -
+                                    suppressWarnings(lgamma(n - x - effort[i] /
+                                                              dens_ratio + 1)) +
+                                    ldiv[i]))
             }
-            else if (return_NA)
-                S_ext = c(S_ext, NA)
-            else 
-                S_ext = c(S_ext, S)
+          } else if (extrapolate) {
+            f1 = sum(x == 1)
+            f2 = sum(x == 2)
+            # estimation of unseen species via Chao1                
+            f0_hat <- ifelse(f2 == 0, 
+                             (n - 1) / n * f1 * (f1 - 1) / 2, 
+                             (n - 1) / n * f1^2 / 2 / f2)
+            A = n * f0_hat / (n * f0_hat + f1)
+            S_ext = c(S_ext, ifelse(f1 == 0, S, 
+                                    S + f0_hat * (1 - A ^ (effort[i] - n))))
+          }
+          else if (return_NA)
+            S_ext = c(S_ext, NA)
+          else 
+            S_ext = c(S_ext, S)
         }
         out = rep(NA, length(effort))
         out[effort <= n] = rowSums(1 - p)
         out[effort > n] = S_ext
+      }
+      
     }
     names(out) = effort
     return(out)
