@@ -4,16 +4,26 @@
 \alias{kNCN_average}
 \title{Construct spatially constrained sample-based rarefaction (sSBR) curve using the k-Nearest-Centroid-neighbour (k-NCN) algorithm}
 \usage{
-kNCN_average(x, n = NULL, coords = NULL, repetitions = 1)
+kNCN_average(x, n = NULL, coords = NULL, repetitions = 1,
+  no_pb = TRUE, cl = NULL)
 }
 \arguments{
-\item{x}{a mob_in object or a sites x species matrix}
+\item{x}{a mob_in object or a community site x species matrix}
 
 \item{n}{number of sites to include.}
 
-\item{coords}{spatial coordinates of the samples. If x is a mob_in object, the fuction uses its "spat" table as coords.}
+\item{coords}{spatial coordinates of the samples. If x is a mob_in object, the fuction uses its 'spat' table as coords.}
 
 \item{repetitions}{Number of times to repeat the procedure. Useful in situations where there are many ties in the distance matrix.}
+
+\item{no_pb}{binary, if TRUE then a progress bar is not printed, defaults to TRUE}
+
+\item{cl}{
+A cluster object created by \code{\link[parallel]{makeCluster}},
+or an integer to indicate number of child-processes
+(integer values are ignored on Windows) for parallel evaluations
+(see Details on performance).
+}
 }
 \value{
 a numeric vector of estimated species richness
@@ -24,4 +34,22 @@ to the proximity to the inital focal sample. This ensures that included samples 
 }
 \details{
 Internally the function constructs one curve per sample whereby each sample serves as the initial sample repetition times. Finally, the average curve is returned.
+}
+\examples{
+data(inv_comm)
+data(inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coords = c('x', 'y'))
+kNCN_average(inv_mob_in)
+\donttest{
+# Not run: 
+# parallel evaluation using the parallel package 
+# run in parallel
+library(parallel)
+cl = makeCluster(2L)
+clusterEvalQ(cl, library(mobr))
+clusterExport(cl, 'inv_mob_in')
+S_kNCN = kNCN_average(inv_mob_in, cl=cl)
+
+stopCluster(cl)
+}
 }

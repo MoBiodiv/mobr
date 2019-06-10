@@ -15,3 +15,9 @@ a plot
 \description{
 This is just plotting all curves.
 }
+\examples{
+data(inv_comm)
+data(inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coords = c('x', 'y'))
+compare_curves(inv_mob_in)
+}
