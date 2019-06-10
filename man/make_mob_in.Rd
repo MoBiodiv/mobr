@@ -8,12 +8,12 @@ make_mob_in(comm, plot_attr, coord_names = NULL, binary = FALSE,
   latlong = FALSE)
 }
 \arguments{
-\item{comm}{community matrix with plots as rows and species columns.}
+\item{comm}{community matrix in which rows are samples (e.g., plots) and
+columns are species.}
 
 \item{plot_attr}{matrix which includes the environmental attributes and
 spatial coordinates of the plots. Environmental attributes are mandatory,
-while spatial coordinates are not. If spatial coordinates are provided, the
-column(s) has to have names "x" and/or "y".}
+while spatial coordinates are optional.}
 
 \item{coord_names}{character vector with the names of the columns of
 \code{plot_attr} that specify the coordinates of the samples. Defaults to
@@ -46,7 +46,7 @@ scales.
 \examples{
  data(inv_comm)
  data(inv_plot_attr)
- inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 }
 \author{
 Dan McGlinn and Xiao Xiao

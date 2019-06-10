@@ -27,7 +27,7 @@ mob_in object
 \examples{
  data(inv_comm)
  data(inv_plot_attr)
- inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
  subset(inv_mob_in, group == 'invaded')
  subset(inv_mob_in, 1:4, type='integer')
  subset(inv_mob_in, 1:4, type='integer', drop_levels=TRUE)
