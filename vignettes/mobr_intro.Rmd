@@ -71,7 +71,7 @@ In order to analyze the data with `mobr` the two data tables have to be combined
 into on single object
 
 ```{r make mob_in}
-inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 inv_mob_in
 ```
 
