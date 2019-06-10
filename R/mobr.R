@@ -34,7 +34,7 @@
 #' @examples
 #'  data(inv_comm)
 #'  data(inv_plot_attr)
-#'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 make_mob_in = function(comm, plot_attr, coord_names = NULL, binary=FALSE,
                        latlong=FALSE) {
   # possibly make group_var and ref_group mandatory arguments
@@ -109,7 +109,7 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary=FALSE,
 #' @examples 
 #'  data(inv_comm)
 #'  data(inv_plot_attr)
-#'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #'  subset(inv_mob_in, group == 'invaded')
 #'  subset(inv_mob_in, 1:4, type='integer')
 #'  subset(inv_mob_in, 1:4, type='integer', drop_levels=TRUE)
@@ -275,7 +275,7 @@ sphere_dist = function(coords){
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' sad = colSums(inv_comm)
-#' inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # rarefaction can be performed on different data inputs
 #' # all three give same answer
 #' # 1) the raw community site-by-species matrix
@@ -924,7 +924,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                            type='discrete', log_scale=TRUE, n_perm=20)
 #' plot(inv_mob_out, 'b1')
@@ -1028,7 +1028,7 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' plot_abu(inv_mob_in, 'group', type='sad', pooled=FALSE, log='x')
 #' plot_abu(inv_mob_in, 'group', type='rad', pooled=TRUE, log='x')
 plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
@@ -1109,7 +1109,7 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # random individual based rarefaction curves
 #' plot_rarefaction(inv_mob_in, 'group', 'indiv',
 #'                  pooled=TRUE, leg_loc='bottomright')
@@ -1205,7 +1205,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=2)
 #' plot(inv_mob_out, 'b1', display = 'rarefaction')
@@ -1331,7 +1331,7 @@ plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL,
 #' @examples 
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=2)
 #' overlap_effects(inv_mob_out, 'invaded', leg_loc=NA)
