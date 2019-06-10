@@ -3,11 +3,11 @@
 #' The 'mob_in' object will be passed on for analyses of biodiversity across 
 #' scales.
 #' 
-#' @param comm community matrix with plots as rows and species columns.
+#' @param comm community matrix in which rows are samples (e.g., plots) and
+#'   columns are species.
 #' @param plot_attr matrix which includes the environmental attributes and
 #'   spatial coordinates of the plots. Environmental attributes are mandatory,
-#'   while spatial coordinates are not. If spatial coordinates are provided, the
-#'   column(s) has to have names "x" and/or "y".
+#'   while spatial coordinates are optional.
 #' @param coord_names character vector with the names of the columns of
 #'   \code{plot_attr} that specify the coordinates of the samples. Defaults to
 #'   NULL (no coordinates). When providing coordinate names, the order the names 
@@ -57,7 +57,8 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
     }
   
     if (any(row.names(comm) != row.names(plot_attr)))
-        warning("Row names of community and plot attributes tables do not match")
+        warning("Row names of community and plot attributes tables do not match
+                which may indicate different identities or orderings of samples")
   
     if (binary)  {
         warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
@@ -71,7 +72,7 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
   
     if (any(colSums(comm) == 0)) {
         warning("Some species have zero occurrences and will be dropped from the community table")
-        comm = comm[, colSums(comm) != 0]
+        comm = comm[ , colSums(comm) != 0]
     }
   
     out$comm = data.frame(comm)
@@ -83,6 +84,7 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
        }
     }
     else {
+        warning("Note: 'coord_names' was not supplied and therefore spatial aggregation will not be examined in downstream analyses")
         out$tests$agg = FALSE
         out$env = data.frame(plot_attr)
         out$spat = NULL
