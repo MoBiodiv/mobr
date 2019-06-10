@@ -7,7 +7,9 @@ Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com",
                     role = "aut"),
              person("Felix", "May", email = "felix.may@idiv.de", 
                     role = "aut"),
-             person("Thor", "Engel", email = "thore.engel@idiv.de",
+             person("Thore", "Engel", email = "thore.engel@idiv.de",
+                    role = "aut"),
+             person("Caroline", "Oliver", email = "olivercs@g.cofc.edu",
                     role = "aut"))
 Date: 2018
 Description: This package is designed to help measure biodiversity and its
@@ -26,7 +28,8 @@ Imports:
     egg
 Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat
 License: MIT
 LazyData: true
 RoxygenNote: 6.1.1
