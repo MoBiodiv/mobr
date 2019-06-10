@@ -41,7 +41,7 @@ Plot rarefaction curves for each treatment group
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 # random individual based rarefaction curves
 plot_rarefaction(inv_mob_in, 'group', 'indiv',
                  pooled=TRUE, leg_loc='bottomright')

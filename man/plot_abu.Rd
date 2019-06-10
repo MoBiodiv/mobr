@@ -31,7 +31,7 @@ Plot distributions of species abundance
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 plot_abu(inv_mob_in, 'group', type='sad', pooled=FALSE, log='x')
 plot_abu(inv_mob_in, 'group', type='rad', pooled=TRUE, log='x')
 }

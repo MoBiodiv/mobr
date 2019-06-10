@@ -83,7 +83,7 @@ observed number of species is returned.
 data(inv_comm)
 data(inv_plot_attr)
 sad = colSums(inv_comm)
-inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 # rarefaction can be performed on different data inputs
 # all three give same answer
 # 1) the raw community site-by-species matrix

@@ -4,7 +4,8 @@
 \alias{plot.mob_out}
 \title{Plot mob curves}
 \usage{
-\method{plot}{mob_out}(mob_out, stat, log2 = "", scale_by = NULL)
+\method{plot}{mob_out}(mob_out, stat, log2 = "", scale_by = NULL,
+  display = c("gradient", "rarefaction", "effect_size"))
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
@@ -23,6 +24,9 @@ rescaled. Options include: \code{NULL}, \code{'indiv'}, or \code{'plot'}
 for no rescaling, rescaling to number of individuals, or rescaling
 to number of plots respectively. The rescaling is carried out using 
 \code{mob_out$density_stat}.}
+
+\item{display}{a string that specifies what graphics to display can be either
+'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial
@@ -34,9 +38,11 @@ Plot mob curves
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
                               type='discrete', log_scale=TRUE, n_perm=2)
+plot(inv_mob_out, 'b1', display = 'rarefaction')
+plot(inv_mob_out, 'b1', display = c('rarefaction', 'effect_size'))
 plot(inv_mob_out, 'b1')
 plot(inv_mob_out, 'b1', log2 = 'x')
 plot(inv_mob_out, 'b1', scale_by = 'indiv')
