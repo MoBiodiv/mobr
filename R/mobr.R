@@ -35,62 +35,62 @@
 #'  data(inv_comm)
 #'  data(inv_plot_attr)
 #'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-make_mob_in = function(comm, plot_attr, coord_names = NULL, binary=FALSE,
-                       latlong=FALSE) {
-  # possibly make group_var and ref_group mandatory arguments
-  out = list(tests = list(N=TRUE, SAD=TRUE, agg=TRUE))
-  # carry out some basic checks
-  if (nrow(comm) < 5) {
-    warning("Number of plots in community is less than five therefore only individual rarefaction will be computed")
-    out$tests$N = FALSE
-    out$tests$agg = FALSE
-  }
-  
-  if (nrow(comm) != nrow(plot_attr))
-    stop("Number of plots in community does not equal number of plots in plot attribute table")
-  
-  if (is.null(coord_names) == FALSE){
-    spat_cols = sapply(coord_names, function(x) which(x == names(plot_attr)))
-    
-  if (length(spat_cols) == 1 & latlong == TRUE)
-    stop("Both latitude and longitude have to be specified")
-  }
-  
-  if (any(row.names(comm) != row.names(plot_attr)))
-    warning("Row names of community and plot attributes tables do not match")
-  
-  if (binary)  {
-    warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
-    out$tests$SAD = FALSE
-    out$tests$N = FALSE
-  } 
-  else {
-    if (max(comm) == 1)
-      warning("Maximum abundance is 1 which suggests data is binary, change the binary argument to TRUE")
-  }
-  
-  if (any(colSums(comm) == 0)) {
-    warning("Some species have zero occurrences and will be dropped from the community table")
-    comm = comm[, colSums(comm) != 0]
-  }
-  
-  out$comm = data.frame(comm)
-  if (is.null(coord_names) == FALSE){
-    if (length(spat_cols) > 0) {
-      out$env = data.frame(plot_attr[ , -spat_cols])
-      colnames(out$env) = colnames(plot_attr)[-spat_cols]
-      out$spat = data.frame(plot_attr[ , spat_cols])
+make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
+                       latlong = FALSE) {
+    # possibly make group_var and ref_group mandatory arguments
+    out = list(tests = list(N = TRUE, SAD = TRUE, agg = TRUE))
+    # carry out some basic checks
+    if (nrow(comm) < 5) {
+        warning("Number of plots in community is less than five therefore only individual rarefaction will be computed")
+        out$tests$N = FALSE
+        out$tests$agg = FALSE
     }
-  }
-  else {
-    out$tests$agg = FALSE
-    out$env = data.frame(plot_attr)
-    out$spat = NULL
-  }
   
-  out$latlong = latlong
-  class(out) = 'mob_in'
-  return(out)
+    if (nrow(comm) != nrow(plot_attr))
+        stop("Number of plots in community does not equal number of plots in plot attribute table")
+  
+    if (is.null(coord_names) == FALSE) {
+        spat_cols = sapply(coord_names, function(x) which(x == names(plot_attr)))
+    
+        if (length(spat_cols) == 1 & latlong == TRUE)
+            stop("Both latitude and longitude have to be specified")
+    }
+  
+    if (any(row.names(comm) != row.names(plot_attr)))
+        warning("Row names of community and plot attributes tables do not match")
+  
+    if (binary)  {
+        warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
+        out$tests$SAD = FALSE
+        out$tests$N = FALSE
+    } 
+    else {
+        if (max(comm) == 1)
+            warning("Maximum abundance is 1 which suggests data is binary, change the binary argument to TRUE")
+    }
+  
+    if (any(colSums(comm) == 0)) {
+        warning("Some species have zero occurrences and will be dropped from the community table")
+        comm = comm[, colSums(comm) != 0]
+    }
+  
+    out$comm = data.frame(comm)
+    if (is.null(coord_names) == FALSE) {
+        if (length(spat_cols) > 0) {
+            out$env = data.frame(plot_attr[ , -spat_cols])
+            colnames(out$env) = colnames(plot_attr)[-spat_cols]
+            out$spat = data.frame(plot_attr[ , spat_cols])
+       }
+    }
+    else {
+        out$tests$agg = FALSE
+        out$env = data.frame(plot_attr)
+        out$spat = NULL
+    }
+  
+    out$latlong = latlong
+    class(out) = 'mob_in'
+    return(out)
 }
 
 #' Subset the rows of the mob data input object
