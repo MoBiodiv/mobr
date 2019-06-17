@@ -4,29 +4,55 @@
 \alias{plot.mob_out}
 \title{Plot mob curves}
 \usage{
-\method{plot}{mob_out}(mob_out, stat, log2 = "", scale_by = NULL,
-  display = c("gradient", "rarefaction", "effect_size"))
+\method{plot}{mob_out}(mob_out, stat = "b1", log2 = "",
+  scale_by = NULL, display = c("S ~ effort", "effect ~ grad",
+  "stat ~ effort"), eff_sub_effort = TRUE, eff_log_base = 2,
+  eff_disp_pts = TRUE, eff_disp_smooth = FALSE)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}
 
 \item{stat}{a character string that specifies what statistic should be 
-used in the effect size plots. Options include: \code{c('betas', 'r2',
-'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
-r-squared, F-statistic, and p-value respectively.}
+used in the effect size plots. Options include: \code{c('b0', 'b1', 'r',
+'r2', 'r2adj', 'f')} for the beta-coefficients, person correlation 
+coefficient, r-squared, adjusted  r-squared, and F-statistic respectively.
+If the explanatory variable is a factor then \code{'b1'} is the only
+reasonable option.}
 
 \item{log2}{a character string specifying if the x- or y-axis should be
-rescale by log base 2. Options include: \code{c('', 'x', 'y', 'xy')} for 
-no rescaling, x-axis, y-axis, and both x and y-axes respectively.}
+rescale by log base 2. Only applies when \code{display == 'S ~ effort' | 'S ~ effort'}.
+Options include: \code{c('', 'x', 'y', 'xy')} for  no rescaling, x-axis,
+y-axis, and both x and y-axes respectively. Default is set to no rescaling.}
 
 \item{scale_by}{a character string specifying if sampling effort should be
-rescaled. Options include: \code{NULL}, \code{'indiv'}, or \code{'plot'} 
-for no rescaling, rescaling to number of individuals, or rescaling
-to number of plots respectively. The rescaling is carried out using 
+rescaled. Options include: \code{NULL}, \code{'indiv'}, and \code{'plot'}
+for no rescaling, rescaling to number of individuals, and rescaling
+to number of plots respectively. The rescaling is carried out using
 \code{mob_out$density_stat}.}
 
-\item{display}{a string that specifies what graphics to display can be either
-'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
+\item{display}{a string that specifies what graphical panels to display. 
+ Options include:
+ \itemize{
+     \item \code{S ~ expl} ... plot of S versus the explanatory variable
+     \item \code{S ~ effort} ... plot of S versus sampling effort (i.e., a rarefaction curve)
+     \item \code{effect ~ expl} ... plot of Agg, N, and SAD effect size versus explanatory variable
+     \item \code{stat ~ effort} ... plot of 
+}
+Defaults to \code{'S ~ effort'}, \code{'effect ~ expl'}, and \code{'stat ~ effort'}.}
+
+\item{eff_sub_effort}{a boolean which determines if only a subset of efforts
+will be considered in the plot of effect size (i.e., when
+\code{display = 'effect ~ expl'}. Defaults to TRUE to declutter the plots.}
+
+\item{eff_log_base}{a positive real number that determines the base of the 
+logathrium that efforts were be disributed across, the larger this number
+the fewer efforts will be diplayed.}
+
+\item{eff_disp_pts}{a boolean to display the raw effect points, defaults to TRUE}
+
+\item{eff_disp_smooth}{a boolean to display the regressions used to summarize
+the linear effect of the explanatory variable on the effect sizes, defaults
+to FALSE}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial
@@ -40,13 +66,10 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                              type='discrete', log_scale=TRUE, n_perm=2)
-plot(inv_mob_out, 'b1', display = 'rarefaction')
-plot(inv_mob_out, 'b1', display = c('rarefaction', 'effect_size'))
-plot(inv_mob_out, 'b1')
-plot(inv_mob_out, 'b1', log2 = 'x')
+                              type='discrete', log_scale=TRUE, n_perm=4)
+plot(inv_mob_out, 'b1') 
 plot(inv_mob_out, 'b1', scale_by = 'indiv')
 }
 \author{
-Xiao Xiao and Dan McGlinn
+Dan McGlinn and Xiao Xiao
 }
