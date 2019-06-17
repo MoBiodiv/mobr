@@ -565,6 +565,21 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
 }
         
 
+#' Randomly sample of a relative abundance distribution (RAD)
+#' to produce an expected species abundance distribution (SAD)
+#' 
+#' @param rad the relative abundance of each species
+#' @param N the total number of individuals sampled
+#' 
+#' Randomly subsampling an RAD produces an SAD that is of a 
+#' similar functional form (Green and Plotkin 2007) but with overall
+#' species richness equal to our less than the relative abundance
+#' distribution.
+#' 
+#' Literature Cited:
+#' Green, J. L., and J. B. Plotkin. 2007. A statistical theory
+#'  for sampling species abundances. Ecology Letters 10:1037–1045.
+#' 
 #' @keywords internal
 get_rand_sad = function(rad, N) {
   rand_samp = sample(1:length(rad), N, replace = T, prob = rad)
@@ -716,11 +731,16 @@ get_overall_p = function(effort, perm, value){
 }
 
 #' @keywords internal
-mod_sum = function(x, stats = c('betas', 'r2', 'r2adj', 'f', 'p')) {
+mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
     summary_lm = summary(x)
     out = list()
     if ('betas' %in% stats) 
         out$betas = coef(x)
+    if ('r' %in% stats) {
+        betas = coef(x)
+        out$r = sqrt(summary_lm$r.squared) * 
+                ifelse(betas[2] < 0, -1, 1)
+    }
     if ('r2' %in% stats)
         out$r2 = summary_lm$r.squared
     if ('r2adj' %in% stats)
@@ -780,7 +800,7 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, type, stats=NULL) 
         if (type == 'discrete')
             stats = 'betas'
         else
-            stats = c('betas', 'r2', 'r2adj', 'f', 'p')
+            stats = c('betas', 'r', 'r2', 'r2adj', 'f')
     }
     mod_df = S_df %>%
              group_by(test, sample, effort) %>%
@@ -817,38 +837,51 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
             null_mob_in = mob_in
             null_mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
             null_results[[i]] = get_results(null_mob_in, groups, tests[k], inds,
-                                            ind_dens, type, stats)$mod_df
+                                            ind_dens, type, stats)
             setTxtProgressBar(pb, i)
         }
         close(pb)    
         # rbind across the null_results adding a permutation index
-        null_results = tibble(null_results)
-        null_df = flatten_dfr(null_results, .id = "perm")
+        null_results = transpose(null_results)
+        null_df = map(null_results, function(x)
+                      flatten_dfr(tibble(x), .id = "perm"))
         # compute quantiles
-        null_qt = null_df %>%
-                  group_by(test, sample, effort, index) %>%
-                  summarize(low_value = quantile(value, 0.025, na.rm=T),
-                            med_value = quantile(value, 0.5, na.rm=T), 
-                            high_value = quantile(value, 0.975, na.rm=T))
-        if (k == 1) 
+        null_qt = list()
+        null_qt$S_df = null_df$S_df %>% 
+                       group_by(group, test, sample, effort) %>%
+                       summarize(low_effect = quantile(effect, 0.025, na.rm = TRUE),
+                                 med_effect = quantile(effect, 0.5, na.rm = TRUE), 
+                                 high_effect = quantile(effect, 0.975, na.rm = TRUE))
+          
+        null_qt$mod_df = null_df$mod_df %>%
+                         group_by(test, sample, effort, index) %>%
+                         summarize(low_value = quantile(value, 0.025, na.rm = TRUE),
+                                   med_value = quantile(value, 0.5, na.rm = TRUE), 
+                                   high_value = quantile(value, 0.975, na.rm = TRUE))
+          
+        if (k == 1) # if only one test run
             out = null_qt
         else 
-            out = rbind(out, null_qt)
+            out = map2(out, null_qt, rbind)
         # to compute p-value we need to also calculate the observed
         # results then the funct must be distributed across the
         # various stats and tests
         if (overall_p) {
             obs_df = get_results(mob_in, groups, tests[k], inds, ind_dens,
-                                 type, stats)$mod_df
-            obs_df = data.frame(perm = 0, obs_df)          
-            null_df = rbind(obs_df, null_df)
-            p_val[[k]] = null_df %>% 
-                         group_by(test, index) %>% 
-                         summarize(p = get_overall_p(effort, perm, value))
+                                 type, stats)
+            obs_df = map(obs_df, function(x) data.frame(perm = 0, x))          
+            null_df = map2(obs_df, null_df, rbind)
+            p_val[[k]] = list(effect_p = null_df$S_df %>%
+                                  group_by(test, group) %>%
+                                  summarize(p = get_overall_p(effort, perm, effect)),
+                              mod_p = null_df$mod_df %>%
+                                  subset(!is.na(value)) %>% 
+                                  group_by(test, index) %>% 
+                                  summarize(p = get_overall_p(effort, perm, value)))
         }
     }
     if (overall_p)
-        attr(out, "p") = bind_rows(p_val)
+        attr(out, "p") = map(transpose(p_val), bind_rows)
     return(out)
 }
 
@@ -928,8 +961,8 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-#'                            type='discrete', log_scale=TRUE, n_perm=20)
-#' plot(inv_mob_out, 'b1')
+#'                            type='discrete', log_scale=TRUE, n_perm=10)
+#' plot(inv_mob_out)
 get_delta_stats = function(mob_in, group_var, ref_group = NULL, 
                            tests = c('SAD', 'N', 'agg'),
                            type = c('continuous', 'discrete'),
@@ -1005,7 +1038,9 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     null_results = run_null_models(mob_in, groups, tests, inds, ind_dens,
                                    type, stats, n_perm, overall_p)
     # merge the null_results into the model data.frame
-    out$mod_df = left_join(out$mod_df, null_results, 
+    out$S_df = left_join(out$S_df, null_results$S_df, 
+                         by = c("group", "test", "sample", "effort"))
+    out$mod_df = left_join(out$mod_df, null_results$mod_df, 
                            by = c("test", "sample", "effort", "index"))
     if (overall_p)
         out$p = attr(null_results, "p")
@@ -1183,24 +1218,44 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' 
 #' @param mob_out a mob_out class object
 #' @param stat a character string that specifies what statistic should be 
-#'   used in the effect size plots. Options include: \code{c('betas', 'r2',
-#'   'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
-#'   r-squared, F-statistic, and p-value respectively.
+#'   used in the effect size plots. Options include: \code{c('b0', 'b1', 'r',
+#'   'r2', 'r2adj', 'f')} for the beta-coefficients, person correlation 
+#'   coefficient, r-squared, adjusted  r-squared, and F-statistic respectively.
+#'   If the explanatory variable is a factor then \code{'b1'} is the only
+#'   reasonable option. 
 #' @param log2 a character string specifying if the x- or y-axis should be
-#'   rescale by log base 2. Options include: \code{c('', 'x', 'y', 'xy')} for 
-#'   no rescaling, x-axis, y-axis, and both x and y-axes respectively.
+#'   rescale by log base 2. Only applies when \code{display == 'S ~ effort' | 'S ~ effort'}.
+#'   Options include: \code{c('', 'x', 'y', 'xy')} for  no rescaling, x-axis,
+#'   y-axis, and both x and y-axes respectively. Default is set to no rescaling. 
 #' @param scale_by a character string specifying if sampling effort should be
-#'   rescaled. Options include: \code{NULL}, \code{'indiv'}, or \code{'plot'} 
-#'   for no rescaling, rescaling to number of individuals, or rescaling
-#'   to number of plots respectively. The rescaling is carried out using 
+#'   rescaled. Options include: \code{NULL}, \code{'indiv'}, and \code{'plot'}
+#'   for no rescaling, rescaling to number of individuals, and rescaling
+#'   to number of plots respectively. The rescaling is carried out using
 #'   \code{mob_out$density_stat}.
-#' @param display a string that specifies what graphics to display can be either
-#'  'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.
+#' @param display a string that specifies what graphical panels to display. 
+#'  Options include:
+#'  \itemize{
+#'      \item \code{S ~ expl} ... plot of S versus the explanatory variable
+#'      \item \code{S ~ effort} ... plot of S versus sampling effort (i.e., a rarefaction curve)
+#'      \item \code{effect ~ expl} ... plot of Agg, N, and SAD effect size versus explanatory variable
+#'      \item \code{stat ~ effort} ... plot of 
+#' }
+#' Defaults to \code{'S ~ effort'}, \code{'effect ~ expl'}, and \code{'stat ~ effort'}.
+#' @param eff_sub_effort a boolean which determines if only a subset of efforts
+#'   will be considered in the plot of effect size (i.e., when
+#'   \code{display = 'effect ~ expl'}. Defaults to TRUE to declutter the plots.
+#' @param eff_log_base a positive real number that determines the base of the 
+#'   logathrium that efforts were be disributed across, the larger this number
+#'   the fewer efforts will be diplayed.
+#' @param eff_disp_pts a boolean to display the raw effect points, defaults to TRUE
+#' @param eff_disp_smooth a boolean to display the regressions used to summarize
+#'  the linear effect of the explanatory variable on the effect sizes, defaults
+#'  to FALSE
 #' 
 #' @return plots the effect of the SAD, the number of individuals, and spatial
 #'  aggregation on the difference in species richness
 #'  
-#' @author Xiao Xiao and Dan McGlinn
+#' @author Dan McGlinn and Xiao Xiao
 #' @import ggplot2 
 #' @importFrom egg ggarrange
 #' @export
@@ -1209,94 +1264,167 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-#'                               type='discrete', log_scale=TRUE, n_perm=2)
-#' plot(inv_mob_out, 'b1', display = 'rarefaction')
-#' plot(inv_mob_out, 'b1', display = c('rarefaction', 'effect_size'))
-#' plot(inv_mob_out, 'b1')
-#' plot(inv_mob_out, 'b1', log2 = 'x')
+#'                               type='discrete', log_scale=TRUE, n_perm=4)
+#' plot(inv_mob_out, 'b1') 
 #' plot(inv_mob_out, 'b1', scale_by = 'indiv')
-plot.mob_out = function(mob_out, stat, log2 = '', scale_by = NULL, 
-                        display=c('gradient', 'rarefaction', 'effect_size')) {
-    type = mob_out$type
+plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL, 
+                        display = c('S ~ effort', 'effect ~ grad', 'stat ~ effort'),
+                        eff_sub_effort = TRUE, eff_log_base = 2,
+                        eff_disp_pts = TRUE, eff_disp_smooth = FALSE) {
+    if (mob_out$type == 'discrete') {
+        if (stat != 'b1')
+            warning('The only statistic that has a reasonable interpretation for a discrete explanatory variable is the difference in the group means from the reference group (i.e., set stat = "b1")')
+    }
     if (!is.null(scale_by)) {
         if (scale_by == 'indiv') {
             mob_out$S_df = mutate(mob_out$S_df, 
                              effort = ifelse(sample == 'plot', 
-                                             effort * mob_out$density_stat$ind_dens,
+                                             round(effort * mob_out$density_stat$ind_dens),
                                              effort))
             mob_out$mod_df = mutate(mob_out$mod_df, 
                                effort = ifelse(sample == 'plot', 
-                                               effort * mob_out$density_stat$ind_dens,
+                                               round(effort * mob_out$density_stat$ind_dens),
                                                effort))
       
         }     
         if (scale_by == 'plot') {
             mob_out$S_df = mutate(mob_out$S_df, 
                              effort = ifelse(sample == 'indiv', 
-                                             effort / mob_out$density_stat$ind_dens,
+                                             round(effort / mob_out$density_stat$ind_dens),
                                              effort))
             mob_out$mod_df = mutate(mob_out$mod_df, 
                                effort = ifelse(sample == 'indiv', 
-                                               effort / mob_out$density_stat$ind_dens,
+                                               round(effort / mob_out$density_stat$ind_dens),
                                                effort))
         } 
     }
-  
-    # S vs gradient 
-    p1 = ggplot(mob_out$S_df, aes(group, S)) +
-      geom_point(aes(group = effort, color = effort)) +
-      labs(x = mob_out$group_var) +
-      facet_grid(. ~ test) 
-#      geom_smooth(data = subset(mob_out$S_df, effort == max(effort)), 
-#                  aes(group = effort, color = effort),
-#                  method = lm, se=FALSE)
     
-    # rarefaction curve: S vs effort 
-    p2 = ggplot(mob_out$S_df, aes(effort, S)) +
-      geom_line(aes(group = group, color = group)) +
-      facet_grid(. ~ test, scales = "free_x") +
-      labs(color = mob_out$group_var)
+    p_list = vector('list', 4)
+
+    if ('S ~ grad' %in% display) {
+        facet_labs = c(`agg` = 'sSBR',
+                       `N` = 'nsSBR',
+                       `SAD` = 'IBR')      
+        p_list[[1]] = ggplot(mob_out$S_df, aes(group, S)) +
+                          geom_point(aes(group = effort, color = effort)) +
+                          labs(x = mob_out$group_var) +
+                          facet_wrap(. ~ test, scales = "free",
+                                     labeller = as_labeller(facet_labs))
+    }
     
-    # effect size vs effort 
-    p3 = ggplot(subset(mob_out$mod_df, index == stat),
-      aes(effort, value)) + 
-      geom_ribbon(aes(ymin = low_value, ymax = high_value, fill = 'null')) +
-      geom_line(aes(group = index, color = 'observed')) +
-      geom_hline(yintercept = 0, linetype = 'dashed') + 
-      facet_grid(. ~ test, scales = "free_x") +
-      labs(y = 'effect size') +
-      scale_color_manual(name = element_blank(), values = c(observed = 'red')) +
-      scale_fill_manual(name = element_blank(), values = c(null = 'grey70'))
+    if ('S ~ effort' %in% display) {
+        facet_labs = c(`agg` = 'sSBR',
+                       `N` = 'nsSBR',
+                       `SAD` = 'IBR')
+        p_list[[2]] = ggplot(mob_out$S_df, aes(effort, S)) +
+                          geom_line(aes(group = group, color = group)) +
+                          facet_wrap(. ~ test, scales = "free",
+                                     labeller = as_labeller(facet_labs)) +
+                          labs(y = expression("Richness (" *
+                                                italic(S) * ")"),
+                               color = mob_out$group_var)
+    }
+    
+    if ('effect ~ grad' %in% display) {
+        efforts = sort(unique(mob_out$S_df$effort))
+        if (is.logical(eff_sub_effort)) {
+            if (eff_sub_effort) {
+                # only show a subset of efforts for clarity
+                effort_r = floor(log(range(efforts), eff_log_base))
+                effort_2 = eff_log_base^(effort_r[1]:effort_r[2])
+                eff_d = as.matrix(dist(c(efforts, effort_2)))
+                eff_d = eff_d[-((length(efforts)+1):ncol(eff_d)),
+                              -(1:length(efforts))]
+                min_index = apply(eff_d, 2, function(x) which(x == min(x))[1])
+                sub_effort = efforts[min_index]
+                print(paste("Effect size shown at the following efforts", sub_effort))
+            }
+        } else if(!is.null(eff_sub_effort))
+            sub_effort = eff_sub_effort
+        else 
+            sub_effort = efforts
+
+        if (mob_out$type == "continuous")
+            mob_out$S_df = mob_out$S_df %>%
+                  group_by(test, effort) %>%
+                  mutate(low_effect = predict(loess(low_effect ~ group), group)) %>%
+                  mutate(high_effect = predict(loess(high_effect ~ group), group)) 
+
         
+        p_list[[3]] = ggplot(subset(mob_out$S_df, effort %in% sub_effort),
+                                    aes(group, effect)) +
+                      #geom_smooth(aes(x=group, y = med_effect,
+                      #                group = effort, color = effort),
+                      #            method = 'lm', se = F) +
+                      geom_ribbon(aes(ymin = low_effect, ymax = high_effect,
+                                      group = effort, color = effort,
+                                      fill = 'null'),
+                                  alpha = .25) +
+                      labs(x = mob_out$group_var) +
+                      facet_wrap(. ~ test, scales = "free_y") +
+                      labs(y = expression('effect (' * Delta * italic(S) * ')')) +
+                      scale_fill_manual(name = element_blank(),
+                                        values = c(null = 'grey40')) +
+                      scale_colour_gradient(trans=scales::log2_trans()) 
+        if (eff_disp_pts)
+            p_list[[3]] = p_list[[3]] + geom_point(aes(group = effort, color = effort))
+        if (eff_disp_smooth)
+            p_list[[3]] = p_list[[3]] + geom_smooth(aes(group = effort, color = effort),
+                                                    method = lm, se=F, lty=3)
+    }
+
+    if ('stat ~ effort' %in% display) {
+        if (stat == 'b1')
+            ylab = expression('Slope (' * italic(beta)[1] * ')')
+        if (stat == 'r2')
+            ylab = expression(italic(R^2))
+        if (stat == 'r')
+            ylab = expression(italic(r))
+        if (stat == 'f')
+            ylab = expression(italic(F))
+        p_list[[4]] = ggplot(subset(mob_out$mod_df, index == stat),
+                          aes(effort, value)) + 
+                          geom_ribbon(aes(ymin = low_value,
+                                          ymax = high_value, fill = 'null'),
+                                      alpha = 0.25) +
+                          geom_line(aes(group = index, color = 'observed')) +
+                          geom_hline(yintercept = 0, linetype = 'dashed') + 
+                          facet_wrap(. ~ test, scales = "free_x") +
+                          labs(y = ylab) +
+                          scale_color_manual(name = element_blank(),
+                                             values = c(observed = 'red')) +
+                          scale_fill_manual(name = element_blank(),
+                                            values = c(null = 'grey40'))
+    }
+    
     if (!is.null(scale_by)) { # change title of legend
-        p1 = p1 + labs(color = scale_by)
-        p2 = p2 + labs(x = scale_by)
-        p3 = p3 + labs(x = scale_by)
+        scale_by = ifelse(scale_by == 'indiv', '# of individuals', '# of plots')
+        if (!is.null(p_list[[1]]))  
+            p_list[[1]] = p_list[[1]] + labs(color = scale_by)
+        if (!is.null(p_list[[3]])) 
+            p_list[[3]] = p_list[[3]] + labs(color = scale_by)
+        
+        if (!is.null(p_list[[2]]))
+            p_list[[2]] =  p_list[[2]] + labs(x = scale_by)
+        if (!is.null(p_list[[4]]))
+            p_list[[4]] =  p_list[[4]] + labs(x = scale_by)
+
     }
     
     if (grepl('x', log2)) {
-        p2 = p2 + scale_x_continuous(trans = 'log2')
-        p3 = p3 + scale_x_continuous(trans = 'log2')
+        if (!is.null(p_list[[2]]))
+            p_list[[2]] = p_list[[2]] + scale_x_continuous(trans = 'log2')
+        if (!is.null(p_list[[4]]))
+            p_list[[4]] = p_list[[4]] + scale_x_continuous(trans = 'log2')
     }
   
     if (grepl('y', log2)) {
-        p2 = p2 + scale_y_continuous(trans = 'log2')
-        p3 = p3 + scale_y_continuous(trans = 'log2')
+        if (!is.null(p_list[[2]]))
+            p_list[[2]] = p_list[[2]] + scale_y_continuous(trans = 'log2')
     }
-    if (all(c('gradient', 'rarefaction', 'effect_size') %in% display))
-        egg::ggarrange(p1, p2, p3)
-    else if (all(c('rarefaction', 'effect_size') %in% display))
-        egg::ggarrange(p2, p3)
-    else if (all(c('gradient', 'rarefaction') %in% display))
-        egg::ggarrange(p1, p2)
-    else if (all(c('gradient', 'effect_size') %in% display))
-        egg::ggarrange(p1, p3)
-    else if (display == 'gradient')
-        p1
-    else if (display == 'rarefaction')
-        p2
-    else if (display == 'effect_size')
-        p3
+    p_list = Filter(Negate(is.null), p_list)
+    egg::ggarrange(plots = p_list,
+                   labels = letters[1:length(p_list)])
 }
 
 #' Plot summary graphics of the effect on species richness
