@@ -525,7 +525,7 @@ avg_nn_dist = function(coords) {
 #' @importFrom tibble tibble
 #' @keywords internal
 get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
-                            inds=NULL, ind_dens=NULL) {
+                            inds=NULL, ind_dens=NULL, n_plots=NULL) {
     if (is.null(inds) & any(c('SAD', 'N') %in% tests))
         stop('If SAD or N effect to be calculated inds must be specified')
     if (is.null(ind_dens) & 'N' %in% tests)
@@ -551,9 +551,11 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
                            stringsAsFactors = FALSE)
     }
     if ('agg' %in% tests) {
-        S_agg = rarefaction(x, 'spat')
-        n_plots = nrow(x$comm)
-        samp_effort = round((1:n_plots * sum(x$comm)) / n_plots)
+        if (is.null(n_plots))
+            n_plots = nrow(x$comm)
+        S_agg = rarefaction(x, 'spat', 1:n_plots)
+        ind_density = sum(x$comm) / nrow(x$comm)
+        samp_effort = round(1:n_plots * ind_density)
         S_N = rarefaction(x, 'indiv', samp_effort)
         effect = S_agg - S_N
         out$agg = data.frame(test = 'agg', sample = 'plot', 
@@ -766,7 +768,8 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
 #' @import dplyr 
 #' @importFrom tidyr nest unnest
 #' @keywords internal 
-get_results = function(mob_in, groups, tests, inds, ind_dens, type, stats=NULL) {
+get_results = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
+                       stats=NULL) {
   
     # the approach taken here to get results for each group
     # is to first break the dataset up into a list of lists 
@@ -779,9 +782,13 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, type, stats=NULL) 
     names(mob_in_groups) = group_levels
   
     S_df = map_dfr(mob_in_groups, get_delta_curves, tests, inds, ind_dens,
-                   .id = "group")
+                   n_plots, .id = "group")
     
     S_df = S_df %>% mutate_if(is.factor, as.character)
+    
+    # truncate sample based sSBR curve for unbalanced designs between groups
+    
+    
     
     if (type == 'discrete')
         S_df$group = factor(S_df$group, levels = levels(groups))
@@ -819,8 +826,8 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, type, stats=NULL) 
 #' @importFrom tibble tibble
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @keywords internal
-run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
-                           n_perm, overall_p) {
+run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
+                           stats, n_perm, overall_p) {
     if (overall_p)
         p_val = vector('list', length(tests))
     for (k in seq_along(tests)) {
@@ -837,7 +844,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
             null_mob_in = mob_in
             null_mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
             null_results[[i]] = get_results(null_mob_in, groups, tests[k], inds,
-                                            ind_dens, type, stats)
+                                            ind_dens, n_plots, type, stats)
             setTxtProgressBar(pb, i)
         }
         close(pb)    
@@ -868,7 +875,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, type, stats,
         # various stats and tests
         if (overall_p) {
             obs_df = get_results(mob_in, groups, tests[k], inds, ind_dens,
-                                 type, stats)
+                                 n_plots, type, stats)
             obs_df = map(obs_df, function(x) data.frame(perm = 0, x))          
             null_df = map2(obs_df, null_df, rbind)
             p_val[[k]] = list(effect_p = null_df$S_df %>%
@@ -1024,6 +1031,7 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     N_max = min(tapply(rowSums(mob_in$comm), list(groups), sum))
     inds = get_inds(N_max, inds, log_scale)
     ind_dens = get_ind_dens(mob_in$comm, density_stat)
+    n_plots = min(tapply(mob_in$comm[ , 1], list(groups), length))
 
     out = list()
     out$group_var = group_var
@@ -1033,10 +1041,11 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     out$density_stat = list(density_stat = density_stat,
                             ind_dens = ind_dens)
     out = append(out, 
-                 get_results(mob_in, groups, tests, inds, ind_dens, type, stats))
+                 get_results(mob_in, groups, tests, inds, ind_dens, n_plots,
+                             type, stats))
 
     null_results = run_null_models(mob_in, groups, tests, inds, ind_dens,
-                                   type, stats, n_perm, overall_p)
+                                   n_plots, type, stats, n_perm, overall_p)
     # merge the null_results into the model data.frame
     out$S_df = left_join(out$S_df, null_results$S_df, 
                          by = c("group", "test", "sample", "effort"))
@@ -1322,7 +1331,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                                      labeller = as_labeller(facet_labs)) +
                           labs(y = expression("Richness (" *
                                                 italic(S) * ")"),
-                               color = mob_out$group_var)
+                               color = mob_out$group_var) 
     }
     
     if ('effect ~ grad' %in% display) {
@@ -1339,10 +1348,10 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                 sub_effort = efforts[min_index]
                 print(paste("Effect size shown at the following efforts", sub_effort))
             }
+            else 
+                sub_effort = efforts
         } else if(!is.null(eff_sub_effort))
             sub_effort = eff_sub_effort
-        else 
-            sub_effort = efforts
 
         if (mob_out$type == "continuous")
             mob_out$S_df = mob_out$S_df %>%
@@ -1356,21 +1365,26 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                       #geom_smooth(aes(x=group, y = med_effect,
                       #                group = effort, color = effort),
                       #            method = 'lm', se = F) +
-                      geom_ribbon(aes(ymin = low_effect, ymax = high_effect,
-                                      group = effort, color = effort,
-                                      fill = 'null'),
-                                  alpha = .25) +
+                      #geom_ribbon(aes(ymin = low_effect, ymax = high_effect,
+                      #                group = effort, color = effort,
+                      #                fill = 'null'),
+                      #            alpha = .25) +
                       labs(x = mob_out$group_var) +
                       facet_wrap(. ~ test, scales = "free_y") +
                       labs(y = expression('effect (' * Delta * italic(S) * ')')) +
                       scale_fill_manual(name = element_blank(),
                                         values = c(null = 'grey40')) +
-                      scale_colour_gradient(trans=scales::log2_trans()) 
+                      scale_colour_gradient2(trans=scales::log2_trans(),
+                                            low=rgb(248, 203, 173, maxColorValue = 255),
+                                            mid=rgb(237,127, 52, maxColorValue = 255),
+                                            high=rgb(165, 0 , 33, maxColorValue = 255),
+                                            midpoint = 4)
+                #"#74c476" 
         if (eff_disp_pts)
             p_list[[3]] = p_list[[3]] + geom_point(aes(group = effort, color = effort))
         if (eff_disp_smooth)
             p_list[[3]] = p_list[[3]] + geom_smooth(aes(group = effort, color = effort),
-                                                    method = lm, se=F, lty=3)
+                                                    method = lm, se=F)
     }
 
     if ('stat ~ effort' %in% display) {
@@ -1423,8 +1437,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
             p_list[[2]] = p_list[[2]] + scale_y_continuous(trans = 'log2')
     }
     p_list = Filter(Negate(is.null), p_list)
-    egg::ggarrange(plots = p_list,
-                   labels = letters[1:length(p_list)])
+    egg::ggarrange(plots = p_list)
 }
 
 #' Plot summary graphics of the effect on species richness
