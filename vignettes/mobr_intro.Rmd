@@ -224,8 +224,8 @@ For the sake of speed we'll run the analysis with just 20 permutations but
 at least 200 are recommended for actual applications. 
 
 ```{r multi-scale analysis, eval=FALSE}
-inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                             type='discrete', log_scale=TRUE, n_perm = 199)
+inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
+                             type='discrete', log_scale=TRUE, n_perm = 99)
 ```
 
 ```{r, echo=FALSE}
@@ -236,27 +236,18 @@ The best way to examine the contents of this object is to plot it.
 First let's examine the three rarefaction curves:
 
 ```{r, fig.width=7, fig.height=3.5}
-plot(inv_deltaS, stat = 'b1', scale_by = 'indiv', display='rarefaction')
+plot(inv_deltaS, stat = 'b1', scale_by = 'indiv', display='S ~ effort')
 ```
 
 Now let's consider the effect sizes as a function of scale
 
 ```{r, fig.width=7, fig.height=3.5}
-plot(inv_deltaS, stat = 'b1', scale_by = 'indiv', display='effect_sizes')
+plot(inv_deltaS, stat = 'b1', scale_by = 'indiv', display='stat ~ effort')
 ```
 
 
 The grey polygons above represent the 95% quantile for the null models of
 no treatment effect. 
-
-Let's examine these individual effects across in a way that is easier to compare
-their effects using the function `overlap_effects`
-
-```{r, fig.width=7, fig.height=4}
-par(mfrow=c(1,2))
-overlap_effects(inv_deltaS, 'invaded', display='raw', leg_loc = 'bottomleft')
-overlap_effects(inv_deltaS, 'invaded', display='stacked', prop=T, leg_loc = NA)
-```
 
 # Herbaceous woodland plants response to fire
 
@@ -268,7 +259,8 @@ collected 26 sites that had been recently burned and 26 sites that they consider
 # central US woodland
 data(fire_comm)
 data(fire_plot_attr)
-fire_mob_in = make_mob_in(fire_comm, fire_plot_attr)
+fire_mob_in = make_mob_in(fire_comm, fire_plot_attr,
+                          coord_names = c('x', 'y'))
 ```
 
 Now that the data is loaded and we have created a `mob_in` object we can begin
@@ -333,38 +325,29 @@ Let's now look at the multi-scale analysis to examine the scale-dependence and
 relative strength of these effects. 
 
 ```{r, eval = FALSE}
-fire_deltaS = get_delta_stats(fire_mob_in, 'group', ref_group = 'unburned')
+fire_deltaS = get_delta_stats(fire_mob_in, 'group', ref_level = 'unburned',
+                              type = 'discrete', n_perm = 19)
 ```
 ```{r, echo = FALSE}
 load('../vignettes/fire_deltaS.Rdata')
 ```
 
-We'll start just by examining the rarefaction curves. 
+This time we'll examine the full suite of graphics for the multimetric analysis. 
 
-```{r, fig.width = 7, fig.height = 3.5}
-plot(fire_deltaS, 'burned', 'unburned', display = 'rarefaction')
+```{r, fig.width = 7, fig.height = 6, }
+plot(fire_deltaS, stat = 'b1')
 ```
 
 These confirm our expectations based on the two-scale analysis. The IBR indicates
 the increase in evenness in the unburned site particularly at coarse scales, the
 nsSBR illustrates that the N-effect is fairly strong, and the sSBR shows that their
-are some effects of aggregation. The delta effect curves can show this more clearly:
-
-```{r, fig.width = 7, fig.height = 3.5}
-plot(fire_deltaS, 'burned', 'unburned', display = 'ddelta S')
-```
-
+are some effects of aggregation. The delta effect curves can show this more clearly. 
 These plots illustrate that 1) none of these individual effects are of a really
 large magnitude ((\(\Delta\)*S* is never more or less than 2 species), 2) the
 *N*-effect is the largest driver of decreases in *S*, 3) the increased
 aggregation in the burned sites is only really relevant at fine spatial scales,
 and lastly 4) although evenness is lower in the burned sites it is only outside
 of the acceptance intervals at the finest spatial scales.
-
-```{r, fig.width=5, fig.height=5}
-overlap_effects(fire_deltaS, 'burned')
-```
-
 
 # Enrichment effect on aquatic experimental cattle tank communities
 
@@ -373,7 +356,8 @@ Here we reanalyze data from Chase (2010) in which freshwater aquatic communities
 ```{r}
 data(tank_comm)
 data(tank_plot_attr)
-tank_mob_in = make_mob_in(tank_comm, tank_plot_attr)
+tank_mob_in = make_mob_in(tank_comm, tank_plot_attr,
+                          coord_names = c('x', 'y'))
 ```
 
 The data is loaded let's examine the sSBR. 
@@ -416,14 +400,14 @@ common species was not changed by enrichment (as we observed in the plots of the
 SADs).
 
 ```{r, eval = FALSE}
-tank_deltaS = get_delta_stats(tank_mob_in, 'group', ref_group = 'low',
-                              inds = 10, log_scale = TRUE) 
+tank_deltaS = get_delta_stats(tank_mob_in, 'group', ref_level = 'low',
+                              inds = 10, log_scale = TRUE, type = 'discrete') 
 ```
 ```{r, echo = FALSE}
 load('../vignettes/tank_deltaS.Rdata')
 ```
-```{r, fig.width = 7, fig.height = 3.5}
-plot(tank_deltaS, 'high', 'low', display = 'ddelta S')
+```{r, fig.width = 7, fig.height = 6}
+plot(tank_deltaS, stat = 'b1')
 ```
 
 The delta S plot indicates that enrichment increased intra-specific aggregation
@@ -436,11 +420,6 @@ density effect, 2) the aggregation effects and SAD effects cancel each other
 out so strongly that a standard analysis of plot *S* indicates no change due to 
 enrichment when obviously there are large changes to the community influencing 
 richness. 
-
-
-```{r fig.width = 5, fig.height = 5}
-overlap_effects(tank_deltaS, 'high', leg_loc = 'bottomright')
-```
 
 # References
 
@@ -456,6 +435,6 @@ Jost, L. (2007). Partitioning Diversity into Independent Alpha and Beta Componen
 
 Myers, J. A., Chase, J. M., Crandall, R. M., & Jiménez, I. (2015). Disturbance alters beta‐diversity but not the relative importance of community assembly mechanisms. Journal of Ecology, 103(5), 1291-1299.
 
-McGlinn, D. J., Xiao, X., May, F., Gotelli, N. J., Blowes, S., Knight, T., … McGill, B. (2018). MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. BioRxiv, 244103. doi:10.1101/244103
+McGlinn, D.J. X. Xiao, F. May, S. Blowes, J. Chase, N. Gotelli, T. Knight, B. McGill, and O. Purschke. 2019. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. Methods in Ecology and Evolution. 10:258–269. https://doi.org/10.1111/2041-210X.13102
 
 Powell, K.I., Chase, J.M. & Knight, T.M. (2013). Invasive Plants Have Scale-Dependent Effects on Diversity by Altering Species-Area Relationships. Science, 339, 316–318.
