@@ -768,7 +768,7 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
 #' @import dplyr 
 #' @importFrom tidyr nest unnest
 #' @keywords internal 
-get_results = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
+get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                        stats=NULL) {
   
     # the approach taken here to get results for each group
@@ -780,27 +780,25 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
     group_rows = map(group_levels, ~ which(groups == .x))
     mob_in_groups = map(group_rows, ~ subset(mob_in, .x, type = 'integer'))
     names(mob_in_groups) = group_levels
-  
+    
     S_df = map_dfr(mob_in_groups, get_delta_curves, tests, inds, ind_dens,
                    n_plots, .id = "group")
     
     S_df = S_df %>% mutate_if(is.factor, as.character)
     
-    # truncate sample based sSBR curve for unbalanced designs between groups
+    # subsistute the group variable for the env variable
+    S_df = data.frame(env = env[match(S_df$group, groups)],
+                      S_df)
+
+    S_df = subset(S_df, select = -group)
     
-    
-    
-    if (type == 'discrete')
-        S_df$group = factor(S_df$group, levels = levels(groups))
-    if (type == 'continuous')
-        S_df$group = as.numeric(S_df$group)
     S_df = as_tibble(S_df)
   
     # now that S and effects computed across scale compute
     # summary statistics at each scale 
   
     delta_mod = function(df) {
-        lm(effect ~ group, data = df)
+        lm(effect ~ env, data = df)
     }
     
     if (is.null(stats)) {
@@ -826,7 +824,7 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
 #' @importFrom tibble tibble
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @keywords internal
-run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
+run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                            stats, n_perm, overall_p) {
     if (overall_p)
         p_val = vector('list', length(tests))
@@ -843,7 +841,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
         for (i in 1:n_perm) {
             null_mob_in = mob_in
             null_mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
-            null_results[[i]] = get_results(null_mob_in, groups, tests[k], inds,
+            null_results[[i]] = get_results(null_mob_in, env, groups, tests[k], inds,
                                             ind_dens, n_plots, type, stats)
             setTxtProgressBar(pb, i)
         }
@@ -855,7 +853,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
         # compute quantiles
         null_qt = list()
         null_qt$S_df = null_df$S_df %>% 
-                       group_by(group, test, sample, effort) %>%
+                       group_by(env, test, sample, effort) %>%
                        summarize(low_effect = quantile(effect, 0.025, na.rm = TRUE),
                                  med_effect = quantile(effect, 0.5, na.rm = TRUE), 
                                  high_effect = quantile(effect, 0.975, na.rm = TRUE))
@@ -874,7 +872,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
         # results then the funct must be distributed across the
         # various stats and tests
         if (overall_p) {
-            obs_df = get_results(mob_in, groups, tests[k], inds, ind_dens,
+            obs_df = get_results(mob_in, env, groups, tests[k], inds, ind_dens,
                                  n_plots, type, stats)
             obs_df = map(obs_df, function(x) data.frame(perm = 0, x))          
             null_df = map2(obs_df, null_df, rbind)
@@ -900,20 +898,21 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
 #' specifically to conduct one or more of these tests.
 #' 
 #' @param mob_in an object of class mob_in created by make_mob_in()
-#' @param group_var a character string specifying the environmental variable in
-#'   mob_in$env used for grouping plots
-#' @param env_var an optional character string specifying a environmental variable
-#'   in mob_in$env which is used in correlation analysis in the continuous case. 
-#'   It is not needed if "type" is discrete or group_var is used in correlation.
-#' @param ref_group a character string used to define the reference group to
-#'   which all other groups are compared with when "type" is discrete. It is not
-#'   needed when "type" is continuous.
+#' @param env_var a character string specifying the environmental variable in
+#'   \code{mob_in$env} to be used for explaining the change in richness
+#' @param group_var an optional character string 
+#'   in \code{mob_in$env} which defines how samples are pooled. If not provided
+#'   then each unique value of the argument \code{env_var} is used define the
+#'   groups. 
+#' @param ref_level a character string used to define the reference level of 
+#'   \code{env_var} to which all other groups are compared with. Only make sense
+#'   if \code{env_var} is a factor. 
 #' @param tests specifies which one or more of the three tests ('SAD', N', 'agg') 
 #'   are to be performed. Default is to include all three tests.
 #' @param type "discrete" or "continuous". If "discrete", pair-wise comparisons
 #'   are conducted between all other groups and the reference group. If
 #'   "continuous", a correlation analysis is conducted between the response
-#'   variables and group_var or env_var (if defined).
+#'   variables and env_var.
 #' @param stats a vector of character strings that specifies what statistics to
 #'   sumamrize effect sizes with. Options include: \code{c('betas', 'r2',
 #'   'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
@@ -959,7 +958,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
 #'  the overall p-values depend on scales of measurement yet do not explicitly 
 #'  reflect significance at any particular scale. 
 #' @return a "mob_out" object with attributes
-#' @author Xiao Xiao and Dan McGlinn
+#' @author Dan McGlinn and Xiao Xiao
 #' @import dplyr
 #' @import purrr
 #' @export
@@ -967,10 +966,10 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+#' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
 #'                            type='discrete', log_scale=TRUE, n_perm=10)
 #' plot(inv_mob_out)
-get_delta_stats = function(mob_in, group_var, ref_group = NULL, 
+get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL, 
                            tests = c('SAD', 'N', 'agg'),
                            type = c('continuous', 'discrete'),
                            stats = NULL, inds = NULL,
@@ -980,8 +979,11 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     # perform preliminary checks and variable assignments
     if (class(mob_in) != "mob_in")
         stop('mob_in must be output of function make_mob_in (i.e., of class mob_in')
-    if (!(group_var %in% names(mob_in$env)))
-        stop('group_var has to be one of the environmental variables in mob_in$env.')
+    if (!(env_var %in% names(mob_in$env)))
+        stop(paste(env_var, ' is not one of the columns in mob_in$env.'))
+    if (!is.null(group_var))
+        if  (!(group_var %in% names(mob_in$env)))
+            stop(paste(group_var, ' is not one of the columns in mob_in$env.')) 
     tests = match.arg(tests, several.ok = TRUE)
     test_status = tests %in% names(unlist(mob_in$tests)) 
     approved_tests = tests[test_status]
@@ -994,29 +996,39 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     type = match.arg(type)
     density_stat = match.arg(density_stat)
     
-    groups = mob_in$env[ , group_var]
-    if (type == 'discrete') {
-        if (class(groups) != 'factor') {
-            warning(paste("Converting", group_var, "to a factor with the default contrats because the argument type = 'discrete'."))
-            groups = as.factor(groups)
+    env = mob_in$env[ , env_var]
+    # if group_var is NULL then set all samples to same group (??)
+    if (is.null(group_var))
+        groups = env
+    else {
+        groups = mob_in$env[ , group_var]
+        # check that for the defined groups all samples have same environmental value
+        if (any(tapply(env, groups, var) > 0)) {
+            # bc all env values not the same for a group then compute mean value
+            print("Computed average environmental value for each group")
+            env = tapply(env, groups, mean)
         }
-        if (!is.null(ref_group)) { # need to ensure that contrasts on the reference group set
-            group_levs = levels(groups) 
-            if (ref_group %in% group_levs) {
-                if (group_levs[1] != ref_group)
-                    groups = factor(groups, 
-                                    levels = c(ref_group, 
-                                               group_levs[group_levs != ref_group]))
+    }    
+    if (type == 'discrete') {
+        if (class(env) != 'factor') {
+            warning(paste("Converting", env_var, "to a factor with the default contrasts because the argument type = 'discrete'."))
+            env = as.factor(env)
+        }
+        if (!is.null(ref_level)) { # need to ensure that contrasts on the reference level set
+            env_levels = levels(env) 
+            if (ref_level %in% env_levels) {
+                if (env_levels[1] != ref_level)
+                    env = factor(env, levels = c(ref_level, env_levels[env_levels != ref_level]))
             } else
-                stop(paste(ref_group, "is not in", group_var))
+                stop(paste(ref_level, "is not in", env_var))
         }    
     } else if (type == 'continuous') {
-        if (!is.numeric(groups)) {
-            warning(paste("Converting", group_var, "to numeric because the argument type = 'continuous'"))
-            groups = as.numeric(as.character(groups))
+        if (!is.numeric(env)) {
+            warning(paste("Converting", env_var, "to numeric because the argument type = 'continuous'"))
+            env = as.numeric(as.character(env))
         }
-        if (!is.null(ref_group))
-            stop('Defining a reference group (i.e., ref_group) only makes sense when doing a discrete analysis (i.e., type = "discrete")')
+        if (!is.null(ref_level))
+            stop('Defining a reference level (i.e., ref_level) only makes sense when doing a discrete analysis (i.e., type = "discrete")')
     }
     #TODO It needs to be clear which beta coefficients apply to 
     # which factor level - this is likely most easily accomplished by appending
@@ -1028,27 +1040,29 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     #    env_levels = tapply(mob_in$env[, env_var],
     #                        list(groups), mean)
     #}
-    N_max = min(tapply(rowSums(mob_in$comm), list(groups), sum))
+    N_max = min(tapply(rowSums(mob_in$comm), groups, sum))
     inds = get_inds(N_max, inds, log_scale)
     ind_dens = get_ind_dens(mob_in$comm, density_stat)
-    n_plots = min(tapply(mob_in$comm[ , 1], list(groups), length))
+    n_plots = min(tapply(mob_in$comm[ , 1], groups, length))
 
     out = list()
-    out$group_var = group_var
+    out$env_var = env_var
+    if (!is.null(group_var))
+        out$group_var = group_var
     out$type = type
     out$tests = tests
     out$log_scale = log_scale
     out$density_stat = list(density_stat = density_stat,
                             ind_dens = ind_dens)
     out = append(out, 
-                 get_results(mob_in, groups, tests, inds, ind_dens, n_plots,
+                 get_results(mob_in, env, groups, tests, inds, ind_dens, n_plots,
                              type, stats))
 
-    null_results = run_null_models(mob_in, groups, tests, inds, ind_dens,
+    null_results = run_null_models(mob_in, env, groups, tests, inds, ind_dens,
                                    n_plots, type, stats, n_perm, overall_p)
     # merge the null_results into the model data.frame
     out$S_df = left_join(out$S_df, null_results$S_df, 
-                         by = c("group", "test", "sample", "effort"))
+                         by = c("env", "test", "sample", "effort"))
     out$mod_df = left_join(out$mod_df, null_results$mod_df, 
                            by = c("test", "sample", "effort", "index"))
     if (overall_p)
@@ -1314,9 +1328,9 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
         facet_labs = c(`agg` = 'sSBR',
                        `N` = 'nsSBR',
                        `SAD` = 'IBR')      
-        p_list[[1]] = ggplot(mob_out$S_df, aes(group, S)) +
+        p_list[[1]] = ggplot(mob_out$S_df, aes(env, S)) +
                           geom_point(aes(group = effort, color = effort)) +
-                          labs(x = mob_out$group_var) +
+                          labs(x = mob_out$env_var) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs))
     }
@@ -1326,12 +1340,12 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                        `N` = 'nsSBR',
                        `SAD` = 'IBR')
         p_list[[2]] = ggplot(mob_out$S_df, aes(effort, S)) +
-                          geom_line(aes(group = group, color = group)) +
+                          geom_line(aes(group = env, color = env)) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs)) +
                           labs(y = expression("Richness (" *
                                                 italic(S) * ")"),
-                               color = mob_out$group_var) 
+                               color = mob_out$env_var) 
     }
     
     if ('effect ~ grad' %in% display) {
@@ -1356,12 +1370,12 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
         if (mob_out$type == "continuous")
             mob_out$S_df = mob_out$S_df %>%
                   group_by(test, effort) %>%
-                  mutate(low_effect = predict(loess(low_effect ~ group), group)) %>%
-                  mutate(high_effect = predict(loess(high_effect ~ group), group)) 
+                  mutate(low_effect = predict(loess(low_effect ~ env), env)) %>%
+                  mutate(high_effect = predict(loess(high_effect ~ env), env)) 
 
         
         p_list[[3]] = ggplot(subset(mob_out$S_df, effort %in% sub_effort),
-                                    aes(group, effect)) +
+                                    aes(env, effect)) +
                       #geom_smooth(aes(x=group, y = med_effect,
                       #                group = effort, color = effort),
                       #            method = 'lm', se = F) +
@@ -1369,7 +1383,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                       #                group = effort, color = effort,
                       #                fill = 'null'),
                       #            alpha = .25) +
-                      labs(x = mob_out$group_var) +
+                      labs(x = mob_out$env_var) +
                       facet_wrap(. ~ test, scales = "free_y") +
                       labs(y = expression('effect (' * Delta * italic(S) * ')')) +
                       scale_fill_manual(name = element_blank(),
