@@ -186,7 +186,7 @@ samples occur several times in the resampled data sets.
 # a binary grouping variable (uninvaded or invaded)
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, c('x', 'y'))
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
                           n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
