@@ -6,7 +6,7 @@
 the three components of community structure: SAD, N, and aggregation}
 \usage{
 get_delta_curves(x, tests = c("SAD", "N", "agg"), inds = NULL,
-  ind_dens = NULL, n_plots = NULL)
+  ind_dens = NULL, n_plots = NULL, spat_algo = NULL)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object or 2) a vector which contains

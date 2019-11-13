@@ -233,7 +233,7 @@ calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
                                  index = 'S_n',
                                  effort = effort, value = NA)
         out = rbind(out, dat_S_n)
-        S_n  = apply(abund_mat, 1, rarefaction, method = 'indiv', effort = effort,
+        S_n  = apply(abund_mat, 1, rarefaction, method = 'IBR', effort = effort,
                      extrapolate = extrapolate, return_NA = return_NA,
                      quiet_mode = TRUE)
         out$value[out$index == "S_n"] = as.numeric(t(S_n))
@@ -539,7 +539,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #' # a binary grouping variable (uninvaded or invaded)
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, c('x', 'y'))
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
 #'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
@@ -650,7 +650,7 @@ get_mob_stats = function(mob_in, group_var,
              dat_samples = rbind(dat_samples, dat_beta_S_n)
         }
         # clean up dat_groups by removing S_n computed using alpha n-value
-        dat_groups = subset(dat_groups, !(effort %in% effort_samples))
+        #dat_groups = subset(dat_groups, !(effort %in% effort_samples))
     } # end rarefied richness
 
     # Number of rare species ---------------------------------------------------------

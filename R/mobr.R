@@ -191,16 +191,29 @@ sphere_dist = function(coords){
 #' Rarefied Species Richness
 #' 
 #' The expected number of species given a particular number of individuals or
-#' samples under and assumption of random sampling with replacement.
+#' samples under random and spatially explicit nearest neighbor sampling
 #' 
 #' 
 #' @param x can either be a: 1) mob_in object, 2) community matrix-like
 #'  object in which rows represent plots and columns represent species, or 3)
 #'  a vector which contains the abundance of each species. 
-#' @param method either 'indiv', 'samp', or 'spat' for individual, sample, or
-#'   sample spatially explicit based rarefaction respectively. To compute the
-#'   sample-based, non-spatial rarefaction curve specify 'indiv' method with the
-#'   appropriate \code{dens_ratio} (see Details).
+#' @param method a character string that specifies the method of rarefaction 
+#'   curve construction it can be one of the following: 
+#' \itemize{
+#'     \item \code{'IBR'} ... individual-based rarefaction in which species
+#'     are accumulated by randomly sampling individuals
+#'     \item \code{'SBR'} ... sample-based rarefaction in which species are 
+#'     accumulated by randomly sampling samples (i.e., plots). Note that within plot spatial 
+#'     aggregration is maintained with this approach. Although this curve
+#'     is implemented here, it is not used in the current version of the MoB framework
+#'     \item \code{'nsSBR'} ... non-spatial, sampled-based rarefaction in which
+#'     species are accumulated by randomly sampling samples that represent a 
+#'     spatially random sample of individuals (i.e., no with-in plot spatial 
+#'     aggregation). The argument \code{dens_ratio} must also be set otherwise 
+#'     this sampling results in a curve idential to the IBR (see Details). 
+#'     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
+#'     are accumulated by including spatially proximate samples first. 
+#' }
 #' @param effort optional argument to specify what number of individuals or 
 #'   number of samples depending on 'method' to compute rarefied richness as. If
 #'   not specified all possible values from 1 to the maximum sampling effort are
@@ -227,17 +240,27 @@ sphere_dist = function(coords){
 #'   \code{extrapolate = FALSE}.
 #' @param quiet_mode boolean defaults to FALSE, if TRUE then warnings and other
 #'   non-error messages are suppressed.
+#' @param spat_algo character string that can be either: \code{'kNN'} or \code{'kNCN'}
+#' for k-neareast neighbor and k-nearest centroid neighbor sampling 
+#' respectively (see Details). 
 #' @inheritParams make_mob_in 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #'   the random sampling expectation for the individual and sampled based
 #'   rarefaction methods. The spatially constrained rarefaction curve (Chiarucci
 #'   et al. 2009) also known as the sample-based accumulation curve (Gotelli and
-#'   Colwell 2001) is computed by sampling each plot in the order of their
-#'   spatial proximity. If plots have the same distance from the focal plot then
-#'   one is chosen randomly to be sampled first. Each plot in the dataset is
-#'   treated as a starting point and then the mean of these n possible
-#'   accumulation curves is computed.
+#'   Colwell 2001) can be computed in one of two ways which is determined by the
+#'   argument \code{spat_algo}. In the kNN approach each plot is accumulated the
+#'   order of their spatial proximity to the original focal cell. If plots have
+#'   the same distance from the focal plot then one is chosen randomly to be
+#'   sampled first. In the kNCN approach a new centroid is computed after each
+#'   plot is accumulated, then disances are recomputed from that new centroid to
+#'   all other plots and the next nearest is sampled. The kNN is faster because
+#'   the distance matrix only needs to be computed once, but the sampling of
+#'   kNCN which simleaneously minimizes spatial disance and extent is more
+#'   similar to an actual person searching a field for species. For both kNN and
+#'   kNCN ,each plot in the dataset is treated as a starting point and then the
+#'   mean of these n possible accumulation curves is computed.
 #' 
 #' For individual-based rarefaction if effort is greater than the number of
 #' individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
@@ -281,32 +304,48 @@ sphere_dist = function(coords){
 #' # rarefaction can be performed on different data inputs
 #' # all three give same answer
 #' # 1) the raw community site-by-species matrix
-#' rarefaction(inv_comm, method='indiv', effort=1:10)
+#' rarefaction(inv_comm, method='IBR', effort=1:10)
 #' # 2) the SAD of the community
-#' rarefaction(inv_comm, method='indiv', effort=1:10)
+#' rarefaction(inv_comm, method='IBR', effort=1:10)
 #' # 3) a mob_in class object
 #' # rescaling of individual based rarefaction 
 #' # when the density ratio is 1 the richness values are 
 #' # identical to unscale rarefaction
-#' rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=1)
+#' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1)
 #' # however the curve is either shrunk when density is higher than 
 #' # the reference value (i.e., dens_ratio < 1)
-#' rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=0.5)
+#' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=0.5)
 #' # the curve is stretched when density is lower than the 
 #' # reference value (i.e., dens_ratio > 1)
-#' rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=1.5)
+#' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1.5)
 #' # sample based rarefaction under random sampling
-#' rarefaction(inv_comm, method='samp')
+#' rarefaction(inv_comm, method='SBR')
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
-#' rarefaction(inv_comm, method='spat', coords=inv_plot_attr[ , c('x','y')],
+#' rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
 #'             latlong=FALSE)
 #' # the syntax is simplier if suppling a mob_in object
-#' rarefaction(inv_mob_in, method='spat')
+#' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
+#' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
 rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
-                       dens_ratio=1, extrapolate=FALSE, return_NA = FALSE, 
-                       quiet_mode=FALSE) {
-    if (!any(method %in% c('indiv', 'samp', 'spat', 'kNCN')))
-        stop('method must be "indiv", "samp", or "spat", "kNCN" for random individual, random sample, and spatial sample-based rarefaction, k-nearest centroid neighbour sSBR, respectively')
+                       dens_ratio=1, extrapolate=FALSE, return_NA=FALSE, 
+                       quiet_mode=FALSE, spat_algo=NULL) {
+    
+    if (method == 'indiv') {
+        warning('method == "indiv" is depreciated and should be set to "IBR" for individual-based rarefaction')
+        method = 'IBR'
+    } else if (method == 'samp') {
+        warning('method == "samp" is depreciated and should be set to "SBR" for sample-based rarefaction')
+        method = 'SBR'
+    } else if (method == 'spat') {
+        warning('method == "spat" is depreciated and should be set to "sSBR" for spatial, sample-based rarefaction')
+        method = 'sSBR'
+    } else if (!any(method %in% c('IBR', 'SBR', 'nsSBR', 'sSBR')))
+        stop('The argument "method" must be set to either "IBR", "SBR", "nsSBR",',
+             ' or "sSBR" for random individual, random sample, non-spatial,', 
+             ' sample-based (nsSBR), and spatial, sample-based rarefaction (sSBR)',
+             ' respectively.')
+    if (method == 'nsSBR' & dens_ratio == 1)
+        warning('The nonspatial, sample-based rarefaction (nsSBR) curve only differs from the IBR when compared with a reference density by setting "dens_ratio" not equal to 1')
     if (class(x) == 'mob_in') {
         x_mob_in = x
         x = x_mob_in$comm
@@ -316,25 +355,25 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
         if (is.null(coords)){
-          if(is.null(x_mob_in$spat)){
-            stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
+            if (is.null(x_mob_in$spat)){
+                stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
             }
-          coords = x_mob_in$spat
+            coords = x_mob_in$spat
         }
     }
-    if (method == 'spat') method = 'kNCN'
-    if (method == 'samp' | method == 'spat' | method == 'kNCN') {
+    if (method == 'SBR' | method == 'sSBR') {
         if (is.null(dim(x)))
             stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
         else {
             x = (x > 0) * 1             
             # all sites are counted as samples even empty ones
             n = nrow(x) 
-            if (method == 'samp')
+            if (method == 'SBR')
                 x = colSums(x)
         }
-    }
-    if (method == 'indiv') {
+    } else if (!is.null(spat_algo))
+        warning("Setting spat_algo to a non-NULL value only has consequences when method = sSBR")
+    if (method == 'IBR') {
         if (!is.null(dim(x)))
             x = colSums(x)
         n = sum(x)
@@ -349,7 +388,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             stop('It does not make sense to set "extrapolate" and "return_NA" to both be TRUE, see documentation')
         if (!quiet_mode) {
             warning_mess = paste('"effort" larger than total number of',
-                                 ifelse(method == 'indiv', 'individuals', 'samples'),
+                                 ifelse(method == 'IBR', 'individuals', 'samples'),
                                  'returning')
             if (extrapolate)
                 warning(paste(warning_mess, 'extrapolated S using Chao1'))
@@ -361,86 +400,87 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
     } else if (extrapolate)
         if (!quiet_mode) 
             message('Richness was not extrapolated because effort less than or equal to the number of samples')
-    if (method == 'spat') {
+    if (method == 'sSBR') {
+        if (is.null(spat_algo)) 
+            spat_algo = 'kNCN'
+        if (spat_algo == 'kNN') {
       
-      explicit_loop = matrix(0, n, n)
-      if (is.null(latlong))
-        stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
-      if (latlong){
-        # Compute distance on sphere if xy are longitudes and latitudes
-        # Assume x is longitude and y is latitude
-        pair_dist = sphere_dist(coords)
-      } else {
-        pair_dist = as.matrix(dist(coords))
-      }
-      for (i in 1:n) {
-        dist_to_site = pair_dist[i, ]
-        # Shuffle plots, so that tied grouping is not biased by original order.
-        new_order = sample(1:n)  
-        dist_new = dist_to_site[new_order]
-        new_order = new_order[order(dist_new)]
-        # Move focal site to the front
-        new_order = c(i, new_order[new_order != i])
-        comm_ordered = x[new_order, ]
-        # 1 for absence, 0 for presence
-        comm_bool = as.data.frame((comm_ordered == 0) * 1) 
-        rich = cumprod(comm_bool)
-        explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
-      }
-      out = apply(explicit_loop, 1, mean)[effort]
-      
-        
-    }
-    else {
-      if( method == "kNCN"){
-        out = kNCN_average(x=x,coords=coords)[effort]
-      } else{
+            explicit_loop = matrix(0, n, n)
+            if (is.null(latlong))
+                stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
+            if (latlong){
+                # Compute distance on sphere if xy are longitudes and latitudes
+                # Assume x is longitude and y is latitude
+                pair_dist = sphere_dist(coords)
+            } else {
+                pair_dist = as.matrix(dist(coords))
+            }
+            for (i in 1:n) {
+                dist_to_site = pair_dist[i, ]
+                # Shuffle plots, so that tied grouping is not biased by original order.
+                new_order = sample(1:n)  
+                dist_new = dist_to_site[new_order]
+                new_order = new_order[order(dist_new)]
+                # Move focal site to the front
+                new_order = c(i, new_order[new_order != i])
+                comm_ordered = x[new_order, ]
+                # 1 for absence, 0 for presence
+                comm_bool = as.data.frame((comm_ordered == 0) * 1) 
+                rich = cumprod(comm_bool)
+                explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+            }
+            out = apply(explicit_loop, 1, mean)[effort]
+            
+        }
+        else if (spat_algo == "kNCN") 
+            out = kNCN_average(x=x, coords=coords)[effort]
+    } 
+    else { 
         # drop species with no observations  
         x = x[x > 0] 
         S = length(x)
         if (dens_ratio == 1) {
-          ldiv = lchoose(n, effort)
+            ldiv = lchoose(n, effort)
         } else {
-          effort = effort[effort / dens_ratio <= n]
-          ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
+            effort = effort[effort / dens_ratio <= n]
+            ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
         }
         p = matrix(0, sum(effort <= n), S)
         out = rep(NA, length(effort))
         S_ext = NULL
         for (i in seq_along(effort)) {
-          if (effort[i] <= n) {
-            if (dens_ratio == 1) {
-              p[i, ] = ifelse(n - x < effort[i], 0, 
-                              exp(lchoose(n - x, effort[i]) - ldiv[i]))
-            } else {
-              p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
-                              exp(suppressWarnings(lgamma(n - x + 1)) -
-                                    suppressWarnings(lgamma(n - x - effort[i] /
-                                                              dens_ratio + 1)) +
-                                    ldiv[i]))
-            }
-          } else if (extrapolate) {
-            f1 = sum(x == 1)
-            f2 = sum(x == 2)
-            # estimation of unseen species via Chao1                
-            f0_hat <- ifelse(f2 == 0, 
-                             (n - 1) / n * f1 * (f1 - 1) / 2, 
-                             (n - 1) / n * f1^2 / 2 / f2)
-            A = n * f0_hat / (n * f0_hat + f1)
-            S_ext = c(S_ext, ifelse(f1 == 0, S, 
-                                    S + f0_hat * (1 - A ^ (effort[i] - n))))
-          }
-          else if (return_NA)
-            S_ext = c(S_ext, NA)
-          else 
-            S_ext = c(S_ext, S)
+            if (effort[i] <= n) {
+                if (dens_ratio == 1) {
+                    p[i, ] = ifelse(n - x < effort[i], 0, 
+                                    exp(lchoose(n - x, effort[i]) - ldiv[i]))
+                } else {
+                    p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
+                                    exp(suppressWarnings(lgamma(n - x + 1)) -
+                                        suppressWarnings(lgamma(n - x - effort[i] /
+                                                                dens_ratio + 1)) +
+                                         ldiv[i]))
+                }
+            } else if (extrapolate) {
+                f1 = sum(x == 1)
+                f2 = sum(x == 2)
+                # estimation of unseen species via Chao1                
+                f0_hat <- ifelse(f2 == 0, 
+                                 (n - 1) / n * f1 * (f1 - 1) / 2, 
+                                 (n - 1) / n * f1^2 / 2 / f2)
+                A = n * f0_hat / (n * f0_hat + f1)
+                S_ext = c(S_ext, ifelse(f1 == 0, S, 
+                                        S + f0_hat * (1 - A ^ (effort[i] - n))))
+              }
+              else if (return_NA)
+                  S_ext = c(S_ext, NA)
+              else 
+                  S_ext = c(S_ext, S)
         }
         out = rep(NA, length(effort))
         out[effort <= n] = rowSums(1 - p)
         out[effort > n] = S_ext
-      }
-      
     }
+      
     names(out) = effort
     return(out)
 }
@@ -525,7 +565,8 @@ avg_nn_dist = function(coords) {
 #' @importFrom tibble tibble
 #' @keywords internal
 get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
-                            inds=NULL, ind_dens=NULL, n_plots=NULL) {
+                            inds=NULL, ind_dens=NULL, n_plots=NULL,
+                            spat_algo=NULL) {
     if (is.null(inds) & any(c('SAD', 'N') %in% tests))
         stop('If SAD or N effect to be calculated inds must be specified')
     if (is.null(ind_dens) & 'N' %in% tests)
@@ -534,7 +575,7 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
         stop('If N or agg effects to be computed x must be a mob_in object')
     out = list()
     if ('SAD' %in% tests) {
-        S_SAD = rarefaction(x, 'indiv', inds)
+        S_SAD = rarefaction(x, 'IBR', inds)
         out$SAD = data.frame(test = 'SAD', sample = 'indiv',
                              effort = inds, S = S_SAD, effect = S_SAD,
                              stringsAsFactors = FALSE)
@@ -542,9 +583,9 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
     if ('N' %in% tests) {
         comm_dens = sum(x$comm) / nrow(x$comm)
         dens_ratio = ind_dens / comm_dens
-        S_N = rarefaction(x, 'indiv', inds, dens_ratio = dens_ratio)
+        S_N = rarefaction(x, 'IBR', inds, dens_ratio = dens_ratio)
         if (!('SAD' %in% tests))
-            S_SAD = rarefaction(x, 'indiv', inds)
+            S_SAD = rarefaction(x, 'IBR', inds)
         effect = S_N - S_SAD
         out$N = data.frame(test = 'N', sample = 'indiv', 
                            effort = inds, S = S_N, effect,
@@ -553,10 +594,10 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
     if ('agg' %in% tests) {
         if (is.null(n_plots))
             n_plots = nrow(x$comm)
-        S_agg = rarefaction(x, 'spat', 1:n_plots)
+        S_agg = rarefaction(x, 'sSBR', 1:n_plots, spat_algo=spat_algo)
         ind_density = sum(x$comm) / nrow(x$comm)
         samp_effort = round(1:n_plots * ind_density)
-        S_N = rarefaction(x, 'indiv', samp_effort)
+        S_N = rarefaction(x, 'IBR', samp_effort)
         effect = S_agg - S_N
         out$agg = data.frame(test = 'agg', sample = 'plot', 
                              effort = as.numeric(names(S_agg)),
@@ -1171,20 +1212,19 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # random individual based rarefaction curves
-#' plot_rarefaction(inv_mob_in, 'group', 'indiv',
+#' plot_rarefaction(inv_mob_in, 'group', 'IBR',
 #'                  pooled=TRUE, leg_loc='bottomright')
-#' plot_rarefaction(inv_mob_in, 'group', 'indiv',
+#' plot_rarefaction(inv_mob_in, 'group', 'IBR',
 #'                  pooled=FALSE, log='x')
 #' # random sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'samp', log='xy')
+#' plot_rarefaction(inv_mob_in, 'group', 'SBR', log='xy')
 #' # spatial sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'spat', log='xy',
-#'                  coords = inv_mob_in$spat)                 
+#' plot_rarefaction(inv_mob_in, 'group', 'sSBR', log='xy')
 plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T, 
-                            col=NULL, lwd=3, log='', leg_loc = 'topleft',
+                            spat_algo=NULL, col=NULL, lwd=3, log='', leg_loc = 'topleft',
                             ...) {
-    if (pooled == FALSE & method != 'indiv')
-        stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="indiv")')
+    if (pooled == FALSE & method != 'IBR')
+        stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
     env_data = mob_in$env[ , env_var]
     grps = sort(unique(as.character(env_data)))
     if (is.null(col)) 
@@ -1199,7 +1239,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
     if (pooled) {
         Srare = lapply(grps, function(x) 
                        rarefaction(subset(mob_in, env_data == x, 'logical'),
-                                   method, ...))
+                                   method, spat_algo=spat_algo, ...))
         xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
         ylim = c(1, max(unlist(Srare)))
         n = as.numeric(names(Srare[[1]]))
