@@ -83,7 +83,7 @@ First let's look at the spatial, sample-based rarefaction (sSBR) in which sample
 added depending on their spatial proximity. 
 
 ```{r, fig.width = 5, fig.height = 5}
-plot_rarefaction(inv_mob_in, 'group', 'spat', lwd=4)
+plot_rarefaction(inv_mob_in, 'group', 'sSBR', lwd=4)
 ```
 
 We can see that invasion decreases richness and that the magnitude of the effect
@@ -95,9 +95,9 @@ only reflect the shape of the SAD (i.e., no individual density or aggregation ef
 
 ```{r, fig.width = 7, fig.height=4}
 par(mfrow=c(1,2))
-plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=F, lwd=2,
+plot_rarefaction(inv_mob_in, 'group', 'IBR', pooled=F, lwd=2,
                  leg_loc='topright')
-plot_rarefaction(inv_mob_in, 'group', 'indiv', pooled=T, lwd=4,
+plot_rarefaction(inv_mob_in, 'group', 'IBR', pooled=T, lwd=4,
                  leg_loc=NA)
 ```
 
@@ -269,7 +269,7 @@ dataset before attempting to analyze its patterns. We will start our exploration
 with the sSBR.
 
 ```{r}
-plot_rarefaction(fire_mob_in, 'group', 'spat')
+plot_rarefaction(fire_mob_in, 'group', 'sSBR')
 ```
 
 The sSBR indicates that the unburned site has higher species richness across
@@ -363,7 +363,7 @@ tank_mob_in = make_mob_in(tank_comm, tank_plot_attr,
 The data is loaded let's examine the sSBR. 
 
 ```{r, fig.width = 5, fig.height = 5}
-plot_rarefaction(tank_mob_in, 'group', 'spat')
+plot_rarefaction(tank_mob_in, 'group', 'sSBR')
 ```
 
 Clearly enrichment had a big effect on species richness as it is larger in the "high" productivity (i.e., enriched) community compared to the "low" community
