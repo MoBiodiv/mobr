@@ -109,7 +109,8 @@ kNCN_average = function(x, n = NULL, coords = NULL, repetitions = 1,
     return(rowMeans(out))
 }
 
-#' Compare all sample-based curves (random, spatiallyconstrained-k-NN, spatially constrained-k-NCN)
+#' Compare all sample-based curves (random, spatially constrained-k-NN,
+#'  spatially constrained-k-NCN)
 #'
 #'This is just plotting all curves.
 #'
@@ -122,12 +123,12 @@ kNCN_average = function(x, n = NULL, coords = NULL, repetitions = 1,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coords = c('x', 'y'))
-#' compare_curves(inv_mob_in)
-compare_curves = function(x) {
+#' compare_samp_rarefaction(inv_mob_in)
+compare_samp_rarefaction = function(x) {
     
-    centroid_curve = kNCN_average(x)
-    spatcurve = rarefaction(x, method = "spat")
-    samplecurve = rarefaction(x, method = "samp")
+    centroid_curve = rarefaction(x, method = "sSBR", spat_algo = "kNCN")
+    spatcurve = rarefaction(x, method = "sSBR", spat_algo = "kNN")
+    samplecurve = rarefaction(x, method = "SBR")
     plot(samplecurve, type = "l", xlab = "Samples", ylab = "Expected species richness")
     lines(centroid_curve, col = 2)
     lines(spatcurve, col = 3)

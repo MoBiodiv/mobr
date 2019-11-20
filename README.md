@@ -8,10 +8,10 @@ estimating biodiversity and the components of its change.
 
 The concepts and methods behind this R package are described in two preprints that are both currently in review. 
 
-McGlinn, D.J. X. Xiao, F. May, S. Blowes, J. Chase, N. Gotelli, T. Knight, B. McGill, and O. Purschke. preprint. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. *bioRxiv* 244103. doi: https://doi.org/10.1101/244103.
+McGlinn, D.J. X. Xiao, F. May, S. Blowes, J. Chase, N. Gotelli, T. Knight, B. McGill, and O. Purschke. 2019. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. Methods in Ecology and Evolution. 10:258–269. https://doi.org/10.1111/2041-210X.13102
 
 
-Chase, J.M., B. McGill, D.J. McGlinn, F. May, S.A. Blowes, X. Xiao, T. Knight. prepint. Embracing scale-dependence to achieve a deeper understanding of biodiversity and its change across communities. *bioRxiv* 275701. doi: https://doi.org/10.1101/275701
+Chase, J.M., B. McGill, D.J. McGlinn, F. May, S.A. Blowes, X. Xiao, T. Knight. 2018. Embracing scale-dependence to achieve a deeper understanding of biodiversity and its change across communities. Ecology Letters. 21: 1737–1751. https://doi.org/10.1111/ele.13151, 
 
 
 # How to install mobr
@@ -52,7 +52,7 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
 inv_stats = get_mob_stats(inv_mob_in, 'group')
 plot(inv_stats)
 inv_deltaS = get_delta_stats(inv_mob_in, 'group',ref_group='uninvaded',
-                             type='discrete', log_scale=TRUE, n_perm = 100)
+                             type='discrete', log_scale=TRUE, n_perm = 10)
 plot(inv_deltaS, 'b1')
 ```
 

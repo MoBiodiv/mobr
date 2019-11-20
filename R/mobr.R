@@ -191,16 +191,29 @@ sphere_dist = function(coords){
 #' Rarefied Species Richness
 #' 
 #' The expected number of species given a particular number of individuals or
-#' samples under and assumption of random sampling with replacement.
+#' samples under random and spatially explicit nearest neighbor sampling
 #' 
 #' 
 #' @param x can either be a: 1) mob_in object, 2) community matrix-like
 #'  object in which rows represent plots and columns represent species, or 3)
 #'  a vector which contains the abundance of each species. 
-#' @param method either 'indiv', 'samp', or 'spat' for individual, sample, or
-#'   sample spatially explicit based rarefaction respectively. To compute the
-#'   sample-based, non-spatial rarefaction curve specify 'indiv' method with the
-#'   appropriate \code{dens_ratio} (see Details).
+#' @param method a character string that specifies the method of rarefaction 
+#'   curve construction it can be one of the following: 
+#' \itemize{
+#'     \item \code{'IBR'} ... individual-based rarefaction in which species
+#'     are accumulated by randomly sampling individuals
+#'     \item \code{'SBR'} ... sample-based rarefaction in which species are 
+#'     accumulated by randomly sampling samples (i.e., plots). Note that within plot spatial 
+#'     aggregration is maintained with this approach. Although this curve
+#'     is implemented here, it is not used in the current version of the MoB framework
+#'     \item \code{'nsSBR'} ... non-spatial, sampled-based rarefaction in which
+#'     species are accumulated by randomly sampling samples that represent a 
+#'     spatially random sample of individuals (i.e., no with-in plot spatial 
+#'     aggregation). The argument \code{dens_ratio} must also be set otherwise 
+#'     this sampling results in a curve idential to the IBR (see Details). 
+#'     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
+#'     are accumulated by including spatially proximate samples first. 
+#' }
 #' @param effort optional argument to specify what number of individuals or 
 #'   number of samples depending on 'method' to compute rarefied richness as. If
 #'   not specified all possible values from 1 to the maximum sampling effort are
@@ -227,17 +240,27 @@ sphere_dist = function(coords){
 #'   \code{extrapolate = FALSE}.
 #' @param quiet_mode boolean defaults to FALSE, if TRUE then warnings and other
 #'   non-error messages are suppressed.
+#' @param spat_algo character string that can be either: \code{'kNN'} or \code{'kNCN'}
+#' for k-neareast neighbor and k-nearest centroid neighbor sampling 
+#' respectively (see Details). 
 #' @inheritParams make_mob_in 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #'   the random sampling expectation for the individual and sampled based
 #'   rarefaction methods. The spatially constrained rarefaction curve (Chiarucci
 #'   et al. 2009) also known as the sample-based accumulation curve (Gotelli and
-#'   Colwell 2001) is computed by sampling each plot in the order of their
-#'   spatial proximity. If plots have the same distance from the focal plot then
-#'   one is chosen randomly to be sampled first. Each plot in the dataset is
-#'   treated as a starting point and then the mean of these n possible
-#'   accumulation curves is computed.
+#'   Colwell 2001) can be computed in one of two ways which is determined by the
+#'   argument \code{spat_algo}. In the kNN approach each plot is accumulated the
+#'   order of their spatial proximity to the original focal cell. If plots have
+#'   the same distance from the focal plot then one is chosen randomly to be
+#'   sampled first. In the kNCN approach a new centroid is computed after each
+#'   plot is accumulated, then disances are recomputed from that new centroid to
+#'   all other plots and the next nearest is sampled. The kNN is faster because
+#'   the distance matrix only needs to be computed once, but the sampling of
+#'   kNCN which simleaneously minimizes spatial disance and extent is more
+#'   similar to an actual person searching a field for species. For both kNN and
+#'   kNCN ,each plot in the dataset is treated as a starting point and then the
+#'   mean of these n possible accumulation curves is computed.
 #' 
 #' For individual-based rarefaction if effort is greater than the number of
 #' individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
@@ -281,32 +304,48 @@ sphere_dist = function(coords){
 #' # rarefaction can be performed on different data inputs
 #' # all three give same answer
 #' # 1) the raw community site-by-species matrix
-#' rarefaction(inv_comm, method='indiv', effort=1:10)
+#' rarefaction(inv_comm, method='IBR', effort=1:10)
 #' # 2) the SAD of the community
-#' rarefaction(inv_comm, method='indiv', effort=1:10)
+#' rarefaction(inv_comm, method='IBR', effort=1:10)
 #' # 3) a mob_in class object
 #' # rescaling of individual based rarefaction 
 #' # when the density ratio is 1 the richness values are 
 #' # identical to unscale rarefaction
-#' rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=1)
+#' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1)
 #' # however the curve is either shrunk when density is higher than 
 #' # the reference value (i.e., dens_ratio < 1)
-#' rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=0.5)
+#' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=0.5)
 #' # the curve is stretched when density is lower than the 
 #' # reference value (i.e., dens_ratio > 1)
-#' rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=1.5)
+#' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1.5)
 #' # sample based rarefaction under random sampling
-#' rarefaction(inv_comm, method='samp')
+#' rarefaction(inv_comm, method='SBR')
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
-#' rarefaction(inv_comm, method='spat', coords=inv_plot_attr[ , c('x','y')],
+#' rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
 #'             latlong=FALSE)
 #' # the syntax is simplier if suppling a mob_in object
-#' rarefaction(inv_mob_in, method='spat')
+#' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
+#' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
 rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
-                       dens_ratio=1, extrapolate=FALSE, return_NA = FALSE, 
-                       quiet_mode=FALSE) {
-    if (!any(method %in% c('indiv', 'samp', 'spat', 'kNCN')))
-        stop('method must be "indiv", "samp", or "spat", "kNCN" for random individual, random sample, and spatial sample-based rarefaction, k-nearest centroid neighbour sSBR, respectively')
+                       dens_ratio=1, extrapolate=FALSE, return_NA=FALSE, 
+                       quiet_mode=FALSE, spat_algo=NULL) {
+    
+    if (method == 'indiv') {
+        warning('method == "indiv" is depreciated and should be set to "IBR" for individual-based rarefaction')
+        method = 'IBR'
+    } else if (method == 'samp') {
+        warning('method == "samp" is depreciated and should be set to "SBR" for sample-based rarefaction')
+        method = 'SBR'
+    } else if (method == 'spat') {
+        warning('method == "spat" is depreciated and should be set to "sSBR" for spatial, sample-based rarefaction')
+        method = 'sSBR'
+    } else if (!any(method %in% c('IBR', 'SBR', 'nsSBR', 'sSBR')))
+        stop('The argument "method" must be set to either "IBR", "SBR", "nsSBR",',
+             ' or "sSBR" for random individual, random sample, non-spatial,', 
+             ' sample-based (nsSBR), and spatial, sample-based rarefaction (sSBR)',
+             ' respectively.')
+    if (method == 'nsSBR' & dens_ratio == 1)
+        warning('The nonspatial, sample-based rarefaction (nsSBR) curve only differs from the IBR when compared with a reference density by setting "dens_ratio" not equal to 1')
     if (class(x) == 'mob_in') {
         x_mob_in = x
         x = x_mob_in$comm
@@ -316,25 +355,25 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
         if (is.null(coords)){
-          if(is.null(x_mob_in$spat)){
-            stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
+            if (is.null(x_mob_in$spat)){
+                stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
             }
-          coords = x_mob_in$spat
+            coords = x_mob_in$spat
         }
     }
-    if (method == 'spat') method = 'kNCN'
-    if (method == 'samp' | method == 'spat' | method == 'kNCN') {
+    if (method == 'SBR' | method == 'sSBR') {
         if (is.null(dim(x)))
             stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
         else {
             x = (x > 0) * 1             
             # all sites are counted as samples even empty ones
             n = nrow(x) 
-            if (method == 'samp')
+            if (method == 'SBR')
                 x = colSums(x)
         }
-    }
-    if (method == 'indiv') {
+    } else if (!is.null(spat_algo))
+        warning("Setting spat_algo to a non-NULL value only has consequences when method = sSBR")
+    if (method == 'IBR') {
         if (!is.null(dim(x)))
             x = colSums(x)
         n = sum(x)
@@ -349,7 +388,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             stop('It does not make sense to set "extrapolate" and "return_NA" to both be TRUE, see documentation')
         if (!quiet_mode) {
             warning_mess = paste('"effort" larger than total number of',
-                                 ifelse(method == 'indiv', 'individuals', 'samples'),
+                                 ifelse(method == 'IBR', 'individuals', 'samples'),
                                  'returning')
             if (extrapolate)
                 warning(paste(warning_mess, 'extrapolated S using Chao1'))
@@ -361,86 +400,87 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
     } else if (extrapolate)
         if (!quiet_mode) 
             message('Richness was not extrapolated because effort less than or equal to the number of samples')
-    if (method == 'spat') {
+    if (method == 'sSBR') {
+        if (is.null(spat_algo)) 
+            spat_algo = 'kNCN'
+        if (spat_algo == 'kNN') {
       
-      explicit_loop = matrix(0, n, n)
-      if (is.null(latlong))
-        stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
-      if (latlong){
-        # Compute distance on sphere if xy are longitudes and latitudes
-        # Assume x is longitude and y is latitude
-        pair_dist = sphere_dist(coords)
-      } else {
-        pair_dist = as.matrix(dist(coords))
-      }
-      for (i in 1:n) {
-        dist_to_site = pair_dist[i, ]
-        # Shuffle plots, so that tied grouping is not biased by original order.
-        new_order = sample(1:n)  
-        dist_new = dist_to_site[new_order]
-        new_order = new_order[order(dist_new)]
-        # Move focal site to the front
-        new_order = c(i, new_order[new_order != i])
-        comm_ordered = x[new_order, ]
-        # 1 for absence, 0 for presence
-        comm_bool = as.data.frame((comm_ordered == 0) * 1) 
-        rich = cumprod(comm_bool)
-        explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
-      }
-      out = apply(explicit_loop, 1, mean)[effort]
-      
-        
-    }
-    else {
-      if( method == "kNCN"){
-        out = kNCN_average(x=x,coords=coords)[effort]
-      } else{
+            explicit_loop = matrix(0, n, n)
+            if (is.null(latlong))
+                stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
+            if (latlong){
+                # Compute distance on sphere if xy are longitudes and latitudes
+                # Assume x is longitude and y is latitude
+                pair_dist = sphere_dist(coords)
+            } else {
+                pair_dist = as.matrix(dist(coords))
+            }
+            for (i in 1:n) {
+                dist_to_site = pair_dist[i, ]
+                # Shuffle plots, so that tied grouping is not biased by original order.
+                new_order = sample(1:n)  
+                dist_new = dist_to_site[new_order]
+                new_order = new_order[order(dist_new)]
+                # Move focal site to the front
+                new_order = c(i, new_order[new_order != i])
+                comm_ordered = x[new_order, ]
+                # 1 for absence, 0 for presence
+                comm_bool = as.data.frame((comm_ordered == 0) * 1) 
+                rich = cumprod(comm_bool)
+                explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+            }
+            out = apply(explicit_loop, 1, mean)[effort]
+            
+        }
+        else if (spat_algo == "kNCN") 
+            out = kNCN_average(x=x, coords=coords)[effort]
+    } 
+    else { 
         # drop species with no observations  
         x = x[x > 0] 
         S = length(x)
         if (dens_ratio == 1) {
-          ldiv = lchoose(n, effort)
+            ldiv = lchoose(n, effort)
         } else {
-          effort = effort[effort / dens_ratio <= n]
-          ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
+            effort = effort[effort / dens_ratio <= n]
+            ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
         }
         p = matrix(0, sum(effort <= n), S)
         out = rep(NA, length(effort))
         S_ext = NULL
         for (i in seq_along(effort)) {
-          if (effort[i] <= n) {
-            if (dens_ratio == 1) {
-              p[i, ] = ifelse(n - x < effort[i], 0, 
-                              exp(lchoose(n - x, effort[i]) - ldiv[i]))
-            } else {
-              p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
-                              exp(suppressWarnings(lgamma(n - x + 1)) -
-                                    suppressWarnings(lgamma(n - x - effort[i] /
-                                                              dens_ratio + 1)) +
-                                    ldiv[i]))
-            }
-          } else if (extrapolate) {
-            f1 = sum(x == 1)
-            f2 = sum(x == 2)
-            # estimation of unseen species via Chao1                
-            f0_hat <- ifelse(f2 == 0, 
-                             (n - 1) / n * f1 * (f1 - 1) / 2, 
-                             (n - 1) / n * f1^2 / 2 / f2)
-            A = n * f0_hat / (n * f0_hat + f1)
-            S_ext = c(S_ext, ifelse(f1 == 0, S, 
-                                    S + f0_hat * (1 - A ^ (effort[i] - n))))
-          }
-          else if (return_NA)
-            S_ext = c(S_ext, NA)
-          else 
-            S_ext = c(S_ext, S)
+            if (effort[i] <= n) {
+                if (dens_ratio == 1) {
+                    p[i, ] = ifelse(n - x < effort[i], 0, 
+                                    exp(lchoose(n - x, effort[i]) - ldiv[i]))
+                } else {
+                    p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
+                                    exp(suppressWarnings(lgamma(n - x + 1)) -
+                                        suppressWarnings(lgamma(n - x - effort[i] /
+                                                                dens_ratio + 1)) +
+                                         ldiv[i]))
+                }
+            } else if (extrapolate) {
+                f1 = sum(x == 1)
+                f2 = sum(x == 2)
+                # estimation of unseen species via Chao1                
+                f0_hat <- ifelse(f2 == 0, 
+                                 (n - 1) / n * f1 * (f1 - 1) / 2, 
+                                 (n - 1) / n * f1^2 / 2 / f2)
+                A = n * f0_hat / (n * f0_hat + f1)
+                S_ext = c(S_ext, ifelse(f1 == 0, S, 
+                                        S + f0_hat * (1 - A ^ (effort[i] - n))))
+              }
+              else if (return_NA)
+                  S_ext = c(S_ext, NA)
+              else 
+                  S_ext = c(S_ext, S)
         }
         out = rep(NA, length(effort))
         out[effort <= n] = rowSums(1 - p)
         out[effort > n] = S_ext
-      }
-      
     }
+      
     names(out) = effort
     return(out)
 }
@@ -525,7 +565,8 @@ avg_nn_dist = function(coords) {
 #' @importFrom tibble tibble
 #' @keywords internal
 get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
-                            inds=NULL, ind_dens=NULL, n_plots=NULL) {
+                            inds=NULL, ind_dens=NULL, n_plots=NULL,
+                            spat_algo=NULL) {
     if (is.null(inds) & any(c('SAD', 'N') %in% tests))
         stop('If SAD or N effect to be calculated inds must be specified')
     if (is.null(ind_dens) & 'N' %in% tests)
@@ -534,7 +575,7 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
         stop('If N or agg effects to be computed x must be a mob_in object')
     out = list()
     if ('SAD' %in% tests) {
-        S_SAD = rarefaction(x, 'indiv', inds)
+        S_SAD = rarefaction(x, 'IBR', inds)
         out$SAD = data.frame(test = 'SAD', sample = 'indiv',
                              effort = inds, S = S_SAD, effect = S_SAD,
                              stringsAsFactors = FALSE)
@@ -542,9 +583,9 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
     if ('N' %in% tests) {
         comm_dens = sum(x$comm) / nrow(x$comm)
         dens_ratio = ind_dens / comm_dens
-        S_N = rarefaction(x, 'indiv', inds, dens_ratio = dens_ratio)
+        S_N = rarefaction(x, 'IBR', inds, dens_ratio = dens_ratio)
         if (!('SAD' %in% tests))
-            S_SAD = rarefaction(x, 'indiv', inds)
+            S_SAD = rarefaction(x, 'IBR', inds)
         effect = S_N - S_SAD
         out$N = data.frame(test = 'N', sample = 'indiv', 
                            effort = inds, S = S_N, effect,
@@ -553,10 +594,10 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
     if ('agg' %in% tests) {
         if (is.null(n_plots))
             n_plots = nrow(x$comm)
-        S_agg = rarefaction(x, 'spat', 1:n_plots)
+        S_agg = rarefaction(x, 'sSBR', 1:n_plots, spat_algo=spat_algo)
         ind_density = sum(x$comm) / nrow(x$comm)
         samp_effort = round(1:n_plots * ind_density)
-        S_N = rarefaction(x, 'indiv', samp_effort)
+        S_N = rarefaction(x, 'IBR', samp_effort)
         effect = S_agg - S_N
         out$agg = data.frame(test = 'agg', sample = 'plot', 
                              effort = as.numeric(names(S_agg)),
@@ -768,7 +809,7 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
 #' @import dplyr 
 #' @importFrom tidyr nest unnest
 #' @keywords internal 
-get_results = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
+get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                        stats=NULL) {
   
     # the approach taken here to get results for each group
@@ -780,27 +821,25 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
     group_rows = map(group_levels, ~ which(groups == .x))
     mob_in_groups = map(group_rows, ~ subset(mob_in, .x, type = 'integer'))
     names(mob_in_groups) = group_levels
-  
+    
     S_df = map_dfr(mob_in_groups, get_delta_curves, tests, inds, ind_dens,
                    n_plots, .id = "group")
     
     S_df = S_df %>% mutate_if(is.factor, as.character)
     
-    # truncate sample based sSBR curve for unbalanced designs between groups
+    # subsistute the group variable for the env variable
+    S_df = data.frame(env = env[match(S_df$group, groups)],
+                      S_df)
+
+    S_df = subset(S_df, select = -group)
     
-    
-    
-    if (type == 'discrete')
-        S_df$group = factor(S_df$group, levels = levels(groups))
-    if (type == 'continuous')
-        S_df$group = as.numeric(S_df$group)
     S_df = as_tibble(S_df)
   
     # now that S and effects computed across scale compute
     # summary statistics at each scale 
   
     delta_mod = function(df) {
-        lm(effect ~ group, data = df)
+        lm(effect ~ env, data = df)
     }
     
     if (is.null(stats)) {
@@ -826,7 +865,7 @@ get_results = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
 #' @importFrom tibble tibble
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @keywords internal
-run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
+run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                            stats, n_perm, overall_p) {
     if (overall_p)
         p_val = vector('list', length(tests))
@@ -843,7 +882,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
         for (i in 1:n_perm) {
             null_mob_in = mob_in
             null_mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
-            null_results[[i]] = get_results(null_mob_in, groups, tests[k], inds,
+            null_results[[i]] = get_results(null_mob_in, env, groups, tests[k], inds,
                                             ind_dens, n_plots, type, stats)
             setTxtProgressBar(pb, i)
         }
@@ -855,7 +894,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
         # compute quantiles
         null_qt = list()
         null_qt$S_df = null_df$S_df %>% 
-                       group_by(group, test, sample, effort) %>%
+                       group_by(env, test, sample, effort) %>%
                        summarize(low_effect = quantile(effect, 0.025, na.rm = TRUE),
                                  med_effect = quantile(effect, 0.5, na.rm = TRUE), 
                                  high_effect = quantile(effect, 0.975, na.rm = TRUE))
@@ -874,7 +913,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
         # results then the funct must be distributed across the
         # various stats and tests
         if (overall_p) {
-            obs_df = get_results(mob_in, groups, tests[k], inds, ind_dens,
+            obs_df = get_results(mob_in, env, groups, tests[k], inds, ind_dens,
                                  n_plots, type, stats)
             obs_df = map(obs_df, function(x) data.frame(perm = 0, x))          
             null_df = map2(obs_df, null_df, rbind)
@@ -900,20 +939,21 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
 #' specifically to conduct one or more of these tests.
 #' 
 #' @param mob_in an object of class mob_in created by make_mob_in()
-#' @param group_var a character string specifying the environmental variable in
-#'   mob_in$env used for grouping plots
-#' @param env_var an optional character string specifying a environmental variable
-#'   in mob_in$env which is used in correlation analysis in the continuous case. 
-#'   It is not needed if "type" is discrete or group_var is used in correlation.
-#' @param ref_group a character string used to define the reference group to
-#'   which all other groups are compared with when "type" is discrete. It is not
-#'   needed when "type" is continuous.
+#' @param env_var a character string specifying the environmental variable in
+#'   \code{mob_in$env} to be used for explaining the change in richness
+#' @param group_var an optional character string 
+#'   in \code{mob_in$env} which defines how samples are pooled. If not provided
+#'   then each unique value of the argument \code{env_var} is used define the
+#'   groups. 
+#' @param ref_level a character string used to define the reference level of 
+#'   \code{env_var} to which all other groups are compared with. Only make sense
+#'   if \code{env_var} is a factor. 
 #' @param tests specifies which one or more of the three tests ('SAD', N', 'agg') 
 #'   are to be performed. Default is to include all three tests.
 #' @param type "discrete" or "continuous". If "discrete", pair-wise comparisons
 #'   are conducted between all other groups and the reference group. If
 #'   "continuous", a correlation analysis is conducted between the response
-#'   variables and group_var or env_var (if defined).
+#'   variables and env_var.
 #' @param stats a vector of character strings that specifies what statistics to
 #'   sumamrize effect sizes with. Options include: \code{c('betas', 'r2',
 #'   'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
@@ -959,7 +999,7 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
 #'  the overall p-values depend on scales of measurement yet do not explicitly 
 #'  reflect significance at any particular scale. 
 #' @return a "mob_out" object with attributes
-#' @author Xiao Xiao and Dan McGlinn
+#' @author Dan McGlinn and Xiao Xiao
 #' @import dplyr
 #' @import purrr
 #' @export
@@ -967,10 +1007,10 @@ run_null_models = function(mob_in, groups, tests, inds, ind_dens, n_plots, type,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+#' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
 #'                            type='discrete', log_scale=TRUE, n_perm=10)
 #' plot(inv_mob_out)
-get_delta_stats = function(mob_in, group_var, ref_group = NULL, 
+get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL, 
                            tests = c('SAD', 'N', 'agg'),
                            type = c('continuous', 'discrete'),
                            stats = NULL, inds = NULL,
@@ -980,8 +1020,11 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     # perform preliminary checks and variable assignments
     if (class(mob_in) != "mob_in")
         stop('mob_in must be output of function make_mob_in (i.e., of class mob_in')
-    if (!(group_var %in% names(mob_in$env)))
-        stop('group_var has to be one of the environmental variables in mob_in$env.')
+    if (!(env_var %in% names(mob_in$env)))
+        stop(paste(env_var, ' is not one of the columns in mob_in$env.'))
+    if (!is.null(group_var))
+        if  (!(group_var %in% names(mob_in$env)))
+            stop(paste(group_var, ' is not one of the columns in mob_in$env.')) 
     tests = match.arg(tests, several.ok = TRUE)
     test_status = tests %in% names(unlist(mob_in$tests)) 
     approved_tests = tests[test_status]
@@ -994,29 +1037,39 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     type = match.arg(type)
     density_stat = match.arg(density_stat)
     
-    groups = mob_in$env[ , group_var]
-    if (type == 'discrete') {
-        if (class(groups) != 'factor') {
-            warning(paste("Converting", group_var, "to a factor with the default contrats because the argument type = 'discrete'."))
-            groups = as.factor(groups)
+    env = mob_in$env[ , env_var]
+    # if group_var is NULL then set all samples to same group (??)
+    if (is.null(group_var))
+        groups = env
+    else {
+        groups = mob_in$env[ , group_var]
+        # check that for the defined groups all samples have same environmental value
+        if (any(tapply(env, groups, var) > 0)) {
+            # bc all env values not the same for a group then compute mean value
+            print("Computed average environmental value for each group")
+            env = tapply(env, groups, mean)
         }
-        if (!is.null(ref_group)) { # need to ensure that contrasts on the reference group set
-            group_levs = levels(groups) 
-            if (ref_group %in% group_levs) {
-                if (group_levs[1] != ref_group)
-                    groups = factor(groups, 
-                                    levels = c(ref_group, 
-                                               group_levs[group_levs != ref_group]))
+    }    
+    if (type == 'discrete') {
+        if (class(env) != 'factor') {
+            warning(paste("Converting", env_var, "to a factor with the default contrasts because the argument type = 'discrete'."))
+            env = as.factor(env)
+        }
+        if (!is.null(ref_level)) { # need to ensure that contrasts on the reference level set
+            env_levels = levels(env) 
+            if (ref_level %in% env_levels) {
+                if (env_levels[1] != ref_level)
+                    env = factor(env, levels = c(ref_level, env_levels[env_levels != ref_level]))
             } else
-                stop(paste(ref_group, "is not in", group_var))
+                stop(paste(ref_level, "is not in", env_var))
         }    
     } else if (type == 'continuous') {
-        if (!is.numeric(groups)) {
-            warning(paste("Converting", group_var, "to numeric because the argument type = 'continuous'"))
-            groups = as.numeric(as.character(groups))
+        if (!is.numeric(env)) {
+            warning(paste("Converting", env_var, "to numeric because the argument type = 'continuous'"))
+            env = as.numeric(as.character(env))
         }
-        if (!is.null(ref_group))
-            stop('Defining a reference group (i.e., ref_group) only makes sense when doing a discrete analysis (i.e., type = "discrete")')
+        if (!is.null(ref_level))
+            stop('Defining a reference level (i.e., ref_level) only makes sense when doing a discrete analysis (i.e., type = "discrete")')
     }
     #TODO It needs to be clear which beta coefficients apply to 
     # which factor level - this is likely most easily accomplished by appending
@@ -1028,27 +1081,29 @@ get_delta_stats = function(mob_in, group_var, ref_group = NULL,
     #    env_levels = tapply(mob_in$env[, env_var],
     #                        list(groups), mean)
     #}
-    N_max = min(tapply(rowSums(mob_in$comm), list(groups), sum))
+    N_max = min(tapply(rowSums(mob_in$comm), groups, sum))
     inds = get_inds(N_max, inds, log_scale)
     ind_dens = get_ind_dens(mob_in$comm, density_stat)
-    n_plots = min(tapply(mob_in$comm[ , 1], list(groups), length))
+    n_plots = min(tapply(mob_in$comm[ , 1], groups, length))
 
     out = list()
-    out$group_var = group_var
+    out$env_var = env_var
+    if (!is.null(group_var))
+        out$group_var = group_var
     out$type = type
     out$tests = tests
     out$log_scale = log_scale
     out$density_stat = list(density_stat = density_stat,
                             ind_dens = ind_dens)
     out = append(out, 
-                 get_results(mob_in, groups, tests, inds, ind_dens, n_plots,
+                 get_results(mob_in, env, groups, tests, inds, ind_dens, n_plots,
                              type, stats))
 
-    null_results = run_null_models(mob_in, groups, tests, inds, ind_dens,
+    null_results = run_null_models(mob_in, env, groups, tests, inds, ind_dens,
                                    n_plots, type, stats, n_perm, overall_p)
     # merge the null_results into the model data.frame
     out$S_df = left_join(out$S_df, null_results$S_df, 
-                         by = c("group", "test", "sample", "effort"))
+                         by = c("env", "test", "sample", "effort"))
     out$mod_df = left_join(out$mod_df, null_results$mod_df, 
                            by = c("test", "sample", "effort", "index"))
     if (overall_p)
@@ -1157,20 +1212,19 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # random individual based rarefaction curves
-#' plot_rarefaction(inv_mob_in, 'group', 'indiv',
+#' plot_rarefaction(inv_mob_in, 'group', 'IBR',
 #'                  pooled=TRUE, leg_loc='bottomright')
-#' plot_rarefaction(inv_mob_in, 'group', 'indiv',
+#' plot_rarefaction(inv_mob_in, 'group', 'IBR',
 #'                  pooled=FALSE, log='x')
 #' # random sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'samp', log='xy')
+#' plot_rarefaction(inv_mob_in, 'group', 'SBR', log='xy')
 #' # spatial sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'spat', log='xy',
-#'                  coords = inv_mob_in$spat)                 
+#' plot_rarefaction(inv_mob_in, 'group', 'sSBR', log='xy')
 plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T, 
-                            col=NULL, lwd=3, log='', leg_loc = 'topleft',
+                            spat_algo=NULL, col=NULL, lwd=3, log='', leg_loc = 'topleft',
                             ...) {
-    if (pooled == FALSE & method != 'indiv')
-        stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="indiv")')
+    if (pooled == FALSE & method != 'IBR')
+        stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
     env_data = mob_in$env[ , env_var]
     grps = sort(unique(as.character(env_data)))
     if (is.null(col)) 
@@ -1185,7 +1239,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
     if (pooled) {
         Srare = lapply(grps, function(x) 
                        rarefaction(subset(mob_in, env_data == x, 'logical'),
-                                   method, ...))
+                                   method, spat_algo=spat_algo, ...))
         xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
         ylim = c(1, max(unlist(Srare)))
         n = as.numeric(names(Srare[[1]]))
@@ -1314,9 +1368,9 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
         facet_labs = c(`agg` = 'sSBR',
                        `N` = 'nsSBR',
                        `SAD` = 'IBR')      
-        p_list[[1]] = ggplot(mob_out$S_df, aes(group, S)) +
+        p_list[[1]] = ggplot(mob_out$S_df, aes(env, S)) +
                           geom_point(aes(group = effort, color = effort)) +
-                          labs(x = mob_out$group_var) +
+                          labs(x = mob_out$env_var) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs))
     }
@@ -1326,12 +1380,12 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                        `N` = 'nsSBR',
                        `SAD` = 'IBR')
         p_list[[2]] = ggplot(mob_out$S_df, aes(effort, S)) +
-                          geom_line(aes(group = group, color = group)) +
+                          geom_line(aes(group = env, color = env)) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs)) +
                           labs(y = expression("Richness (" *
                                                 italic(S) * ")"),
-                               color = mob_out$group_var) 
+                               color = mob_out$env_var) 
     }
     
     if ('effect ~ grad' %in% display) {
@@ -1356,12 +1410,12 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
         if (mob_out$type == "continuous")
             mob_out$S_df = mob_out$S_df %>%
                   group_by(test, effort) %>%
-                  mutate(low_effect = predict(loess(low_effect ~ group), group)) %>%
-                  mutate(high_effect = predict(loess(high_effect ~ group), group)) 
+                  mutate(low_effect = predict(loess(low_effect ~ env), env)) %>%
+                  mutate(high_effect = predict(loess(high_effect ~ env), env)) 
 
         
         p_list[[3]] = ggplot(subset(mob_out$S_df, effort %in% sub_effort),
-                                    aes(group, effect)) +
+                                    aes(env, effect)) +
                       #geom_smooth(aes(x=group, y = med_effect,
                       #                group = effort, color = effort),
                       #            method = 'lm', se = F) +
@@ -1369,7 +1423,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                       #                group = effort, color = effort,
                       #                fill = 'null'),
                       #            alpha = .25) +
-                      labs(x = mob_out$group_var) +
+                      labs(x = mob_out$env_var) +
                       facet_wrap(. ~ test, scales = "free_y") +
                       labs(y = expression('effect (' * Delta * italic(S) * ')')) +
                       scale_fill_manual(name = element_blank(),

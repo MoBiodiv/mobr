@@ -4,21 +4,26 @@
 \alias{get_delta_stats}
 \title{Conduct the MoB tests on drivers of biodiversity across scales.}
 \usage{
-get_delta_stats(mob_in, group_var, ref_group = NULL, tests = c("SAD",
-  "N", "agg"), type = c("continuous", "discrete"), stats = NULL,
-  inds = NULL, log_scale = FALSE, min_plots = NULL,
+get_delta_stats(mob_in, env_var, group_var = NULL, ref_level = NULL,
+  tests = c("SAD", "N", "agg"), type = c("continuous", "discrete"),
+  stats = NULL, inds = NULL, log_scale = FALSE, min_plots = NULL,
   density_stat = c("mean", "max", "min"), n_perm = 1000,
   overall_p = FALSE)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
 
-\item{group_var}{a character string specifying the environmental variable in
-mob_in$env used for grouping plots}
+\item{env_var}{a character string specifying the environmental variable in
+\code{mob_in$env} to be used for explaining the change in richness}
 
-\item{ref_group}{a character string used to define the reference group to
-which all other groups are compared with when "type" is discrete. It is not
-needed when "type" is continuous.}
+\item{group_var}{an optional character string 
+in \code{mob_in$env} which defines how samples are pooled. If not provided
+then each unique value of the argument \code{env_var} is used define the
+groups.}
+
+\item{ref_level}{a character string used to define the reference level of 
+\code{env_var} to which all other groups are compared with. Only make sense
+if \code{env_var} is a factor.}
 
 \item{tests}{specifies which one or more of the three tests ('SAD', N', 'agg') 
 are to be performed. Default is to include all three tests.}
@@ -26,7 +31,7 @@ are to be performed. Default is to include all three tests.}
 \item{type}{"discrete" or "continuous". If "discrete", pair-wise comparisons
 are conducted between all other groups and the reference group. If
 "continuous", a correlation analysis is conducted between the response
-variables and group_var or env_var (if defined).}
+variables and env_var.}
 
 \item{stats}{a vector of character strings that specifies what statistics to
 sumamrize effect sizes with. Options include: \code{c('betas', 'r2',
@@ -78,10 +83,6 @@ plot-level density is used.}
 p-values for the null tests. This should be interpreted with caution because
 the overall p-values depend on scales of measurement yet do not explicitly 
 reflect significance at any particular scale.}
-
-\item{env_var}{an optional character string specifying a environmental variable
-in mob_in$env which is used in correlation analysis in the continuous case. 
-It is not needed if "type" is discrete or group_var is used in correlation.}
 }
 \value{
 a "mob_out" object with attributes
@@ -95,10 +96,10 @@ specifically to conduct one or more of these tests.
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
                            type='discrete', log_scale=TRUE, n_perm=10)
-plot(inv_mob_out, 'b1')
+plot(inv_mob_out)
 }
 \author{
-Xiao Xiao and Dan McGlinn
+Dan McGlinn and Xiao Xiao
 }
