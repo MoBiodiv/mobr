@@ -38,7 +38,7 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
         centroid = rgeos::gCentroid(accumulated_plots)@coords
         candidates2 = candidates[-included, , drop = F]
         spat_dists = pracma::distmat(centroid, candidates2[ , -3, drop = F])
-        random_tie_breaker = runif(nrow(candidates2))
+        random_tie_breaker = stats::runif(nrow(candidates2))
         nearest_index = order(spat_dists, random_tie_breaker)[1]
         nearest_plot = candidates2[nearest_index, 3, drop = T]
         included = c(included, nearest_plot)
@@ -72,7 +72,7 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coords = c('x', 'y'))
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' kNCN_average(inv_mob_in)
 #' \donttest{
 #' # Not run: 
@@ -117,12 +117,13 @@ kNCN_average = function(x, n = NULL, coords = NULL, repetitions = 1,
 #' @param x a mob_in object
 #'
 #' @return a plot 
+#' @importFrom graphics lines legend
 #' @export
 #'
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coords = c('x', 'y'))
+#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' compare_samp_rarefaction(inv_mob_in)
 compare_samp_rarefaction = function(x) {
     

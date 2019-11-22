@@ -38,7 +38,7 @@ Internally the function constructs one curve per sample whereby each sample serv
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coords = c('x', 'y'))
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 kNCN_average(inv_mob_in)
 \donttest{
 # Not run: 
