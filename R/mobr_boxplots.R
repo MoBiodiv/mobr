@@ -96,7 +96,7 @@ calc_chao1 = function(x) {
 #' calc_PIE(inv_comm, ENS=TRUE)
 calc_PIE = function(x, ENS=FALSE) {
     if (class(x) == 'mob_in') {
-        x = x_mob_in$comm
+        x = x$comm
     }
     x = drop(as.matrix(x))
     if (any(x < 0, na.rm = TRUE)) 
@@ -135,7 +135,7 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
     sample_dat = bind_rows(sample_dat)
    
     # abundance distribution pooled in groups
-    abund_group = aggregate(sample_dat[ , -1], by = list(sample_dat[ , 1]),
+    abund_group = stats::aggregate(sample_dat[ , -1], by = list(sample_dat[ , 1]),
                             FUN = "sum")
    
     dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
@@ -297,7 +297,8 @@ calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
     return(out)
 }
 
-#Get F statistics from diversity indices and grouping vector
+#' Get F statistics from diversity indices and grouping vector
+#' @keywords internal
 get_F_values = function(div_dat, permute = F) {
     if (permute)
         div_dat = div_dat %>%
@@ -306,10 +307,10 @@ get_F_values = function(div_dat, permute = F) {
     
     models = div_dat %>%
              group_by(index, effort) %>%
-             do(mod = try(lm(value ~ group, data = .), silent=TRUE))
+             do(mod = try(stats::lm(value ~ group, data = .), silent=TRUE))
    
     models = models %>% 
-             mutate(F_val = ifelse(class(mod) == 'lm', anova(mod)$F[1], NA)) %>%
+             mutate(F_val = ifelse(class(mod) == 'lm', stats::anova(mod)$F[1], NA)) %>%
              ungroup()
    
     
@@ -324,7 +325,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
     if (permute)
         group_id = sample(group_id)
    
-    abund_group = aggregate(abund_mat, by = list(group_id), FUN = "sum")
+    abund_group = stats::aggregate(abund_mat, by = list(group_id), FUN = "sum")
    
     dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
                              groups = abund_group[ , 1],
@@ -332,7 +333,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
                              extrapolate, return_NA, rare_thres = rare_thres)
     delta_groups = dat_groups %>%
                    group_by(index, effort) %>%
-                   summarise(delta = mean(dist(value))) %>%
+                   summarise(delta = mean(stats::dist(value))) %>%
                    ungroup()
    
     return(delta_groups)
@@ -598,7 +599,7 @@ get_mob_stats = function(mob_in, group_var,
     effort_groups = c(effort_samples, effort_samples * min(samples_per_group))
    
     # Abundance distribution pooled in groups
-    abund_group = aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
+    abund_group = stats::aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
    
     dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
                              groups = abund_group[ , 1],
@@ -722,7 +723,7 @@ get_mob_stats = function(mob_in, group_var,
                 ungroup()
     D_bar = alpha_avg %>%
                 group_by(index, effort) %>%
-                summarise(D_bar = mean(dist(alpha_avg), na.rm=T)) %>%
+                summarise(D_bar = mean(stats::dist(alpha_avg), na.rm=T)) %>%
                 ungroup()
     F_obs = get_F_values(dat_samples, permute = F)
     cat('\nComputing null model at alpha-scale\n')
@@ -763,7 +764,7 @@ get_mob_stats = function(mob_in, group_var,
      
         dat_groups = boot_repl_groups %>% 
                      group_by(group, index, effort) %>%
-                     do(setNames(data.frame(t(quantile(.$value, probs, na.rm = T))),
+                     do(stats::setNames(data.frame(t(stats::quantile(.$value, probs, na.rm = T))),
                                  c("lower","median","upper")))      
     } else {
         delta_obs = get_group_delta(mob_in$comm, group_id, index,
@@ -823,7 +824,9 @@ get_mob_stats = function(mob_in, group_var,
     return(out)
 }
 
-# Panel function for alpha-scale results
+#' Panel function for alpha-scale results
+#' @importFrom graphics boxplot mtext
+#' @keywords internal
 samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
                            main = expression(alpha * "-scale"), 
                           cex.axis=1.2, ...) {
@@ -841,6 +844,7 @@ samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
 }
 
 #' Panel function for gamma-scale results
+#' @importFrom graphics boxplot points mtext 
 #' @keywords internal
 groups_panel1 = function(group_dat, tests, col, ylab = "",
                          main = expression(gamma * "-scale"),

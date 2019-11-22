@@ -25,7 +25,10 @@ Imports:
     tidyr,
     pbapply,
     ggplot2,
-    egg
+    egg,
+    rgeos,
+    sp,
+    tibble
 Suggests:
     knitr,
     rmarkdown,

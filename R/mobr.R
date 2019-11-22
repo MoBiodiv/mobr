@@ -140,6 +140,7 @@ subset.mob_in = function(mob_in, subset, type='string', drop_levels=FALSE) {
 }
   
 #' Print a shortened version of the mob_in object
+#' @importFrom utils head
 #' @keywords internal
 #' @export
 print.mob_in = function(x, nrows=6, nsp=5) {
@@ -295,6 +296,7 @@ sphere_dist = function(coords){
 #' and pitfalls in the measurement and comparison of species richness. Ecology
 #' Letters, 4, 379–391.
 #'
+#' @importFrom stats dist
 #' @export
 #' @examples 
 #' data(inv_comm)
@@ -546,7 +548,7 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
 #' plot(avg_nn_dist(grid), type='o', main='grid',
 #'      xlab='# of samples', ylab='average distance')
 avg_nn_dist = function(coords) {
-    pair_dist = as.matrix(dist(coords))
+    pair_dist = as.matrix(stats::dist(coords))
     sort_dist = apply(pair_dist, 1, sort)
     avg_dist = apply(sort_dist, 1, mean)
     return(avg_dist)
@@ -614,10 +616,9 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
 #' @param rad the relative abundance of each species
 #' @param N the total number of individuals sampled
 #' 
-#' Randomly subsampling an RAD produces an SAD that is of a 
-#' similar functional form (Green and Plotkin 2007) but with overall
-#' species richness equal to our less than the relative abundance
-#' distribution.
+#' Randomly subsampling an RAD with replacemewnt produces an SAD that is of a
+#' similar functional form (Green and Plotkin 2007) but with overall species
+#' richness equal to or less than the relative abundance distribution.
 #' 
 #' Literature Cited:
 #' Green, J. L., and J. B. Plotkin. 2007. A statistical theory
@@ -666,10 +667,10 @@ get_rand_sad = function(rad, N) {
 #' comm
 #' groups = rep(1:2, each=2)
 #' groups
-#' get_null_comm(comm, 'noagg')
-#' get_null_comm(comm, 'noagg', groups)
-#' get_null_comm(comm, 'swapN')
-#' get_null_comm(comm, 'swapN', groups)
+#' get_null_comm(comm, 'SAD')
+#' get_null_comm(comm, 'SAD', groups)
+#' get_null_comm(comm, 'N')
+#' get_null_comm(comm, 'N', groups)
 get_null_comm = function(comm, tests, groups = NULL) {
     # the main component of all the null models is random sampling 
     # from a pooled or group-specific SAD
@@ -773,6 +774,10 @@ get_overall_p = function(effort, perm, value){
     return(overall_p)
 }
 
+#' Extract coefficients and metrics of fit from model
+#' @param x a fitted model object
+#' @param stats the statistics to output
+#' @importFrom stats pf coef
 #' @keywords internal
 mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
     summary_lm = summary(x)
@@ -792,7 +797,7 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
         out$f = summary_lm$fstatistic[1]
     if ('p' %in% stats){ # interpreted as overall model p-value
         f = summary_lm$fstatistic
-        out$p = unname(pf(f[1],f[2],f[3],lower.tail=F))
+        out$p = unname(stats::pf(f[1],f[2],f[3],lower.tail=F))
     }
     if ('betas' %in% stats)
         coef_type = c(paste0('b', 0:(length(out$betas) - 1)),
@@ -831,15 +836,15 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
     S_df = data.frame(env = env[match(S_df$group, groups)],
                       S_df)
 
-    S_df = subset(S_df, select = -group)
+    #S_df = subset(S_df, select = -group)
     
-    S_df = as_tibble(S_df)
+    S_df = as_tibble(S_df, .name_repair = 'minimal')
   
     # now that S and effects computed across scale compute
     # summary statistics at each scale 
   
     delta_mod = function(df) {
-        lm(effect ~ env, data = df)
+        stats::lm(effect ~ env, data = df)
     }
     
     if (is.null(stats)) {
@@ -855,7 +860,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
              mutate(sum = map(fit, mod_sum, stats)) %>%
              select(test, sample, effort, sum) %>% 
              unnest(sum) %>%
-             mutate_if(is.factor, as.character)
+             try(mutate_if(is.factor, as.character), silent = TRUE)
     
     return(list(S_df = S_df, mod_df = mod_df))
 }
@@ -864,6 +869,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
 #' @import dplyr
 #' @importFrom tibble tibble
 #' @importFrom utils txtProgressBar setTxtProgressBar
+#' @importFrom stats quantile
 #' @keywords internal
 run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                            stats, n_perm, overall_p) {
@@ -1125,6 +1131,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #' @inheritParams plot.mob_out
 #' @inheritParams graphics::plot.default
 #' @importFrom scales alpha
+#' @importFrom graphics lines legend
 #' @export
 #' @examples
 #' data(inv_comm)
@@ -1179,12 +1186,12 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
              comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
              if (pooled) {
                 sad_grp = colSums(comm_grp)
-                sad_sort = sort(sad_grp[sad_grp != 0], dec=T)
+                sad_sort = sort(sad_grp[sad_grp != 0], decreasing=T)
                 lines(sad_sort / sum(sad_sort), col = col_grp, lwd = lwd,
                       type = "l")
              } else {
                  for (j in 1:nrow(comm_grp)) {
-                     sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0], dec=T)
+                     sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0], decreasing=T)
                      lines(1:length(sad_sort), sad_sort / sum(sad_sort),
                            col = scales::alpha(col_grp, 0.5),
                            lwd = lwd, type = "l")
@@ -1206,6 +1213,7 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #' @inheritParams plot_abu
 #' @inheritParams rarefaction
 #' @importFrom scales alpha
+#' @importFrom graphics lines legend
 #' @export
 #' @examples
 #' data(inv_comm)
@@ -1321,12 +1329,14 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' @author Dan McGlinn and Xiao Xiao
 #' @import ggplot2 
 #' @importFrom egg ggarrange
+#' @importFrom stats predict loess lm
+#' @importFrom grDevices rgb
 #' @export
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
+#' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=4)
 #' plot(inv_mob_out, 'b1') 
 #' plot(inv_mob_out, 'b1', scale_by = 'indiv')
@@ -1380,7 +1390,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                        `N` = 'nsSBR',
                        `SAD` = 'IBR')
         p_list[[2]] = ggplot(mob_out$S_df, aes(effort, S)) +
-                          geom_line(aes(group = env, color = env)) +
+                          geom_line(aes(group = group, color = env)) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs)) +
                           labs(y = expression("Richness (" *
@@ -1395,7 +1405,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                 # only show a subset of efforts for clarity
                 effort_r = floor(log(range(efforts), eff_log_base))
                 effort_2 = eff_log_base^(effort_r[1]:effort_r[2])
-                eff_d = as.matrix(dist(c(efforts, effort_2)))
+                eff_d = as.matrix(stats::dist(c(efforts, effort_2)))
                 eff_d = eff_d[-((length(efforts)+1):ncol(eff_d)),
                               -(1:length(efforts))]
                 min_index = apply(eff_d, 2, function(x) which(x == min(x))[1])
@@ -1524,6 +1534,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
 #' @inheritParams plot.mob_out
 #' @inheritParams graphics::plot.default
 #' @importFrom pracma pchip
+#' @importFrom graphics lines abline legend axTicks axis mtext
 #' @export
 #' @examples 
 #' data(inv_comm)
@@ -1638,6 +1649,7 @@ overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
 #' @param comm community matrix with sites as rows and species as columns
 #' @param n_perm number of permutations to average across, defaults to 1000
 #' @author Dan McGlinn
+#' @importFrom graphics abline legend 
 #' @export
 #' @examples
 #' data(inv_comm)

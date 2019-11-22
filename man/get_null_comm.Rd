@@ -44,8 +44,8 @@ comm = matrix(rpois(S*nplots, 1),
 comm
 groups = rep(1:2, each=2)
 groups
-get_null_comm(comm, 'noagg')
-get_null_comm(comm, 'noagg', groups)
-get_null_comm(comm, 'swapN')
-get_null_comm(comm, 'swapN', groups)
+get_null_comm(comm, 'SAD')
+get_null_comm(comm, 'SAD', groups)
+get_null_comm(comm, 'N')
+get_null_comm(comm, 'N', groups)
 }
