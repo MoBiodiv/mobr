@@ -13,52 +13,52 @@ test_that("mobr rarefaction function values are equivalent to true/accepted valu
   # First SAD value
   sad1 = rep(10, 100)
   # Calculate rarefaction value and convert to dataframe for double value reference
-  sad1DF = as.data.frame(rarefaction(sad1, 'indiv', 100))
+  sad1DF = as.data.frame(rarefaction(sad1, 'IBR', 100))
   
   # Second SAD value
   sad2 = c(76, rep(50, 5), rep(20, 27-7), rep(5, 77-27), rep(1, 101-77))
   # Calculate rarefaction value and convert to dataframe for double value reference
-  sad2DF = as.data.frame(rarefaction(sad2, 'indiv', 100))
+  sad2DF = as.data.frame(rarefaction(sad2, 'IBR', 100))
   
   # Third SAD value
   sad3 = c(365, 112, 81, 61, 55, 46, 40, 38, 29, 23, 21, 15, 13, 12, 10, 8, 7, 7, 6, 6, 5, 5, 5, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1)
   # Calculate rarefaction value and convert to dataframe for double value reference
-  sad3DF = as.data.frame(rarefaction(sad3, 'indiv', 100))
+  sad3DF = as.data.frame(rarefaction(sad3, 'IBR', 100))
   
   # Fourth SAD value
   sad4 = c(505, rep(5, 99))
   # Calculate rarefaction value and convert to dataframe for double value reference
-  sad4DF = as.data.frame(rarefaction(sad4, 'indiv', 100))
+  sad4DF = as.data.frame(rarefaction(sad4, 'IBR', 100))
   
   # Fifth SAD value
   sad5 = c(901, rep(1, 99))
   # Calculate rarefaction value and convert to dataframe for double value reference
-  sad5DF = as.data.frame(rarefaction(sad5, 'indiv', 100))
+  sad5DF = as.data.frame(rarefaction(sad5, 'IBR', 100))
   
   # EXPECTATION 1
   # Check equivalence of first SAD value with value from table - 65.3
   # Calculated rarefaction value has been rounded to nearest tenth to match table value
-  expect_equal(round(sad1DF$`rarefaction(sad1, "indiv", 100)` , digits = 1), 65.3)
+  expect_equal(round(sad1DF$`rarefaction(sad1, "IBR", 100)` , digits = 1), 65.3)
   
   # EXPECTATION 2
   # Check equivalence of second SAD value with value from table - 46.5
   # Calculated rarefaction value has been rounded to nearest tenth to match table value
-  expect_equal(round(sad2DF$`rarefaction(sad2, "indiv", 100)`, digits = 1), 46.5)
+  expect_equal(round(sad2DF$`rarefaction(sad2, "IBR", 100)`, digits = 1), 46.5)
   
   # EXPECTATION 3
   # Check equivalence of second SAD value with value from table - 20.4
   # Calculated rarefaction value has been rounded to nearest tenth to match table value
-  expect_equal(round(sad3DF$`rarefaction(sad3, "indiv", 100)`, digits = 1), 20.4)
+  expect_equal(round(sad3DF$`rarefaction(sad3, "IBR", 100)`, digits = 1), 20.4)
   
   # EXPECTATION 4
   # Check equivalence of second SAD value with value from table - 41.6
   # Calculated rarefaction value has been rounded to nearest tenth to match table value
-  expect_equal(round(sad4DF$`rarefaction(sad4, "indiv", 100)`, digits = 1), 41.6)
+  expect_equal(round(sad4DF$`rarefaction(sad4, "IBR", 100)`, digits = 1), 41.6)
   
   # EXPECTATION 5
   # Check equivalence of second SAD value with value from table - 10.9
   # Calculated rarefaction value has been rounded to nearest tenth to match table value
-  expect_equal(round(sad5DF$`rarefaction(sad5, "indiv", 100)`, digits = 1), 10.9)
+  expect_equal(round(sad5DF$`rarefaction(sad5, "IBR", 100)`, digits = 1), 10.9)
   
   # SPACIAL-BASED RAREFACTION TESTING (EXPECTATIONS 6 THROUGH 9)
   # Compare mobr spacial-based rarefaction function against hand calculated values
@@ -75,7 +75,10 @@ test_that("mobr rarefaction function values are equivalent to true/accepted valu
   
   # Calculate rarefaction values using mobr rarefaction function
   # Convert values to dataframe for easy referencing in test functions
-  rarefaction_values = as.data.frame(rarefaction(comms, 'spat', coords = 1:6, latlong=F))
+  rarefaction_values = as.data.frame(rarefaction(comms, 'sSBR',
+                                                 coords = cbind(1:6,1),
+                                                 latlong = F,
+                                                 spat_algo = "kNN"))
   
   # NOTE:
   # Rarefaction values to compare are at indeces: 1, 3, 5, and 6
