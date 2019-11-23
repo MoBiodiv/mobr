@@ -5,8 +5,8 @@
 \title{Auxiliary function for computing S and the effect on S of 
 the three components of community structure: SAD, N, and aggregation}
 \usage{
-get_delta_curves(x, tests = c("SAD", "N", "agg"), inds = NULL,
-  ind_dens = NULL, n_plots = NULL, spat_algo = NULL)
+get_delta_curves(x, tests = c("SAD", "N", "agg"), spat_algo = NULL,
+  inds = NULL, ind_dens = NULL, n_plots = NULL)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object or 2) a vector which contains
@@ -15,6 +15,12 @@ when x is a mob_in object but only the SAD effect can be computed when
 x is a vector of species abundances.}
 
 \item{tests}{what effects to compute defaults to 'SAD', 'N', and 'agg'}
+
+\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
+for k-neareast neighbor and k-nearest centroid neighbor sampling 
+respectively. It defaults to k-neareast neighbor which is a 
+more computationally efficient algorithim that closely approximates the 
+potentially more correct k-NCN algo (see Details).}
 
 \item{ind_dens}{the density of individuals to compare against for computing
 N effect}

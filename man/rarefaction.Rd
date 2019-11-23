@@ -66,7 +66,9 @@ non-error messages are suppressed.}
 
 \item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
 for k-neareast neighbor and k-nearest centroid neighbor sampling 
-respectively (see Details).}
+respectively. It defaults to k-neareast neighbor which is a 
+more computationally efficient algorithim that closely approximates the 
+potentially more correct k-NCN algo (see Details).}
 }
 \value{
 A vector of rarefied species richness values
