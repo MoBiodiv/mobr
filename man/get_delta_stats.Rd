@@ -5,10 +5,10 @@
 \title{Conduct the MoB tests on drivers of biodiversity across scales.}
 \usage{
 get_delta_stats(mob_in, env_var, group_var = NULL, ref_level = NULL,
-  tests = c("SAD", "N", "agg"), type = c("continuous", "discrete"),
-  stats = NULL, inds = NULL, log_scale = FALSE, min_plots = NULL,
-  density_stat = c("mean", "max", "min"), n_perm = 1000,
-  overall_p = FALSE)
+  tests = c("SAD", "N", "agg"), spat_algo = NULL,
+  type = c("continuous", "discrete"), stats = NULL, inds = NULL,
+  log_scale = FALSE, min_plots = NULL, density_stat = c("mean",
+  "max", "min"), n_perm = 1000, overall_p = FALSE)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
@@ -27,6 +27,12 @@ if \code{env_var} is a factor.}
 
 \item{tests}{specifies which one or more of the three tests ('SAD', N', 'agg') 
 are to be performed. Default is to include all three tests.}
+
+\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
+for k-neareast neighbor and k-nearest centroid neighbor sampling 
+respectively. It defaults to k-neareast neighbor which is a 
+more computationally efficient algorithim that closely approximates the 
+potentially more correct k-NCN algo (see Details).}
 
 \item{type}{"discrete" or "continuous". If "discrete", pair-wise comparisons
 are conducted between all other groups and the reference group. If

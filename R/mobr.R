@@ -243,7 +243,9 @@ sphere_dist = function(coords){
 #'   non-error messages are suppressed.
 #' @param spat_algo character string that can be either: \code{'kNN'} or \code{'kNCN'}
 #' for k-neareast neighbor and k-nearest centroid neighbor sampling 
-#' respectively (see Details). 
+#' respectively. It defaults to k-neareast neighbor which is a 
+#' more computationally efficient algorithim that closely approximates the 
+#' potentially more correct k-NCN algo (see Details). 
 #' @inheritParams make_mob_in 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
@@ -404,7 +406,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             message('Richness was not extrapolated because effort less than or equal to the number of samples')
     if (method == 'sSBR') {
         if (is.null(spat_algo)) 
-            spat_algo = 'kNCN'
+            spat_algo = 'kNN'
         if (spat_algo == 'kNN') {
       
             explicit_loop = matrix(0, n, n)
@@ -564,11 +566,11 @@ avg_nn_dist = function(coords) {
 #' @param tests what effects to compute defaults to 'SAD', 'N', and 'agg'
 #' @param ind_dens the density of individuals to compare against for computing
 #'  N effect
+#' @inheritParams rarefaction
 #' @importFrom tibble tibble
 #' @keywords internal
-get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'),
-                            inds=NULL, ind_dens=NULL, n_plots=NULL,
-                            spat_algo=NULL) {
+get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
+                            inds=NULL, ind_dens=NULL, n_plots=NULL) {
     if (is.null(inds) & any(c('SAD', 'N') %in% tests))
         stop('If SAD or N effect to be calculated inds must be specified')
     if (is.null(ind_dens) & 'N' %in% tests)
@@ -815,7 +817,7 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
 #' @importFrom tidyr nest unnest
 #' @keywords internal 
 get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
-                       stats=NULL) {
+                       stats=NULL, spat_algo=NULL) {
   
     # the approach taken here to get results for each group
     # is to first break the dataset up into a list of lists 
@@ -827,10 +829,10 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
     mob_in_groups = map(group_rows, ~ subset(mob_in, .x, type = 'integer'))
     names(mob_in_groups) = group_levels
     
-    S_df = map_dfr(mob_in_groups, get_delta_curves, tests, inds, ind_dens,
-                   n_plots, .id = "group")
+    S_df = map_dfr(mob_in_groups, get_delta_curves, tests, spat_algo,
+                   inds, ind_dens, n_plots, .id = "group")
     
-    S_df = S_df %>% mutate_if(is.factor, as.character)
+    S_df = S_df %>% try(mutate_if(is.factor, as.character), silent=T)
     
     # subsistute the group variable for the env variable
     S_df = data.frame(env = env[match(S_df$group, groups)],
@@ -859,7 +861,8 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
              mutate(fit = map(data, delta_mod)) %>%
              mutate(sum = map(fit, mod_sum, stats)) %>%
              select(test, sample, effort, sum) %>% 
-             unnest(sum) %>%
+             unnest(sum) %>% 
+             ungroup() %>%
              try(mutate_if(is.factor, as.character), silent = TRUE)
     
     return(list(S_df = S_df, mod_df = mod_df))
@@ -1004,6 +1007,7 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
 #'  p-values for the null tests. This should be interpreted with caution because
 #'  the overall p-values depend on scales of measurement yet do not explicitly 
 #'  reflect significance at any particular scale. 
+#' @inheritParams rarefaction
 #' @return a "mob_out" object with attributes
 #' @author Dan McGlinn and Xiao Xiao
 #' @import dplyr
@@ -1017,7 +1021,7 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
 #'                            type='discrete', log_scale=TRUE, n_perm=10)
 #' plot(inv_mob_out)
 get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL, 
-                           tests = c('SAD', 'N', 'agg'),
+                           tests = c('SAD', 'N', 'agg'), spat_algo = NULL,
                            type = c('continuous', 'discrete'),
                            stats = NULL, inds = NULL,
                            log_scale = FALSE, min_plots = NULL,
@@ -1103,10 +1107,11 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
                             ind_dens = ind_dens)
     out = append(out, 
                  get_results(mob_in, env, groups, tests, inds, ind_dens, n_plots,
-                             type, stats))
+                             type, stats, spat_algo))
 
     null_results = run_null_models(mob_in, env, groups, tests, inds, ind_dens,
-                                   n_plots, type, stats, n_perm, overall_p)
+                                   n_plots, type, stats, spat_algo,
+                                   n_perm, overall_p)
     # merge the null_results into the model data.frame
     out$S_df = left_join(out$S_df, null_results$S_df, 
                          by = c("env", "test", "sample", "effort"))
