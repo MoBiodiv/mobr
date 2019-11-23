@@ -225,7 +225,7 @@ at least 200 are recommended for actual applications.
 
 ```{r multi-scale analysis, eval=FALSE}
 inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
-                             type='discrete', log_scale=TRUE, n_perm = 99)
+                             type='discrete', log_scale=TRUE, n_perm = 20)
 ```
 
 ```{r, echo=FALSE}
@@ -401,7 +401,8 @@ SADs).
 
 ```{r, eval = FALSE}
 tank_deltaS = get_delta_stats(tank_mob_in, 'group', ref_level = 'low',
-                              inds = 10, log_scale = TRUE, type = 'discrete') 
+                              inds = 10, log_scale = TRUE, type = 'discrete',
+                              n_perm=19) 
 ```
 ```{r, echo = FALSE}
 load('../vignettes/tank_deltaS.Rdata')
