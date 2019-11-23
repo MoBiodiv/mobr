@@ -875,7 +875,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
 #' @importFrom stats quantile
 #' @keywords internal
 run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
-                           stats, n_perm, overall_p) {
+                           stats, spat_algo, n_perm, overall_p) {
     if (overall_p)
         p_val = vector('list', length(tests))
     for (k in seq_along(tests)) {
@@ -892,7 +892,7 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
             null_mob_in = mob_in
             null_mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
             null_results[[i]] = get_results(null_mob_in, env, groups, tests[k], inds,
-                                            ind_dens, n_plots, type, stats)
+                                            ind_dens, n_plots, type, stats, spat_algo)
             setTxtProgressBar(pb, i)
         }
         close(pb)    
@@ -923,7 +923,7 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
         # various stats and tests
         if (overall_p) {
             obs_df = get_results(mob_in, env, groups, tests[k], inds, ind_dens,
-                                 n_plots, type, stats)
+                                 n_plots, type, stats, spat_algo)
             obs_df = map(obs_df, function(x) data.frame(perm = 0, x))          
             null_df = map2(obs_df, null_df, rbind)
             p_val[[k]] = list(effect_p = null_df$S_df %>%

@@ -147,7 +147,7 @@ turnover it is most sensitive too (McGlinn et al. 2018, Chase et al. 2018).
 
 ```{r run two-scale analysis, eval = FALSE}
 inv_stats <- get_mob_stats(inv_mob_in, group_var = "group", 
-                           n_perm = 200)
+                           n_perm = 20)
 ```
 
 ```{r, echo = FALSE}
