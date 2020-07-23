@@ -4,9 +4,19 @@
 \alias{plot_rarefaction}
 \title{Plot rarefaction curves for each treatment group}
 \usage{
-plot_rarefaction(mob_in, env_var, method, dens_ratio = 1, pooled = T,
-  spat_algo = NULL, col = NULL, lwd = 3, log = "",
-  leg_loc = "topleft", ...)
+plot_rarefaction(
+  mob_in,
+  env_var,
+  method,
+  dens_ratio = 1,
+  pooled = T,
+  spat_algo = NULL,
+  col = NULL,
+  lwd = 3,
+  log = "",
+  leg_loc = "topleft",
+  ...
+)
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}

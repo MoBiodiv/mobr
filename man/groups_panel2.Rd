@@ -4,8 +4,14 @@
 \alias{groups_panel2}
 \title{Panel function for gamma-scale results with confidence intervals}
 \usage{
-groups_panel2(group_dat, col, ylab = "", main = expression(gamma *
-  "-scale"), cex.axis = 1.2, ...)
+groups_panel2(
+  group_dat,
+  col,
+  ylab = "",
+  main = expression(gamma * "-scale"),
+  cex.axis = 1.2,
+  ...
+)
 }
 \description{
 Panel function for gamma-scale results with confidence intervals

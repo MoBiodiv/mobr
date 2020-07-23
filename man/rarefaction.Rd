@@ -4,9 +4,18 @@
 \alias{rarefaction}
 \title{Rarefied Species Richness}
 \usage{
-rarefaction(x, method, effort = NULL, coords = NULL, latlong = NULL,
-  dens_ratio = 1, extrapolate = FALSE, return_NA = FALSE,
-  quiet_mode = FALSE, spat_algo = NULL)
+rarefaction(
+  x,
+  method,
+  effort = NULL,
+  coords = NULL,
+  latlong = NULL,
+  dens_ratio = 1,
+  extrapolate = FALSE,
+  return_NA = FALSE,
+  quiet_mode = FALSE,
+  spat_algo = NULL
+)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like

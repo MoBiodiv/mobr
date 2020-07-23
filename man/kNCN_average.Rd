@@ -4,8 +4,14 @@
 \alias{kNCN_average}
 \title{Construct spatially constrained sample-based rarefaction (sSBR) curve using the k-Nearest-Centroid-neighbour (k-NCN) algorithm}
 \usage{
-kNCN_average(x, n = NULL, coords = NULL, repetitions = 1,
-  no_pb = TRUE, cl = NULL)
+kNCN_average(
+  x,
+  n = NULL,
+  coords = NULL,
+  repetitions = 1,
+  no_pb = TRUE,
+  cl = NULL
+)
 }
 \arguments{
 \item{x}{a mob_in object or a community site x species matrix}

@@ -4,8 +4,15 @@
 \alias{samples_panel1}
 \title{Panel function for alpha-scale results}
 \usage{
-samples_panel1(sample_dat, samples_tests, col, ylab = "",
-  main = expression(alpha * "-scale"), cex.axis = 1.2, ...)
+samples_panel1(
+  sample_dat,
+  samples_tests,
+  col,
+  ylab = "",
+  main = expression(alpha * "-scale"),
+  cex.axis = 1.2,
+  ...
+)
 }
 \description{
 Panel function for alpha-scale results

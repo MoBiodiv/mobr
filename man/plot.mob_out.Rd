@@ -4,10 +4,17 @@
 \alias{plot.mob_out}
 \title{Plot mob curves}
 \usage{
-\method{plot}{mob_out}(mob_out, stat = "b1", log2 = "",
-  scale_by = NULL, display = c("S ~ effort", "effect ~ grad",
-  "stat ~ effort"), eff_sub_effort = TRUE, eff_log_base = 2,
-  eff_disp_pts = TRUE, eff_disp_smooth = FALSE)
+\method{plot}{mob_out}(
+  mob_out,
+  stat = "b1",
+  log2 = "",
+  scale_by = NULL,
+  display = c("S ~ effort", "effect ~ grad", "stat ~ effort"),
+  eff_sub_effort = TRUE,
+  eff_log_base = 2,
+  eff_disp_pts = TRUE,
+  eff_disp_smooth = FALSE
+)
 }
 \arguments{
 \item{mob_out}{a mob_out class object}

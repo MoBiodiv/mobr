@@ -4,8 +4,13 @@
 \alias{make_mob_in}
 \title{Create the 'mob_in' object.}
 \usage{
-make_mob_in(comm, plot_attr, coord_names = NULL, binary = FALSE,
-  latlong = FALSE)
+make_mob_in(
+  comm,
+  plot_attr,
+  coord_names = NULL,
+  binary = FALSE,
+  latlong = FALSE
+)
 }
 \arguments{
 \item{comm}{community matrix in which rows are samples (e.g., plots) and

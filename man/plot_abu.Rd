@@ -4,8 +4,16 @@
 \alias{plot_abu}
 \title{Plot distributions of species abundance}
 \usage{
-plot_abu(mob_in, env_var, type = c("sad", "rad"), pooled = FALSE,
-  col = NULL, lwd = 3, log = "", leg_loc = "topleft")
+plot_abu(
+  mob_in,
+  env_var,
+  type = c("sad", "rad"),
+  pooled = FALSE,
+  col = NULL,
+  lwd = 3,
+  log = "",
+  leg_loc = "topleft"
+)
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}

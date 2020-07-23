@@ -4,8 +4,7 @@
 \alias{subset.mob_in}
 \title{Subset the rows of the mob data input object}
 \usage{
-\method{subset}{mob_in}(mob_in, subset, type = "string",
-  drop_levels = FALSE)
+\method{subset}{mob_in}(mob_in, subset, type = "string", drop_levels = FALSE)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by \code{\link{make_mob_in}}}

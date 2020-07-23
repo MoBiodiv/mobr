@@ -4,8 +4,15 @@
 \alias{calc_biodiv}
 \title{Calculate biodiversity statistics from sites by species table.}
 \usage{
-calc_biodiv(abund_mat, groups, index, effort, extrapolate, return_NA,
-  rare_thres)
+calc_biodiv(
+  abund_mat,
+  groups,
+  index,
+  effort,
+  extrapolate,
+  return_NA,
+  rare_thres
+)
 }
 \arguments{
 \item{abund_mat}{Sites by species table with species abundances
