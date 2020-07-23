@@ -962,8 +962,7 @@ plot.mob_stats = function(mob_stats, index = NULL, multi_panel = FALSE,
     if ("S_n" %in% index_match) {
         S_n_samples = filter(mob_stats$samples_stats, index == "S_n")
         S_n_groups = filter(mob_stats$groups_stats, index == "S_n")
-        S_n_len = max(length(unique(S_n_samples$effort)),
-                        length(unique(S_n_groups$effort)))
+        S_n_len = length(unique(S_n_samples$effort))
     } else {
         S_n_len = 0
     }
