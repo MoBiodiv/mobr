@@ -246,7 +246,6 @@ sphere_dist = function(coords){
 #' respectively. It defaults to k-neareast neighbor which is a 
 #' more computationally efficient algorithim that closely approximates the 
 #' potentially more correct k-NCN algo (see Details). 
-#' @inheritParams make_mob_in 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #'   the random sampling expectation for the individual and sampled based
@@ -358,11 +357,13 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         else if(latlong != x_mob_in$latlong)
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
-        if (is.null(coords)){
-            if (is.null(x_mob_in$spat)){
-                stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
+        if (method == 'sSBR') {
+            if (is.null(coords)){
+                if (is.null(x_mob_in$spat)){
+                    stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
+                }
+                coords = x_mob_in$spat
             }
-            coords = x_mob_in$spat
         }
     }
     if (method == 'SBR' | method == 'sSBR') {
@@ -377,7 +378,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         }
     } else if (!is.null(spat_algo))
         warning("Setting spat_algo to a non-NULL value only has consequences when method = sSBR")
-    if (method == 'IBR') {
+    if (method == 'IBR' | method == 'nsSBR') {
         if (!is.null(dim(x)))
             x = colSums(x)
         n = sum(x)
@@ -683,21 +684,25 @@ get_null_comm = function(comm, tests, groups = NULL) {
   
     # compute N at each plot across groups
     N_plots = rowSums(comm)
-    if (tests == "N") # shuffle these abundances in the N null model
-        N_plots = sample(N_plots)
     if (tests == "SAD") {
+        # NOTE: for SAD test it is not necessary to fix or not fix plot level
+        # abundance because individual based rarefaction ignores that
+        # detail when it is computed
         # compute relative abundance distribution of the species pool
         rad_pool = colSums(comm) / sum(comm)
+        # compute average abundance per group 
         # randomly sample N individuals from the pool with replacement
         null_sads = map(N_plots, ~ get_rand_sad(rad_pool, .x))
         names(null_sads) = 1:length(null_sads)
     } else if (tests == "N" | tests == "agg") {
+        if (tests == "N") # shuffle these abundances in the N null model
+            N_plots = sample(N_plots)
         # compute rad for each group
         rad_groups = data.frame(comm, groups) %>%
                      group_by(groups) %>%
                      summarize_all(sum) %>%
-                     select(-one_of("groups")) %>%
-                     t %>% as_tibble %>%
+                     select(-one_of("groups")) %>% t %>%
+                     as_tibble(.x, .name_repair = ~ vctrs::vec_as_names(..., quiet = TRUE)) %>%
                      map(~ .x / sum(.x))
         # replicate these rads so that you have one rad for every
         # plot in the dataset
@@ -840,7 +845,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
 
     #S_df = subset(S_df, select = -group)
     
-    S_df = as_tibble(S_df, .name_repair = 'minimal')
+    S_df = tibble::as_tibble(S_df, .name_repair = 'minimal')
   
     # now that S and effects computed across scale compute
     # summary statistics at each scale 
@@ -878,6 +883,7 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
                            stats, spat_algo, n_perm, overall_p) {
     if (overall_p)
         p_val = vector('list', length(tests))
+    # it may be possible to run all tests at the same time
     for (k in seq_along(tests)) {
         null_results = vector('list', length = n_perm)
         cat(paste('\nComputing null model for', tests[k], 'effect\n'))
@@ -1384,7 +1390,8 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                        `N` = 'nsSBR',
                        `SAD` = 'IBR')      
         p_list[[1]] = ggplot(mob_out$S_df, aes(env, S)) +
-                          geom_point(aes(group = effort, color = effort)) +
+                          geom_smooth(aes(group = effort, color = effort),
+                                      method = 'lm', se = F) +
                           labs(x = mob_out$env_var) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs))
@@ -1398,7 +1405,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                           geom_line(aes(group = group, color = env)) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs)) +
-                          labs(y = expression("Richness (" *
+                          labs(y = expression("richness (" *
                                                 italic(S) * ")"),
                                color = mob_out$env_var) 
     }
@@ -1410,12 +1417,14 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                 # only show a subset of efforts for clarity
                 effort_r = floor(log(range(efforts), eff_log_base))
                 effort_2 = eff_log_base^(effort_r[1]:effort_r[2])
+                effort_2 = effort_2[effort_2 > 1] # effort at 1 indiv uninformative
                 eff_d = as.matrix(stats::dist(c(efforts, effort_2)))
                 eff_d = eff_d[-((length(efforts)+1):ncol(eff_d)),
                               -(1:length(efforts))]
                 min_index = apply(eff_d, 2, function(x) which(x == min(x))[1])
                 sub_effort = efforts[min_index]
-                print(paste("Effect size shown at the following efforts", sub_effort))
+                print(paste("Effect size shown at the following efforts:",
+                            paste(sub_effort, collapse=', ')))
             }
             else 
                 sub_effort = efforts
@@ -1438,6 +1447,7 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                       #                group = effort, color = effort,
                       #                fill = 'null'),
                       #            alpha = .25) +
+                      geom_hline(yintercept = 0, linetype = 'dashed') + 
                       labs(x = mob_out$env_var) +
                       facet_wrap(. ~ test, scales = "free_y") +
                       labs(y = expression('effect (' * Delta * italic(S) * ')')) +
@@ -1457,6 +1467,8 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
     }
 
     if ('stat ~ effort' %in% display) {
+        if (stat == 'b0')
+            ylab = expression('Intercept (' * italic(beta)[0] * ')')
         if (stat == 'b1')
             ylab = expression('Slope (' * italic(beta)[1] * ')')
         if (stat == 'r2')
