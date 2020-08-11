@@ -40,12 +40,14 @@ Imports:
     egg,
     rgeos,
     sp,
-    tibble
+    tibble,
+    vctrs,
+    rlang
 Suggests:
     knitr,
     rmarkdown,
     testthat
-License: MIT
+License: MIT + file LICENSE
 LazyData: true
 RoxygenNote: 7.0.2
 Encoding: UTF-8
