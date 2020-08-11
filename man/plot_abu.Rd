@@ -24,14 +24,19 @@ specifies the grouping variable.}
 \item{type}{either 'sad' or 'rad' for species abundance vs rank abundance
 distribution}
 
-\item{pooled}{boolean specifying if abundances should be pooled at the group
-level or not}
+\item{pooled}{boolean defaults to FALSE which specifies that abundances shoulud
+not be pooled at the group level, TRUE specifies that they should be pooled}
 
 \item{col}{optional vector of colors.}
 
-\item{log}{a character string which contains \code{"x"} if the x axis
-    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
-    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
+\item{lwd}{a number which specifies the width of the lines}
+
+\item{log}{a string that specifies if any axes are to be log transformed, 
+options include 'x', 'y' or 'xy' in which either the x-axis, y-axis, or
+both axes are log transformed respectively}
+
+\item{leg_loc}{a string that specifies the location of the legend, 
+options include: 'lowerleft', 'topleft', 'loweright','topright'}
 }
 \description{
 Plot distributions of species abundance

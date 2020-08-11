@@ -138,12 +138,14 @@ rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=0.5)
 rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1.5)
 # sample based rarefaction under random sampling
 rarefaction(inv_comm, method='SBR')
+\donttest{ 
 # sampled based rarefaction under spatially explicit nearest neighbor sampling
 rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
             latlong=FALSE)
 # the syntax is simplier if suppling a mob_in object
 rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
 rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
+}
 }
 \references{
 Cayuela, L., N.J. Gotelli, & R.K. Colwell (2015) Ecological and 

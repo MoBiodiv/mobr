@@ -5,7 +5,7 @@
 \title{Plot mob curves}
 \usage{
 \method{plot}{mob_out}(
-  mob_out,
+  x,
   stat = "b1",
   log2 = "",
   scale_by = NULL,
@@ -13,11 +13,12 @@
   eff_sub_effort = TRUE,
   eff_log_base = 2,
   eff_disp_pts = TRUE,
-  eff_disp_smooth = FALSE
+  eff_disp_smooth = FALSE,
+  ...
 )
 }
 \arguments{
-\item{mob_out}{a mob_out class object}
+\item{x}{a mob_out class object}
 
 \item{stat}{a character string that specifies what statistic should be 
 used in the effect size plots. Options include: \code{c('b0', 'b1', 'r',
@@ -60,6 +61,8 @@ the fewer efforts will be diplayed.}
 \item{eff_disp_smooth}{a boolean to display the regressions used to summarize
 the linear effect of the explanatory variable on the effect sizes, defaults
 to FALSE}
+
+\item{...}{parameters passed to other functions}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial
@@ -75,7 +78,9 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
                               type='discrete', log_scale=TRUE, n_perm=4)
 plot(inv_mob_out, 'b1') 
+\donttest{ 
 plot(inv_mob_out, 'b1', scale_by = 'indiv')
+}
 }
 \author{
 Dan McGlinn and Xiao Xiao

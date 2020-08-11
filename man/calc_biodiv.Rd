@@ -45,6 +45,11 @@ single value or an integer vector.}
 when effort is larger than the number of individuals using the chao1
 method.}
 
+\item{return_NA}{boolean in which the rarefaction function
+returns the observed S when \code{effort} is larger than the number of
+individuals. If set to TRUE then NA is returned. Note that this argument
+is only relevant when \code{extrapolate = FALSE}.}
+
 \item{rare_thres}{The threshold that determines how pct_rare is computed.
 It can range from (0, 1] and defaults to 0.05 which specifies that any 
 species with less than or equal to 5% of the total abundance in a sample is

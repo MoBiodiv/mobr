@@ -4,13 +4,12 @@
 \alias{subset.mob_in}
 \title{Subset the rows of the mob data input object}
 \usage{
-\method{subset}{mob_in}(mob_in, subset, type = "string", drop_levels = FALSE)
+\method{subset}{mob_in}(x, subset, type = "string", drop_levels = FALSE, ...)
 }
 \arguments{
-\item{mob_in}{an object of class mob_in created by \code{\link{make_mob_in}}}
+\item{x}{an object of class mob_in created by \code{\link{make_mob_in}}}
 
-\item{subset}{logical expression indicating elements or rows to keep:
-    missing values are taken as false.}
+\item{subset}{expression indicating elements or rows to keep: missing values are taken as false.}
 
 \item{type}{specifies the type of object the argument \code{subset}
 specifies, may be: \code{string}, \code{integer}, or \code{logical},
@@ -18,6 +17,8 @@ defaults to \code{string}}
 
 \item{drop_levels}{boolean if TRUE unused levels are removed from factors in
 mob_in$env}
+
+\item{...}{parameters passed to other functions}
 }
 \description{
 This function subsets the rows of comm, env, and spat attributes of the
