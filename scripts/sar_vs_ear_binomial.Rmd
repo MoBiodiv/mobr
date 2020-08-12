@@ -113,5 +113,20 @@ I haven't worked it all out but where I'm going is that multi-site beta-diversit
 this clearly then it would be an important step forward in the unification of 
 beta diversity metrics. Note this also has close ties with zeta diversity as well.
 
+### Does this also hold for non RPM models of species distributions
 
+A quick look with mobsim suggests that this is not true for spatially 
+aggregated communities.
+```{r}
+library(mobsim)
+
+sim_com1 <- sim_thomas_community(100, 1000, sigma = .01)
+dd1 <- dist_decay(sim_com1, n_samples = 1e3)
+plot(dd1)
+dar1 <- divar(sim_com1, n_samples = 1e3 )
+
+plot(m_species ~ prop_area, data = dar1, ylim = c(0, 100))
+lines(m_endemics ~ prop_area, data = dar1)
+lines(dar1$prop_area, c(100 - rev(dar1$m_endemics)[-1] , 100))
+```
 

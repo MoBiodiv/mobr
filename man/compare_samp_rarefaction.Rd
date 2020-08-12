@@ -17,8 +17,10 @@ a plot
 This is just plotting all curves.
 }
 \examples{
+\donttest{
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 compare_samp_rarefaction(inv_mob_in)
+}
 }

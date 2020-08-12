@@ -73,7 +73,7 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' kNCN_average(inv_mob_in)
+#' kNCN_average(inv_mob_in, n = 5)
 #' \donttest{
 #' # Not run: 
 #' # parallel evaluation using the parallel package 
@@ -121,10 +121,12 @@ kNCN_average = function(x, n = NULL, coords = NULL, repetitions = 1,
 #' @export
 #'
 #' @examples
+#' \donttest{
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' compare_samp_rarefaction(inv_mob_in)
+#' }
 compare_samp_rarefaction = function(x) {
     
     centroid_curve = rarefaction(x, method = "sSBR", spat_algo = "kNCN")

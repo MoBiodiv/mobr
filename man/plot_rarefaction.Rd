@@ -4,9 +4,19 @@
 \alias{plot_rarefaction}
 \title{Plot rarefaction curves for each treatment group}
 \usage{
-plot_rarefaction(mob_in, env_var, method, dens_ratio = 1, pooled = T,
-  spat_algo = NULL, col = NULL, lwd = 3, log = "",
-  leg_loc = "topleft", ...)
+plot_rarefaction(
+  mob_in,
+  env_var,
+  method,
+  dens_ratio = 1,
+  pooled = T,
+  spat_algo = NULL,
+  col = NULL,
+  lwd = 3,
+  log = "",
+  leg_loc = "topleft",
+  ...
+)
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
@@ -49,9 +59,14 @@ potentially more correct k-NCN algo (see Details).}
 
 \item{col}{optional vector of colors.}
 
-\item{log}{a character string which contains \code{"x"} if the x axis
-    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
-    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
+\item{lwd}{a number which specifies the width of the lines}
+
+\item{log}{a string that specifies if any axes are to be log transformed, 
+options include 'x', 'y' or 'xy' in which either the x-axis, y-axis, or
+both axes are log transformed respectively}
+
+\item{leg_loc}{a string that specifies the location of the legend, 
+options include: 'lowerleft', 'topleft', 'loweright','topright'}
 
 \item{...}{other arguments to provide to \code{\link[mobr]{rarefaction}}}
 }

@@ -1,8 +1,8 @@
 #' Create the 'mob_in' object.
-#' 
-#' The 'mob_in' object will be passed on for analyses of biodiversity across 
+#'
+#' The 'mob_in' object will be passed on for analyses of biodiversity across
 #' scales.
-#' 
+#'
 #' @param comm community matrix in which rows are samples (e.g., plots) and
 #'   columns are species.
 #' @param plot_attr matrix which includes the environmental attributes and
@@ -10,9 +10,9 @@
 #'   while spatial coordinates are optional.
 #' @param coord_names character vector with the names of the columns of
 #'   \code{plot_attr} that specify the coordinates of the samples. Defaults to
-#'   NULL (no coordinates). When providing coordinate names, the order the names 
-#'   are provided matters when working with latitude-longitude coordinates 
-#'   (i.e., argument \code{latlong = TRUE}, and it is expected that the column 
+#'   NULL (no coordinates). When providing coordinate names, the order the names
+#'   are provided matters when working with latitude-longitude coordinates
+#'   (i.e., argument \code{latlong = TRUE}, and it is expected that the column
 #'   specifying the x-coordinate or the longitude is provided first, y-coordinate
 #'    or latitude provided second. To provide coordinate names use the following
 #'    syntax: \code{coord_names = c('longitude_col_name','latitude_col_name')}
@@ -22,13 +22,13 @@
 #'   latitude-longitudes or not. If TRUE, distance calculations by downstream
 #'   functions are based upon great circle distances rather than Euclidean
 #'   distances. Note latitude-longitudes should be in decimal degree.
-#'   
+#'
 #' @return a "mob_in" object with four attributes. "comm" is the plot by species
 #'   matrix. "env" is the environmental attribute matrix, without the spatial
 #'   coordinates. "spat" contains the spatial coordinates (1-D or 2-D). "tests"
 #'   specifies whether each of the three tests in the biodiversity analyses is
 #'   allowed by data.
-#'   
+#'
 #' @author Dan McGlinn and Xiao Xiao
 #' @export
 #' @examples
@@ -45,36 +45,36 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
         out$tests$N = FALSE
         out$tests$agg = FALSE
     }
-  
+
     if (nrow(comm) != nrow(plot_attr))
         stop("Number of plots in community does not equal number of plots in plot attribute table")
-  
+
     if (is.null(coord_names) == FALSE) {
         spat_cols = sapply(coord_names, function(x) which(x == names(plot_attr)))
-    
+
         if (length(spat_cols) == 1 & latlong == TRUE)
             stop("Both latitude and longitude have to be specified")
     }
-  
+
     if (any(row.names(comm) != row.names(plot_attr)))
         warning("Row names of community and plot attributes tables do not match
                 which may indicate different identities or orderings of samples")
-  
+
     if (binary)  {
         warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
         out$tests$SAD = FALSE
         out$tests$N = FALSE
-    } 
+    }
     else {
         if (max(comm) == 1)
             warning("Maximum abundance is 1 which suggests data is binary, change the binary argument to TRUE")
     }
-  
+
     if (any(colSums(comm) == 0)) {
         warning("Some species have zero occurrences and will be dropped from the community table")
         comm = comm[ , colSums(comm) != 0]
     }
-  
+
     out$comm = data.frame(comm)
     if (is.null(coord_names) == FALSE) {
         if (length(spat_cols) > 0) {
@@ -89,7 +89,7 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
         out$env = data.frame(plot_attr)
         out$spat = NULL
     }
-  
+
     out$latlong = latlong
     class(out) = 'mob_in'
     return(out)
@@ -100,15 +100,16 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
 #' This function subsets the rows of comm, env, and spat attributes of the
 #' mob_in object
 #'
-#' @param mob_in an object of class mob_in created by \code{\link{make_mob_in}}
+#' @param x an object of class mob_in created by \code{\link{make_mob_in}}
+#' @param subset expression indicating elements or rows to keep: missing values are taken as false.
 #' @param type specifies the type of object the argument \code{subset}
 #'   specifies, may be: \code{string}, \code{integer}, or \code{logical},
 #'   defaults to \code{string}
 #' @param drop_levels boolean if TRUE unused levels are removed from factors in
 #'   mob_in$env
-#' @inheritParams base::subset
+#' @param ... parameters passed to other functions
 #' @export
-#' @examples 
+#' @examples
 #'  data(inv_comm)
 #'  data(inv_plot_attr)
 #'  inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
@@ -117,33 +118,38 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
 #'  subset(inv_mob_in, 1:4, type='integer', drop_levels=TRUE)
 #'  sub_log = c(TRUE, FALSE, TRUE, rep(FALSE, nrow(inv_mob_in$comm) - 3))
 #'  subset(inv_mob_in, sub_log, type='logical')
-subset.mob_in = function(mob_in, subset, type='string', drop_levels=FALSE) {
+subset.mob_in = function(x, subset, type='string', drop_levels=FALSE, ...) {
     if (missing(subset))
-        r <- rep_len(TRUE, nrow(mob_in$comm))
+        r <- rep_len(TRUE, nrow(x$comm))
     if (type == 'integer')
-        r <- 1:nrow(mob_in$comm) %in% subset
+        r <- 1:nrow(x$comm) %in% subset
     if (type == 'logical')
         r <- subset
     if (type == 'string'){
         e <- substitute(subset)
-        r <- eval(e, mob_in$env)
-        if (!is.logical(r)) 
+        r <- eval(e, x$env)
+        if (!is.logical(r))
             stop("'subset' must be logical when type = 'string'")
-   } 
-   mob_in$comm = base::subset(mob_in$comm, r)
-   mob_in$env = base::subset(mob_in$env, r)
+   }
+   x$comm = base::subset(x$comm, r)
+   x$env = base::subset(x$env, r)
    if (drop_levels)
-       mob_in$env = droplevels(mob_in$env)
-   if (!is.null(mob_in$spat))
-       mob_in$spat = mob_in$spat[r, ]
-   return(mob_in)
+       x$env = droplevels(x$env)
+   if (!is.null(x$spat))
+       x$spat = x$spat[r, ]
+   return(x)
 }
-  
+
 #' Print a shortened version of the mob_in object
+#' @param x a mob_in class object
+#' @param nrows the number of rows of each matrix to print
+#' @param nsp the number of species columns to print
+#' @param ... parameters passed to other functions
 #' @importFrom utils head
 #' @keywords internal
+#' @rdname print.mob_in
 #' @export
-print.mob_in = function(x, nrows=6, nsp=5) {
+print.mob_in = function(x, nrows=6, nsp=5, ...) {
     if (nrow(x$comm) > nrows) 
         cat(paste('Only the first', nrows, 'rows of any matrices are printed\n'))
     else 
@@ -156,15 +162,11 @@ print.mob_in = function(x, nrows=6, nsp=5) {
         nsp = ncol(x$comm)
     print(x$comm[1:nrows, 1:nsp])
     cat('\n$env\n')
-    print(head(x$env, nrows))
+    print(utils::head(x$env, nrows))
     cat('\n$spat\n')
     print(head(x$spat, nrows))
     cat('\n$latlong\n')
     print(x$latlong)
-}
-
-summary.mob_out = function(...) {
-   #  print summary anova style table
 }
 
 #' Internal function for distance matrix assuming inputs are lat and long 
@@ -246,7 +248,6 @@ sphere_dist = function(coords){
 #' respectively. It defaults to k-neareast neighbor which is a 
 #' more computationally efficient algorithim that closely approximates the 
 #' potentially more correct k-NCN algo (see Details). 
-#' @inheritParams make_mob_in 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #'   the random sampling expectation for the individual and sampled based
@@ -324,12 +325,14 @@ sphere_dist = function(coords){
 #' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1.5)
 #' # sample based rarefaction under random sampling
 #' rarefaction(inv_comm, method='SBR')
+#' \donttest{ 
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
 #' rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
 #'             latlong=FALSE)
 #' # the syntax is simplier if suppling a mob_in object
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
+#' }
 rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
                        dens_ratio=1, extrapolate=FALSE, return_NA=FALSE, 
                        quiet_mode=FALSE, spat_algo=NULL) {
@@ -358,11 +361,13 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         else if(latlong != x_mob_in$latlong)
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
-        if (is.null(coords)){
-            if (is.null(x_mob_in$spat)){
-                stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
+        if (method == 'sSBR') {
+            if (is.null(coords)){
+                if (is.null(x_mob_in$spat)){
+                    stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
+                }
+                coords = x_mob_in$spat
             }
-            coords = x_mob_in$spat
         }
     }
     if (method == 'SBR' | method == 'sSBR') {
@@ -377,7 +382,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         }
     } else if (!is.null(spat_algo))
         warning("Setting spat_algo to a non-NULL value only has consequences when method = sSBR")
-    if (method == 'IBR') {
+    if (method == 'IBR' | method == 'nsSBR') {
         if (!is.null(dim(x)))
             x = colSums(x)
         n = sum(x)
@@ -657,8 +662,10 @@ get_rand_sad = function(rad, N) {
 #'   community matrix are assumed to be members of the same group
 #'   
 #' @return a site-by-species matrix
+#' @importFrom vctrs vec_as_names
 #' @import purrr
 #' @import dplyr
+#' @importFrom utils globalVariables
 #' @export
 #' @examples 
 #' S = 3
@@ -683,21 +690,26 @@ get_null_comm = function(comm, tests, groups = NULL) {
   
     # compute N at each plot across groups
     N_plots = rowSums(comm)
-    if (tests == "N") # shuffle these abundances in the N null model
-        N_plots = sample(N_plots)
     if (tests == "SAD") {
+        # NOTE: for SAD test it is not necessary to fix or not fix plot level
+        # abundance because individual based rarefaction ignores that
+        # detail when it is computed
         # compute relative abundance distribution of the species pool
         rad_pool = colSums(comm) / sum(comm)
+        # compute average abundance per group 
         # randomly sample N individuals from the pool with replacement
         null_sads = map(N_plots, ~ get_rand_sad(rad_pool, .x))
         names(null_sads) = 1:length(null_sads)
     } else if (tests == "N" | tests == "agg") {
+        if (tests == "N") # shuffle these abundances in the N null model
+            N_plots = sample(N_plots)
         # compute rad for each group
+        .x <- NULL   # book keeping first for CRAN checks 
         rad_groups = data.frame(comm, groups) %>%
                      group_by(groups) %>%
                      summarize_all(sum) %>%
-                     select(-one_of("groups")) %>%
-                     t %>% as_tibble %>%
+                     select(-one_of("groups")) %>% t %>%
+                     as_tibble(.x, .name_repair = ~ vctrs::vec_as_names(..., quiet = TRUE)) %>%
                      map(~ .x / sum(.x))
         # replicate these rads so that you have one rad for every
         # plot in the dataset
@@ -815,6 +827,7 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
 #' @import purrr
 #' @import dplyr 
 #' @importFrom tidyr nest unnest
+#' @importFrom rlang .data
 #' @keywords internal 
 get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                        stats=NULL, spat_algo=NULL) {
@@ -840,7 +853,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
 
     #S_df = subset(S_df, select = -group)
     
-    S_df = as_tibble(S_df, .name_repair = 'minimal')
+    S_df = tibble::as_tibble(S_df, .name_repair = 'minimal')
   
     # now that S and effects computed across scale compute
     # summary statistics at each scale 
@@ -856,11 +869,11 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
             stats = c('betas', 'r', 'r2', 'r2adj', 'f')
     }
     mod_df = S_df %>%
-             group_by(test, sample, effort) %>%
+             group_by(.data$test, sample, .data$effort) %>%
              nest() %>%
-             mutate(fit = map(data, delta_mod)) %>%
-             mutate(sum = map(fit, mod_sum, stats)) %>%
-             select(test, sample, effort, sum) %>% 
+             mutate(fit = map(.data$data, delta_mod)) %>%
+             mutate(sum = map(.data$fit, mod_sum, stats)) %>%
+             select(.data$test, sample, .data$effort, sum) %>% 
              unnest(sum) %>% 
              ungroup() %>%
              try(mutate_if(is.factor, as.character), silent = TRUE)
@@ -873,11 +886,13 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
 #' @importFrom tibble tibble
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @importFrom stats quantile
+#' @importFrom rlang .data
 #' @keywords internal
 run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                            stats, spat_algo, n_perm, overall_p) {
     if (overall_p)
         p_val = vector('list', length(tests))
+    # it may be possible to run all tests at the same time
     for (k in seq_along(tests)) {
         null_results = vector('list', length = n_perm)
         cat(paste('\nComputing null model for', tests[k], 'effect\n'))
@@ -903,16 +918,16 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
         # compute quantiles
         null_qt = list()
         null_qt$S_df = null_df$S_df %>% 
-                       group_by(env, test, sample, effort) %>%
-                       summarize(low_effect = quantile(effect, 0.025, na.rm = TRUE),
-                                 med_effect = quantile(effect, 0.5, na.rm = TRUE), 
-                                 high_effect = quantile(effect, 0.975, na.rm = TRUE))
+                       group_by(env, .data$test, sample, .data$effort) %>%
+                       summarize(low_effect = quantile(.data$effect, 0.025, na.rm = TRUE),
+                                 med_effect = quantile(.data$effect, 0.5, na.rm = TRUE), 
+                                 high_effect = quantile(.data$effect, 0.975, na.rm = TRUE))
           
         null_qt$mod_df = null_df$mod_df %>%
-                         group_by(test, sample, effort, index) %>%
-                         summarize(low_value = quantile(value, 0.025, na.rm = TRUE),
-                                   med_value = quantile(value, 0.5, na.rm = TRUE), 
-                                   high_value = quantile(value, 0.975, na.rm = TRUE))
+                         group_by(.data$test, sample, .data$effort, .data$index) %>%
+                         summarize(low_value = quantile(.data$value, 0.025, na.rm = TRUE),
+                                   med_value = quantile(.data$value, 0.5, na.rm = TRUE), 
+                                   high_value = quantile(.data$value, 0.975, na.rm = TRUE))
           
         if (k == 1) # if only one test run
             out = null_qt
@@ -927,12 +942,12 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
             obs_df = map(obs_df, function(x) data.frame(perm = 0, x))          
             null_df = map2(obs_df, null_df, rbind)
             p_val[[k]] = list(effect_p = null_df$S_df %>%
-                                  group_by(test, group) %>%
-                                  summarize(p = get_overall_p(effort, perm, effect)),
+                                  group_by(.data$test, .data$group) %>%
+                                  summarize(p = get_overall_p(.data$effort, .data$perm, .data$effect)),
                               mod_p = null_df$mod_df %>%
-                                  subset(!is.na(value)) %>% 
-                                  group_by(test, index) %>% 
-                                  summarize(p = get_overall_p(effort, perm, value)))
+                                  subset(!is.na(.data$value)) %>% 
+                                  group_by(.data$test, .data$index) %>% 
+                                  summarize(p = get_overall_p(.data$effort, .data$perm, .data$value)))
         }
     }
     if (overall_p)
@@ -1012,13 +1027,14 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
 #' @author Dan McGlinn and Xiao Xiao
 #' @import dplyr
 #' @import purrr
+#' @importFrom stats sd
 #' @export
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
-#'                            type='discrete', log_scale=TRUE, n_perm=10)
+#'                            type='discrete', log_scale=TRUE, n_perm=3)
 #' plot(inv_mob_out)
 get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL, 
                            tests = c('SAD', 'N', 'agg'), spat_algo = NULL,
@@ -1054,7 +1070,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
     else {
         groups = mob_in$env[ , group_var]
         # check that for the defined groups all samples have same environmental value
-        if (any(tapply(env, groups, var) > 0)) {
+        if (any(tapply(env, groups, stats::sd) > 0)) {
             # bc all env values not the same for a group then compute mean value
             print("Computed average environmental value for each group")
             env = tapply(env, groups, mean)
@@ -1130,11 +1146,15 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #'   specifies the grouping variable.
 #' @param type either 'sad' or 'rad' for species abundance vs rank abundance
 #'   distribution
-#' @param pooled boolean specifying if abundances should be pooled at the group
-#'   level or not
+#' @param pooled boolean defaults to FALSE which specifies that abundances shoulud
+#'   not be pooled at the group level, TRUE specifies that they should be pooled 
 #' @param col optional vector of colors.
-#' @inheritParams plot.mob_out
-#' @inheritParams graphics::plot.default
+#' @param lwd a number which specifies the width of the lines
+#' @param log a string that specifies if any axes are to be log transformed, 
+#'   options include 'x', 'y' or 'xy' in which either the x-axis, y-axis, or
+#'   both axes are log transformed respectively
+#' @param leg_loc a string that specifies the location of the legend, 
+#'   options include: 'lowerleft', 'topleft', 'loweright','topright' 
 #' @importFrom scales alpha
 #' @importFrom graphics lines legend
 #' @export
@@ -1292,7 +1312,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 
 #' Plot mob curves
 #' 
-#' @param mob_out a mob_out class object
+#' @param x a mob_out class object
 #' @param stat a character string that specifies what statistic should be 
 #'   used in the effect size plots. Options include: \code{c('b0', 'b1', 'r',
 #'   'r2', 'r2adj', 'f')} for the beta-coefficients, person correlation 
@@ -1327,6 +1347,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' @param eff_disp_smooth a boolean to display the regressions used to summarize
 #'  the linear effect of the explanatory variable on the effect sizes, defaults
 #'  to FALSE
+#' @param ... parameters passed to other functions
 #' 
 #' @return plots the effect of the SAD, the number of individuals, and spatial
 #'  aggregation on the difference in species richness
@@ -1336,6 +1357,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' @importFrom egg ggarrange
 #' @importFrom stats predict loess lm
 #' @importFrom grDevices rgb
+#' @importFrom rlang .data
 #' @export
 #' @examples
 #' data(inv_comm)
@@ -1344,36 +1366,38 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=4)
 #' plot(inv_mob_out, 'b1') 
+#' \donttest{ 
 #' plot(inv_mob_out, 'b1', scale_by = 'indiv')
-plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL, 
+#' }
+plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL, 
                         display = c('S ~ effort', 'effect ~ grad', 'stat ~ effort'),
                         eff_sub_effort = TRUE, eff_log_base = 2,
-                        eff_disp_pts = TRUE, eff_disp_smooth = FALSE) {
-    if (mob_out$type == 'discrete') {
+                        eff_disp_pts = TRUE, eff_disp_smooth = FALSE, ...) {
+    if (x$type == 'discrete') {
         if (stat != 'b1')
             warning('The only statistic that has a reasonable interpretation for a discrete explanatory variable is the difference in the group means from the reference group (i.e., set stat = "b1")')
     }
     if (!is.null(scale_by)) {
         if (scale_by == 'indiv') {
-            mob_out$S_df = mutate(mob_out$S_df, 
+            x$S_df = mutate(x$S_df, 
                              effort = ifelse(sample == 'plot', 
-                                             round(effort * mob_out$density_stat$ind_dens),
-                                             effort))
-            mob_out$mod_df = mutate(mob_out$mod_df, 
+                                             round(.data$effort * x$density_stat$ind_dens),
+                                             .data$effort))
+            x$mod_df = mutate(x$mod_df, 
                                effort = ifelse(sample == 'plot', 
-                                               round(effort * mob_out$density_stat$ind_dens),
-                                               effort))
+                                               round(.data$effort * x$density_stat$ind_dens),
+                                               .data$effort))
       
         }     
         if (scale_by == 'plot') {
-            mob_out$S_df = mutate(mob_out$S_df, 
+            x$S_df = mutate(x$S_df, 
                              effort = ifelse(sample == 'indiv', 
-                                             round(effort / mob_out$density_stat$ind_dens),
-                                             effort))
-            mob_out$mod_df = mutate(mob_out$mod_df, 
+                                             round(.data$effort / x$density_stat$ind_dens),
+                                             .data$effort))
+            x$mod_df = mutate(x$mod_df, 
                                effort = ifelse(sample == 'indiv', 
-                                               round(effort / mob_out$density_stat$ind_dens),
-                                               effort))
+                                               round(.data$effort / x$density_stat$ind_dens),
+                                               .data$effort))
         } 
     }
     
@@ -1383,9 +1407,10 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
         facet_labs = c(`agg` = 'sSBR',
                        `N` = 'nsSBR',
                        `SAD` = 'IBR')      
-        p_list[[1]] = ggplot(mob_out$S_df, aes(env, S)) +
-                          geom_point(aes(group = effort, color = effort)) +
-                          labs(x = mob_out$env_var) +
+        p_list[[1]] = ggplot(x$S_df, aes(.data$env, .data$S)) +
+                          geom_smooth(aes(group = .data$effort, color = .data$effort),
+                                      method = 'lm', se = F) +
+                          labs(x = x$env_var) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs))
     }
@@ -1394,43 +1419,45 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
         facet_labs = c(`agg` = 'sSBR',
                        `N` = 'nsSBR',
                        `SAD` = 'IBR')
-        p_list[[2]] = ggplot(mob_out$S_df, aes(effort, S)) +
-                          geom_line(aes(group = group, color = env)) +
+        p_list[[2]] = ggplot(x$S_df, aes(.data$effort, .data$S)) +
+                          geom_line(aes(group = .data$group, color = .data$env)) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs)) +
-                          labs(y = expression("Richness (" *
+                          labs(y = expression("richness (" *
                                                 italic(S) * ")"),
-                               color = mob_out$env_var) 
+                               color = x$env_var) 
     }
     
     if ('effect ~ grad' %in% display) {
-        efforts = sort(unique(mob_out$S_df$effort))
+        efforts = sort(unique(x$S_df$effort))
         if (is.logical(eff_sub_effort)) {
             if (eff_sub_effort) {
                 # only show a subset of efforts for clarity
                 effort_r = floor(log(range(efforts), eff_log_base))
                 effort_2 = eff_log_base^(effort_r[1]:effort_r[2])
+                effort_2 = effort_2[effort_2 > 1] # effort at 1 indiv uninformative
                 eff_d = as.matrix(stats::dist(c(efforts, effort_2)))
                 eff_d = eff_d[-((length(efforts)+1):ncol(eff_d)),
                               -(1:length(efforts))]
                 min_index = apply(eff_d, 2, function(x) which(x == min(x))[1])
                 sub_effort = efforts[min_index]
-                print(paste("Effect size shown at the following efforts", sub_effort))
+                print(paste("Effect size shown at the following efforts:",
+                            paste(sub_effort, collapse=', ')))
             }
             else 
                 sub_effort = efforts
         } else if(!is.null(eff_sub_effort))
             sub_effort = eff_sub_effort
 
-        if (mob_out$type == "continuous")
-            mob_out$S_df = mob_out$S_df %>%
-                  group_by(test, effort) %>%
-                  mutate(low_effect = predict(loess(low_effect ~ env), env)) %>%
-                  mutate(high_effect = predict(loess(high_effect ~ env), env)) 
+        if (x$type == "continuous")
+            x$S_df = x$S_df %>%
+                  group_by(.data$test, .data$effort) %>%
+                  mutate(low_effect = predict(loess(low_effect ~ .data$env), .data$env)) %>%
+                  mutate(high_effect = predict(loess(high_effect ~ .data$env), .data$env)) 
 
         
-        p_list[[3]] = ggplot(subset(mob_out$S_df, effort %in% sub_effort),
-                                    aes(env, effect)) +
+        p_list[[3]] = ggplot(subset(x$S_df, x$S_df$effort %in% sub_effort),
+                                    aes(.data$env, .data$effect)) +
                       #geom_smooth(aes(x=group, y = med_effect,
                       #                group = effort, color = effort),
                       #            method = 'lm', se = F) +
@@ -1438,7 +1465,8 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                       #                group = effort, color = effort,
                       #                fill = 'null'),
                       #            alpha = .25) +
-                      labs(x = mob_out$env_var) +
+                      geom_hline(yintercept = 0, linetype = 'dashed') + 
+                      labs(x = x$env_var) +
                       facet_wrap(. ~ test, scales = "free_y") +
                       labs(y = expression('effect (' * Delta * italic(S) * ')')) +
                       scale_fill_manual(name = element_blank(),
@@ -1450,13 +1478,17 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
                                             midpoint = 4)
                 #"#74c476" 
         if (eff_disp_pts)
-            p_list[[3]] = p_list[[3]] + geom_point(aes(group = effort, color = effort))
+            p_list[[3]] = p_list[[3]] + geom_point(aes(group = .data$effort,
+                                                       color = .data$effort))
         if (eff_disp_smooth)
-            p_list[[3]] = p_list[[3]] + geom_smooth(aes(group = effort, color = effort),
+            p_list[[3]] = p_list[[3]] + geom_smooth(aes(group = .data$effort, 
+                                                        color = .data$effort),
                                                     method = lm, se=F)
     }
 
     if ('stat ~ effort' %in% display) {
+        if (stat == 'b0')
+            ylab = expression('Intercept (' * italic(beta)[0] * ')')
         if (stat == 'b1')
             ylab = expression('Slope (' * italic(beta)[1] * ')')
         if (stat == 'r2')
@@ -1465,12 +1497,12 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
             ylab = expression(italic(r))
         if (stat == 'f')
             ylab = expression(italic(F))
-        p_list[[4]] = ggplot(subset(mob_out$mod_df, index == stat),
-                          aes(effort, value)) + 
-                          geom_ribbon(aes(ymin = low_value,
-                                          ymax = high_value, fill = 'null'),
+        p_list[[4]] = ggplot(subset(x$mod_df, x$mod_df$index == stat),
+                          aes(.data$effort, .data$value)) + 
+                          geom_ribbon(aes(ymin = .data$low_value,
+                                          ymax = .data$high_value, fill = 'null'),
                                       alpha = 0.25) +
-                          geom_line(aes(group = index, color = 'observed')) +
+                          geom_line(aes(group = .data$index, color = 'observed')) +
                           geom_hline(yintercept = 0, linetype = 'dashed') + 
                           facet_wrap(. ~ test, scales = "free_x") +
                           labs(y = ylab) +
@@ -1509,141 +1541,6 @@ plot.mob_out = function(mob_out, stat = 'b1', log2 = '', scale_by = NULL,
     egg::ggarrange(plots = p_list)
 }
 
-#' Plot summary graphics of the effect on species richness
-#' 
-#' All three treatment effect sizes due to the SAD, N, or aggregation are
-#' graphed on a single plot. The treatment effect is defined as the treatment difference
-#' in richness due to a particular component of community structure. The overlap
-#' of the three effects is accomplished by rescaling numbers of individuals 
-#' to the number of plots. The effect sizes may be plotted simply in their raw 
-#' form or as stacked area plots. 
-#' @param display the type of graphic to display options include: "raw" or
-#'  "stacked" for plots of the raw effect sizes or a stacked area plot of the
-#'  absolute value of the effect sizes. 
-#' @param prop boolean if TRUE then proportions are used in the stacked area plot
-#' @param rescale string that specifies how to rescale number of individuals to
-#'  the number of samples. Defaults to 'max_effort' which rescales by 
-#'  setting the maximum number of individuals considered in the individual
-#'  rarefaction curve to the scale of the maximum number of samples considered
-#'  in the spatial rarefaction curve. The other option is 'density_stat' which
-#'  rescales individuals to number of samples using the density statistic 
-#'  specified when the mob statistics where computed by \code{\link[mobr]{get_delta_stats}}. 
-#' @param common_scale boolean defaults to FALSE. If TRUE then all the effects
-#'  are truncated to only be across the same range of number of individuals.
-#' @param xlabel_indiv boolean if TRUE then the top axis is 
-#'  labeled with numbers of individuals
-#' @param lty a vector of line types, see \link[graphics]{par}.
-#' @param col the colors for lines. Three colors can be specified so that each
-#'  line can be given its own color with the curves ordered as SAD, N, and
-#'  aggregation.
-#' @inheritParams plot.mob_out
-#' @inheritParams graphics::plot.default
-#' @importFrom pracma pchip
-#' @importFrom graphics lines abline legend axTicks axis mtext
-#' @export
-#' @examples 
-#' data(inv_comm)
-#' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-#'                               type='discrete', log_scale=TRUE, n_perm=2)
-#' overlap_effects(inv_mob_out, 'invaded', leg_loc=NA)
-#' overlap_effects(inv_mob_out, 'invaded', display='stacked')
-#' overlap_effects(inv_mob_out, 'invaded', display='stacked', prop=TRUE)
-overlap_effects = function(mob_out, trt_group, display='raw', prop=FALSE,
-                           rescale='max_effort', common_scale=FALSE, 
-                           xlabel_indiv=TRUE, ylim=NULL, log='', lty=1, lwd=3,
-                           leg_loc='topleft', col=c("#FFB3B5", "#78D3EC", "#C5C0FE")) {
-    if (prop & display != 'stacked')
-        stop("Proptional differences can only be used when considering stacked area graphs (i.e., display = 'stacked')")
-    if (length(lty) == 1) 
-        lty = rep(lty, 3)
-    tests = mob_out$tests
-    SAD = data.frame(type='SAD', 
-                    mob_out$SAD[mob_out$SAD$group == trt_group, 
-                                c('effort_ind', 'deltaS_emp')])
-    N = data.frame(type='N', 
-                   mob_out$N[mob_out$N$group == trt_group,
-                             c('effort_sample', 'ddeltaS_emp')])
-    agg = data.frame(type='agg',
-                     mob_out$agg[mob_out$agg$group == trt_group,
-                                 c('effort_sample', 'ddeltaS_emp')])
-    names(SAD) = names(N) = names(agg) =  c('type', 'effort', 'effect')
-    if (rescale == 'max_effort') {
-        virt_effort = seq(min(SAD$effort), max(SAD$effort),
-                          length.out = length(agg$effort))
-        effort = agg$effort
-    } else if (rescale == 'density_stat'){
-        N_plots = max(agg$effort)
-        N_indiv = max(SAD$effort)
-        ind_dens = mob_out$density_stat$ind_dens
-        # the next line assumes that the density stat is average (may need to generalize)
-        effort = min(agg$effort) : round(N_indiv / N_plots)
-        virt_effort = effort * ind_dens
-    } else
-        stop('rescale must be specified as "max_effort" or "density_stat" see documentation')
-    SAD_interp = pracma::pchip(SAD$effort, SAD$effect, virt_effort)
-    N_interp = pracma::pchip(N$effort, N$effect, virt_effort)    
-    SAD = data.frame(type='SAD', effort, effect=SAD_interp)
-    N = data.frame(type='N', effort=effort, effect=N_interp)
-    agg = agg[effort, ]
-    dat = rbind(SAD, N, agg)
-    dat$abs_effect = abs(dat$effect)
-    if (common_scale)
-        dat = subset(dat , effort <= max(dat$effort[dat$type == 'SAD']))
-    if (is.null(ylim)) {
-        if (display == 'raw')
-           ylim = range(dat$effect)
-        else if (prop)
-           ylim = c(0, 1)
-    }
-    if (display == 'raw') {
-       plot(effect ~ effort, data=dat, subset= type == 'SAD',
-            xlab = 'Number of Samples',
-            ylab = 'Difference in Richness',
-            frame.plot=F, ylim=ylim, type='l', col=col[1],
-            lwd=lwd, lty=lty[1], log=log)
-       lines(unique(dat$effort), dat$effect[dat$type == 'N'], col=col[2], 
-             lwd=lwd, lty=lty[2])
-       lines(unique(dat$effort), dat$effect[dat$type == 'agg'], col=col[3], 
-             lwd=lwd, lty=lty[3])
-       abline(h=0, lty=2, lwd=2)
-       if (!is.na(leg_loc))
-         legend(leg_loc, legend=c('SAD', 'N', 'Agg.'), col=col, lwd=lwd, 
-                bty='n')       
-    }
-    if (display == 'stacked') {
-        if (prop) {
-            props = unlist(tapply(dat$abs_effect, dat$effort,
-                                  function(x) x / sum(x)))
-            dat = data.frame(type = rep(c('SAD', 'N', 'agg'), 
-                                        times=length(effort)),
-                            effort = rep(effort, each=3),
-                            abs_effect = props)
-            ylab = 'Fraction of abs(Diff. in Richness)'
-         } else
-            ylab = 'abs(Diff. in Richness)'
-         plotStacked(unique(dat$effort),
-                     data.frame(dat$abs_effect[dat$type == 'SAD'],
-                                dat$abs_effect[dat$type == 'N'],
-                                dat$abs_effect[dat$type == 'agg']),
-                     xlab = 'Number of Samples', ylab = ylab ,
-                     col = col, border=NA,
-                     frame.plot=F, ylim=ylim, log=log)
-         if (!is.na(leg_loc))
-           legend(leg_loc, legend=c('SAD', 'N', 'Agg.'), fill=col,
-                  border=0, box.lwd=0, box.col=0)         
-    }
-    ticks = axTicks(side=3)
-    n_indices = round(seq(1, length(virt_effort), 
-                          length.out=length(ticks)))
-    if (xlabel_indiv) {
-        axis(side=3, at=effort[n_indices], 
-             labels=round(virt_effort[n_indices]))
-        mtext(side=3, "Number of Individuals", padj=-4.5)
-    }
-
-}
 
 #' Plot the relationship between the number of plots and the number of
 #' individuals
