@@ -4,8 +4,14 @@
 \alias{kNCN_average}
 \title{Construct spatially constrained sample-based rarefaction (sSBR) curve using the k-Nearest-Centroid-neighbour (k-NCN) algorithm}
 \usage{
-kNCN_average(x, n = NULL, coords = NULL, repetitions = 1,
-  no_pb = TRUE, cl = NULL)
+kNCN_average(
+  x,
+  n = NULL,
+  coords = NULL,
+  repetitions = 1,
+  no_pb = TRUE,
+  cl = NULL
+)
 }
 \arguments{
 \item{x}{a mob_in object or a community site x species matrix}
@@ -39,7 +45,7 @@ Internally the function constructs one curve per sample whereby each sample serv
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-kNCN_average(inv_mob_in)
+kNCN_average(inv_mob_in, n = 5)
 \donttest{
 # Not run: 
 # parallel evaluation using the parallel package 

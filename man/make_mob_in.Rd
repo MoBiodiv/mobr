@@ -4,8 +4,13 @@
 \alias{make_mob_in}
 \title{Create the 'mob_in' object.}
 \usage{
-make_mob_in(comm, plot_attr, coord_names = NULL, binary = FALSE,
-  latlong = FALSE)
+make_mob_in(
+  comm,
+  plot_attr,
+  coord_names = NULL,
+  binary = FALSE,
+  latlong = FALSE
+)
 }
 \arguments{
 \item{comm}{community matrix in which rows are samples (e.g., plots) and
@@ -17,9 +22,9 @@ while spatial coordinates are optional.}
 
 \item{coord_names}{character vector with the names of the columns of
 \code{plot_attr} that specify the coordinates of the samples. Defaults to
-NULL (no coordinates). When providing coordinate names, the order the names 
-are provided matters when working with latitude-longitude coordinates 
-(i.e., argument \code{latlong = TRUE}, and it is expected that the column 
+NULL (no coordinates). When providing coordinate names, the order the names
+are provided matters when working with latitude-longitude coordinates
+(i.e., argument \code{latlong = TRUE}, and it is expected that the column
 specifying the x-coordinate or the longitude is provided first, y-coordinate
  or latitude provided second. To provide coordinate names use the following
  syntax: \code{coord_names = c('longitude_col_name','latitude_col_name')}}
@@ -40,7 +45,7 @@ a "mob_in" object with four attributes. "comm" is the plot by species
   allowed by data.
 }
 \description{
-The 'mob_in' object will be passed on for analyses of biodiversity across 
+The 'mob_in' object will be passed on for analyses of biodiversity across
 scales.
 }
 \examples{
