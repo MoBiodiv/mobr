@@ -1,6 +1,6 @@
 Package: mobr
 Title: Measurement of Biodiversity in R
-Version: 1.9
+Version: 2.0.0
 Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
                     role = c("aut", "cre")),
              person("Xiao", "Xiao", email = "xiao@weecology.org", 
