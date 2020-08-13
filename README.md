@@ -3,7 +3,7 @@ mobr [![Build Status](https://travis-ci.org/MoBiodiv/mobr.png)](https://travis-c
 
 # Measurement of Biodiversity in R 
 
-This reposititory hosts an R package that is actively being developed for 
+This repository hosts an R package that is actively being developed for 
 estimating biodiversity and the components of its change. The key innovations of
 this R package over other R packages that also carry out rarefaction (e.g.,
 `vegan`, `iNext`) is that `mobr` is focused on 1) making empirical comparisons between 
@@ -16,7 +16,7 @@ The concepts and methods behind this R package are described in two publications
 McGlinn, D.J. X. Xiao, F. May, S. Blowes, J. Chase, N. Gotelli, T. Knight, B. McGill, and O. Purschke. 2019. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. Methods in Ecology and Evolution. 10:258–269. https://doi.org/10.1111/2041-210X.13102
 
 
-Chase, J.M., B. McGill, D.J. McGlinn, F. May, S.A. Blowes, X. Xiao, T. Knight. 2018. Embracing scale-dependence to achieve a deeper understanding of biodiversity and its change across communities. Ecology Letters. 21: 1737–1751. https://doi.org/10.1111/ele.13151, 
+Chase, J.M., B. McGill, D.J. McGlinn, F. May, S.A. Blowes, X. Xiao, T. Knight. 2018. Embracing scale-dependence to achieve a deeper understanding of biodiversity and its change across communities. Ecology Letters. 21: 1737–1751. https://doi.org/10.1111/ele.13151 
 
 
 ## Installation
@@ -34,12 +34,12 @@ Now that `devtools` is installed you can install `mobr using the following R cod
 install_github('MoBiodiv/mobr')
 ```
 
-Note: the installation may take some time due to numerous depenancies. We are 
-working on reducing the number of dependancies. 
+Note: the installation may take some time due to numerous dependencies. We are 
+working on reducing the number of dependencies. 
 
 ## Examples
 
-The package [vignette](./vignettes/mobr_intro.pdf) provides a useful walkthrough
+The package [vignette](./vignettes/mobr_intro.pdf) provides a useful walk-through
 the package tools, but below is some example code that uses the two key analyses
 and related graphics. 
 
