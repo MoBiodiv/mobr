@@ -15,7 +15,7 @@
 #' @keywords internal
 centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
 
-    if (class(x) == "mob_in") {
+    if ("mob_in" %in% class(x)) {
         comm = x$comm
         coords = x$spat
     } else {
@@ -88,7 +88,7 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
 #' }
 kNCN_average = function(x, n = NULL, coords = NULL, repetitions = 1, 
                         no_pb = TRUE, cl = NULL) {
-    if (class(x) == "mob_in") {
+    if ("mob_in" %in% class(x)) {
         sites = x$comm
         coords = x$spat
     } else {
