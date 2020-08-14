@@ -4,19 +4,41 @@
 \alias{rarefaction}
 \title{Rarefied Species Richness}
 \usage{
-rarefaction(x, method, effort = NULL, coords = NULL, latlong = NULL,
-  dens_ratio = 1, extrapolate = FALSE, return_NA = FALSE,
-  quiet_mode = FALSE)
+rarefaction(
+  x,
+  method,
+  effort = NULL,
+  coords = NULL,
+  latlong = NULL,
+  dens_ratio = 1,
+  extrapolate = FALSE,
+  return_NA = FALSE,
+  quiet_mode = FALSE,
+  spat_algo = NULL
+)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or
-sample spatially explicit based rarefaction respectively. To compute the
-sample-based, non-spatial rarefaction curve specify 'indiv' method with the
-appropriate \code{dens_ratio} (see Details).}
+\item{method}{a character string that specifies the method of rarefaction 
+  curve construction it can be one of the following: 
+\itemize{
+    \item \code{'IBR'} ... individual-based rarefaction in which species
+    are accumulated by randomly sampling individuals
+    \item \code{'SBR'} ... sample-based rarefaction in which species are 
+    accumulated by randomly sampling samples (i.e., plots). Note that within plot spatial 
+    aggregation is maintained with this approach. Although this curve
+    is implemented here, it is not used in the current version of the MoB framework
+    \item \code{'nsSBR'} ... non-spatial, sampled-based rarefaction in which
+    species are accumulated by randomly sampling samples that represent a 
+    spatially random sample of individuals (i.e., no with-in plot spatial 
+    aggregation). The argument \code{dens_ratio} must also be set otherwise 
+    this sampling results in a curve identical to the IBR (see Details). 
+    \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
+    are accumulated by including spatially proximate samples first. 
+}}
 
 \item{effort}{optional argument to specify what number of individuals or 
 number of samples depending on 'method' to compute rarefied richness as. If
@@ -29,48 +51,58 @@ is not already supplied by \code{x}. The first column should specify
 the x-coordinate (e.g., longitude) and the second coordinate should 
 specify the y-coordinate (e.g., latitude)}
 
-\item{latlong}{boolean, defaults to FALSE. Whether the coordinates are
-latitude-longitudes or not. If TRUE, distance calculations by downstream
-functions are based upon great circle distances rather than Euclidean
-distances. Note latitude-longitudes should be in decimal degree.}
+\item{latlong}{Boolean if coordinates are latitude-longitude}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
 and the community data (i.e., x) under consideration. This argument is
 used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
-\item{extrapolate}{boolean which specifies if richness should be extrapolated
+\item{extrapolate}{Boolean which specifies if richness should be extrapolated
 when effort is larger than the number of individuals using the chao1 method.
 Defaults to FALSE in which case it returns observed richness. Extrapolation
 is only implemented for individual-based rarefaction 
 (i.e., \code{method = 'indiv'})}
 
-\item{return_NA}{boolean defaults to FALSE in which the function returns the
+\item{return_NA}{Boolean defaults to FALSE in which the function returns the
 observed S when \code{effort} is larger than the number of individuals or
 number of samples (depending on the method of rarefaction). If set to TRUE
 then NA is returned. Note that this argument is only relevant when
 \code{extrapolate = FALSE}.}
 
-\item{quiet_mode}{boolean defaults to FALSE, if TRUE then warnings and other
+\item{quiet_mode}{Boolean defaults to FALSE, if TRUE then warnings and other
 non-error messages are suppressed.}
+
+\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
+for k-nearest neighbor and k-nearest centroid neighbor sampling 
+respectively. It defaults to k-nearest neighbor which is a 
+more computationally efficient algorithm that closely approximates the 
+potentially more correct k-NCN algo (see Details).}
 }
 \value{
 A vector of rarefied species richness values
 }
 \description{
 The expected number of species given a particular number of individuals or
-samples under and assumption of random sampling with replacement.
+samples under random and spatially explicit nearest neighbor sampling
 }
 \details{
 The analytical formulas of Cayuela et al. (2015) are used to compute
   the random sampling expectation for the individual and sampled based
   rarefaction methods. The spatially constrained rarefaction curve (Chiarucci
   et al. 2009) also known as the sample-based accumulation curve (Gotelli and
-  Colwell 2001) is computed by sampling each plot in the order of their
-  spatial proximity. If plots have the same distance from the focal plot then
-  one is chosen randomly to be sampled first. Each plot in the dataset is
-  treated as a starting point and then the mean of these n possible
-  accumulation curves is computed.
+  Colwell 2001) can be computed in one of two ways which is determined by the
+  argument \code{spat_algo}. In the kNN approach each plot is accumulated the
+  order of their spatial proximity to the original focal cell. If plots have
+  the same distance from the focal plot then one is chosen randomly to be
+  sampled first. In the kNCN approach a new centroid is computed after each
+  plot is accumulated, then disances are recomputed from that new centroid to
+  all other plots and the next nearest is sampled. The kNN is faster because
+  the distance matrix only needs to be computed once, but the sampling of
+  kNCN which simleaneously minimizes spatial distance and extent is more
+  similar to an actual person searching a field for species. For both kNN and
+  kNCN ,each plot in the dataset is treated as a starting point and then the
+  mean of these n possible accumulation curves is computed.
 
 For individual-based rarefaction if effort is greater than the number of
 individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
@@ -86,31 +118,34 @@ observed number of species is returned.
 data(inv_comm)
 data(inv_plot_attr)
 sad = colSums(inv_comm)
-inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 # rarefaction can be performed on different data inputs
 # all three give same answer
 # 1) the raw community site-by-species matrix
-rarefaction(inv_comm, method='indiv', effort=1:10)
+rarefaction(inv_comm, method='IBR', effort=1:10)
 # 2) the SAD of the community
-rarefaction(inv_comm, method='indiv', effort=1:10)
+rarefaction(inv_comm, method='IBR', effort=1:10)
 # 3) a mob_in class object
 # rescaling of individual based rarefaction 
 # when the density ratio is 1 the richness values are 
 # identical to unscale rarefaction
-rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=1)
+rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1)
 # however the curve is either shrunk when density is higher than 
 # the reference value (i.e., dens_ratio < 1)
-rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=0.5)
+rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=0.5)
 # the curve is stretched when density is lower than the 
 # reference value (i.e., dens_ratio > 1)
-rarefaction(inv_comm, method='indiv', effort=1:10, dens_ratio=1.5)
+rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1.5)
 # sample based rarefaction under random sampling
-rarefaction(inv_comm, method='samp')
+rarefaction(inv_comm, method='SBR')
+\donttest{ 
 # sampled based rarefaction under spatially explicit nearest neighbor sampling
-rarefaction(inv_comm, method='spat', coords=inv_plot_attr[ , c('x','y')],
+rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
             latlong=FALSE)
-# the syntax is simplier if suppling a mob_in object
-rarefaction(inv_mob_in, method='spat')
+# the syntax is simpler if supplying a mob_in object
+rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
+rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
+}
 }
 \references{
 Cayuela, L., N.J. Gotelli, & R.K. Colwell (2015) Ecological and 

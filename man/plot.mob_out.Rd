@@ -4,36 +4,65 @@
 \alias{plot.mob_out}
 \title{Plot mob curves}
 \usage{
-\method{plot}{mob_out}(mob_out, trt_group, ref_group, same_scale = FALSE,
-  log = "", display = c("rarefaction", "delta S", "ddelta S"), lwd = 3,
-  leg_loc = "topleft", par_args = NULL, ...)
+\method{plot}{mob_out}(
+  x,
+  stat = "b1",
+  log2 = "",
+  scale_by = NULL,
+  display = c("S ~ effort", "effect ~ grad", "stat ~ effort"),
+  eff_sub_effort = TRUE,
+  eff_log_base = 2,
+  eff_disp_pts = TRUE,
+  eff_disp_smooth = FALSE,
+  ...
+)
 }
 \arguments{
-\item{mob_out}{a mob_out class object}
+\item{x}{a mob_out class object}
 
-\item{trt_group}{a string that specifies the name of the treatment group}
+\item{stat}{a character string that specifies what statistic should be 
+used in the effect size plots. Options include: \code{c('b0', 'b1', 'r',
+'r2', 'r2adj', 'f')} for the beta-coefficients, person correlation 
+coefficient, r-squared, adjusted  r-squared, and F-statistic respectively.
+If the explanatory variable is a factor then \code{'b1'} is the only
+reasonable option.}
 
-\item{ref_group}{a string that specifies the name of the reference group}
+\item{log2}{a character string specifying if the x- or y-axis should be
+rescale by log base 2. Only applies when \code{display == 'S ~ effort' | 'S ~ effort'}.
+Options include: \code{c('', 'x', 'y', 'xy')} for  no rescaling, x-axis,
+y-axis, and both x and y-axes respectively. Default is set to no rescaling.}
 
-\item{same_scale}{a boolean if TRUE then the y-axis of the rarefaction and 
-ddelta S plots are scaled identically across the tested effects}
+\item{scale_by}{a character string specifying if sampling effort should be
+rescaled. Options include: \code{NULL}, \code{'indiv'}, and \code{'plot'}
+for no rescaling, rescaling to number of individuals, and rescaling
+to number of plots respectively. The rescaling is carried out using
+\code{mob_out$density_stat}.}
 
-\item{log}{a character string which contains \code{"x"} if the x axis
-    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
-    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
+\item{display}{a string that specifies what graphical panels to display. 
+ Options include:
+ \itemize{
+     \item \code{S ~ expl} ... plot of S versus the explanatory variable
+     \item \code{S ~ effort} ... plot of S versus sampling effort (i.e., a rarefaction curve)
+     \item \code{effect ~ expl} ... plot of agg., N, and SAD effect size versus explanatory variable
+     \item \code{stat ~ effort} ... plot of summary statistic versus sampling effort
+}
+Defaults to \code{'S ~ effort'}, \code{'effect ~ expl'}, and \code{'stat ~ effort'}.}
 
-\item{display}{a string that specifies what graphics to display can be either
-'rarefaction', 'delta S', or 'ddelta S' defaults to all three options.}
+\item{eff_sub_effort}{Boolean which determines if only a subset of efforts
+will be considered in the plot of effect size (i.e., when
+\code{display = 'effect ~ expl'}. Defaults to TRUE to declutter the plots.}
 
-\item{lwd}{the line width, a single positive number, defaults to \code{3},
-see \code{\link[graphics]{par}} for more information.}
+\item{eff_log_base}{a positive real number that determines the base of the 
+logarithm that efforts were be distributed across, the larger this number
+the fewer efforts will be displayed.}
 
-\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
-\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
+\item{eff_disp_pts}{Boolean to display the raw effect points, defaults to TRUE}
 
-\item{par_args}{optional argument that sets graphical parameters to set}
+\item{eff_disp_smooth}{Boolean to display the regressions used to summarize
+the linear effect of the explanatory variable on the effect sizes, defaults
+to FALSE}
 
-\item{...}{Other plot arguments}
+\item{...}{parameters passed to other functions}
 }
 \value{
 plots the effect of the SAD, the number of individuals, and spatial
@@ -45,13 +74,14 @@ Plot mob curves
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                              type='discrete', log_scale=TRUE, n_perm=2)
-plot(inv_mob_out, 'invaded', 'uninvaded', display='rarefaction')
-plot(inv_mob_out, 'invaded', 'uninvaded', display='delta S')
-plot(inv_mob_out, 'invaded', 'uninvaded', display='ddelta S')
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
+inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
+                              type='discrete', log_scale=TRUE, n_perm=4)
+plot(inv_mob_out, 'b1') 
+\donttest{ 
+plot(inv_mob_out, 'b1', scale_by = 'indiv')
+}
 }
 \author{
-Xiao Xiao and Dan McGlinn
+Dan McGlinn and Xiao Xiao
 }

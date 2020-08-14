@@ -4,32 +4,60 @@
 \alias{get_delta_stats}
 \title{Conduct the MoB tests on drivers of biodiversity across scales.}
 \usage{
-get_delta_stats(mob_in, group_var, env_var = NULL, ref_group = NULL,
-  tests = c("SAD", "N", "agg"), type = "discrete", inds = NULL,
-  log_scale = FALSE, min_plots = NULL, density_stat = "mean",
-  corr = "spearman", n_perm = 1000, overall_p = FALSE)
+get_delta_stats(
+  mob_in,
+  env_var,
+  group_var = NULL,
+  ref_level = NULL,
+  tests = c("SAD", "N", "agg"),
+  spat_algo = NULL,
+  type = c("continuous", "discrete"),
+  stats = NULL,
+  inds = NULL,
+  log_scale = FALSE,
+  min_plots = NULL,
+  density_stat = c("mean", "max", "min"),
+  n_perm = 1000,
+  overall_p = FALSE
+)
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
 
-\item{group_var}{a character string specifying the environmental variable in
-mob_in$env used for grouping plots}
+\item{env_var}{a character string specifying the environmental variable in
+\code{mob_in$env} to be used for explaining the change in richness}
 
-\item{env_var}{an optional character string specifying a environmental variable
-in mob_in$env which is used in correlation analysis in the continuous case. 
-It is not needed if "type" is discrete or group_var is used in correlation.}
+\item{group_var}{an optional character string 
+in \code{mob_in$env} which defines how samples are pooled. If not provided
+then each unique value of the argument \code{env_var} is used define the
+groups.}
 
-\item{ref_group}{a character string used to define the reference group to
-which all other groups are compared with when "type" is discrete. It is not
-needed when "type" is continuous.}
+\item{ref_level}{a character string used to define the reference level of 
+\code{env_var} to which all other groups are compared with. Only make sense
+if \code{env_var} is a factor.}
 
 \item{tests}{specifies which one or more of the three tests ('SAD', N', 'agg') 
 are to be performed. Default is to include all three tests.}
 
+\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
+for k-nearest neighbor and k-nearest centroid neighbor sampling 
+respectively. It defaults to k-nearest neighbor which is a 
+more computationally efficient algorithm that closely approximates the 
+potentially more correct k-NCN algo (see Details).}
+
 \item{type}{"discrete" or "continuous". If "discrete", pair-wise comparisons
 are conducted between all other groups and the reference group. If
 "continuous", a correlation analysis is conducted between the response
-variables and group_var or env_var (if defined).}
+variables and env_var.}
+
+\item{stats}{a vector of character strings that specifies what statistics to
+summarize effect sizes with. Options include: \code{c('betas', 'r2',
+'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
+r-squared, F-statistic, and p-value respectively. The default value of
+\code{NULL} will result in only betas being calculated when \code{type ==
+'discrete'} and all possible stats being computed when \code{type ==
+'continuous'}. Note that for a discrete analysis all non-betas stats are
+meaningless because the model has zero degrees of freedom in this context.}
 
 \item{inds}{effort size at which the individual-based rarefaction curves are
 to be evaluated, and to which the sample-based rarefaction curves are to be
@@ -66,14 +94,9 @@ all plots within the two groups for each pair-wise comparison when "type"
 is "discrete") are used. If it is "min" or "max", the minimum/maximum
 plot-level density is used.}
 
-\item{corr}{which kind of correlation to use when "type" is "continuous". It
-can take two values, "spearman" or "pearson". "spearman" (default) is
-generally recommended because the relationship between the response and
-"env_var" may not be linear.}
-
 \item{n_perm}{number of iterations to run for null tests, defaults to 1000.}
 
-\item{overall_p}{boolean defaults to FALSE specifies if overall across scale 
+\item{overall_p}{Boolean defaults to FALSE specifies if overall across scale 
 p-values for the null tests. This should be interpreted with caution because
 the overall p-values depend on scales of measurement yet do not explicitly 
 reflect significance at any particular scale.}
@@ -89,10 +112,11 @@ specifically to conduct one or more of these tests.
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in= make_mob_in(inv_comm, inv_plot_attr)
-inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                           type='discrete', log_scale=TRUE, n_perm=20)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
+inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
+                           type='discrete', log_scale=TRUE, n_perm=3)
+plot(inv_mob_out)
 }
 \author{
-Xiao Xiao and Dan McGlinn
+Dan McGlinn and Xiao Xiao
 }

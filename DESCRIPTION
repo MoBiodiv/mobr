@@ -1,32 +1,54 @@
 Package: mobr
 Title: Measurement of Biodiversity in R
-Version: 1.0
-Authors@R: c(person("Xiao", "Xiao", email = "xiao@weecology.org", 
+Version: 2.0.0
+Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
                     role = c("aut", "cre")),
-             person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
+             person("Xiao", "Xiao", email = "xiao@weecology.org", 
+                    role = "aut"),
+             person("Brian", "McGill", email = "brimcgill@gmail.com",
                     role = "aut"),
              person("Felix", "May", email = "felix.may@idiv.de", 
                     role = "aut"),
              person("Thore", "Engel", email = "thore.engel@idiv.de",
                     role = "aut"),
              person("Caroline", "Oliver", email = "olivercs@g.cofc.edu",
+                    role = "aut"),
+             person("Shane", "Blowes", email = "shane.blowes@idiv.de",
+                    role = "aut"),
+             person("Tiffany", "Knight", email = "tiffany.knight@idiv.de",
+                    role = 'aut'),
+             person("Oliver", "Purschke", email = "oliverpurschke@web.de",
+                    role = 'aut'),
+             person("Nicholas", "Gotelli", email = "Nicholas.Gotelli@uvm.edu",
+                    role = "aut"),
+             person("Jon", "Chase", email = "jonathan.chase@idiv.de",
                     role = "aut"))
-Date: 2018
+Date: 2019
 Description: This package is designed to help measure biodiversity and its
     changes across scales.
 Depends:
-    R (>= 3.0.2),
+    R (>= 3.0.2)
+Imports:
+    plotrix,
     pracma,
     scales,
     dplyr,
-    pbapply
-Imports:
-    plotrix
+    purrr,
+    tidyr,
+    pbapply,
+    ggplot2,
+    egg,
+    rgeos,
+    sp,
+    tibble,
+    vctrs,
+    rlang
 Suggests:
     knitr,
     rmarkdown,
     testthat
-License: MIT
+License: MIT + file LICENSE
 LazyData: true
-RoxygenNote: 6.0.1
+RoxygenNote: 7.0.2
+Encoding: UTF-8
 VignetteBuilder: knitr

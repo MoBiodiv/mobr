@@ -11,7 +11,7 @@ calc_PIE(x, ENS = FALSE)
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{ENS}{boolean that determines if the effective number of species should
+\item{ENS}{Boolean that determines if the effective number of species should
 be returned or the raw PIE value. Defaults to FALSE}
 }
 \description{

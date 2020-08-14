@@ -4,8 +4,19 @@
 \alias{plot_rarefaction}
 \title{Plot rarefaction curves for each treatment group}
 \usage{
-plot_rarefaction(mob_in, env_var, method, dens_ratio = 1, pooled = T,
-  col = NULL, lwd = 3, log = "", leg_loc = "topleft", ...)
+plot_rarefaction(
+  mob_in,
+  env_var,
+  method,
+  dens_ratio = 1,
+  pooled = T,
+  spat_algo = NULL,
+  col = NULL,
+  lwd = 3,
+  log = "",
+  leg_loc = "topleft",
+  ...
+)
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
@@ -13,31 +24,49 @@ plot_rarefaction(mob_in, env_var, method, dens_ratio = 1, pooled = T,
 \item{env_var}{a string that specifies the column name in mob_in$env that
 specifies the grouping variable.}
 
-\item{method}{either 'indiv', 'samp', or 'spat' for individual, sample, or
-sample spatially explicit based rarefaction respectively. To compute the
-sample-based, non-spatial rarefaction curve specify 'indiv' method with the
-appropriate \code{dens_ratio} (see Details).}
+\item{method}{a character string that specifies the method of rarefaction 
+  curve construction it can be one of the following: 
+\itemize{
+    \item \code{'IBR'} ... individual-based rarefaction in which species
+    are accumulated by randomly sampling individuals
+    \item \code{'SBR'} ... sample-based rarefaction in which species are 
+    accumulated by randomly sampling samples (i.e., plots). Note that within plot spatial 
+    aggregation is maintained with this approach. Although this curve
+    is implemented here, it is not used in the current version of the MoB framework
+    \item \code{'nsSBR'} ... non-spatial, sampled-based rarefaction in which
+    species are accumulated by randomly sampling samples that represent a 
+    spatially random sample of individuals (i.e., no with-in plot spatial 
+    aggregation). The argument \code{dens_ratio} must also be set otherwise 
+    this sampling results in a curve identical to the IBR (see Details). 
+    \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
+    are accumulated by including spatially proximate samples first. 
+}}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
 and the community data (i.e., x) under consideration. This argument is
 used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
-\item{pooled}{boolean specifying if samples should be pooled at the group
+\item{pooled}{Boolean specifying if samples should be pooled at the group
 level or not. Defaults to TRUE. This argument only applies when
 the individual based rarefaction is used (i.e., method = 'indiv')}
 
+\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
+for k-nearest neighbor and k-nearest centroid neighbor sampling 
+respectively. It defaults to k-nearest neighbor which is a 
+more computationally efficient algorithm that closely approximates the 
+potentially more correct k-NCN algo (see Details).}
+
 \item{col}{optional vector of colors.}
 
-\item{lwd}{the line width, a single positive number, defaults to \code{3},
-see \code{\link[graphics]{par}} for more information.}
+\item{lwd}{a number which specifies the width of the lines}
 
-\item{log}{a character string which contains \code{"x"} if the x axis
-    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
-    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
+\item{log}{a string that specifies if any axes are to be log transformed, 
+options include 'x', 'y' or 'xy' in which either the x-axis, y-axis, or
+both axes are log transformed respectively}
 
-\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
-\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
+\item{leg_loc}{a string that specifies the location of the legend, 
+options include: 'lowerleft', 'topleft', 'loweright','topright'}
 
 \item{...}{other arguments to provide to \code{\link[mobr]{rarefaction}}}
 }
@@ -47,15 +76,14 @@ Plot rarefaction curves for each treatment group
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 # random individual based rarefaction curves
-plot_rarefaction(inv_mob_in, 'group', 'indiv',
+plot_rarefaction(inv_mob_in, 'group', 'IBR',
                  pooled=TRUE, leg_loc='bottomright')
-plot_rarefaction(inv_mob_in, 'group', 'indiv',
+plot_rarefaction(inv_mob_in, 'group', 'IBR',
                  pooled=FALSE, log='x')
 # random sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'samp', log='xy')
+plot_rarefaction(inv_mob_in, 'group', 'SBR', log='xy')
 # spatial sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'spat', log='xy',
-                 coords = inv_mob_in$spat)                 
+plot_rarefaction(inv_mob_in, 'group', 'sSBR', log='xy')
 }

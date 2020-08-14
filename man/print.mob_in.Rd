@@ -4,7 +4,16 @@
 \alias{print.mob_in}
 \title{Print a shortened version of the mob_in object}
 \usage{
-\method{print}{mob_in}(x, nrows = 6, nsp = 5)
+\method{print}{mob_in}(x, nrows = 6, nsp = 5, ...)
+}
+\arguments{
+\item{x}{a mob_in class object}
+
+\item{nrows}{the number of rows of each matrix to print}
+
+\item{nsp}{the number of species columns to print}
+
+\item{...}{parameters passed to other functions}
 }
 \description{
 Print a shortened version of the mob_in object

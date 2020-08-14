@@ -20,7 +20,7 @@ of sampling is used  by the function \code{rarefaction}
 when building the spatial accumulation curves
 }
 \examples{
-# transect spatial arragnement
+# transect spatial arrangement
 transect = 1:100
 avg_nn_dist(transect)
 grid = expand.grid(1:10, 1:10)

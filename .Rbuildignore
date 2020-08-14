@@ -1,2 +1,16 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+scripts
+figs
+results
+.travis.yml
+^LICENSE\.md$
+data/TERENO_Butterfly_coord
+data/Tereno_butterflies
+data/chase_cartoon_nature
+data/mobd_cartoons1
+data/nested_turnover_cartoon_comm
+data/condit.mat
+data/gentry.Rdata
+data/irish_ices_fish.Rdata
+data/sim_mob_for_N_effect.Rdata

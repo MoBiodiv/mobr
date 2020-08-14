@@ -3,7 +3,6 @@
 \docType{package}
 \name{mobr}
 \alias{mobr}
-\alias{mobr-package}
 \title{mobr: measurement of biodiversity across scales}
 \description{
 mobr: measurement of biodiversity across scales

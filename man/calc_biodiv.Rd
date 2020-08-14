@@ -4,8 +4,15 @@
 \alias{calc_biodiv}
 \title{Calculate biodiversity statistics from sites by species table.}
 \usage{
-calc_biodiv(abund_mat, groups, index, effort, extrapolate, return_NA,
-  rare_thres)
+calc_biodiv(
+  abund_mat,
+  groups,
+  index,
+  effort,
+  extrapolate,
+  return_NA,
+  rare_thres
+)
 }
 \arguments{
 \item{abund_mat}{Sites by species table with species abundances
@@ -34,9 +41,14 @@ biodiversity indices.}
 calculation of rarefied species richness. This can a be
 single value or an integer vector.}
 
-\item{extrapolate}{boolean which specifies if richness should be extrapolated
+\item{extrapolate}{Boolean which specifies if richness should be extrapolated
 when effort is larger than the number of individuals using the chao1
 method.}
+
+\item{return_NA}{Boolean in which the rarefaction function
+returns the observed S when \code{effort} is larger than the number of
+individuals. If set to TRUE then NA is returned. Note that this argument
+is only relevant when \code{extrapolate = FALSE}.}
 
 \item{rare_thres}{The threshold that determines how pct_rare is computed.
 It can range from (0, 1] and defaults to 0.05 which specifies that any 
@@ -46,11 +58,11 @@ average abundance as the threshold which McGill (2011) found to have the
 best small sample behavior.}
 }
 \value{
-A dataframe with four columns:
+A \code{data.frame} with four columns:
 \itemize{
    \item \code{group} ... Group label for sites
    \item \code{index} ... Name of the biodiversity index
-   \item \code{effort} ... Sampling effort for rarefeid richness 
+   \item \code{effort} ... Sampling effort for rarefied richness 
    (NA for the other indices)
    \item \code{value} ... Value of the biodiversity index
 }

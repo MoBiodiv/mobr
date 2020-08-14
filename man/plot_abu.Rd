@@ -4,8 +4,16 @@
 \alias{plot_abu}
 \title{Plot distributions of species abundance}
 \usage{
-plot_abu(mob_in, env_var, type = c("sad", "rad"), pooled = FALSE,
-  col = NULL, lwd = 3, log = "", leg_loc = "topleft")
+plot_abu(
+  mob_in,
+  env_var,
+  type = c("sad", "rad"),
+  pooled = FALSE,
+  col = NULL,
+  lwd = 3,
+  log = "",
+  leg_loc = "topleft"
+)
 }
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
@@ -16,20 +24,19 @@ specifies the grouping variable.}
 \item{type}{either 'sad' or 'rad' for species abundance vs rank abundance
 distribution}
 
-\item{pooled}{boolean specifying if abundances should be pooled at the group
-level or not}
+\item{pooled}{Boolean defaults to FALSE which specifies that abundances should
+not be pooled at the group level, TRUE specifies that they should be pooled}
 
 \item{col}{optional vector of colors.}
 
-\item{lwd}{the line width, a single positive number, defaults to \code{3},
-see \code{\link[graphics]{par}} for more information.}
+\item{lwd}{a number which specifies the width of the lines}
 
-\item{log}{a character string which contains \code{"x"} if the x axis
-    is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
-    and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic.}
+\item{log}{a string that specifies if any axes are to be log transformed, 
+options include 'x', 'y' or 'xy' in which either the x-axis, y-axis, or
+both axes are log transformed respectively}
 
-\item{leg_loc}{the location of the legend. Defaults to 'topleft', see
-\code{\link[graphics]{legend}}. If set to NA then no legend is printed.}
+\item{leg_loc}{a string that specifies the location of the legend, 
+options include: 'lowerleft', 'topleft', 'loweright','topright'}
 }
 \description{
 Plot distributions of species abundance
@@ -37,7 +44,7 @@ Plot distributions of species abundance
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 plot_abu(inv_mob_in, 'group', type='sad', pooled=FALSE, log='x')
 plot_abu(inv_mob_in, 'group', type='rad', pooled=TRUE, log='x')
 }

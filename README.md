@@ -3,18 +3,23 @@ mobr [![Build Status](https://travis-ci.org/MoBiodiv/mobr.png)](https://travis-c
 
 # Measurement of Biodiversity in R 
 
-This reposititory hosts an R package that is being developed for 
-estimating biodiversity and the components of its change.
+This repository hosts an R package that is actively being developed for 
+estimating biodiversity and the components of its change. The key innovations of
+this R package over other R packages that also carry out rarefaction (e.g.,
+`vegan`, `iNext`) is that `mobr` is focused on 1) making empirical comparisons between 
+treatments or gradients, and 2) our framework emphasizes how changes in 
+biodiversity are linked to changes in community structure: the SAD, total
+abundance, and spatial aggregation. 
 
-The concepts and methods behind this R package are described in two preprints that are both currently in review. 
+The concepts and methods behind this R package are described in two publications.
 
-McGlinn, D.J. X. Xiao, F. May, S. Blowes, J. Chase, N. Gotelli, T. Knight, B. McGill, and O. Purschke. preprint. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. *bioRxiv* 244103. doi: https://doi.org/10.1101/244103.
-
-
-Chase, J.M., B. McGill, D.J. McGlinn, F. May, S.A. Blowes, X. Xiao, T. Knight. prepint. Embracing scale-dependence to achieve a deeper understanding of biodiversity and its change across communities. *bioRxiv* 275701. doi: https://doi.org/10.1101/275701
+McGlinn, D.J. X. Xiao, F. May, S. Blowes, J. Chase, N. Gotelli, T. Knight, B. McGill, and O. Purschke. 2019. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. Methods in Ecology and Evolution. 10:258–269. https://doi.org/10.1111/2041-210X.13102
 
 
-# How to install mobr
+Chase, J.M., B. McGill, D.J. McGlinn, F. May, S.A. Blowes, X. Xiao, T. Knight. 2018. Embracing scale-dependence to achieve a deeper understanding of biodiversity and its change across communities. Ecology Letters. 21: 1737–1751. https://doi.org/10.1111/ele.13151 
+
+
+## Installation
 
 The easiest option is to install the package directly from GitHub using the package `devtools`. If you do not already have `devtools` installed then need to install it.
 
@@ -23,24 +28,18 @@ install.packages('devtools')
 library(devtools)
 ```
 
-The package also requires the `dplyr` package which has many dependencies. If you do 
-not already have the `dplyr` package installed we suggest you install it and 
-all of its dependencies using :
-
-```r
-install.packages(c('bindrcpp','glue','pkgconfig','tibble','plyr','dplyr'))
-```
-
-Then check that `dplyr` can be loaded with `library(dplyr)`.
-Now you should be ready to go with the `mobr` install
+Now that `devtools` is installed you can install `mobr using the following R code:
 
 ```r
 install_github('MoBiodiv/mobr')
 ```
 
-# Examples
+Note: the installation may take some time due to numerous dependencies. We are 
+working on reducing the number of dependencies. 
 
-The package [vignette](./vignettes/mobr_intro.pdf) provides a useful walkthrough
+## Examples
+
+The package [vignette](./vignettes/mobr_intro.pdf) provides a useful walk-through
 the package tools, but below is some example code that uses the two key analyses
 and related graphics. 
 
@@ -48,52 +47,17 @@ and related graphics.
 library(mobr)
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
+inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 inv_stats = get_mob_stats(inv_mob_in, 'group')
 plot(inv_stats)
-inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_group='uninvaded',
-                              type='discrete', log_scale=TRUE)
-plot(inv_deltaS, 'invaded', 'uninvaded')
+inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
+                             type='discrete', log_scale=TRUE, n_perm = 5)
+plot(inv_deltaS, 'b1')
 ```
 
+## Meta
 
-## How to contribute to this project
-1) Fork the repo to your local GitHub account
-
-2) Clone your forked version of the repo to your machine
-
-`git clone git@github.com:your_user_name/mobr.git`
-
-3) Link your local repo back to the master on MoBiodiv
-
-`git remote add upstream git@github.com:MoBiodiv/mobr.git`
-
-4) Create a branch for your changes
-
-`git branch new_function`
-
-5) Checkout your branch
-
-`git checkout new_function`
-
-6) Make your commits on that branch and when you are done push it to your
-forked copy of the repo
-
-`git push origin new_function`
-
-7) Submit a pull request on the GitHub website by going to your forked copy
-of the repo and clicking on the pull request button 
-
-8) After your changes are merged with master you'll want to merge that
-update to master with your copies as well. 
-
-```
-git pull upstream master
-git push origin master
-# delete your branch as its no longer needed
-git branch -d new_function
-```
-
-Before your start work on the project in the future you'll want to repeat
-step 8 so that your version of the repo does not become out-of-sync
-with the main repository. 
+* Please [report any issues or bugs](https://github.com/mobiodiv/mobr).
+* License: MIT
+* Get citation information for `mobr` in R doing `citation(package = 'mobr')`
+* Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms.
