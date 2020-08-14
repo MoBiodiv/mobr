@@ -20,7 +20,6 @@ community matrix are assumed to be members of the same group}
 a site-by-species matrix
 }
 \description{
-## To DO: update this documentation
 Two types of permutation can be carried out: 1) 'noagg': each individual of
 each species is reassigned a plot randomly which removes any patterns due to
 within and between plot spatial aggregation, but maintains species group

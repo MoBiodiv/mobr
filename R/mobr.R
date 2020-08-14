@@ -640,7 +640,6 @@ get_rand_sad = function(rad, N) {
 
 #' Generate a null community matrix 
 #' 
-#' ## To DO: update this documentation
 #' Two types of permutation can be carried out: 1) 'noagg': each individual of
 #' each species is reassigned a plot randomly which removes any patterns due to
 #' within and between plot spatial aggregation, but maintains species group
