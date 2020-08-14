@@ -3,7 +3,6 @@
 scripts
 figs
 results
-.travis.yml
 ^LICENSE\.md$
 data/TERENO_Butterfly_coord
 data/Tereno_butterflies
@@ -14,3 +13,4 @@ data/condit.mat
 data/gentry.Rdata
 data/irish_ices_fish.Rdata
 data/sim_mob_for_N_effect.Rdata
+^\.travis\.yml$
