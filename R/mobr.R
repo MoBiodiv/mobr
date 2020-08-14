@@ -353,7 +353,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
              ' respectively.')
     if (method == 'nsSBR' & dens_ratio == 1)
         warning('The nonspatial, sample-based rarefaction (nsSBR) curve only differs from the IBR when compared with a reference density by setting "dens_ratio" not equal to 1')
-    if (class(x) == 'mob_in') {
+    if ('mob_in' %in% class(x)) {
         x_mob_in = x
         x = x_mob_in$comm
         if (is.null(latlong))
@@ -580,7 +580,7 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
         stop('If SAD or N effect to be calculated inds must be specified')
     if (is.null(ind_dens) & 'N' %in% tests)
         stop('If N effect to be calculated ind_dens must be specified')
-    if (any(c('N', 'agg') %in% tests) & class(x) != 'mob_in')
+    if (any(c('N', 'agg') %in% tests) & !('mob_in' %in% class(x)))
         stop('If N or agg effects to be computed x must be a mob_in object')
     out = list()
     if ('SAD' %in% tests) {
