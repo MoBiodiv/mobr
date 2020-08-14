@@ -138,7 +138,7 @@ rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=0.5)
 rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1.5)
 # sample based rarefaction under random sampling
 rarefaction(inv_comm, method='SBR')
-\donttest{ 
+\dontrun{ 
 # sampled based rarefaction under spatially explicit nearest neighbor sampling
 rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
             latlong=FALSE)

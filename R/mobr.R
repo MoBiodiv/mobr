@@ -325,7 +325,7 @@ sphere_dist = function(coords){
 #' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1.5)
 #' # sample based rarefaction under random sampling
 #' rarefaction(inv_comm, method='SBR')
-#' \donttest{ 
+#' \dontrun{ 
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
 #' rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
 #'             latlong=FALSE)
@@ -505,7 +505,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
 #' @param n_indiv the number of individuals to evaluate the rarefaction curve
 #' at. The default behavior is to evaluate it on a log2 interval from 1 to N 
 #' @examples 
-#' \donttest{ 
+#' \dontrun{ 
 #' data(inv_comm)
 #' sad = colSums(inv_comm)
 #' ind_rare_perm(sad)
@@ -1365,7 +1365,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=4)
 #' plot(inv_mob_out, 'b1') 
-#' \donttest{ 
+#' \dontrun{ 
 #' plot(inv_mob_out, 'b1', scale_by = 'indiv')
 #' }
 plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL, 

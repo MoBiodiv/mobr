@@ -555,7 +555,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
 #' 
-#' \donttest{
+#' \dontrun{
 #' # Not run: 
 #' # parallel evaluation using the parallel package 
 #' # run in parallel

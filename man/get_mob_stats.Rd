@@ -202,7 +202,7 @@ inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
                           n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
 
-\donttest{
+\dontrun{
 # Not run: 
 # parallel evaluation using the parallel package 
 # run in parallel
