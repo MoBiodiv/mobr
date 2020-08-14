@@ -29,13 +29,13 @@ a vector which contains the abundance of each species.}
     are accumulated by randomly sampling individuals
     \item \code{'SBR'} ... sample-based rarefaction in which species are 
     accumulated by randomly sampling samples (i.e., plots). Note that within plot spatial 
-    aggregration is maintained with this approach. Although this curve
+    aggregation is maintained with this approach. Although this curve
     is implemented here, it is not used in the current version of the MoB framework
     \item \code{'nsSBR'} ... non-spatial, sampled-based rarefaction in which
     species are accumulated by randomly sampling samples that represent a 
     spatially random sample of individuals (i.e., no with-in plot spatial 
     aggregation). The argument \code{dens_ratio} must also be set otherwise 
-    this sampling results in a curve idential to the IBR (see Details). 
+    this sampling results in a curve identical to the IBR (see Details). 
     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
     are accumulated by including spatially proximate samples first. 
 }}
@@ -51,32 +51,32 @@ is not already supplied by \code{x}. The first column should specify
 the x-coordinate (e.g., longitude) and the second coordinate should 
 specify the y-coordinate (e.g., latitude)}
 
-\item{latlong}{boolean if coordinates are latitude-longitude}
+\item{latlong}{Boolean if coordinates are latitude-longitude}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
 and the community data (i.e., x) under consideration. This argument is
 used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
-\item{extrapolate}{boolean which specifies if richness should be extrapolated
+\item{extrapolate}{Boolean which specifies if richness should be extrapolated
 when effort is larger than the number of individuals using the chao1 method.
 Defaults to FALSE in which case it returns observed richness. Extrapolation
 is only implemented for individual-based rarefaction 
 (i.e., \code{method = 'indiv'})}
 
-\item{return_NA}{boolean defaults to FALSE in which the function returns the
+\item{return_NA}{Boolean defaults to FALSE in which the function returns the
 observed S when \code{effort} is larger than the number of individuals or
 number of samples (depending on the method of rarefaction). If set to TRUE
 then NA is returned. Note that this argument is only relevant when
 \code{extrapolate = FALSE}.}
 
-\item{quiet_mode}{boolean defaults to FALSE, if TRUE then warnings and other
+\item{quiet_mode}{Boolean defaults to FALSE, if TRUE then warnings and other
 non-error messages are suppressed.}
 
 \item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
-for k-neareast neighbor and k-nearest centroid neighbor sampling 
-respectively. It defaults to k-neareast neighbor which is a 
-more computationally efficient algorithim that closely approximates the 
+for k-nearest neighbor and k-nearest centroid neighbor sampling 
+respectively. It defaults to k-nearest neighbor which is a 
+more computationally efficient algorithm that closely approximates the 
 potentially more correct k-NCN algo (see Details).}
 }
 \value{
@@ -99,7 +99,7 @@ The analytical formulas of Cayuela et al. (2015) are used to compute
   plot is accumulated, then disances are recomputed from that new centroid to
   all other plots and the next nearest is sampled. The kNN is faster because
   the distance matrix only needs to be computed once, but the sampling of
-  kNCN which simleaneously minimizes spatial disance and extent is more
+  kNCN which simleaneously minimizes spatial distance and extent is more
   similar to an actual person searching a field for species. For both kNN and
   kNCN ,each plot in the dataset is treated as a starting point and then the
   mean of these n possible accumulation curves is computed.
@@ -142,7 +142,7 @@ rarefaction(inv_comm, method='SBR')
 # sampled based rarefaction under spatially explicit nearest neighbor sampling
 rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
             latlong=FALSE)
-# the syntax is simplier if suppling a mob_in object
+# the syntax is simpler if supplying a mob_in object
 rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
 rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
 }

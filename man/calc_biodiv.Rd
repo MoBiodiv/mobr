@@ -41,11 +41,11 @@ biodiversity indices.}
 calculation of rarefied species richness. This can a be
 single value or an integer vector.}
 
-\item{extrapolate}{boolean which specifies if richness should be extrapolated
+\item{extrapolate}{Boolean which specifies if richness should be extrapolated
 when effort is larger than the number of individuals using the chao1
 method.}
 
-\item{return_NA}{boolean in which the rarefaction function
+\item{return_NA}{Boolean in which the rarefaction function
 returns the observed S when \code{effort} is larger than the number of
 individuals. If set to TRUE then NA is returned. Note that this argument
 is only relevant when \code{extrapolate = FALSE}.}
@@ -58,11 +58,11 @@ average abundance as the threshold which McGill (2011) found to have the
 best small sample behavior.}
 }
 \value{
-A dataframe with four columns:
+A \code{data.frame} with four columns:
 \itemize{
    \item \code{group} ... Group label for sites
    \item \code{index} ... Name of the biodiversity index
-   \item \code{effort} ... Sampling effort for rarefeid richness 
+   \item \code{effort} ... Sampling effort for rarefied richness 
    (NA for the other indices)
    \item \code{value} ... Value of the biodiversity index
 }

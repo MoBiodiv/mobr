@@ -40,9 +40,9 @@ if \code{env_var} is a factor.}
 are to be performed. Default is to include all three tests.}
 
 \item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
-for k-neareast neighbor and k-nearest centroid neighbor sampling 
-respectively. It defaults to k-neareast neighbor which is a 
-more computationally efficient algorithim that closely approximates the 
+for k-nearest neighbor and k-nearest centroid neighbor sampling 
+respectively. It defaults to k-nearest neighbor which is a 
+more computationally efficient algorithm that closely approximates the 
 potentially more correct k-NCN algo (see Details).}
 
 \item{type}{"discrete" or "continuous". If "discrete", pair-wise comparisons
@@ -51,7 +51,7 @@ are conducted between all other groups and the reference group. If
 variables and env_var.}
 
 \item{stats}{a vector of character strings that specifies what statistics to
-sumamrize effect sizes with. Options include: \code{c('betas', 'r2',
+summarize effect sizes with. Options include: \code{c('betas', 'r2',
 'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
 r-squared, F-statistic, and p-value respectively. The default value of
 \code{NULL} will result in only betas being calculated when \code{type ==
@@ -96,7 +96,7 @@ plot-level density is used.}
 
 \item{n_perm}{number of iterations to run for null tests, defaults to 1000.}
 
-\item{overall_p}{boolean defaults to FALSE specifies if overall across scale 
+\item{overall_p}{Boolean defaults to FALSE specifies if overall across scale 
 p-values for the null tests. This should be interpreted with caution because
 the overall p-values depend on scales of measurement yet do not explicitly 
 reflect significance at any particular scale.}

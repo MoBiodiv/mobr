@@ -54,11 +54,11 @@ individuals then \code{effort_min} are excluded from the analysis with a
 warning. Accordingly, when \code{effort_samples} is set by the user it has
 to be higher than \code{effort_min}.}
 
-\item{extrapolate}{extrapolate    boolean which specifies if richness should be
+\item{extrapolate}{extrapolate    Boolean which specifies if richness should be
 extrapolated when \code{effort_samples} is larger than the number of
 individuals using the chao1 method. Defaults to TRUE.}
 
-\item{return_NA}{boolean defaults to FALSE in which the rarefaction function
+\item{return_NA}{Boolean defaults to FALSE in which the rarefaction function
 returns the observed S when \code{effort} is larger than the number of
 individuals. If set to TRUE then NA is returned. Note that this argument
 is only relevant when \code{extrapolate = FALSE}.}

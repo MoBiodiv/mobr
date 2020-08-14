@@ -15,7 +15,7 @@
 specifies, may be: \code{string}, \code{integer}, or \code{logical},
 defaults to \code{string}}
 
-\item{drop_levels}{boolean if TRUE unused levels are removed from factors in
+\item{drop_levels}{Boolean if TRUE unused levels are removed from factors in
 mob_in$env}
 
 \item{...}{parameters passed to other functions}

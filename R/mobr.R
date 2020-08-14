@@ -16,9 +16,9 @@
 #'   specifying the x-coordinate or the longitude is provided first, y-coordinate
 #'    or latitude provided second. To provide coordinate names use the following
 #'    syntax: \code{coord_names = c('longitude_col_name','latitude_col_name')}
-#' @param binary boolean, defaults to FALSE. Whether the plot by species matrix
+#' @param binary Boolean, defaults to FALSE. Whether the plot by species matrix
 #'   "comm" is in abundances or presence/absence.
-#' @param latlong boolean, defaults to FALSE. Whether the coordinates are
+#' @param latlong Boolean, defaults to FALSE. Whether the coordinates are
 #'   latitude-longitudes or not. If TRUE, distance calculations by downstream
 #'   functions are based upon great circle distances rather than Euclidean
 #'   distances. Note latitude-longitudes should be in decimal degree.
@@ -61,7 +61,7 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
                 which may indicate different identities or orderings of samples")
 
     if (binary)  {
-        warning("Only spatially-explict sampled based forms of rarefaction can be computed on binary data")
+        warning("Only spatially-explicit sampled based forms of rarefaction can be computed on binary data")
         out$tests$SAD = FALSE
         out$tests$N = FALSE
     }
@@ -105,7 +105,7 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
 #' @param type specifies the type of object the argument \code{subset}
 #'   specifies, may be: \code{string}, \code{integer}, or \code{logical},
 #'   defaults to \code{string}
-#' @param drop_levels boolean if TRUE unused levels are removed from factors in
+#' @param drop_levels Boolean if TRUE unused levels are removed from factors in
 #'   mob_in$env
 #' @param ... parameters passed to other functions
 #' @export
@@ -207,13 +207,13 @@ sphere_dist = function(coords){
 #'     are accumulated by randomly sampling individuals
 #'     \item \code{'SBR'} ... sample-based rarefaction in which species are 
 #'     accumulated by randomly sampling samples (i.e., plots). Note that within plot spatial 
-#'     aggregration is maintained with this approach. Although this curve
+#'     aggregation is maintained with this approach. Although this curve
 #'     is implemented here, it is not used in the current version of the MoB framework
 #'     \item \code{'nsSBR'} ... non-spatial, sampled-based rarefaction in which
 #'     species are accumulated by randomly sampling samples that represent a 
 #'     spatially random sample of individuals (i.e., no with-in plot spatial 
 #'     aggregation). The argument \code{dens_ratio} must also be set otherwise 
-#'     this sampling results in a curve idential to the IBR (see Details). 
+#'     this sampling results in a curve identical to the IBR (see Details). 
 #'     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
 #'     are accumulated by including spatially proximate samples first. 
 #' }
@@ -226,27 +226,27 @@ sphere_dist = function(coords){
 #'   is not already supplied by \code{x}. The first column should specify 
 #'   the x-coordinate (e.g., longitude) and the second coordinate should 
 #'   specify the y-coordinate (e.g., latitude)
-#' @param latlong boolean if coordinates are latitude-longitude 
+#' @param latlong Boolean if coordinates are latitude-longitude 
 #' @param dens_ratio the ratio of individual density between a reference group
 #'   and the community data (i.e., x) under consideration. This argument is
 #'   used to rescale the rarefaction curve when estimating the effect of
 #'   individual density on group differences in richness.
-#' @param extrapolate boolean which specifies if richness should be extrapolated
+#' @param extrapolate Boolean which specifies if richness should be extrapolated
 #'   when effort is larger than the number of individuals using the chao1 method.
 #'   Defaults to FALSE in which case it returns observed richness. Extrapolation
 #'   is only implemented for individual-based rarefaction 
 #'   (i.e., \code{method = 'indiv'})
-#' @param return_NA boolean defaults to FALSE in which the function returns the
+#' @param return_NA Boolean defaults to FALSE in which the function returns the
 #'   observed S when \code{effort} is larger than the number of individuals or
 #'   number of samples (depending on the method of rarefaction). If set to TRUE
 #'   then NA is returned. Note that this argument is only relevant when
 #'   \code{extrapolate = FALSE}.
-#' @param quiet_mode boolean defaults to FALSE, if TRUE then warnings and other
+#' @param quiet_mode Boolean defaults to FALSE, if TRUE then warnings and other
 #'   non-error messages are suppressed.
 #' @param spat_algo character string that can be either: \code{'kNN'} or \code{'kNCN'}
-#' for k-neareast neighbor and k-nearest centroid neighbor sampling 
-#' respectively. It defaults to k-neareast neighbor which is a 
-#' more computationally efficient algorithim that closely approximates the 
+#' for k-nearest neighbor and k-nearest centroid neighbor sampling 
+#' respectively. It defaults to k-nearest neighbor which is a 
+#' more computationally efficient algorithm that closely approximates the 
 #' potentially more correct k-NCN algo (see Details). 
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
@@ -261,7 +261,7 @@ sphere_dist = function(coords){
 #'   plot is accumulated, then disances are recomputed from that new centroid to
 #'   all other plots and the next nearest is sampled. The kNN is faster because
 #'   the distance matrix only needs to be computed once, but the sampling of
-#'   kNCN which simleaneously minimizes spatial disance and extent is more
+#'   kNCN which simleaneously minimizes spatial distance and extent is more
 #'   similar to an actual person searching a field for species. For both kNN and
 #'   kNCN ,each plot in the dataset is treated as a starting point and then the
 #'   mean of these n possible accumulation curves is computed.
@@ -329,7 +329,7 @@ sphere_dist = function(coords){
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
 #' rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
 #'             latlong=FALSE)
-#' # the syntax is simplier if suppling a mob_in object
+#' # the syntax is simpler if supplying a mob_in object
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
 #' }
@@ -543,7 +543,7 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
 #'   of accumulated nearest samples. 
 #' @export
 #' @examples 
-#' # transect spatial arragnement
+#' # transect spatial arrangement
 #' transect = 1:100
 #' avg_nn_dist(transect)
 #' grid = expand.grid(1:10, 1:10)
@@ -623,7 +623,7 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
 #' @param rad the relative abundance of each species
 #' @param N the total number of individuals sampled
 #' 
-#' Randomly subsampling an RAD with replacemewnt produces an SAD that is of a
+#' Randomly subsampling an RAD with replacement produces an SAD that is of a
 #' similar functional form (Green and Plotkin 2007) but with overall species
 #' richness equal to or less than the relative abundance distribution.
 #' 
@@ -835,7 +835,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
     # the approach taken here to get results for each group
     # is to first break the dataset up into a list of lists 
     # where this is one list per group - this is likely not 
-    # the best pratice for memory but it makes the code much 
+    # the best practice for memory but it makes the code much 
     # easier to follow - we may need to revisit this. 
     group_levels = unique(groups)
     group_rows = map(group_levels, ~ which(groups == .x))
@@ -847,7 +847,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
     
     S_df = S_df %>% try(mutate_if(is.factor, as.character), silent=T)
     
-    # subsistute the group variable for the env variable
+    # substitute the group variable for the env variable
     S_df = data.frame(env = env[match(S_df$group, groups)],
                       S_df)
 
@@ -979,7 +979,7 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
 #'   "continuous", a correlation analysis is conducted between the response
 #'   variables and env_var.
 #' @param stats a vector of character strings that specifies what statistics to
-#'   sumamrize effect sizes with. Options include: \code{c('betas', 'r2',
+#'   summarize effect sizes with. Options include: \code{c('betas', 'r2',
 #'   'r2adj', 'f', 'p')} for the beta-coefficients, r-squared, adjusted
 #'   r-squared, F-statistic, and p-value respectively. The default value of
 #'   \code{NULL} will result in only betas being calculated when \code{type ==
@@ -1018,7 +1018,7 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
 #'   is "discrete") are used. If it is "min" or "max", the minimum/maximum
 #'   plot-level density is used.
 #' @param n_perm number of iterations to run for null tests, defaults to 1000.
-#' @param overall_p boolean defaults to FALSE specifies if overall across scale 
+#' @param overall_p Boolean defaults to FALSE specifies if overall across scale 
 #'  p-values for the null tests. This should be interpreted with caution because
 #'  the overall p-values depend on scales of measurement yet do not explicitly 
 #'  reflect significance at any particular scale. 
@@ -1146,7 +1146,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #'   specifies the grouping variable.
 #' @param type either 'sad' or 'rad' for species abundance vs rank abundance
 #'   distribution
-#' @param pooled boolean defaults to FALSE which specifies that abundances shoulud
+#' @param pooled Boolean defaults to FALSE which specifies that abundances should
 #'   not be pooled at the group level, TRUE specifies that they should be pooled 
 #' @param col optional vector of colors.
 #' @param lwd a number which specifies the width of the lines
@@ -1230,7 +1230,7 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
     
 #' Plot rarefaction curves for each treatment group
 #' 
-#' @param pooled boolean specifying if samples should be pooled at the group
+#' @param pooled Boolean specifying if samples should be pooled at the group
 #'  level or not. Defaults to TRUE. This argument only applies when
 #'  the individual based rarefaction is used (i.e., method = 'indiv')
 #' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
@@ -1333,18 +1333,18 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #'  \itemize{
 #'      \item \code{S ~ expl} ... plot of S versus the explanatory variable
 #'      \item \code{S ~ effort} ... plot of S versus sampling effort (i.e., a rarefaction curve)
-#'      \item \code{effect ~ expl} ... plot of Agg, N, and SAD effect size versus explanatory variable
-#'      \item \code{stat ~ effort} ... plot of 
+#'      \item \code{effect ~ expl} ... plot of agg., N, and SAD effect size versus explanatory variable
+#'      \item \code{stat ~ effort} ... plot of summary statistic versus sampling effort
 #' }
 #' Defaults to \code{'S ~ effort'}, \code{'effect ~ expl'}, and \code{'stat ~ effort'}.
-#' @param eff_sub_effort a boolean which determines if only a subset of efforts
+#' @param eff_sub_effort Boolean which determines if only a subset of efforts
 #'   will be considered in the plot of effect size (i.e., when
 #'   \code{display = 'effect ~ expl'}. Defaults to TRUE to declutter the plots.
 #' @param eff_log_base a positive real number that determines the base of the 
-#'   logathrium that efforts were be disributed across, the larger this number
-#'   the fewer efforts will be diplayed.
-#' @param eff_disp_pts a boolean to display the raw effect points, defaults to TRUE
-#' @param eff_disp_smooth a boolean to display the regressions used to summarize
+#'   logarithm that efforts were be distributed across, the larger this number
+#'   the fewer efforts will be displayed.
+#' @param eff_disp_pts Boolean to display the raw effect points, defaults to TRUE
+#' @param eff_disp_smooth Boolean to display the regressions used to summarize
 #'  the linear effect of the explanatory variable on the effect sizes, defaults
 #'  to FALSE
 #' @param ... parameters passed to other functions

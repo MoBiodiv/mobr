@@ -24,7 +24,7 @@ specifies the grouping variable.}
 \item{type}{either 'sad' or 'rad' for species abundance vs rank abundance
 distribution}
 
-\item{pooled}{boolean defaults to FALSE which specifies that abundances shoulud
+\item{pooled}{Boolean defaults to FALSE which specifies that abundances should
 not be pooled at the group level, TRUE specifies that they should be pooled}
 
 \item{col}{optional vector of colors.}

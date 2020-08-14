@@ -31,13 +31,13 @@ specifies the grouping variable.}
     are accumulated by randomly sampling individuals
     \item \code{'SBR'} ... sample-based rarefaction in which species are 
     accumulated by randomly sampling samples (i.e., plots). Note that within plot spatial 
-    aggregration is maintained with this approach. Although this curve
+    aggregation is maintained with this approach. Although this curve
     is implemented here, it is not used in the current version of the MoB framework
     \item \code{'nsSBR'} ... non-spatial, sampled-based rarefaction in which
     species are accumulated by randomly sampling samples that represent a 
     spatially random sample of individuals (i.e., no with-in plot spatial 
     aggregation). The argument \code{dens_ratio} must also be set otherwise 
-    this sampling results in a curve idential to the IBR (see Details). 
+    this sampling results in a curve identical to the IBR (see Details). 
     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
     are accumulated by including spatially proximate samples first. 
 }}
@@ -47,14 +47,14 @@ and the community data (i.e., x) under consideration. This argument is
 used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
-\item{pooled}{boolean specifying if samples should be pooled at the group
+\item{pooled}{Boolean specifying if samples should be pooled at the group
 level or not. Defaults to TRUE. This argument only applies when
 the individual based rarefaction is used (i.e., method = 'indiv')}
 
 \item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
-for k-neareast neighbor and k-nearest centroid neighbor sampling 
-respectively. It defaults to k-neareast neighbor which is a 
-more computationally efficient algorithim that closely approximates the 
+for k-nearest neighbor and k-nearest centroid neighbor sampling 
+respectively. It defaults to k-nearest neighbor which is a 
+more computationally efficient algorithm that closely approximates the 
 potentially more correct k-NCN algo (see Details).}
 
 \item{col}{optional vector of colors.}

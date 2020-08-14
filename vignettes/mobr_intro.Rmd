@@ -285,7 +285,7 @@ plot_abu(fire_mob_in, 'group', 'sad', leg_loc = NA)
 ```
 
 Above we plot the SAD in two different ways. The plot on the left is the standard rank curve and the plot on the right is the cumulative curve which McGill (2011) advocates for using. The cumulative curve makes it particularly
-clear that the shape (i.e., eveness) between the treatments is really similar, 
+clear that the shape (i.e., evenness) between the treatments is really similar, 
 but in the rank curve it does appear that the burned site does some sites that 
 are highly dominated by a single species. 
 
@@ -316,7 +316,7 @@ as strong in \(\beta_{Sn}\) which indicates: 1) that the burned sites have
 higher turnover in part because they have fewer individuals, and 2) that there
 is a detectable increase in intra-specific aggregation in the burned sites
 because \(\beta_{Sn}\) is still higher in the burned site. *S*<sub>PIE</sub>
-indicates that their is a shift towards higher eveness in the unburned sites
+indicates that their is a shift towards higher evenness in the unburned sites
 that is stronger at the \(\gamma\)-scale. So from the two-scale analysis we can
 conclude that fire: 1) decreases *N* which decreases *S*, 2) increases
 aggregation, and 3) decreases evenness.
@@ -367,7 +367,7 @@ plot_rarefaction(tank_mob_in, 'group', 'sSBR')
 ```
 
 Clearly enrichment had a big effect on species richness as it is larger in the "high" productivity (i.e., enriched) community compared to the "low" community
-at all scales. It is rare to see such a strong asympote on a rarefaction curve but it does appear that no new species were being encountered in the low community.
+at all scales. It is rare to see such a strong asymptote on a rarefaction curve but it does appear that no new species were being encountered in the low community.
 
 ```{r, fig.width = 7, fig.height=4}
 par(mfrow=c(1,2))

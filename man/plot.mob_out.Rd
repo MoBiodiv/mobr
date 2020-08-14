@@ -43,22 +43,22 @@ to number of plots respectively. The rescaling is carried out using
  \itemize{
      \item \code{S ~ expl} ... plot of S versus the explanatory variable
      \item \code{S ~ effort} ... plot of S versus sampling effort (i.e., a rarefaction curve)
-     \item \code{effect ~ expl} ... plot of Agg, N, and SAD effect size versus explanatory variable
-     \item \code{stat ~ effort} ... plot of 
+     \item \code{effect ~ expl} ... plot of agg., N, and SAD effect size versus explanatory variable
+     \item \code{stat ~ effort} ... plot of summary statistic versus sampling effort
 }
 Defaults to \code{'S ~ effort'}, \code{'effect ~ expl'}, and \code{'stat ~ effort'}.}
 
-\item{eff_sub_effort}{a boolean which determines if only a subset of efforts
+\item{eff_sub_effort}{Boolean which determines if only a subset of efforts
 will be considered in the plot of effect size (i.e., when
 \code{display = 'effect ~ expl'}. Defaults to TRUE to declutter the plots.}
 
 \item{eff_log_base}{a positive real number that determines the base of the 
-logathrium that efforts were be disributed across, the larger this number
-the fewer efforts will be diplayed.}
+logarithm that efforts were be distributed across, the larger this number
+the fewer efforts will be displayed.}
 
-\item{eff_disp_pts}{a boolean to display the raw effect points, defaults to TRUE}
+\item{eff_disp_pts}{Boolean to display the raw effect points, defaults to TRUE}
 
-\item{eff_disp_smooth}{a boolean to display the regressions used to summarize
+\item{eff_disp_smooth}{Boolean to display the regressions used to summarize
 the linear effect of the explanatory variable on the effect sizes, defaults
 to FALSE}
 

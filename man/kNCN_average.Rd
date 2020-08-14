@@ -2,7 +2,7 @@
 % Please edit documentation in R/k-NCN_curve_functions.R
 \name{kNCN_average}
 \alias{kNCN_average}
-\title{Construct spatially constrained sample-based rarefaction (sSBR) curve using the k-Nearest-Centroid-neighbour (k-NCN) algorithm}
+\title{Construct spatially constrained sample-based rarefaction (sSBR) curve using the k-Nearest-Centroid-neighbor (k-NCN) algorithm}
 \usage{
 kNCN_average(
   x,
@@ -18,7 +18,7 @@ kNCN_average(
 
 \item{n}{number of sites to include.}
 
-\item{coords}{spatial coordinates of the samples. If x is a mob_in object, the fuction uses its 'spat' table as coords.}
+\item{coords}{spatial coordinates of the samples. If x is a mob_in object, the function uses its 'spat' table as coords.}
 
 \item{repetitions}{Number of times to repeat the procedure. Useful in situations where there are many ties in the distance matrix.}
 
@@ -36,7 +36,7 @@ a numeric vector of estimated species richness
 }
 \description{
 This function accumulates samples according their proximity to all previously included samples (their centroid) as opposed
-to the proximity to the inital focal sample. This ensures that included samples mutually close to each other and not all over the place.
+to the proximity to the initial focal sample. This ensures that included samples mutually close to each other and not all over the place.
 }
 \details{
 Internally the function constructs one curve per sample whereby each sample serves as the initial sample repetition times. Finally, the average curve is returned.

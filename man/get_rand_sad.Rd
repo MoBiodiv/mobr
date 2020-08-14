@@ -12,7 +12,7 @@ get_rand_sad(rad, N)
 
 \item{N}{the total number of individuals sampled
 
-Randomly subsampling an RAD with replacemewnt produces an SAD that is of a
+Randomly subsampling an RAD with replacement produces an SAD that is of a
 similar functional form (Green and Plotkin 2007) but with overall species
 richness equal to or less than the relative abundance distribution.
 

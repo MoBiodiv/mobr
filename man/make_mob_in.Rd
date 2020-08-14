@@ -29,10 +29,10 @@ specifying the x-coordinate or the longitude is provided first, y-coordinate
  or latitude provided second. To provide coordinate names use the following
  syntax: \code{coord_names = c('longitude_col_name','latitude_col_name')}}
 
-\item{binary}{boolean, defaults to FALSE. Whether the plot by species matrix
+\item{binary}{Boolean, defaults to FALSE. Whether the plot by species matrix
 "comm" is in abundances or presence/absence.}
 
-\item{latlong}{boolean, defaults to FALSE. Whether the coordinates are
+\item{latlong}{Boolean, defaults to FALSE. Whether the coordinates are
 latitude-longitudes or not. If TRUE, distance calculations by downstream
 functions are based upon great circle distances rather than Euclidean
 distances. Note latitude-longitudes should be in decimal degree.}
