@@ -95,7 +95,7 @@ calc_chao1 = function(x) {
 #' calc_PIE(inv_comm)
 #' calc_PIE(inv_comm, ENS=TRUE)
 calc_PIE = function(x, ENS=FALSE) {
-    if (class(x) == 'mob_in') {
+    if ('mob_in' %in% class(x)) {
         x = x$comm
     }
     x = drop(as.matrix(x))
