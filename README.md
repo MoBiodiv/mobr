@@ -39,9 +39,9 @@ working on reducing the number of dependencies.
 
 ## Examples
 
-The package [vignette](./vignettes/mobr_intro.pdf) provides a useful walk-through
-the package tools, but below is some example code that uses the two key analyses
-and related graphics. 
+The package [vignette](https://github.com/MoBiodiv/mobr/blob/master/vignettes/mobr_intro.pdf)
+provides a useful walk-through the package tools, but below is some example code
+that uses the two key analyses and related graphics. 
 
 ```r
 library(mobr)
