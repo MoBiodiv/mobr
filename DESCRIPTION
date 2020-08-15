@@ -23,7 +23,7 @@ Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com",
                     role = "aut"),
              person("Jon", "Chase", email = "jonathan.chase@idiv.de",
                     role = "aut"))
-Date: 2019
+Date: 2019-08-15
 Description: This package is designed to help measure biodiversity and its
     changes across scales.
 Depends:
