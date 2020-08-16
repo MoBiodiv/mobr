@@ -24,7 +24,7 @@ Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com",
              person("Jon", "Chase", email = "jonathan.chase@idiv.de",
                     role = "aut"))
 Date: 2020-08-15
-Description: A package that computes metrics for the measurement biodiversity
+Description: Functions for calculating metrics for the measurement biodiversity
     and its changes across scales, treatments, and gradients.
 Depends:
     R (>= 3.0.2)
