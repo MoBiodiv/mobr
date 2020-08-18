@@ -92,17 +92,18 @@ The analytical formulas of Cayuela et al. (2015) are used to compute
   rarefaction methods. The spatially constrained rarefaction curve (Chiarucci
   et al. 2009) also known as the sample-based accumulation curve (Gotelli and
   Colwell 2001) can be computed in one of two ways which is determined by the
-  argument \code{spat_algo}. In the kNN approach each plot is accumulated the
-  order of their spatial proximity to the original focal cell. If plots have
-  the same distance from the focal plot then one is chosen randomly to be
-  sampled first. In the kNCN approach a new centroid is computed after each
-  plot is accumulated, then disances are recomputed from that new centroid to
-  all other plots and the next nearest is sampled. The kNN is faster because
-  the distance matrix only needs to be computed once, but the sampling of
-  kNCN which simleaneously minimizes spatial distance and extent is more
-  similar to an actual person searching a field for species. For both kNN and
-  kNCN ,each plot in the dataset is treated as a starting point and then the
-  mean of these n possible accumulation curves is computed.
+  argument \code{spat_algo}. In the kNN approach each plot is accumulated by
+  the order of their spatial proximity to the original focal cell. If plots
+  have the same distance from the focal plot then one is chosen randomly to
+  be sampled first. In the kNCN approach, a new centroid is computed after
+  each plot is accumulated, then distances are recomputed from that new
+  centroid to all other plots and the next nearest is sampled. The kNN is
+  faster because the distance matrix only needs to be computed once, but the
+  sampling of kNCN which simultaneously minimizes spatial distance and extent
+  is more similar to an actual person searching a field for species. For both
+  kNN and kNCN, each plot in the community matrix is treated as a starting
+  point and then the mean of these n possible accumulation curves is
+  computed.
 
 For individual-based rarefaction if effort is greater than the number of
 individuals and \code{extrapolate = TRUE} then the Chao1 method is used 

@@ -4,47 +4,88 @@
 \alias{get_null_comm}
 \title{Generate a null community matrix}
 \usage{
-get_null_comm(comm, tests, groups = NULL)
+get_null_comm(comm, null_model, groups = NULL)
 }
 \arguments{
-\item{comm}{community matrix with plots as rows and species columns.}
+\item{comm}{community matrix of abundances with plots as rows and species columns.}
 
-\item{tests}{'SAD', 'N', or 'agg' for a null model that nullifies 
-the given component}
+\item{null_model}{a string which specifies which null model to use options
+include: \code{'rand_SAD'}, \code{'rand_N'}, and \code{'rand_agg'}. See 
+Details for description of each null model.}
 
 \item{groups}{optional argument that is a vector of group ids which specify
-which group each site is associated with. If is NULL then all rows of the
-community matrix are assumed to be members of the same group}
+which group each site is associated with. If is \code{NULL} then all rows
+of the community matrix are assumed to be members of the same group}
 }
 \value{
 a site-by-species matrix
 }
 \description{
-Two types of permutation can be carried out: 1) 'noagg': each individual of
-each species is reassigned a plot randomly which removes any patterns due to
-within and between plot spatial aggregation, but maintains species group
-abundance and therefore observed group N, and 2) 'swapN': the total number of
-individuals in a plot is shuffled and then that many individuals are drawn
-randomly from the group specific species-abundance distribution for each plot
-which provides a means of removing group differences in the total number of
-individuals in a given sample. Note: The 'noagg' algorithm fixes the total number
-of individuals for a given species within a group and the 'swapN' algorithm does
-not.
+Three  null models are implemented that randomize different components of
+community structure while keeping other components constant.
 }
 \details{
+This function implements three different nested null models. They are considered
+nested because at the core of each null model is the random sampling 
+with replacement of the relative abundance distribution (RAD) to generate 
+a random sample of a species abundance distribution (SAD). Here we describe
+each null model:
+\itemize{
+   \item \code{'rand_SAD'} ... A random SAD is generated using a sample with
+   replacement of individuals from the species pool proportional to their
+   observed relative abundance. This null model will produce an SAD that is
+   of a similar functional form to the observed SAD (Green and Plotkin 2007).
+   The total abundance of the random SAD is the same as the observed SAD but
+   overall species richness will be equal to or less than the observed SAD.
+   This algorithm ignores the \code{group} argument. This sampling algorithm
+   is also used in the two other null models \code{'rand_N'} and
+   \code{'rand_agg'}.
+   
+   \item \code{'rand_N'} ... The total number of individuals in a plot is
+   shuffled across all plots (within and between groups). Then for each plot
+   that many individuals are drawn randomly from the group specific relative
+   abundance distribution with replacement for each plot (i.e., using the
+   \code{'rand_SAD'} algorithm described above. This removes group
+   differences in the total number of individuals in a given plot, but
+   maintains group level differences in their SADs.
+   
+   \item \code{'rand_agg'} ... This null model nullifies the spatial
+   structure of individuals (i.e., their aggregation), but it is constrained
+   by the observed total number of individuals in each plot (in contrast to
+   the \code{'rand_N'} null model), and the group specific SAD (in contrast
+   to the \code{'rand_SAD'} null model). The other two null models also
+   nullify spatial structure. The \code{'rand_agg'} null model is identical
+   to the \code{'rand_N'} null model except that plot abundances are not 
+   shuffled. 
+}
+
 Replaces depreciated function `permute_comm`
 }
 \examples{
 S = 3
 N = 20
 nplots = 4
-comm = matrix(rpois(S*nplots, 1),
-              ncol=S, nrow=nplots)
+comm = matrix(rpois(S * nplots, 1), ncol = S, nrow = nplots)
 comm
 groups = rep(1:2, each=2)
 groups
-get_null_comm(comm, 'SAD')
-get_null_comm(comm, 'SAD', groups)
-get_null_comm(comm, 'N')
-get_null_comm(comm, 'N', groups)
+set.seed(1)
+get_null_comm(comm, 'rand_SAD')
+# null model 'rand_SAD' ignores groups argument
+set.seed(1)
+get_null_comm(comm, 'rand_SAD', groups)
+set.seed(1)
+get_null_comm(comm, 'rand_N')
+# null model 'rand_N' does not ignore the groups argument
+set.seed(1)
+get_null_comm(comm, 'rand_N', groups)
+# note that the 'rand_agg' null model is constrained by observed plot abundances
+noagg = get_null_comm(comm, 'rand_agg', groups)
+noagg
+rowSums(comm)
+rowSums(noagg)
+}
+\references{
+Green, J. L., and J. B. Plotkin. 2007. A statistical theory for sampling 
+species abundances. Ecology Letters 10:1037–1045.
 }

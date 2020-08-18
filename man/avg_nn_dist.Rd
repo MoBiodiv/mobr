@@ -17,7 +17,7 @@ a vector of average distances for each sequential number
 This function computes the average distance of the next
 nearest sample for a given set of coordinates. This method
 of sampling is used  by the function \code{rarefaction}
-when building the spatial accumulation curves
+when building the spatial, sample-based rarefaction curves (sSBR).
 }
 \examples{
 # transect spatial arrangement

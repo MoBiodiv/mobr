@@ -2,7 +2,7 @@
 #' @name inv_comm
 #' @aliases  inv_plot_attr
 #' @description Herbaceous plant species counts sites invaded and uninvaded by
-#'   Lonicera maackii (Amur honeysuckle) which is an invasive shrub.
+#'   \emph{Lonicera maackii} (Amur honeysuckle) which is an invasive shrub.
 #'
 #' @details \code{inv_comm} is a site-by-species matrix with individual counts.
 #'

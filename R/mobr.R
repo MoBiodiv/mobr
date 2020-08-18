@@ -254,17 +254,18 @@ sphere_dist = function(coords){
 #'   rarefaction methods. The spatially constrained rarefaction curve (Chiarucci
 #'   et al. 2009) also known as the sample-based accumulation curve (Gotelli and
 #'   Colwell 2001) can be computed in one of two ways which is determined by the
-#'   argument \code{spat_algo}. In the kNN approach each plot is accumulated the
-#'   order of their spatial proximity to the original focal cell. If plots have
-#'   the same distance from the focal plot then one is chosen randomly to be
-#'   sampled first. In the kNCN approach a new centroid is computed after each
-#'   plot is accumulated, then disances are recomputed from that new centroid to
-#'   all other plots and the next nearest is sampled. The kNN is faster because
-#'   the distance matrix only needs to be computed once, but the sampling of
-#'   kNCN which simleaneously minimizes spatial distance and extent is more
-#'   similar to an actual person searching a field for species. For both kNN and
-#'   kNCN ,each plot in the dataset is treated as a starting point and then the
-#'   mean of these n possible accumulation curves is computed.
+#'   argument \code{spat_algo}. In the kNN approach each plot is accumulated by
+#'   the order of their spatial proximity to the original focal cell. If plots
+#'   have the same distance from the focal plot then one is chosen randomly to
+#'   be sampled first. In the kNCN approach, a new centroid is computed after
+#'   each plot is accumulated, then distances are recomputed from that new
+#'   centroid to all other plots and the next nearest is sampled. The kNN is
+#'   faster because the distance matrix only needs to be computed once, but the
+#'   sampling of kNCN which simultaneously minimizes spatial distance and extent
+#'   is more similar to an actual person searching a field for species. For both
+#'   kNN and kNCN, each plot in the community matrix is treated as a starting
+#'   point and then the mean of these n possible accumulation curves is
+#'   computed.
 #' 
 #' For individual-based rarefaction if effort is greater than the number of
 #' individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
@@ -536,7 +537,7 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
 #' This function computes the average distance of the next
 #' nearest sample for a given set of coordinates. This method
 #' of sampling is used  by the function \code{rarefaction}
-#' when building the spatial accumulation curves
+#' when building the spatial, sample-based rarefaction curves (sSBR).
 #' 
 #' @param coords a matrix with n-dimensional coordinates
 #' @return a vector of average distances for each sequential number
@@ -640,46 +641,88 @@ get_rand_sad = function(rad, N) {
 
 #' Generate a null community matrix 
 #' 
-#' Two types of permutation can be carried out: 1) 'noagg': each individual of
-#' each species is reassigned a plot randomly which removes any patterns due to
-#' within and between plot spatial aggregation, but maintains species group
-#' abundance and therefore observed group N, and 2) 'swapN': the total number of
-#' individuals in a plot is shuffled and then that many individuals are drawn
-#' randomly from the group specific species-abundance distribution for each plot
-#' which provides a means of removing group differences in the total number of
-#' individuals in a given sample. Note: The 'noagg' algorithm fixes the total number
-#' of individuals for a given species within a group and the 'swapN' algorithm does
-#' not. 
+#' Three  null models are implemented that randomize different components of
+#' community structure while keeping other components constant.
+#' 
+#' 
+#' @param comm community matrix of abundances with plots as rows and species columns.
+#' @param null_model a string which specifies which null model to use options
+#'   include: \code{'rand_SAD'}, \code{'rand_N'}, and \code{'rand_agg'}. See 
+#'   Details for description of each null model.
+#' @param groups optional argument that is a vector of group ids which specify
+#'   which group each site is associated with. If is \code{NULL} then all rows
+#'   of the community matrix are assumed to be members of the same group
+#'   
+#' @return a site-by-species matrix
+#' 
+#' @details 
+#' This function implements three different nested null models. They are considered
+#' nested because at the core of each null model is the random sampling 
+#' with replacement of the relative abundance distribution (RAD) to generate 
+#' a random sample of a species abundance distribution (SAD). Here we describe
+#' each null model:
+#' \itemize{
+#'    \item \code{'rand_SAD'} ... A random SAD is generated using a sample with
+#'    replacement of individuals from the species pool proportional to their
+#'    observed relative abundance. This null model will produce an SAD that is
+#'    of a similar functional form to the observed SAD (Green and Plotkin 2007).
+#'    The total abundance of the random SAD is the same as the observed SAD but
+#'    overall species richness will be equal to or less than the observed SAD.
+#'    This algorithm ignores the \code{group} argument. This sampling algorithm
+#'    is also used in the two other null models \code{'rand_N'} and
+#'    \code{'rand_agg'}.
+#'    
+#'    \item \code{'rand_N'} ... The total number of individuals in a plot is
+#'    shuffled across all plots (within and between groups). Then for each plot
+#'    that many individuals are drawn randomly from the group specific relative
+#'    abundance distribution with replacement for each plot (i.e., using the
+#'    \code{'rand_SAD'} algorithm described above. This removes group
+#'    differences in the total number of individuals in a given plot, but
+#'    maintains group level differences in their SADs.
+#'    
+#'    \item \code{'rand_agg'} ... This null model nullifies the spatial
+#'    structure of individuals (i.e., their aggregation), but it is constrained
+#'    by the observed total number of individuals in each plot (in contrast to
+#'    the \code{'rand_N'} null model), and the group specific SAD (in contrast
+#'    to the \code{'rand_SAD'} null model). The other two null models also
+#'    nullify spatial structure. The \code{'rand_agg'} null model is identical
+#'    to the \code{'rand_N'} null model except that plot abundances are not 
+#'    shuffled. 
+#' }
 #' 
 #' Replaces depreciated function `permute_comm`
 #' 
-#' @param comm community matrix with plots as rows and species columns.
-#' @param tests 'SAD', 'N', or 'agg' for a null model that nullifies 
-#' the given component
-#' @param groups optional argument that is a vector of group ids which specify
-#'   which group each site is associated with. If is NULL then all rows of the
-#'   community matrix are assumed to be members of the same group
-#'   
-#' @return a site-by-species matrix
+#' @references 
+#' Green, J. L., and J. B. Plotkin. 2007. A statistical theory for sampling 
+#' species abundances. Ecology Letters 10:1037–1045.
 #' @importFrom vctrs vec_as_names
 #' @import purrr
 #' @import dplyr
-#' @importFrom utils globalVariables
 #' @export
 #' @examples 
 #' S = 3
 #' N = 20
 #' nplots = 4
-#' comm = matrix(rpois(S*nplots, 1),
-#'               ncol=S, nrow=nplots)
+#' comm = matrix(rpois(S * nplots, 1), ncol = S, nrow = nplots)
 #' comm
 #' groups = rep(1:2, each=2)
 #' groups
-#' get_null_comm(comm, 'SAD')
-#' get_null_comm(comm, 'SAD', groups)
-#' get_null_comm(comm, 'N')
-#' get_null_comm(comm, 'N', groups)
-get_null_comm = function(comm, tests, groups = NULL) {
+#' set.seed(1)
+#' get_null_comm(comm, 'rand_SAD')
+#' # null model 'rand_SAD' ignores groups argument
+#' set.seed(1)
+#' get_null_comm(comm, 'rand_SAD', groups)
+#' set.seed(1)
+#' get_null_comm(comm, 'rand_N')
+#' # null model 'rand_N' does not ignore the groups argument
+#' set.seed(1)
+#' get_null_comm(comm, 'rand_N', groups)
+#' # note that the 'rand_agg' null model is constrained by observed plot abundances
+#' noagg = get_null_comm(comm, 'rand_agg', groups)
+#' noagg
+#' rowSums(comm)
+#' rowSums(noagg)
+get_null_comm = function(comm, null_model, groups = NULL) {
     # the main component of all the null models is random sampling 
     # from a pooled or group-specific SAD
     if (!(is.matrix(comm) | is.data.frame(comm)))
@@ -689,7 +732,7 @@ get_null_comm = function(comm, tests, groups = NULL) {
   
     # compute N at each plot across groups
     N_plots = rowSums(comm)
-    if (tests == "SAD") {
+    if (null_model == "rand_SAD") {
         # NOTE: for SAD test it is not necessary to fix or not fix plot level
         # abundance because individual based rarefaction ignores that
         # detail when it is computed
@@ -699,22 +742,22 @@ get_null_comm = function(comm, tests, groups = NULL) {
         # randomly sample N individuals from the pool with replacement
         null_sads = map(N_plots, ~ get_rand_sad(rad_pool, .x))
         names(null_sads) = 1:length(null_sads)
-    } else if (tests == "N" | tests == "agg") {
-        if (tests == "N") # shuffle these abundances in the N null model
+    } else if (null_model == "rand_N" | null_model == "rand_agg") {
+        if (null_model == "rand_N") # shuffle these abundances in the N null model
             N_plots = sample(N_plots)
         # compute rad for each group
-        .x <- NULL   # book keeping first for CRAN checks 
+        .x <- NULL   # book keeping for CRAN checks 
         rad_groups = data.frame(comm, groups) %>%
                      group_by(groups) %>%
                      summarize_all(sum) %>%
                      select(-one_of("groups")) %>% t %>%
                      as_tibble(.x, .name_repair = ~ vctrs::vec_as_names(..., quiet = TRUE)) %>%
                      map(~ .x / sum(.x))
-        # replicate these rads so that you have one rad for every
+        # replicate these rads so that you have one group specific rad for every
         # plot in the dataset
         rad_plots = rep(rad_groups, table(groups))
         names(rad_plots) = 1:length(rad_plots)
-        # draw random sads 
+        # draw random sads from each group specific rad
         null_sads = map2(rad_plots, N_plots, get_rand_sad)
     }  
     # now convert sads to a new community matrix
@@ -826,7 +869,9 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
 #' @import purrr
 #' @import dplyr 
 #' @importFrom tidyr nest unnest
+#' @importFrom tibble as_tibble
 #' @importFrom rlang .data
+#' @importFrom stats lm
 #' @keywords internal 
 get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                        stats=NULL, spat_algo=NULL) {
@@ -850,8 +895,6 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
     S_df = data.frame(env = env[match(S_df$group, groups)],
                       S_df)
 
-    #S_df = subset(S_df, select = -group)
-    
     S_df = tibble::as_tibble(S_df, .name_repair = 'minimal')
   
     # now that S and effects computed across scale compute
@@ -904,7 +947,8 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
         pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
         for (i in 1:n_perm) {
             null_mob_in = mob_in
-            null_mob_in$comm = get_null_comm(mob_in$comm, tests[k], groups)
+            null_mob_in$comm = get_null_comm(mob_in$comm, paste0('rand_', tests[k]),
+                                             groups)
             null_results[[i]] = get_results(null_mob_in, env, groups, tests[k], inds,
                                             ind_dens, n_plots, type, stats, spat_algo)
             setTxtProgressBar(pb, i)
@@ -1309,7 +1353,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
         legend(leg_loc, legend=grps, col = col, lwd = lwd, bty='n')
 }
 
-#' Plot mob curves
+#' Plot the multiscale MoB analysis output generated by \code{get_delta_stats}.
 #' 
 #' @param x a mob_out class object
 #' @param stat a character string that specifies what statistic should be 
