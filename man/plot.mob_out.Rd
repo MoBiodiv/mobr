@@ -20,17 +20,19 @@
 \arguments{
 \item{x}{a mob_out class object}
 
-\item{stat}{a character string that specifies what statistic should be 
-used in the effect size plots. Options include: \code{c('b0', 'b1', 'r',
-'r2', 'r2adj', 'f')} for the beta-coefficients, person correlation 
-coefficient, r-squared, adjusted  r-squared, and F-statistic respectively.
-If the explanatory variable is a factor then \code{'b1'} is the only
-reasonable option.}
+\item{stat}{a character string that specifies what statistic should be used
+in the effect size plots. Options include: \code{c('b0', 'b1', 'r', 'r2',
+'r2adj', 'f')} for the beta-coefficients, person correlation coefficient,
+r-squared, adjusted  r-squared, and F-statistic respectively. If the
+explanatory variable is a factor then \code{'b1'} is the only reasonable
+option. The default is set to the regression slope \code{'b1'} because this
+appears to have the strongest statistical power.}
 
 \item{log2}{a character string specifying if the x- or y-axis should be
-rescale by log base 2. Only applies when \code{display == 'S ~ effort' | 'S ~ effort'}.
-Options include: \code{c('', 'x', 'y', 'xy')} for  no rescaling, x-axis,
-y-axis, and both x and y-axes respectively. Default is set to no rescaling.}
+rescale by log base 2. Only applies when \code{display == 'S ~ effort' | 'S
+~ effort'}. Options include: \code{c('', 'x', 'y', 'xy')} for  no
+rescaling, x-axis, y-axis, and both x and y-axes respectively. Default is
+set to no rescaling.}
 
 \item{scale_by}{a character string specifying if sampling effort should be
 rescaled. Options include: \code{NULL}, \code{'indiv'}, and \code{'plot'}
@@ -42,9 +44,12 @@ to number of plots respectively. The rescaling is carried out using
  Options include:
  \itemize{
      \item \code{S ~ expl} ... plot of S versus the explanatory variable
-     \item \code{S ~ effort} ... plot of S versus sampling effort (i.e., a rarefaction curve)
-     \item \code{effect ~ expl} ... plot of agg., N, and SAD effect size versus explanatory variable
-     \item \code{stat ~ effort} ... plot of summary statistic versus sampling effort
+     \item \code{S ~ effort} ... plot of S versus sampling effort (i.e., a
+     rarefaction curve) 
+     \item \code{effect ~ expl} ... plot of agg., N, and SAD effect size
+     versus explanatory variable
+     \item \code{stat ~ effort} ... plot of summary statistic versus sampling
+     effort
 }
 Defaults to \code{'S ~ effort'}, \code{'effect ~ expl'}, and \code{'stat ~ effort'}.}
 
