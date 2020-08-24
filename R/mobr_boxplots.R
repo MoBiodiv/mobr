@@ -399,7 +399,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #'   best small sample behavior. 
 #'   
 #' @param n_perm The number of permutations to use for testing for treatment
-#'   effects.
+#'   effects. Defaults to 199. 
 #'   
 #' @param boot_groups Use bootstrap resampling within groups to derive
 #'   gamma-scale confidence intervals for all biodiversity indices. Default is

@@ -5,7 +5,13 @@
 \title{Internal function used by kNCN_average to compute the k-NCN algorithm
 starting with a specified focal sample}
 \usage{
-centroid_accumulate(x, focal_sample = 1, n = NULL, coords = NULL)
+centroid_accumulate(
+  x,
+  focal_sample = 1,
+  n = NULL,
+  coords = NULL,
+  latlong = FALSE
+)
 }
 \arguments{
 \item{x}{a mob_in object or a community site x species matrix}
@@ -17,6 +23,8 @@ specifies which sample to start with. Defaults to 1}
 case all samples are accumulated}
 
 \item{coords}{the spatial coordinates of the samples of x}
+
+\item{latlong}{if latitude longitude arguments are supplied}
 }
 \description{
 Internal function used by kNCN_average to compute the k-NCN algorithm

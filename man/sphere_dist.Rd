@@ -2,23 +2,32 @@
 % Please edit documentation in R/mobr.R
 \name{sphere_dist}
 \alias{sphere_dist}
-\title{Internal function for distance matrix assuming inputs are lat and long 
-  on a sphere}
+\title{Internal function for distance matrix assuming inputs are longitude and
+latitudes on a spherical Earth.}
 \usage{
-sphere_dist(coords)
+sphere_dist(coords, r = 6378.137)
 }
 \arguments{
-\item{coords}{a matrix with latitudes and longitudes. The longitudes should
-be provided in the first column (they are the x-coordinate) and the latitudes
-should be provided in the second column (they are the y-coordinate).}
+\item{coords}{a matrix with longitudes and latitudes in decimal degrees. The
+longitudes should be provided in the first column (they are the
+x-coordinate) and the latitudes should be provided in the second column
+(they are the y-coordinate).}
+
+\item{r}{the radius of the Earth, defaults to 6378.137 km}
 }
 \value{
-a numeric value
+distance matrix between all pairwise coordinates.
 }
 \description{
-Distance matrix between points on the unit (r = 1) sphere.
+This calculation uses the Haversine method of computing great
+  circle distances in kilometers on a spherical Earth (r = 6378.137 km). This
+  code was taken from fields::rdist.earth by Doug Nychka, John Paige, Florian
+  Gerber.
 }
-\author{
-Xiao Xiao
+\examples{
+\dontrun{
+xy <- cbind(c(0, 30, 60), c(0, 30, 60))
+sphere_dist(xy)
+}
 }
 \keyword{internal}

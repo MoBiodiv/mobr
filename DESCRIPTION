@@ -30,7 +30,6 @@ Depends:
     R (>= 3.0.2)
 Imports:
     plotrix,
-    pracma,
     scales,
     dplyr,
     purrr,
@@ -38,11 +37,10 @@ Imports:
     pbapply,
     ggplot2,
     egg,
-    rgeos,
-    sp,
     tibble,
     vctrs,
-    rlang
+    rlang,
+    geosphere
 Suggests:
     knitr,
     rmarkdown,

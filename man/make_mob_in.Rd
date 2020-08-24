@@ -33,9 +33,9 @@ specifying the x-coordinate or the longitude is provided first, y-coordinate
 "comm" is in abundances or presence/absence.}
 
 \item{latlong}{Boolean, defaults to FALSE. Whether the coordinates are
-latitude-longitudes or not. If TRUE, distance calculations by downstream
-functions are based upon great circle distances rather than Euclidean
-distances. Note latitude-longitudes should be in decimal degree.}
+latitude-longitudes. If TRUE, distance calculations by downstream functions
+are based upon great circle distances rather than Euclidean distances. Note
+latitude-longitudes should be in decimal degree.}
 }
 \value{
 a "mob_in" object with four attributes. "comm" is the plot by species
