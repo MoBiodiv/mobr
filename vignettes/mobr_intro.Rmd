@@ -147,7 +147,7 @@ turnover it is most sensitive too (McGlinn et al. 2018, Chase et al. 2018).
 
 ```{r run two-scale analysis, eval = FALSE}
 inv_stats <- get_mob_stats(inv_mob_in, group_var = "group", 
-                           n_perm = 20)
+                           n_perm = 199)
 ```
 
 ```{r, echo = FALSE}
@@ -225,7 +225,7 @@ at least 200 are recommended for actual applications.
 
 ```{r multi-scale analysis, eval=FALSE}
 inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
-                             type='discrete', log_scale=TRUE, n_perm = 20)
+                             type='discrete', log_scale=TRUE, n_perm = 199)
 ```
 
 ```{r, echo=FALSE}
@@ -269,6 +269,7 @@ dataset before attempting to analyze its patterns. We will start our exploration
 with the sSBR.
 
 ```{r}
+plot_rarefaction(fire_mob_in, 'group', 'IBR')
 plot_rarefaction(fire_mob_in, 'group', 'sSBR')
 ```
 
@@ -322,11 +323,14 @@ conclude that fire: 1) decreases *N* which decreases *S*, 2) increases
 aggregation, and 3) decreases evenness.
 
 Let's now look at the multi-scale analysis to examine the scale-dependence and
-relative strength of these effects. 
+relative strength of these effects. Note here we set the argument \code{log_scale}
+to \code{TRUE} because there is a large number of individuals and it is not
+necessary to compute the differences beween the curves at all possible scales.
 
 ```{r, eval = FALSE}
 fire_deltaS = get_delta_stats(fire_mob_in, 'group', ref_level = 'unburned',
-                              type = 'discrete', n_perm = 19)
+                              type = 'discrete', log_scale = T, n_perm = 199,
+                              overall_p = T)
 ```
 ```{r, echo = FALSE}
 load('../vignettes/fire_deltaS.Rdata')
@@ -335,19 +339,21 @@ load('../vignettes/fire_deltaS.Rdata')
 This time we'll examine the full suite of graphics for the multimetric analysis. 
 
 ```{r, fig.width = 7, fig.height = 6, }
-plot(fire_deltaS, stat = 'b1')
+plot(fire_deltaS, stat = 'b1', scale_by = 'indiv')
 ```
 
 These confirm our expectations based on the two-scale analysis. The IBR indicates
 the increase in evenness in the unburned site particularly at coarse scales, the
 nsSBR illustrates that the N-effect is fairly strong, and the sSBR shows that their
 are some effects of aggregation. The delta effect curves can show this more clearly. 
-These plots illustrate that 1) none of these individual effects are of a really
-large magnitude ((\(\Delta\)*S* is never more or less than 2 species), 2) the
-*N*-effect is the largest driver of decreases in *S*, 3) the increased
-aggregation in the burned sites is only really relevant at fine spatial scales,
-and lastly 4) although evenness is lower in the burned sites it is only outside
-of the acceptance intervals at the finest spatial scales.
+These plots illustrate that: 
+1. None of these individual effects are of a really large magnitude
+((\(\Delta\)*S* is never more or less than 2 species). 
+2. The *N*-effect is the largest driver of decreases in *S*. 
+3. The increased aggregation in the burned sites is only really relevant at fine
+spatial scales.
+4. Although evenness is lower in the burned sites it is only outside of the
+acceptance intervals at the finest spatial scales.
 
 # Enrichment effect on aquatic experimental cattle tank communities
 
@@ -402,7 +408,7 @@ SADs).
 ```{r, eval = FALSE}
 tank_deltaS = get_delta_stats(tank_mob_in, 'group', ref_level = 'low',
                               inds = 10, log_scale = TRUE, type = 'discrete',
-                              n_perm=19) 
+                              n_perm=199) 
 ```
 ```{r, echo = FALSE}
 load('../vignettes/tank_deltaS.Rdata')
