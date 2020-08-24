@@ -9,6 +9,12 @@
 - Added automated tests
 - Improved documentation throughout the package
 
+### bug fixes
+- Function `sphere_dist` did not appear to be calculating great circle distances
+from latitude and longitude coordinates correctly using the Haversine formula.
+This was corrected with a new function this is correct according to comparisons
+with `fields::rdist.earth` and `geosphere::distHaversine`.
+
 ### omitted feature
 - Removed the function `overlap_effects` which provided an overlapped image of the three components SAD, N, and agg across scale. This may be added back in the future
 
