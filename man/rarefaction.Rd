@@ -51,7 +51,7 @@ is not already supplied by \code{x}. The first column should specify
 the x-coordinate (e.g., longitude) and the second coordinate should 
 specify the y-coordinate (e.g., latitude)}
 
-\item{latlong}{Boolean if coordinates are latitude-longitude}
+\item{latlong}{Boolean if coordinates are latitude-longitude decimal degrees}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
 and the community data (i.e., x) under consideration. This argument is

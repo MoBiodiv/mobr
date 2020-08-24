@@ -2,7 +2,8 @@
 % Please edit documentation in R/k-NCN_curve_functions.R
 \name{kNCN_average}
 \alias{kNCN_average}
-\title{Construct spatially constrained sample-based rarefaction (sSBR) curve using the k-Nearest-Centroid-neighbor (k-NCN) algorithm}
+\title{Construct spatially constrained sample-based rarefaction (sSBR) curve using
+the k-Nearest-Centroid-neighbor (k-NCN) algorithm}
 \usage{
 kNCN_average(
   x,
@@ -10,6 +11,7 @@ kNCN_average(
   coords = NULL,
   repetitions = 1,
   no_pb = TRUE,
+  latlong = FALSE,
   cl = NULL
 )
 }
@@ -18,14 +20,19 @@ kNCN_average(
 
 \item{n}{number of sites to include.}
 
-\item{coords}{spatial coordinates of the samples. If x is a mob_in object, the function uses its 'spat' table as coords.}
+\item{coords}{spatial coordinates of the samples. If x is a mob_in object,
+the function uses its 'spat' table as coords.}
 
-\item{repetitions}{Number of times to repeat the procedure. Useful in situations where there are many ties in the distance matrix.}
+\item{repetitions}{Number of times to repeat the procedure. Useful in
+situations where there are many ties in the distance matrix.}
 
-\item{no_pb}{binary, if TRUE then a progress bar is not printed, defaults to TRUE}
+\item{no_pb}{binary, if TRUE then a progress bar is not printed, defaults to
+TRUE}
+
+\item{latlong}{if longitude latitudes are supplied}
 
 \item{cl}{
-A cluster object created by \code{\link[parallel]{makeCluster}},
+A cluster object created by \code{\link{makeCluster}},
 or an integer to indicate number of child-processes
 (integer values are ignored on Windows) for parallel evaluations
 (see Details on performance).
@@ -35,11 +42,15 @@ or an integer to indicate number of child-processes
 a numeric vector of estimated species richness
 }
 \description{
-This function accumulates samples according their proximity to all previously included samples (their centroid) as opposed
-to the proximity to the initial focal sample. This ensures that included samples mutually close to each other and not all over the place.
+This function accumulates samples according their proximity to all previously
+included samples (their centroid) as opposed to the proximity to the initial
+focal sample. This ensures that included samples mutually close to each other
+and not all over the place.
 }
 \details{
-Internally the function constructs one curve per sample whereby each sample serves as the initial sample repetition times. Finally, the average curve is returned.
+Internally the function constructs one curve per sample whereby each sample
+serves as the initial sample repetition times. Finally, the average curve is
+returned.
 }
 \examples{
 data(inv_comm)

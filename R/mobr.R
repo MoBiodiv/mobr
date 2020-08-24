@@ -19,9 +19,9 @@
 #' @param binary Boolean, defaults to FALSE. Whether the plot by species matrix
 #'   "comm" is in abundances or presence/absence.
 #' @param latlong Boolean, defaults to FALSE. Whether the coordinates are
-#'   latitude-longitudes or not. If TRUE, distance calculations by downstream
-#'   functions are based upon great circle distances rather than Euclidean
-#'   distances. Note latitude-longitudes should be in decimal degree.
+#'   latitude-longitudes. If TRUE, distance calculations by downstream functions
+#'   are based upon great circle distances rather than Euclidean distances. Note
+#'   latitude-longitudes should be in decimal degree.
 #'
 #' @return a "mob_in" object with four attributes. "comm" is the plot by species
 #'   matrix. "env" is the environmental attribute matrix, without the spatial
@@ -169,26 +169,36 @@ print.mob_in = function(x, nrows=6, nsp=5, ...) {
     print(x$latlong)
 }
 
-#' Internal function for distance matrix assuming inputs are lat and long 
-#'   on a sphere
-#' 
-#' @param coords a matrix with latitudes and longitudes. The longitudes should
-#' be provided in the first column (they are the x-coordinate) and the latitudes
-#' should be provided in the second column (they are the y-coordinate). 
-#' @description  Distance matrix between points on the unit (r = 1) sphere.
-#' @return a numeric value
-#' @author Xiao Xiao
+#' Internal function for distance matrix assuming inputs are longitude and
+#' latitudes on a spherical Earth.
+#'
+#' @param coords a matrix with longitudes and latitudes in decimal degrees. The
+#'   longitudes should be provided in the first column (they are the
+#'   x-coordinate) and the latitudes should be provided in the second column
+#'   (they are the y-coordinate).
+#'
+#' @param r the radius of the Earth, defaults to 6378.137 km
+#'
+#' @returns distance matrix between all pairwise coordinates.
+#'
+#' @description This calculation uses the Haversine method of computing great
+#'   circle distances in kilometers on a spherical Earth (r = 6378.137 km). This
+#'   code was taken from fields::rdist.earth by Doug Nychka, John Paige, Florian
+#'   Gerber.
+#' @examples 
+#' \dontrun{
+#' xy <- cbind(c(0, 30, 60), c(0, 30, 60))
+#' sphere_dist(xy)
+#' }
 #' @keywords internal
-sphere_dist = function(coords){
-    long = coords[ , 1]
-    lat = coords[ , 2]
-    # Convert degrees to radians
-    deg2rad = function(deg) return(deg * pi / 180)
-    delta_long = as.matrix(dist(as.matrix(deg2rad(long))))
-    delta_lat = as.matrix(dist(as.matrix(deg2rad(lat))))
-    hav = sin(delta_lat / 2)^2 + cos(lat) %*% t(cos(lat)) * sin(delta_long / 2)^2
-    dist = 2 * asin(sqrt(hav))
-    return(dist)
+sphere_dist = function(coords, r = 6378.137){
+    coslat1 <- cos((coords[ , 2] * pi) / 180)
+    sinlat1 <- sin((coords[ , 2] * pi) / 180)
+    coslon1 <- cos((coords[ , 1] * pi) / 180)
+    sinlon1 <- sin((coords[ , 1] * pi) / 180)
+    pp <- cbind(coslat1 * coslon1, coslat1 * sinlon1, sinlat1) %*% 
+          t(cbind(coslat1 * coslon1, coslat1 * sinlon1, sinlat1))
+    return(r * acos(ifelse(abs(pp) > 1, 1 * sign(pp), pp)))
 }
 
 #' Rarefied Species Richness
@@ -226,7 +236,7 @@ sphere_dist = function(coords){
 #'   is not already supplied by \code{x}. The first column should specify 
 #'   the x-coordinate (e.g., longitude) and the second coordinate should 
 #'   specify the y-coordinate (e.g., latitude)
-#' @param latlong Boolean if coordinates are latitude-longitude 
+#' @param latlong Boolean if coordinates are latitude-longitude decimal degrees
 #' @param dens_ratio the ratio of individual density between a reference group
 #'   and the community data (i.e., x) under consideration. This argument is
 #'   used to rescale the rarefaction curve when estimating the effect of
@@ -443,7 +453,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             
         }
         else if (spat_algo == "kNCN") 
-            out = kNCN_average(x=x, coords=coords)[effort]
+            out = kNCN_average(x=x, coords=coords, latlong=latlong)[effort]
     } 
     else { 
         # drop species with no observations  
@@ -1012,11 +1022,16 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
 #'   in \code{mob_in$env} which defines how samples are pooled. If not provided
 #'   then each unique value of the argument \code{env_var} is used define the
 #'   groups. 
-#' @param ref_level a character string used to define the reference level of 
-#'   \code{env_var} to which all other groups are compared with. Only make sense
-#'   if \code{env_var} is a factor. 
-#' @param tests specifies which one or more of the three tests ('SAD', N', 'agg') 
-#'   are to be performed. Default is to include all three tests.
+#' @param ref_level a character string used to define the reference level of
+#'   \code{env_var} to which all other groups are compared with. Only makes sense
+#'   if \code{env_var} is a factor (i.e. \code{type == 'discrete'})
+#' @param tests specifies which one or more of the three tests ('SAD', N',
+#'   'agg') are to be performed. Default is to include all three tests.
+#' @param spat_algo character string that can be either: \code{'kNN'} or
+#'   \code{'kNCN'} for k-nearest neighbor and k-nearest centroid neighbor
+#'   sampling respectively. It defaults to k-nearest neighbor which is a more
+#'   computationally efficient algorithm that closely approximates the
+#'   potentially more correct k-NCN algo (see Details of ?rarefaction).
 #' @param type "discrete" or "continuous". If "discrete", pair-wise comparisons
 #'   are conducted between all other groups and the reference group. If
 #'   "continuous", a correlation analysis is conducted between the response
@@ -1065,13 +1080,13 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
 #'  p-values for the null tests. This should be interpreted with caution because
 #'  the overall p-values depend on scales of measurement yet do not explicitly 
 #'  reflect significance at any particular scale. 
-#' @inheritParams rarefaction
 #' @return a "mob_out" object with attributes
 #' @author Dan McGlinn and Xiao Xiao
 #' @import dplyr
 #' @import purrr
 #' @importFrom stats sd
 #' @export
+#' @seealso	\code{\link{rarefaction}}
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)

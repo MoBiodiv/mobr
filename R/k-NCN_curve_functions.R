@@ -7,13 +7,13 @@
 #' @param n the number of samples to accumulate, defaults to NULL in which 
 #' case all samples are accumulated
 #' @param coords the spatial coordinates of the samples of x
+#' @param latlong if latitude longitude arguments are supplied
 #' 
-#' @importFrom sp SpatialPoints
-#' @importFrom rgeos gCentroid
-#' @importFrom pracma distmat
+#' @importFrom geosphere centroid midPoint
+#' @importFrom stats runif
 #' 
 #' @keywords internal
-centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
+centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL, latlong = FALSE) {
 
     if ("mob_in" %in% class(x)) {
         comm = x$comm
@@ -31,13 +31,35 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
     pool = colSums(comm[included, , drop = F])
     S_accumulated = rep(0, n)
     S_accumulated[1] = sum(pool > 0)
-    sp_object = sp::SpatialPoints(coords)
     candidates = cbind(coords, 1:n)
     for (i in 1:(n - 1)) {
-        accumulated_plots = sp_object[included, ]
-        centroid = rgeos::gCentroid(accumulated_plots)@coords
+        accumulated_plots = coords[included, , drop = F]
+        if (latlong) {
+            if (i == 1)
+                samp_centroid = accumulated_plots
+            else if (i == 2)
+                samp_centroid = geosphere::midPoint(accumulated_plots[1, ],
+                                                    accumulated_plots[2, ])
+            else if (latlong)
+                samp_centroid = geosphere::centroid(accumulated_plots)
+        } else
+            samp_centroid = matrix(colMeans(accumulated_plots), ncol = 2) 
         candidates2 = candidates[-included, , drop = F]
-        spat_dists = pracma::distmat(centroid, candidates2[ , -3, drop = F])
+        # it appears that sphere_dist in mobr may not be correct
+        # therefore it may be wise to use geosphere's function when lat long 
+        # supplied but there are problems with this approch near the poles and
+        # it fails going over the poles.
+        if (latlong) {
+            # compute great circle distance assuming sphereical earth
+            spat_dists = geosphere::distHaversine(samp_centroid,
+                                                  candidates2[ , -3, drop = F])
+        } else {
+            # compute Euclidean distance
+            # calculation is take 
+            #spat_dists = pracma::distmat(samp_centroid, candidates2[ , -3, drop = F])
+            spat_dists = apply(outer(samp_centroid, t(candidates2[ , -3, drop = F]), "-"),
+                               c(1, 4), function(x) sqrt(sum(diag(x * x))))
+        }
         random_tie_breaker = stats::runif(nrow(candidates2))
         nearest_index = order(spat_dists, random_tie_breaker)[1]
         nearest_plot = candidates2[nearest_index, 3, drop = T]
@@ -48,23 +70,32 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
     return(S_accumulated)
 }
 
-#' Construct spatially constrained sample-based rarefaction (sSBR) curve using the k-Nearest-Centroid-neighbor (k-NCN) algorithm 
+#' Construct spatially constrained sample-based rarefaction (sSBR) curve using
+#' the k-Nearest-Centroid-neighbor (k-NCN) algorithm
 #'
-#' This function accumulates samples according their proximity to all previously included samples (their centroid) as opposed
-#' to the proximity to the initial focal sample. This ensures that included samples mutually close to each other and not all over the place.
-#' 
-#' Internally the function constructs one curve per sample whereby each sample serves as the initial sample repetition times. Finally, the average curve is returned.
+#' This function accumulates samples according their proximity to all previously
+#' included samples (their centroid) as opposed to the proximity to the initial
+#' focal sample. This ensures that included samples mutually close to each other
+#' and not all over the place.
+#'
+#' Internally the function constructs one curve per sample whereby each sample
+#' serves as the initial sample repetition times. Finally, the average curve is
+#' returned.
 #'
 #' @param x a mob_in object or a community site x species matrix
-#' @param n number of sites to include. 
-#' @param coords spatial coordinates of the samples. If x is a mob_in object, the function uses its 'spat' table as coords.
-#' @param repetitions Number of times to repeat the procedure. Useful in situations where there are many ties in the distance matrix.
-#' @param no_pb binary, if TRUE then a progress bar is not printed, defaults to TRUE
-#' 
+#' @param n number of sites to include.
+#' @param coords spatial coordinates of the samples. If x is a mob_in object,
+#'   the function uses its 'spat' table as coords.
+#' @param repetitions Number of times to repeat the procedure. Useful in
+#'   situations where there are many ties in the distance matrix.
+#' @param no_pb binary, if TRUE then a progress bar is not printed, defaults to
+#'   TRUE
+#' @param latlong if longitude latitudes are supplied
+#'
 #' @inheritParams pbapply::pbreplicate
-#' 
+#'
 #' @return a numeric vector of estimated species richness
-#' 
+#'
 #' @importFrom pbapply pbsapply pboptions
 #' 
 #' @export
@@ -87,7 +118,7 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL) {
 #' stopCluster(cl)
 #' }
 kNCN_average = function(x, n = NULL, coords = NULL, repetitions = 1, 
-                        no_pb = TRUE, cl = NULL) {
+                        no_pb = TRUE, latlong = FALSE, cl = NULL) {
     if ("mob_in" %in% class(x)) {
         sites = x$comm
         coords = x$spat
@@ -104,7 +135,8 @@ kNCN_average = function(x, n = NULL, coords = NULL, repetitions = 1,
         pbapply::pboptions(type = 'none')
     out = pbapply::pbsapply(samples, function(sample) 
                             centroid_accumulate(x = x, focal_sample = sample, 
-                                                coords = coords), cl = cl)
+                                                coords = coords, latlong = latlong),
+                            cl = cl)
     pbapply::pboptions(op) # reset options to default
     return(rowMeans(out))
 }

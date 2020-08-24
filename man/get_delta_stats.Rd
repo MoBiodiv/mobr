@@ -32,18 +32,18 @@ in \code{mob_in$env} which defines how samples are pooled. If not provided
 then each unique value of the argument \code{env_var} is used define the
 groups.}
 
-\item{ref_level}{a character string used to define the reference level of 
-\code{env_var} to which all other groups are compared with. Only make sense
-if \code{env_var} is a factor.}
+\item{ref_level}{a character string used to define the reference level of
+\code{env_var} to which all other groups are compared with. Only makes sense
+if \code{env_var} is a factor (i.e. \code{type == 'discrete'})}
 
-\item{tests}{specifies which one or more of the three tests ('SAD', N', 'agg') 
-are to be performed. Default is to include all three tests.}
+\item{tests}{specifies which one or more of the three tests ('SAD', N',
+'agg') are to be performed. Default is to include all three tests.}
 
-\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
-for k-nearest neighbor and k-nearest centroid neighbor sampling 
-respectively. It defaults to k-nearest neighbor which is a 
-more computationally efficient algorithm that closely approximates the 
-potentially more correct k-NCN algo (see Details).}
+\item{spat_algo}{character string that can be either: \code{'kNN'} or
+\code{'kNCN'} for k-nearest neighbor and k-nearest centroid neighbor
+sampling respectively. It defaults to k-nearest neighbor which is a more
+computationally efficient algorithm that closely approximates the
+potentially more correct k-NCN algo (see Details of ?rarefaction).}
 
 \item{type}{"discrete" or "continuous". If "discrete", pair-wise comparisons
 are conducted between all other groups and the reference group. If
@@ -116,6 +116,9 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
                            type='discrete', log_scale=TRUE, n_perm=3)
 plot(inv_mob_out)
+}
+\seealso{
+\code{\link{rarefaction}}
 }
 \author{
 Dan McGlinn and Xiao Xiao

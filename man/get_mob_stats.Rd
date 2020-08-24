@@ -71,7 +71,7 @@ average abundance as the threshold which McGill (2011) found to have the
 best small sample behavior.}
 
 \item{n_perm}{The number of permutations to use for testing for treatment
-effects.}
+effects. Defaults to 199.}
 
 \item{boot_groups}{Use bootstrap resampling within groups to derive
 gamma-scale confidence intervals for all biodiversity indices. Default is
@@ -82,7 +82,7 @@ bootstrapped confidence intervals. Only used when \code{boot_groups =
 TRUE}.}
 
 \item{cl}{
-A cluster object created by \code{\link[parallel]{makeCluster}},
+A cluster object created by \code{\link{makeCluster}},
 or an integer to indicate number of child-processes
 (integer values are ignored on Windows) for parallel evaluations
 (see Details on performance).
