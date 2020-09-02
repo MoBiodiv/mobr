@@ -1531,7 +1531,7 @@ plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL,
                       geom_hline(yintercept = 0, linetype = 'dashed') + 
                       labs(x = x$env_var) +
                       facet_wrap(. ~ test, scales = "free_y") +
-                      labs(y = expression('effect (' * Delta * italic(S) * ')')) +
+                      labs(y = expression('effect (' * italic(S) * ')')) +
                       scale_fill_manual(name = element_blank(),
                                         values = c(null = 'grey40')) +
                       scale_colour_gradient2(trans=scales::log2_trans(),
@@ -1551,9 +1551,9 @@ plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL,
 
     if ('stat ~ effort' %in% display) {
         if (stat == 'b0')
-            ylab = expression('Intercept (' * italic(beta)[0] * ')')
+            ylab = expression('intercept (' * italic(beta)[0] * ')')
         if (stat == 'b1')
-            ylab = expression('Slope (' * italic(beta)[1] * ')')
+            ylab = expression('slope (' * italic(beta)[1] * ')')
         if (stat == 'r2')
             ylab = expression(italic(R^2))
         if (stat == 'r')
