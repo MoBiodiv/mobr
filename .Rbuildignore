@@ -15,3 +15,4 @@ data/irish_ices_fish.Rdata
 data/sim_mob_for_N_effect.Rdata
 ^\.travis\.yml$
 cran-comments.md
+^CRAN-RELEASE$
