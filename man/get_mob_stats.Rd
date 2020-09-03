@@ -230,7 +230,7 @@ Alternative Parameters. Ecology, 52, 577-586.
 Jost, L. (2006) Entropy and diversity. Oikos, 113, 363-375.
 
 Jost, L. (2007) Partitioning Diversity into Independent Alpha and Beta
-Components. Ecology, 88, 2427–2439.
+Components. Ecology, 88, 2427-2439.
 
 Legendre, P. & Legendre, L.F.J. (1998) Numerical Ecology, Volume 24, 2nd
 Edition Elsevier, Amsterdam; Boston.

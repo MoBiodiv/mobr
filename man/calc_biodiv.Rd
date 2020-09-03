@@ -75,7 +75,7 @@ This function is primarily intended as auxiliary function used in
 \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
 }
 \references{
-McGill, B. J. 2011. Species abundance distributions. Pages 105–122 Biological
+McGill, B. J. 2011. Species abundance distributions. Pages 105-122 Biological
 Diversity: Frontiers in Measurement and Assessment, eds. A.E. Magurran and
 B.J. McGill.
 }

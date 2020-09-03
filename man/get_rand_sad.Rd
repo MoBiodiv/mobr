@@ -18,7 +18,7 @@ richness equal to or less than the relative abundance distribution.
 
 Literature Cited:
 Green, J. L., and J. B. Plotkin. 2007. A statistical theory
- for sampling species abundances. Ecology Letters 10:1037–1045.}
+ for sampling species abundances. Ecology Letters 10:1037-1045.}
 }
 \description{
 Randomly sample of a relative abundance distribution (RAD)

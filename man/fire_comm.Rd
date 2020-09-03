@@ -24,8 +24,8 @@ data(fire_plot_attr)
 fire_mob_in = make_mob_in(fire_comm, fire_plot_attr)
 }
 \references{
-Myers, J. A., Chase, J. M., Crandall, R. M., & Jiménez, I.
-(2015). Disturbance alters beta‐diversity but not the relative importance of
+Myers, J. A., Chase, J. M., Crandall, R. M., & Jimenez, I.
+(2015). Disturbance alters beta-diversity but not the relative importance of
 community assembly mechanisms. Journal of Ecology, 103: 1291-1299.
 }
 \keyword{burned}

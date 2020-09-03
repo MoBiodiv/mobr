@@ -22,7 +22,7 @@
 #' Chao, A. (1987) Estimating the population size for capture-recapture data with
 #' unequal catchability. Biometrics, 43, 783-791.
 #' 
-#' Chao, A. (2005) Species estimation and applications. Pages 7907–7916 in
+#' Chao, A. (2005) Species estimation and applications. Pages 7907-7916 in
 #' N. Balakrishnan, C. B. Read, and B. Vidakovic, editors. Encyclopedia of
 #' statistical sciences. Second edition, volume 12. Wiley, New York, New York,
 #' USA.
@@ -83,11 +83,11 @@ calc_chao1 = function(x) {
 #' 
 #' @references 
 #' Hurlbert, S. H. (1971) The nonconcept of species diversity: a critique and
-#'  alternative parameters. Ecology 52, 577–586.
+#'  alternative parameters. Ecology 52, 577-586.
 #'  
 #' Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R. K., & Ellison, A. M. (2014).
 #'  Rarefaction and extrapolation with Hill numbers: A framework for sampling and estimation in species diversity studies.
-#'  Ecological Monographs 84(1), 45–67.
+#'  Ecological Monographs 84(1), 45-67.
 #'
 #' @export
 #' @examples 
@@ -209,7 +209,7 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' 
 #' @references 
 #' 
-#' McGill, B. J. 2011. Species abundance distributions. Pages 105–122 Biological
+#' McGill, B. J. 2011. Species abundance distributions. Pages 105-122 Biological
 #' Diversity: Frontiers in Measurement and Assessment, eds. A.E. Magurran and
 #' B.J. McGill.
 #'
@@ -528,7 +528,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #' Jost, L. (2006) Entropy and diversity. Oikos, 113, 363-375.
 #' 
 #' Jost, L. (2007) Partitioning Diversity into Independent Alpha and Beta
-#' Components. Ecology, 88, 2427–2439.
+#' Components. Ecology, 88, 2427-2439.
 #' 
 #' Legendre, P. & Legendre, L.F.J. (1998) Numerical Ecology, Volume 24, 2nd
 #' Edition Elsevier, Amsterdam; Boston.

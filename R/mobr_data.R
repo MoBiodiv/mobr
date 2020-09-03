@@ -41,8 +41,8 @@ NULL
 #' The data were adapted from Myers et al (2015).
 #'
 #'
-#' @references Myers, J. A., Chase, J. M., Crandall, R. M., & Jiménez, I.
-#' (2015). Disturbance alters beta‐diversity but not the relative importance of
+#' @references Myers, J. A., Chase, J. M., Crandall, R. M., & Jimenez, I.
+#' (2015). Disturbance alters beta-diversity but not the relative importance of
 #' community assembly mechanisms. Journal of Ecology, 103: 1291-1299.
 #' @examples
 #' data(fire_comm)

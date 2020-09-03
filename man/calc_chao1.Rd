@@ -33,7 +33,7 @@ population. Scandinavian Journal of Statistics, 11, 265-270.
 Chao, A. (1987) Estimating the population size for capture-recapture data with
 unequal catchability. Biometrics, 43, 783-791.
 
-Chao, A. (2005) Species estimation and applications. Pages 7907–7916 in
+Chao, A. (2005) Species estimation and applications. Pages 7907-7916 in
 N. Balakrishnan, C. B. Read, and B. Vidakovic, editors. Encyclopedia of
 statistical sciences. Second edition, volume 12. Wiley, New York, New York,
 USA.

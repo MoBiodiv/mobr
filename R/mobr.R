@@ -308,7 +308,7 @@ sphere_dist = function(coords, r = 6378.137){
 #'  
 #' Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
 #' and pitfalls in the measurement and comparison of species richness. Ecology
-#' Letters, 4, 379–391.
+#' Letters, 4, 379-391.
 #'
 #' @importFrom stats dist
 #' @export
@@ -640,7 +640,7 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
 #' 
 #' Literature Cited:
 #' Green, J. L., and J. B. Plotkin. 2007. A statistical theory
-#'  for sampling species abundances. Ecology Letters 10:1037–1045.
+#'  for sampling species abundances. Ecology Letters 10:1037-1045.
 #' 
 #' @keywords internal
 get_rand_sad = function(rad, N) {
@@ -704,7 +704,7 @@ get_rand_sad = function(rad, N) {
 #' 
 #' @references 
 #' Green, J. L., and J. B. Plotkin. 2007. A statistical theory for sampling 
-#' species abundances. Ecology Letters 10:1037–1045.
+#' species abundances. Ecology Letters 10:1037-1045.
 #' @importFrom vctrs vec_as_names
 #' @import purrr
 #' @import dplyr

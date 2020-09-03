@@ -167,7 +167,7 @@ Chiarucci, A., G. Bacaro, D. Rocchini, C. Ricotta, M. Palmer, & S. Scheiner
  
 Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
 and pitfalls in the measurement and comparison of species richness. Ecology
-Letters, 4, 379–391.
+Letters, 4, 379-391.
 }
 \author{
 Dan McGlinn and Xiao Xiao
