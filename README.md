@@ -1,4 +1,4 @@
-mobr [![Travis build status](https://travis-ci.org/MoBiodiv/mobr.svg?branch=master)](https://travis-ci.org/MoBiodiv/mobr) [![DOI](https://zenodo.org/badge/36759899.svg)](https://zenodo.org/badge/latestdoi/36759899)
+mobr [![Travis build status](https://travis-ci.org/MoBiodiv/mobr.svg?branch=master)](https://travis-ci.org/MoBiodiv/mobr) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4014111.svg)](https://doi.org/10.5281/zenodo.4014111)
 ============
 
 # Measurement of Biodiversity in R 
