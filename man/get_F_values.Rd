@@ -4,7 +4,7 @@
 \alias{get_F_values}
 \title{Get F statistics from diversity indices and grouping vector}
 \usage{
-get_F_values(div_dat, permute = F)
+get_F_values(div_dat, permute = FALSE)
 }
 \description{
 Get F statistics from diversity indices and grouping vector

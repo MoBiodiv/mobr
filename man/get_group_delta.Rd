@@ -12,7 +12,7 @@ get_group_delta(
   extrapolate,
   return_NA,
   rare_thres,
-  permute = F
+  permute = FALSE
 )
 }
 \description{

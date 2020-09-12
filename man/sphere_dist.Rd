@@ -24,10 +24,4 @@ This calculation uses the Haversine method of computing great
   code was taken from fields::rdist.earth by Doug Nychka, John Paige, Florian
   Gerber.
 }
-\examples{
-\dontrun{
-xy <- cbind(c(0, 30, 60), c(0, 30, 60))
-sphere_dist(xy)
-}
-}
 \keyword{internal}

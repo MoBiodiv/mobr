@@ -83,7 +83,7 @@ First let's look at the spatial, sample-based rarefaction (sSBR) in which sample
 added depending on their spatial proximity. 
 
 ```{r, fig.width = 5, fig.height = 5}
-plot_rarefaction(inv_mob_in, 'group', 'sSBR', lwd=4)
+plot_rarefaction(inv_mob_in, 'group', 'sSBR', lwd = 4)
 ```
 
 We can see that invasion decreases richness and that the magnitude of the effect
@@ -94,11 +94,13 @@ First we look at the individual rarefaction curves for each treatment which
 only reflect the shape of the SAD (i.e., no individual density or aggregation effects):
 
 ```{r, fig.width = 7, fig.height=4}
-par(mfrow=c(1,2))
-plot_rarefaction(inv_mob_in, 'group', 'IBR', pooled=F, lwd=2,
-                 leg_loc='topright')
-plot_rarefaction(inv_mob_in, 'group', 'IBR', pooled=T, lwd=4,
-                 leg_loc=NA)
+oldpar <- par(no.readonly = TRUE)       
+par(mfrow = c(1, 2))
+plot_rarefaction(inv_mob_in, 'group', 'IBR', pooled = FALSE, lwd = 2,
+                 leg_loc = 'topright')
+plot_rarefaction(inv_mob_in, 'group', 'IBR', pooled = TRUE, lwd = 4,
+                 leg_loc = NA)
+par(oldpar)
 ```
 
 Visually you can see there are some big differences in total numbers individuals
@@ -108,9 +110,11 @@ a bit surprising and it implies that the invaded sites have greater evenness.
 We can directly examine the species abundance distribution (SAD):
 
 ```{r, fig.width = 7, fig.height=4}
-par(mfrow=c(1,2))
-plot_abu(inv_mob_in, 'group', type='rad', pooled=F, log='x')
-plot_abu(inv_mob_in, 'group', type='rad', pooled=T, log='x')
+oldpar <- par(no.readonly = TRUE)
+par(mfrow = c(1, 2))
+plot_abu(inv_mob_in, 'group', type = 'rad', pooled = FALSE, log = 'x')
+plot_abu(inv_mob_in, 'group', type = 'rad', pooled = TRUE , log = 'x')
+par(oldpar)
 ```
 
 The SADs suggest that the invaded site has greater evenness in its common
@@ -280,9 +284,11 @@ to see if they may have shifted and may be partially responsible for this
 observed shift in S.
 
 ```{r}
-par(mfrow=c(1,2))
+oldpar <- par(no.readonly = TRUE) 
+par(mfrow = c(1, 2))
 plot_abu(fire_mob_in, 'group', 'rad', leg_loc = 'topright',)
 plot_abu(fire_mob_in, 'group', 'sad', leg_loc = NA)
+par(oldpar)
 ```
 
 Above we plot the SAD in two different ways. The plot on the left is the standard rank curve and the plot on the right is the cumulative curve which McGill (2011) advocates for using. The cumulative curve makes it particularly
@@ -376,9 +382,11 @@ Clearly enrichment had a big effect on species richness as it is larger in the "
 at all scales. It is rare to see such a strong asymptote on a rarefaction curve but it does appear that no new species were being encountered in the low community.
 
 ```{r, fig.width = 7, fig.height=4}
-par(mfrow=c(1,2))
+oldpar <- par(no.readonly = TRUE) 
+par(mfrow = c(1, 2))
 plot_abu(tank_mob_in, 'group', 'rad')
 plot_abu(tank_mob_in, 'group', 'sad', leg_loc = NA)
+par(oldpar)
 ```
 
 The SAD plots indicate only a modest shift in the evenness component of the SAD

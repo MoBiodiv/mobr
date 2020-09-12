@@ -57,8 +57,7 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 kNCN_average(inv_mob_in, n = 5)
-\dontrun{
-# Not run: 
+\donttest{
 # parallel evaluation using the parallel package 
 # run in parallel
 library(parallel)

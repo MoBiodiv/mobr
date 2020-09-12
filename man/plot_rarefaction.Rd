@@ -9,7 +9,7 @@ plot_rarefaction(
   env_var,
   method,
   dens_ratio = 1,
-  pooled = T,
+  pooled = TRUE,
   spat_algo = NULL,
   col = NULL,
   lwd = 3,

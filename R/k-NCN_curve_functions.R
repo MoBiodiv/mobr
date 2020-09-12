@@ -28,12 +28,12 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL, lat
     if (is.null(n)) 
         n = nrow(comm)
     included = focal_sample
-    pool = colSums(comm[included, , drop = F])
+    pool = colSums(comm[included, , drop = FALSE])
     S_accumulated = rep(0, n)
     S_accumulated[1] = sum(pool > 0)
     candidates = cbind(coords, 1:n)
     for (i in 1:(n - 1)) {
-        accumulated_plots = coords[included, , drop = F]
+        accumulated_plots = coords[included, , drop = FALSE]
         if (latlong) {
             if (i == 1)
                 samp_centroid = accumulated_plots
@@ -44,7 +44,7 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL, lat
                 samp_centroid = geosphere::centroid(accumulated_plots)
         } else
             samp_centroid = matrix(colMeans(accumulated_plots), ncol = 2) 
-        candidates2 = candidates[-included, , drop = F]
+        candidates2 = candidates[-included, , drop = FALSE]
         # it appears that sphere_dist in mobr may not be correct
         # therefore it may be wise to use geosphere's function when lat long 
         # supplied but there are problems with this approch near the poles and
@@ -52,17 +52,17 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL, lat
         if (latlong) {
             # compute great circle distance assuming sphereical earth
             spat_dists = geosphere::distHaversine(samp_centroid,
-                                                  candidates2[ , -3, drop = F])
+                                                  candidates2[ , -3, drop = FALSE])
         } else {
             # compute Euclidean distance
             # calculation is take 
-            #spat_dists = pracma::distmat(samp_centroid, candidates2[ , -3, drop = F])
-            spat_dists = apply(outer(samp_centroid, t(candidates2[ , -3, drop = F]), "-"),
+            #spat_dists = pracma::distmat(samp_centroid, candidates2[ , -3, drop = FALSE])
+            spat_dists = apply(outer(samp_centroid, t(candidates2[ , -3, drop = FALSE]), "-"),
                                c(1, 4), function(x) sqrt(sum(diag(x * x))))
         }
         random_tie_breaker = stats::runif(nrow(candidates2))
         nearest_index = order(spat_dists, random_tie_breaker)[1]
-        nearest_plot = candidates2[nearest_index, 3, drop = T]
+        nearest_plot = candidates2[nearest_index, 3, drop = TRUE]
         included = c(included, nearest_plot)
         pool = pool + comm[nearest_plot, ]
         S_accumulated[i + 1] = sum(pool > 0)
@@ -105,8 +105,7 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL, lat
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' kNCN_average(inv_mob_in, n = 5)
-#' \dontrun{
-#' # Not run: 
+#' \donttest{
 #' # parallel evaluation using the parallel package 
 #' # run in parallel
 #' library(parallel)
@@ -153,7 +152,7 @@ kNCN_average = function(x, n = NULL, coords = NULL, repetitions = 1,
 #' @export
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))

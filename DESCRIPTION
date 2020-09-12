@@ -1,5 +1,5 @@
 Package: mobr
-Title: Measurement of Biodiversity in R
+Title: Measurement of Biodiversity
 Version: 2.0.0
 Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
                     role = c("aut", "cre")),
@@ -25,7 +25,11 @@ Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com",
                     role = "aut"))
 Date: 2020-08-15
 Description: Functions for calculating metrics for the measurement biodiversity
-    and its changes across scales, treatments, and gradients.
+    and its changes across scales, treatments, and gradients. The methods 
+    implemented in this package are described in:
+    Chase, J.M., et al. (2018) <https://doi.org/10.1111/ele.13151>, 
+    McGlinn, D.J., et al. (2019) <https://doi.org/10.1111/2041-210X.13102>, and
+    McGlinn, D.J., et al. (2020) <https://doi.org/10.1101/851717>. 
 Depends:
     R (>= 3.0.2)
 Imports:

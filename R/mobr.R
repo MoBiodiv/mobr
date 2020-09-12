@@ -118,14 +118,14 @@ make_mob_in = function(comm, plot_attr, coord_names = NULL, binary = FALSE,
 #'  subset(inv_mob_in, 1:4, type='integer', drop_levels=TRUE)
 #'  sub_log = c(TRUE, FALSE, TRUE, rep(FALSE, nrow(inv_mob_in$comm) - 3))
 #'  subset(inv_mob_in, sub_log, type='logical')
-subset.mob_in = function(x, subset, type='string', drop_levels=FALSE, ...) {
+subset.mob_in = function(x, subset, type = 'string', drop_levels = FALSE, ...) {
     if (missing(subset))
         r <- rep_len(TRUE, nrow(x$comm))
     if (type == 'integer')
         r <- 1:nrow(x$comm) %in% subset
     if (type == 'logical')
         r <- subset
-    if (type == 'string'){
+    if (type == 'string') {
         e <- substitute(subset)
         r <- eval(e, x$env)
         if (!is.logical(r))
@@ -149,7 +149,7 @@ subset.mob_in = function(x, subset, type='string', drop_levels=FALSE, ...) {
 #' @keywords internal
 #' @rdname print.mob_in
 #' @export
-print.mob_in = function(x, nrows=6, nsp=5, ...) {
+print.mob_in = function(x, nrows = 6, nsp = 5, ...) {
     if (nrow(x$comm) > nrows) 
         cat(paste('Only the first', nrows, 'rows of any matrices are printed\n'))
     else 
@@ -185,11 +185,6 @@ print.mob_in = function(x, nrows=6, nsp=5, ...) {
 #'   circle distances in kilometers on a spherical Earth (r = 6378.137 km). This
 #'   code was taken from fields::rdist.earth by Doug Nychka, John Paige, Florian
 #'   Gerber.
-#' @examples 
-#' \dontrun{
-#' xy <- cbind(c(0, 30, 60), c(0, 30, 60))
-#' sphere_dist(xy)
-#' }
 #' @keywords internal
 sphere_dist = function(coords, r = 6378.137){
     coslat1 <- cos((coords[ , 2] * pi) / 180)
@@ -336,7 +331,7 @@ sphere_dist = function(coords, r = 6378.137){
 #' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1.5)
 #' # sample based rarefaction under random sampling
 #' rarefaction(inv_comm, method='SBR')
-#' \dontrun{ 
+#' \donttest{ 
 #' # sampled based rarefaction under spatially explicit nearest neighbor sampling
 #' rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
 #'             latlong=FALSE)
@@ -369,12 +364,12 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         x = x_mob_in$comm
         if (is.null(latlong))
             latlong = x_mob_in$latlong
-        else if(latlong != x_mob_in$latlong)
+        else if (latlong != x_mob_in$latlong)
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
         if (method == 'sSBR') {
-            if (is.null(coords)){
-                if (is.null(x_mob_in$spat)){
+            if (is.null(coords)) {
+                if (is.null(x_mob_in$spat)) {
                     stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
                 }
                 coords = x_mob_in$spat
@@ -428,7 +423,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             explicit_loop = matrix(0, n, n)
             if (is.null(latlong))
                 stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
-            if (latlong){
+            if (latlong) {
                 # Compute distance on sphere if xy are longitudes and latitudes
                 # Assume x is longitude and y is latitude
                 pair_dist = sphere_dist(coords)
@@ -515,14 +510,8 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
 #' @param n_perm the number of permutations to average across, defaults to 100
 #' @param n_indiv the number of individuals to evaluate the rarefaction curve
 #' at. The default behavior is to evaluate it on a log2 interval from 1 to N 
-#' @examples 
-#' \dontrun{ 
-#' data(inv_comm)
-#' sad = colSums(inv_comm)
-#' ind_rare_perm(sad)
-#' }
 #' @keywords internal
-ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
+ind_rare_perm = function(abu, n_perm = 100, n_indiv = NULL) {
     if (!is.vector(abu)) {
         stop('abu must be a vector of abundances')
     } 
@@ -530,7 +519,7 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
         sapply(n_indiv, function(n) length(unique(splist[1:n])))
     }
     rand_splist = function(abu, S) {
-        sample(unlist(mapply(rep, 1:S, abu)), replace=F)
+        sample(unlist(mapply(rep, 1:S, abu)), replace = FALSE)
     }
     S = length(abu)
     N = sum(abu)
@@ -559,12 +548,14 @@ ind_rare_perm = function(abu, n_perm=100, n_indiv=NULL) {
 #' avg_nn_dist(transect)
 #' grid = expand.grid(1:10, 1:10)
 #' avg_nn_dist(grid)
+#' oldpar <- par(no.readonly = TRUE)
 #' par(mfrow=c(1,2)) 
 #' plot(avg_nn_dist(transect), type='o', main='transect',
 #'      xlab='# of samples', ylab='average distance')
 #' # 2-D grid spatial arrangement
 #' plot(avg_nn_dist(grid), type='o', main='grid',
 #'      xlab='# of samples', ylab='average distance')
+#' par(oldpar)
 avg_nn_dist = function(coords) {
     pair_dist = as.matrix(stats::dist(coords))
     sort_dist = apply(pair_dist, 1, sort)
@@ -614,7 +605,7 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
     if ('agg' %in% tests) {
         if (is.null(n_plots))
             n_plots = nrow(x$comm)
-        S_agg = rarefaction(x, 'sSBR', 1:n_plots, spat_algo=spat_algo)
+        S_agg = rarefaction(x, 'sSBR', 1:n_plots, spat_algo = spat_algo)
         ind_density = sum(x$comm) / nrow(x$comm)
         samp_effort = round(1:n_plots * ind_density)
         S_N = rarefaction(x, 'IBR', samp_effort)
@@ -861,9 +852,9 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
         out$r2adj = summary_lm$adj.r.squared
     if ('f' %in% stats)
         out$f = summary_lm$fstatistic[1]
-    if ('p' %in% stats){ # interpreted as overall model p-value
+    if ('p' %in% stats) { # interpreted as overall model p-value
         f = summary_lm$fstatistic
-        out$p = unname(stats::pf(f[1],f[2],f[3],lower.tail=F))
+        out$p = unname(stats::pf(f[1], f[2], f[3], lower.tail = FALSE))
     }
     if ('betas' %in% stats)
         coef_type = c(paste0('b', 0:(length(out$betas) - 1)),
@@ -899,7 +890,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
     S_df = map_dfr(mob_in_groups, get_delta_curves, tests, spat_algo,
                    inds, ind_dens, n_plots, .id = "group")
     
-    S_df = S_df %>% try(mutate_if(is.factor, as.character), silent=T)
+    S_df = S_df %>% try(mutate_if(is.factor, as.character), silent = TRUE)
     
     # substitute the group variable for the env variable
     S_df = data.frame(env = env[match(S_df$group, groups)],
@@ -951,8 +942,8 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
         # need to parallelize this process optionally
         # in get_mob_stats we have the following:
         #   F_rand = bind_rows(pbreplicate(n_perm,
-        #             get_F_values(dat_samples, permute = T),
-        #              simplify = F, cl = cl)) %>%
+        #             get_F_values(dat_samples, permute = TRUE),
+        #              simplify = FALSE, cl = cl)) %>%
         #             ungroup()
         pb <- txtProgressBar(min = 0, max = n_perm, style = 3)
         for (i in 1:n_perm) {
@@ -1113,7 +1104,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
     test_status = tests %in% names(unlist(mob_in$tests)) 
     approved_tests = tests[test_status]
     if (length(approved_tests) < length(tests)) {
-        tests_string = paste(approved_tests, collapse=' and ')
+        tests_string = paste(approved_tests, collapse = ' and ')
         warning(paste('Based upon the attributes of the community object only the following tests will be performed:',
                   tests_string))
         tests = approved_tests
@@ -1130,7 +1121,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
         # check that for the defined groups all samples have same environmental value
         if (any(tapply(env, groups, stats::sd) > 0)) {
             # bc all env values not the same for a group then compute mean value
-            print("Computed average environmental value for each group")
+            message("Computed average environmental value for each group")
             env = tapply(env, groups, mean)
         }
     }    
@@ -1259,9 +1250,9 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
         }
     } 
     if ('rad' == type) {
-        plot(1:10, 1:10, type='n', xlab='rank', ylab='abundance',
-             log=log, xlim=c(1, ncol(mob_in$comm)), 
-             ylim=range(0.01, 1), cex.lab = 1.5, cex.axis = 1.5,
+        plot(1:10, 1:10, type = 'n', xlab = 'rank', ylab = 'abundance',
+             log = log, xlim = c(1, ncol(mob_in$comm)), 
+             ylim = range(0.01, 1), cex.lab = 1.5, cex.axis = 1.5,
              main = title)
         for (i in 1:length(grps)) {
              col_grp = col[i]
@@ -1269,12 +1260,12 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
              comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
              if (pooled) {
                 sad_grp = colSums(comm_grp)
-                sad_sort = sort(sad_grp[sad_grp != 0], decreasing=T)
+                sad_sort = sort(sad_grp[sad_grp != 0], decreasing = TRUE)
                 lines(sad_sort / sum(sad_sort), col = col_grp, lwd = lwd,
                       type = "l")
              } else {
                  for (j in 1:nrow(comm_grp)) {
-                     sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0], decreasing=T)
+                     sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0], decreasing = TRUE)
                      lines(1:length(sad_sort), sad_sort / sum(sad_sort),
                            col = scales::alpha(col_grp, 0.5),
                            lwd = lwd, type = "l")
@@ -1283,7 +1274,7 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
         }
     }
     if (!is.na(leg_loc))
-        legend(leg_loc, legend=grps, col = col, lwd = lwd, bty='n')
+        legend(leg_loc, legend = grps, col = col, lwd = lwd, bty = 'n')
 }
     
 #' Plot rarefaction curves for each treatment group
@@ -1311,9 +1302,9 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #' plot_rarefaction(inv_mob_in, 'group', 'SBR', log='xy')
 #' # spatial sample based rarefaction curves 
 #' plot_rarefaction(inv_mob_in, 'group', 'sSBR', log='xy')
-plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T, 
-                            spat_algo=NULL, col=NULL, lwd=3, log='', leg_loc = 'topleft',
-                            ...) {
+plot_rarefaction = function(mob_in, env_var, method, dens_ratio = 1, pooled = TRUE, 
+                            spat_algo = NULL, col = NULL, lwd = 3, log = '',
+                            leg_loc = 'topleft', ...) {
     if (pooled == FALSE & method != 'IBR')
         stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
     env_data = mob_in$env[ , env_var]
@@ -1330,7 +1321,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
     if (pooled) {
         Srare = lapply(grps, function(x) 
                        rarefaction(subset(mob_in, env_data == x, 'logical'),
-                                   method, spat_algo=spat_algo, ...))
+                                   method, spat_algo = spat_algo, ...))
         xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
         ylim = c(1, max(unlist(Srare)))
         n = as.numeric(names(Srare[[1]]))
@@ -1365,7 +1356,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
         }
     }
     if (!is.na(leg_loc))
-        legend(leg_loc, legend=grps, col = col, lwd = lwd, bty='n')
+        legend(leg_loc, legend = grps, col = col, lwd = lwd, bty = 'n')
 }
 
 #' Plot the multiscale MoB analysis output generated by \code{get_delta_stats}.
@@ -1429,13 +1420,15 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio=1, pooled=T,
 #' inv_mob_out = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
 #'                               type='discrete', log_scale=TRUE, n_perm=4)
 #' plot(inv_mob_out, 'b1') 
-#' \dontrun{ 
+#' \donttest{ 
 #' plot(inv_mob_out, 'b1', scale_by = 'indiv')
 #' }
 plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL, 
                         display = c('S ~ effort', 'effect ~ grad', 'stat ~ effort'),
                         eff_sub_effort = TRUE, eff_log_base = 2,
                         eff_disp_pts = TRUE, eff_disp_smooth = FALSE, ...) {
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
     if (x$type == 'discrete') {
         if (stat != 'b1')
             warning('The only statistic that has a reasonable interpretation for a discrete explanatory variable is the difference in the group means from the reference group (i.e., set stat = "b1")')
@@ -1472,7 +1465,7 @@ plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL,
                        `SAD` = 'IBR')      
         p_list[[1]] = ggplot(x$S_df, aes(.data$env, .data$S)) +
                           geom_smooth(aes(group = .data$effort, color = .data$effort),
-                                      method = 'lm', se = F) +
+                                      method = 'lm', se = FALSE) +
                           labs(x = x$env_var) +
                           facet_wrap(. ~ test, scales = "free",
                                      labeller = as_labeller(facet_labs))
@@ -1500,16 +1493,16 @@ plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL,
                 effort_2 = eff_log_base^(effort_r[1]:effort_r[2])
                 effort_2 = effort_2[effort_2 > 1] # effort at 1 indiv uninformative
                 eff_d = as.matrix(stats::dist(c(efforts, effort_2)))
-                eff_d = eff_d[-((length(efforts)+1):ncol(eff_d)),
+                eff_d = eff_d[-((length(efforts) + 1):ncol(eff_d)),
                               -(1:length(efforts))]
                 min_index = apply(eff_d, 2, function(x) which(x == min(x))[1])
                 sub_effort = efforts[min_index]
-                print(paste("Effect size shown at the following efforts:",
-                            paste(sub_effort, collapse=', ')))
+                message(paste("Effect size shown at the following efforts:",
+                            paste(sub_effort, collapse = ', ')))
             }
             else 
                 sub_effort = efforts
-        } else if(!is.null(eff_sub_effort))
+        } else if (!is.null(eff_sub_effort))
             sub_effort = eff_sub_effort
 
         if (x$type == "continuous")
@@ -1523,7 +1516,7 @@ plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL,
                                     aes(.data$env, .data$effect)) +
                       #geom_smooth(aes(x=group, y = med_effect,
                       #                group = effort, color = effort),
-                      #            method = 'lm', se = F) +
+                      #            method = 'lm', se = FALSE) +
                       #geom_ribbon(aes(ymin = low_effect, ymax = high_effect,
                       #                group = effort, color = effort,
                       #                fill = 'null'),
@@ -1535,9 +1528,9 @@ plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL,
                       scale_fill_manual(name = element_blank(),
                                         values = c(null = 'grey40')) +
                       scale_colour_gradient2(trans=scales::log2_trans(),
-                                            low=rgb(248, 203, 173, maxColorValue = 255),
-                                            mid=rgb(237,127, 52, maxColorValue = 255),
-                                            high=rgb(165, 0 , 33, maxColorValue = 255),
+                                            low = rgb(248, 203, 173, maxColorValue = 255),
+                                            mid = rgb(237,127, 52, maxColorValue = 255),
+                                            high = rgb(165, 0 , 33, maxColorValue = 255),
                                             midpoint = 4)
                 #"#74c476" 
         if (eff_disp_pts)
@@ -1546,7 +1539,7 @@ plot.mob_out = function(x, stat = 'b1', log2 = '', scale_by = NULL,
         if (eff_disp_smooth)
             p_list[[3]] = p_list[[3]] + geom_smooth(aes(group = .data$effort, 
                                                         color = .data$effort),
-                                                    method = lm, se=F)
+                                                    method = lm, se = FALSE)
     }
 
     if ('stat ~ effort' %in% display) {
@@ -1623,9 +1616,9 @@ plot_N = function(comm, n_perm=1000) {
     N = rowSums(comm)
     ind_dens = mean(N)
     N_sum = apply(replicate(n_perm, cumsum(sample(N))), 1, mean)
-    plot(N_sum, xlab='Number of plots', ylab='Number of Individuals')
-    abline(a=0, b=ind_dens, col='red')
-    legend('topleft', 'Expected line', lty=1, bty='n', col='red')
+    plot(N_sum, xlab = 'Number of plots', ylab = 'Number of Individuals')
+    abline(a = 0, b = ind_dens, col = 'red')
+    legend('topleft', 'Expected line', lty = 1, bty = 'n', col = 'red')
 }
 
 #' @title Stacked plot by Marc Taylor (@marchtaylor on gitHub)
@@ -1658,42 +1651,44 @@ plotStacked <- function(
 	ylim=NULL,
 	...
 ){
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+	if (sum(y < 0) > 0) stop("y cannot contain negative numbers")
 
-	if(sum(y < 0) > 0) stop("y cannot contain negative numbers")
+	if (is.null(border)) border <- par("fg")
+	border <- as.vector(matrix(border, nrow = ncol(y), ncol = 1))
+	col <- as.vector(matrix(col, nrow = ncol(y), ncol = 1))
+	lwd <- as.vector(matrix(lwd, nrow = ncol(y), ncol = 1))
 
-	if(is.null(border)) border <- par("fg")
-	border <- as.vector(matrix(border, nrow=ncol(y), ncol=1))
-	col <- as.vector(matrix(col, nrow=ncol(y), ncol=1))
-	lwd <- as.vector(matrix(lwd, nrow=ncol(y), ncol=1))
-
-  if(is.null(ylim)) ylim=c(0, 1.2*max(apply(y,1,sum)))
+  if (is.null(ylim)) ylim = c(0, 1.2 * max(apply(y, 1, sum)))
   
-	if(order.method == "max") {
+	if (order.method == "max") {
 		ord <- order(apply(y, 2, which.max))
 		y <- y[, ord]
 		col <- col[ord]
 		border <- border[ord]
 	}
 
-	if(order.method == "first") {
-		ord <- order(apply(y, 2, function(x) min(which(x>0))))
-		y <- y[, ord]
+	if (order.method == "first") {
+		ord <- order(apply(y, 2, function(x) min(which(x > 0))))
+		y <- y[ , ord]
 		col <- col[ord]
 		border <- border[ord]
 	}
 
 	top.old <- x*0
-	polys <- vector(mode="list", ncol(y))
-	for(i in seq(polys)){
+	polys <- vector(mode  = "list", ncol(y))
+	for (i in seq(polys)) {
 		top.new <- top.old + y[,i]
-		polys[[i]] <- list(x=c(x, rev(x)), y=c(top.old, rev(top.new)))
+		polys[[i]] <- list(x = c(x, rev(x)), y = c(top.old, rev(top.new)))
 		top.old <- top.new
 	}
 
-	if(is.null(ylim)) ylim <- range(sapply(polys, function(x) range(x$y, na.rm=TRUE)), na.rm=TRUE)
-	plot(x,y[,1], ylab=ylab, xlab=xlab, ylim=ylim, t="n", ...)
-	for(i in seq(polys)){
-		polygon(polys[[i]], border=border[i], col=col[i], lwd=lwd[i])
+	if (is.null(ylim)) 
+	  ylim <- range(sapply(polys, function(x) range(x$y, na.rm = TRUE)), na.rm = TRUE)
+	plot(x, y[ , 1],  ylab = ylab, xlab = xlab, ylim = ylim, t = "n", ...)
+	for (i in seq(polys)) {
+		polygon(polys[[i]], border = border[i], col = col[i], lwd = lwd[i])
 	}
 
 }

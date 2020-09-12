@@ -19,11 +19,4 @@ An internal function that can provide an independent derivation of
 the individual rarefaction curve for the purposes of testing the 
 performance of the function \code{rarefaction}
 }
-\examples{
-\dontrun{ 
-data(inv_comm)
-sad = colSums(inv_comm)
-ind_rare_perm(sad)
-}
-}
 \keyword{internal}

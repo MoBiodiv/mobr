@@ -14,7 +14,7 @@ get_mob_stats(
   return_NA = FALSE,
   rare_thres = 0.05,
   n_perm = 199,
-  boot_groups = F,
+  boot_groups = FALSE,
   conf_level = 0.95,
   cl = NULL,
   ...
@@ -202,8 +202,7 @@ inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
                           n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
 
-\dontrun{
-# Not run: 
+\donttest{
 # parallel evaluation using the parallel package 
 # run in parallel
 library(parallel)

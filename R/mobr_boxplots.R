@@ -32,7 +32,7 @@ calc_chao1 = function(x) {
     if (!is.numeric(x) & !is.matrix(x) & !is.data.frame(x))
         stop("invalid data structure")
     if (is.matrix(x) | is.data.frame(x)) {
-        S_Chao1= apply(x, 1, calc_chao1)
+        S_Chao1 = apply(x, 1, calc_chao1)
     } else {
         n = sum(x)
         D = sum(x > 0)
@@ -120,7 +120,7 @@ calc_PIE = function(x, ENS=FALSE) {
     H = ifelse(total < 2, NA, (total / (total - 1) * (1 - H)))
     if (ENS) {
         # convert to effective number of species (except for PIE == 1)
-        H = ifelse(H==1| S == total, NA, (1/ (1-H)))
+        H = ifelse(H == 1 | S == total, NA, (1 / (1 - H)))
     }     
     return(H)
 }
@@ -130,7 +130,7 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
                               rare_thres) {
     # sample rows and calculate abundance vector
     sample_dat = by(abund_mat, INDICES = abund_mat$group_id, FUN = sample_frac,
-                    replace = T)
+                    replace = TRUE)
     class(sample_dat) = "list"
     sample_dat = bind_rows(sample_dat)
    
@@ -281,7 +281,7 @@ calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
     # Effective number of species based on PIE ----------------------------------
     if (any(index == "S_PIE")) {
         plots_n01 = N <= 1
-        S_PIE = calc_PIE(abund_mat, ENS=TRUE)
+        S_PIE = calc_PIE(abund_mat, ENS = TRUE)
         S_PIE[plots_n01] = NA
         out$value[out$index == "S_PIE"] = S_PIE
     }
@@ -305,7 +305,7 @@ calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
 #' Get F statistics from diversity indices and grouping vector
 #' @importFrom rlang .data
 #' @keywords internal
-get_F_values = function(div_dat, permute = F) {
+get_F_values = function(div_dat, permute = FALSE) {
     if (permute)
         div_dat = div_dat %>%
                   group_by(.data$index, .data$effort) %>%
@@ -330,7 +330,7 @@ get_F_values = function(div_dat, permute = F) {
 #' @importFrom rlang .data
 #' @keywords internal
 get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
-                           return_NA, rare_thres, permute = F) {
+                           return_NA, rare_thres, permute = FALSE) {
     if (permute)
         group_id = sample(group_id)
    
@@ -555,8 +555,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
 #' 
-#' \dontrun{
-#' # Not run: 
+#' \donttest{
 #' # parallel evaluation using the parallel package 
 #' # run in parallel
 #' library(parallel)
@@ -572,7 +571,7 @@ get_mob_stats = function(mob_in, group_var,
                          effort_samples = NULL, effort_min = 5,
                          extrapolate = TRUE, return_NA = FALSE, 
                          rare_thres = 0.05, n_perm = 199, 
-                         boot_groups = F, conf_level = 0.95, cl=NULL, 
+                         boot_groups = FALSE, conf_level = 0.95, cl=NULL, 
                          ...) {
     EPS <- sqrt(.Machine$double.eps)
     if (n_perm < 1) 
@@ -601,7 +600,7 @@ get_mob_stats = function(mob_in, group_var,
         effort_samples[effort_samples < effort_min] = effort_min
         effort_samples = unique(effort_samples)
       
-        print(paste("Number of individuals for rarefaction:",
+        message(paste("Number of individuals for rarefaction:",
                     paste(effort_samples, collapse = ", ")))
     }
   
@@ -729,17 +728,17 @@ get_mob_stats = function(mob_in, group_var,
     # alpha-scale
     alpha_avg = dat_samples %>% 
                 group_by(.data$group, index, .data$effort) %>%
-                summarise(alpha_avg = mean(.data$value, na.rm = T)) %>%
+                summarise(alpha_avg = mean(.data$value, na.rm = TRUE)) %>%
                 ungroup()
     D_bar = alpha_avg %>%
                 group_by(index, .data$effort) %>%
-                summarise(D_bar = mean(stats::dist(alpha_avg), na.rm = T)) %>%
+                summarise(D_bar = mean(stats::dist(alpha_avg), na.rm = TRUE)) %>%
                 ungroup()
-    F_obs = get_F_values(dat_samples, permute = F)
+    F_obs = get_F_values(dat_samples, permute = FALSE)
     cat('\nComputing null model at alpha-scale\n')
     F_rand = bind_rows(pbreplicate(n_perm,
-                                   get_F_values(dat_samples, permute = T),
-                                   simplify = F, cl = cl)) %>%
+                                   get_F_values(dat_samples, permute = TRUE),
+                                   simplify = FALSE, cl = cl)) %>%
              ungroup()
     F_obs = F_obs %>% mutate(F_val_obs = .data$F_val, F_val = NULL)
     F_rand = left_join(F_rand, F_obs, by = c("index", "effort"))
@@ -766,7 +765,7 @@ get_mob_stats = function(mob_in, group_var,
                                                    extrapolate = extrapolate,
                                                    return_NA = return_NA, 
                                                   rare_thres = rare_thres),
-                            simplify = F, cl = cl)
+                            simplify = FALSE, cl = cl)
         boot_repl_groups = bind_rows(boot_repl_groups)
       
         alpha = 1 - conf_level
@@ -774,18 +773,18 @@ get_mob_stats = function(mob_in, group_var,
      
         dat_groups = boot_repl_groups %>% 
                      group_by(.data$group, index, .data$effort) %>%
-                     do(stats::setNames(data.frame(t(stats::quantile(.data$value, probs, na.rm = T))),
+                     do(stats::setNames(data.frame(t(stats::quantile(.data$value, probs, na.rm = TRUE))),
                                  c("lower","median","upper")))      
     } else {
         delta_obs = get_group_delta(mob_in$comm, group_id, index,
                                     effort_groups, extrapolate,
-                                    return_NA, rare_thres, permute = F)
+                                    return_NA, rare_thres, permute = FALSE)
         cat('\nComputing null model at gamma-scale\n')
         delta_rand = bind_rows(pbapply::pbreplicate(n_perm, 
                                    get_group_delta(mob_in$comm, group_id,
                                        index, effort_groups, extrapolate,
-                                       return_NA, rare_thres, permute = T),
-                               simplify = F, cl = cl))
+                                       return_NA, rare_thres, permute = TRUE),
+                               simplify = FALSE, cl = cl))
         delta_obs = delta_obs %>% mutate(d_obs = .data$delta, delta = NULL)
         delta_rand = suppressMessages(left_join(delta_rand, delta_obs))
       
@@ -845,8 +844,8 @@ samples_panel1 = function(sample_dat, samples_tests, col, ylab = "",
                       list(D_bar = round(samples_tests$D_bar, 2),
                            p_val = round(samples_tests$p_val, 3)))
    boxplot(value ~ group, data = sample_dat, main = main,
-           ylab =  ylab, col = col, cex.axis=cex.axis, cex.main = 1.5,
-           frame.plot=T, ...)
+           ylab =  ylab, col = col, cex.axis = cex.axis, cex.main = 1.5,
+           frame.plot = TRUE, ...)
    groups = levels(sample_dat$group)
    #axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
    #      cex.axis=cex.axis)
@@ -865,8 +864,8 @@ groups_panel1 = function(group_dat, tests, col, ylab = "",
                             p_val = round(tests$p_val, 3)))
     boxplot(value ~ group, data = group_dat, main = main,
             ylab = ylab, boxwex = 0, 
-            ylim = c(0, 1.1 * max(group_dat$value, na.rm = T)),
-            col = col, cex.axis=cex.axis, cex.main = 1.5, frame.plot=T,
+            ylim = c(0, 1.1 * max(group_dat$value, na.rm = TRUE)),
+            col = col, cex.axis = cex.axis, cex.main = 1.5, frame.plot = TRUE,
             ...)
     groups = levels(group_dat$group)
     points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2,
@@ -881,12 +880,12 @@ groups_panel2 = function(group_dat, col, ylab = "",
                          main = expression(gamma * "-scale"),
                          cex.axis=1.2, ...) {
     boxplot(median ~ group, data = group_dat, main = main,
-            ylab = ylab, boxwex = 0, ylim = c(0, 1.1*max(group_dat$upper)),
-            col = col, cex.axis=cex.axis, cex.main=1.5, frame.plot=T, 
+            ylab = ylab, boxwex = 0, ylim = c(0, 1.1 * max(group_dat$upper)),
+            col = col, cex.axis = cex.axis, cex.main = 1.5, frame.plot = TRUE, 
             ...)
     groups = levels(group_dat$group)
     plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
-           ui = group_dat$upper, add = T, pch = 19, cex = 1.5,
+           ui = group_dat$upper, add = TRUE, pch = 19, cex = 1.5,
            sfrac = 0.02, col = col, ...)
 }
 
@@ -943,6 +942,8 @@ plot.mob_stats = function(x, index = NULL, multi_panel = FALSE,
                           col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
                                   "#E2C288", "#F7B0E6", "#AAD28C"), 
                           cex.axis=1.2, ...) {
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
     mob_stats = x
     # default colors derived with colorspace::rainbow_hcl(5, c=60, l=80)
     if (any(is.na(col)) & length(col) == 1) 
@@ -1028,9 +1029,9 @@ plot.mob_stats = function(x, index = NULL, multi_panel = FALSE,
          
             if (multi_panel) {
                 if (var == "f_0") 
-                    par(fig = c(0, 0.33, 1 / n_rows, 2 / n_rows), new = T)
+                    par(fig = c(0, 0.33, 1 / n_rows, 2 / n_rows), new = TRUE)
                 if (var == "S_PIE") 
-                    par(fig = c(0, 0.33, 0         , 1 / n_rows), new = T)
+                    par(fig = c(0, 0.33, 0         , 1 / n_rows), new = TRUE)
             }
             
             y_label = switch(var,
@@ -1053,9 +1054,9 @@ plot.mob_stats = function(x, index = NULL, multi_panel = FALSE,
          
            if (multi_panel) {
                if (var == "pct_rare") 
-                   par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = T)
+                   par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = TRUE)
                if (var == "S_PIE") 
-                   par(fig = c(0.33, 0.67, 0       , 1/n_rows), new = T)
+                   par(fig = c(0.33, 0.67, 0       , 1/n_rows), new = TRUE)
            }
          
            beta_var = paste("beta", var, sep = "_")
@@ -1068,9 +1069,9 @@ plot.mob_stats = function(x, index = NULL, multi_panel = FALSE,
          
            if (multi_panel) {
                if (var == "pct_rare")
-                   par(fig = c(0.67, 1.0, 1 / n_rows, 2 / n_rows), new = T)
+                   par(fig = c(0.67, 1.0, 1 / n_rows, 2 / n_rows), new = TRUE)
                if (var == "S_PIE")
-                   par(fig = c(0.67, 1.0, 0         , 1 / n_rows), new = T)
+                   par(fig = c(0.67, 1.0, 0         , 1 / n_rows), new = TRUE)
            }
          
            dat_groups = filter(mob_stats$groups_stats, index == var)
@@ -1100,7 +1101,7 @@ plot.mob_stats = function(x, index = NULL, multi_panel = FALSE,
             
                 if (multi_panel)
                     par(fig = c(0, 0.33, (1 + i) / n_rows, (2 + i) / n_rows),
-                        new = T)
+                        new = TRUE)
             
                 dat_samples = filter(S_n_samples, .data$effort == effort_samples[i])
                 dat_tests = filter(mob_stats$samples_tests, 
@@ -1119,7 +1120,7 @@ plot.mob_stats = function(x, index = NULL, multi_panel = FALSE,
             
                 if (multi_panel)
                     par(fig = c(0.33, 0.67, (1 + i) / n_rows, (2 + i) / n_rows),
-                        new = T)
+                        new = TRUE)
             
                 beta_var = paste("beta", var, sep = "_")
                 dat_samples = filter(mob_stats$samples_stats, index == beta_var)
@@ -1130,15 +1131,15 @@ plot.mob_stats = function(x, index = NULL, multi_panel = FALSE,
                                              "), n = ", n), 
                                        list(n = effort_samples[i]))
                 samples_panel1(dat_samples, dat_tests, main = '',
-                               ylab = "", col = col, cex.axis=cex.axis, ...)
+                               ylab = "", col = col, cex.axis = cex.axis, ...)
 
-                par(new=TRUE)
-                plot(1:10, 1:10, type='n', axes=F, xlab='', ylab='',
-                     main=fig_title, cex.main=1.5)
+                par(new = TRUE)
+                plot(1:10, 1:10, type = 'n', axes = F, xlab = '', ylab = '',
+                     main = fig_title, cex.main = 1.5)
                                 
                 if (multi_panel)
                     par(fig = c(0.67, 1.0, (1 + i) / n_rows, (2 + i) / n_rows),
-                        new = T)
+                        new = TRUE)
             
                 dat_groups = filter(S_n_groups, .data$effort == effort_groups[i])
                 fig_title = substitute(paste(gamma, "-scale, n = ", n),
