@@ -27,9 +27,9 @@ Date: 2020-08-15
 Description: Functions for calculating metrics for the measurement biodiversity
     and its changes across scales, treatments, and gradients. The methods 
     implemented in this package are described in:
-    Chase, J.M., et al. (2018) <https://doi.org/10.1111/ele.13151>, 
-    McGlinn, D.J., et al. (2019) <https://doi.org/10.1111/2041-210X.13102>, and
-    McGlinn, D.J., et al. (2020) <https://doi.org/10.1101/851717>. 
+    Chase, J.M., et al. (2018) <doi:10.1111/ele.13151>, 
+    McGlinn, D.J., et al. (2019) <doi:10.1111/2041-210X.13102>, and
+    McGlinn, D.J., et al. (2020) <doi:10.1101/851717>. 
 Depends:
     R (>= 3.0.2)
 Imports:
