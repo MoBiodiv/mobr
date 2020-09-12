@@ -85,7 +85,7 @@ centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL, lat
 #' @param x a mob_in object or a community site x species matrix
 #' @param n number of sites to include.
 #' @param coords spatial coordinates of the samples. If x is a mob_in object,
-#'   the function uses its 'spat' table as coords.
+#'   the function uses its 'spat' table as coordinates.
 #' @param repetitions Number of times to repeat the procedure. Useful in
 #'   situations where there are many ties in the distance matrix.
 #' @param no_pb binary, if TRUE then a progress bar is not printed, defaults to

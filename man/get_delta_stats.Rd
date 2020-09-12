@@ -62,13 +62,13 @@ meaningless because the model has zero degrees of freedom in this context.}
 \item{inds}{effort size at which the individual-based rarefaction curves are
 to be evaluated, and to which the sample-based rarefaction curves are to be
 interpolated. It can take three types of values, a single integer, a vector
-of integers, and NULL. If inds = NULL (default), the curves are evaluated
-at every possible effort size, from 1 to the total number of individuals
-within the group (slow). If inds is a single integer, it is taken as the
-number of points at which the curves are evaluated; the positions of the
-points are determined by the "log_scale" argument. If inds is a vector of
-integers, it is taken as the exact points at which the curves are
-evaluated.}
+of integers, and NULL. If \code{inds = NULL} (the default), the curves are
+evaluated at every possible effort size, from 1 to the total number of
+individuals within the group (slow). If inds is a single integer, it is
+taken as the number of points at which the curves are evaluated; the
+positions of the points are determined by the "log_scale" argument. If inds
+is a vector of integers, it is taken as the exact points at which the
+curves are evaluated.}
 
 \item{log_scale}{if "inds" is given a single integer, "log_scale" determines
 the position of the points. If log_scale is TRUE, the points are equally

@@ -455,18 +455,20 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #' to increase. This metric is calculated as \code{S_asymp - S}. This metric is less 
 #' correlated with S than the raw \code{S_asymp} metric. 
 #' 
-#' \strong{PIE: Probability of intraspecific encounter} represents the probability that two randomly drawn individuals 
-#' belong to the same species. Here we use the definition of Hurlbert (1971),
-#' which considers sampling without replacement. PIE is closely related to the
-#' well-known Simpson diversity index, but the latter assumes sampling with
-#' replacement.
+#' \strong{PIE: Probability of intraspecific encounter} represents the
+#' probability that two randomly drawn individuals belong to the same species.
+#' Here we use the definition of Hurlbert (1971), which considers sampling
+#' without replacement. PIE is closely related to the well-known Simpson
+#' diversity index, but the latter assumes sampling with replacement.
 #' 
-#' \strong{S_PIE: Effective number of species for PIE} represents the effective number of species derived from the
-#' PIE. It is calculated using the asymptotic estimator for Hill numbers of diversity order 2 (Chao et al, 2014).
-#' S_PIE represents the species richness of a hypothetical community with equally-abundant species
-#' and infinitely many individuals corresponding to the same value of PIE as the real community.
-#' An intuitive interpretation of S_PIE is that it corresponds to the number of
-#' dominant (highly abundant) species in the species pool.
+#' \strong{S_PIE: Effective number of species for PIE} represents the effective
+#' number of species derived from the PIE. It is calculated using the asymptotic
+#' estimator for Hill numbers of diversity order 2 (Chao et al, 2014). S_PIE
+#' represents the species richness of a hypothetical community with
+#' equally-abundant species and infinitely many individuals corresponding to the
+#' same value of PIE as the real community. An intuitive interpretation of S_PIE
+#' is that it corresponds to the number of dominant (highly abundant) species in
+#' the species pool.
 #' 
 #' For species richness \code{S}, rarefied richness \code{S_n}, undetected
 #' richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also

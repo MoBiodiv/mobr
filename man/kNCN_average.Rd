@@ -21,7 +21,7 @@ kNCN_average(
 \item{n}{number of sites to include.}
 
 \item{coords}{spatial coordinates of the samples. If x is a mob_in object,
-the function uses its 'spat' table as coords.}
+the function uses its 'spat' table as coordinates.}
 
 \item{repetitions}{Number of times to repeat the procedure. Useful in
 situations where there are many ties in the distance matrix.}

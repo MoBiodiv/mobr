@@ -1038,13 +1038,13 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
 #' @param inds effort size at which the individual-based rarefaction curves are
 #'   to be evaluated, and to which the sample-based rarefaction curves are to be
 #'   interpolated. It can take three types of values, a single integer, a vector
-#'   of integers, and NULL. If inds = NULL (default), the curves are evaluated
-#'   at every possible effort size, from 1 to the total number of individuals
-#'   within the group (slow). If inds is a single integer, it is taken as the
-#'   number of points at which the curves are evaluated; the positions of the
-#'   points are determined by the "log_scale" argument. If inds is a vector of
-#'   integers, it is taken as the exact points at which the curves are
-#'   evaluated.
+#'   of integers, and NULL. If \code{inds = NULL} (the default), the curves are
+#'   evaluated at every possible effort size, from 1 to the total number of
+#'   individuals within the group (slow). If inds is a single integer, it is
+#'   taken as the number of points at which the curves are evaluated; the
+#'   positions of the points are determined by the "log_scale" argument. If inds
+#'   is a vector of integers, it is taken as the exact points at which the
+#'   curves are evaluated.
 #' @param log_scale if "inds" is given a single integer, "log_scale" determines
 #'   the position of the points. If log_scale is TRUE, the points are equally
 #'   spaced on logarithmic scale. If it is FALSE (default), the points are
@@ -1281,7 +1281,7 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #' 
 #' @param pooled Boolean specifying if samples should be pooled at the group
 #'  level or not. Defaults to TRUE. This argument only applies when
-#'  the individual based rarefaction is used (i.e., method = 'indiv')
+#'  the individual based rarefaction is used (i.e., \code{method = 'indiv'})
 #' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
 #' @inheritParams plot.mob_out
 #' @inheritParams plot_abu

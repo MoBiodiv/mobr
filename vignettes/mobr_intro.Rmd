@@ -331,7 +331,7 @@ aggregation, and 3) decreases evenness.
 Let's now look at the multi-scale analysis to examine the scale-dependence and
 relative strength of these effects. Note here we set the argument \code{log_scale}
 to \code{TRUE} because there is a large number of individuals and it is not
-necessary to compute the differences beween the curves at all possible scales.
+necessary to compute the differences between the curves at all possible scales.
 
 ```{r, eval = FALSE}
 fire_deltaS = get_delta_stats(fire_mob_in, 'group', ref_level = 'unburned',

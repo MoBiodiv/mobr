@@ -49,7 +49,7 @@ individual density on group differences in richness.}
 
 \item{pooled}{Boolean specifying if samples should be pooled at the group
 level or not. Defaults to TRUE. This argument only applies when
-the individual based rarefaction is used (i.e., method = 'indiv')}
+the individual based rarefaction is used (i.e., \code{method = 'indiv'})}
 
 \item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
 for k-nearest neighbor and k-nearest centroid neighbor sampling 
