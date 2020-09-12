@@ -3,7 +3,8 @@
 ---
 
 ### new features
-- Gradient multi-scale mob method added to the function `get_delta_stats`
+- Gradient multi-scale mob method added to the function `get_delta_stats` as
+described in McGlinn et al. ([2020](https://doi.org/10.1101/851717)
 - Added a new k-nearest neighbor algorithm for the spatial sample based rarefaction curve (sSBR)
 - ggplot integrated into plotting method for `get_delta_stats` -> `plot.mob_out`
 - Added automated tests
