@@ -1,3 +1,5 @@
+## version 2.0.1
+---
 
 ### minor bug fixes
 - typo in test_rarefaction.R
