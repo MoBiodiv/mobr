@@ -1,3 +1,9 @@
+
+### minor bug fixes
+- typo in test_rarefaction.R
+- typo in get_mob_stats documentation
+
+
 ## version 2.0.0
 
 ---
