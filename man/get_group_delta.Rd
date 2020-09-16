@@ -6,7 +6,7 @@
 \usage{
 get_group_delta(
   abund_mat,
-  group_id,
+  groups,
   index,
   effort,
   extrapolate,

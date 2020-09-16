@@ -129,7 +129,7 @@ calc_PIE = function(x, ENS=FALSE) {
 boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
                               rare_thres) {
     # sample rows and calculate abundance vector
-    sample_dat = by(abund_mat, INDICES = abund_mat$group_id, FUN = sample_frac,
+    sample_dat = by(abund_mat, INDICES = abund_mat$groups, FUN = sample_frac,
                     replace = TRUE)
     class(sample_dat) = "list"
     sample_dat = bind_rows(sample_dat)
@@ -329,12 +329,12 @@ get_F_values = function(div_dat, permute = FALSE) {
 #' Get gamma-scale differences 
 #' @importFrom rlang .data
 #' @keywords internal
-get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
+get_group_delta = function(abund_mat, groups, index, effort, extrapolate,
                            return_NA, rare_thres, permute = FALSE) {
     if (permute)
-        group_id = sample(group_id)
+        groups = sample(groups)
    
-    abund_group = stats::aggregate(abund_mat, by = list(group_id), FUN = "sum")
+    abund_group = stats::aggregate(abund_mat, by = list(groups), FUN = "sum")
    
     dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
                              groups = abund_group[ , 1],
@@ -353,6 +353,10 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #' 
 #' @param group_var String that specifies which field in \code{mob_in$env} the
 #'   data should be grouped by
+#' 
+#' @param ref_level String that defines the reference level of \code{group_var}
+#'   to which all other groups are compared with, defaults to \code{NULL}.
+#'   If \code{NULL} then the default contrasts of \code{group_var} are used. 
 #' 
 #' @param index The calculated biodiversity indices. The options are
 #' \itemize{
@@ -553,7 +557,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, c('x', 'y'))
-#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
+#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
 #'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
 #' 
@@ -568,7 +572,7 @@ get_group_delta = function(abund_mat, group_id, index, effort, extrapolate,
 #'
 #' stopCluster(cl)
 #' }
-get_mob_stats = function(mob_in, group_var, 
+get_mob_stats = function(mob_in, group_var, ref_level = NULL, 
                          index = c("N", "S", "S_n", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
                          extrapolate = TRUE, return_NA = FALSE, 
@@ -583,11 +587,22 @@ get_mob_stats = function(mob_in, group_var,
                 "pct_rare", "PIE", "S_PIE")
     index = match.arg(index, INDICES, several.ok = TRUE)
     
-    group_id  = factor(mob_in$env[, group_var])
+    groups  = factor(mob_in$env[ , group_var])
+    # ensure that proper contrasts in groups specify the reference level as 
+    # first group so downstream graphics have reference level in
+    # leftmost boxplot panel
+    if (!is.null(ref_level)) { 
+        group_levels = levels(groups) 
+        if (ref_level %in% group_levels) {
+            if (group_levels[1] != ref_level)
+                groups = factor(groups, levels = c(ref_level, group_levels[group_levels != ref_level]))
+        } else
+            stop(paste(ref_level, "is not in", group_var))
+    }
     
     # Get rarefaction level
     samples_N = rowSums(mob_in$comm) 
-    samples_per_group = table(group_id)
+    samples_per_group = table(groups)
    
     if (any(is.null(effort_samples)) | !is.numeric(effort_samples)) {
         N_min_sample = min(samples_N)
@@ -610,7 +625,7 @@ get_mob_stats = function(mob_in, group_var,
     effort_groups = c(effort_samples, effort_samples * min(samples_per_group))
    
     # Abundance distribution pooled in groups
-    abund_group = stats::aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
+    abund_group = stats::aggregate(mob_in$comm, by = list(groups), FUN = "sum")
    
     dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
                              groups = abund_group[ , 1],
@@ -621,7 +636,7 @@ get_mob_stats = function(mob_in, group_var,
                              rare_thres = rare_thres)
    
     dat_samples = calc_biodiv(abund_mat = mob_in$comm,
-                              groups = group_id,
+                              groups = groups,
                               index = index,
                               effort = effort_samples, 
                               extrapolate = extrapolate,
@@ -635,10 +650,10 @@ get_mob_stats = function(mob_in, group_var,
         gamma = with(dat_groups, value[index == "S"])
         alpha = with(dat_samples,  value[index == "S"])
       
-        beta_S = gamma[group_id] / alpha
+        beta_S = gamma[groups] / alpha
         beta_S[!is.finite(beta_S)] = NA
       
-        dat_beta_S = data.frame(group = group_id,
+        dat_beta_S = data.frame(group = groups,
                                index = "beta_S",
                                effort = NA,
                                value = beta_S)
@@ -652,10 +667,10 @@ get_mob_stats = function(mob_in, group_var,
                           value[index == "S_n" & effort == effort_groups[i]])
              alpha = with(dat_samples,
                           value[index == "S_n" & effort == effort_samples[i]])
-             beta_S_n = gamma[group_id] / alpha
+             beta_S_n = gamma[groups] / alpha
              beta_S_n[!is.finite(beta_S_n)] = NA
          
-             dat_beta_S_n = data.frame(group = group_id,
+             dat_beta_S_n = data.frame(group = groups,
                                           index = "beta_S_n",
                                           effort = effort_samples[i],
                                           value = beta_S_n)
@@ -670,10 +685,10 @@ get_mob_stats = function(mob_in, group_var,
       gamma = with(dat_groups, value[index == "pct_rare"])
       alpha = with(dat_samples,  value[index == "pct_rare"])
       
-      beta_pct_rare = gamma[group_id] / alpha
+      beta_pct_rare = gamma[groups] / alpha
       beta_pct_rare[!is.finite(beta_pct_rare)] = NA
       
-      dat_beta_pct_rare = data.frame(group = group_id,
+      dat_beta_pct_rare = data.frame(group = groups,
                                      index = "beta_pct_rare",
                                      effort = NA,
                                      value = beta_pct_rare)
@@ -685,10 +700,10 @@ get_mob_stats = function(mob_in, group_var,
     if ("S_asymp" %in% index) {
         gamma = with(dat_groups, value[index == "S_asymp"])
         alpha = with(dat_samples,  value[index == "S_asymp"])
-        beta_S_asymp = gamma[group_id] / alpha
+        beta_S_asymp = gamma[groups] / alpha
         beta_S_asymp[!is.finite(beta_S_asymp)] = NA
       
-        dat_beta_S_asymp = data.frame(group = group_id,
+        dat_beta_S_asymp = data.frame(group = groups,
                                       index = "beta_S_asymp",
                                       effort = NA,
                                       value = beta_S_asymp)
@@ -700,10 +715,10 @@ get_mob_stats = function(mob_in, group_var,
     if ("f_0" %in% index) {
         gamma = with(dat_groups, value[index == "f_0"])
         alpha = with(dat_samples,  value[index == "f_0"])
-        beta_f_0 = gamma[group_id] / alpha
+        beta_f_0 = gamma[groups] / alpha
         beta_f_0[!is.finite(beta_f_0)] = NA
       
-        dat_beta_f_0 = data.frame(group = group_id,
+        dat_beta_f_0 = data.frame(group = groups,
                                       index = "beta_f_0",
                                       effort = NA,
                                       value = beta_f_0)
@@ -715,10 +730,10 @@ get_mob_stats = function(mob_in, group_var,
         gamma = with(dat_groups, value[index == "S_PIE"])
         alpha = with(dat_samples,  value[index == "S_PIE"])
       
-        beta_S_PIE = gamma[group_id] / alpha
+        beta_S_PIE = gamma[groups] / alpha
         beta_S_PIE[!is.finite(beta_S_PIE)] = NA
       
-        dat_beta_S_PIE = data.frame(group = group_id,
+        dat_beta_S_PIE = data.frame(group = groups,
                                     index = "beta_S_PIE",
                                     effort = NA,
                                     value = beta_S_PIE)
@@ -758,7 +773,7 @@ get_mob_stats = function(mob_in, group_var,
     if (boot_groups) {
         # bootstrap sampling within groups
       
-        abund_dat = cbind(group_id, mob_in$comm)
+        abund_dat = cbind(groups, mob_in$comm)
         cat('\nComputing bootstrap confidence intervals at the gamma-scale\n')
         boot_repl_groups = pbreplicate(n_perm,
                                boot_sample_groups(abund_dat,
@@ -778,12 +793,12 @@ get_mob_stats = function(mob_in, group_var,
                      do(stats::setNames(data.frame(t(stats::quantile(.data$value, probs, na.rm = TRUE))),
                                  c("lower","median","upper")))      
     } else {
-        delta_obs = get_group_delta(mob_in$comm, group_id, index,
+        delta_obs = get_group_delta(mob_in$comm, groups, index,
                                     effort_groups, extrapolate,
                                     return_NA, rare_thres, permute = FALSE)
         cat('\nComputing null model at gamma-scale\n')
         delta_rand = bind_rows(pbapply::pbreplicate(n_perm, 
-                                   get_group_delta(mob_in$comm, group_id,
+                                   get_group_delta(mob_in$comm, groups,
                                        index, effort_groups, extrapolate,
                                        return_NA, rare_thres, permute = TRUE),
                                simplify = FALSE, cl = cl))

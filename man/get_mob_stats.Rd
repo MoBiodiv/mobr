@@ -7,6 +7,7 @@
 get_mob_stats(
   mob_in,
   group_var,
+  ref_level = NULL,
   index = c("N", "S", "S_n", "S_PIE"),
   effort_samples = NULL,
   effort_min = 5,
@@ -25,6 +26,10 @@ get_mob_stats(
 
 \item{group_var}{String that specifies which field in \code{mob_in$env} the
 data should be grouped by}
+
+\item{ref_level}{String that defines the reference level of \code{group_var}
+to which all other groups are compared with, defaults to \code{NULL}.
+If \code{NULL} then the default contrasts of \code{group_var} are used.}
 
 \item{index}{The calculated biodiversity indices. The options are
 \itemize{
@@ -200,7 +205,7 @@ samples occur several times in the resampled data sets.
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, c('x', 'y'))
-inv_stats = get_mob_stats(inv_mob_in, group_var = "group",
+inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
                           n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
 
