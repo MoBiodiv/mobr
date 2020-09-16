@@ -60,8 +60,10 @@ test_that("mobr rarefaction function values are equivalent to true/accepted valu
   # Calculated rarefaction value has been rounded to nearest tenth to match table value
   expect_equal(round(sad5DF$`rarefaction(sad5, "IBR", 100)`, digits = 1), 10.9)
   
-  # SPACIAL-BASED RAREFACTION TESTING (EXPECTATIONS 6 THROUGH 9)
-  # Compare mobr spacial-based rarefaction function against hand calculated values
+  # SPATIAL SAMPLE-BASED RAREFACTION (sSBR) TESTING (EXPECTATIONS 6 THROUGH 9)
+  # Compare mobr spatial, sample-based rarefaction function against hand calculated values
+  # but only at the sampling efforts where all possible sSBRs completely 
+  # overlap (i.e., no variance in expected S)
   
   # Community matrix used for calculation
   comms = cbind(
