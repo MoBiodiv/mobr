@@ -2,9 +2,10 @@
 ---
 
 ### new features
-- `ref_level` can be specified in `get_mob_stats` which allows for the 
-reference (i.e., control) group to be specified which all others are compared to.
-This is similar to the implementation in the function `get_delta_stats`
+- `ref_level` can be specified in `get_mob_stats`, `plot_rarefaction` and `plot_sad`
+which allows for the reference (i.e., control) group to be specified which all
+others are compared to. This is similar to the implementation in the function
+`get_delta_stats`
 
 ### minor bug fixes
 - typo in test_rarefaction.R
