@@ -568,7 +568,8 @@ get_group_delta = function(abund_mat, groups, index, effort, extrapolate,
 #' cl = makeCluster(2L)
 #' clusterEvalQ(cl, library(mobr))
 #' clusterExport(cl, 'inv_mob_in')
-#' inv_mob_stats = get_mob_stats(inv_mob_in, 'group', n_perm=999, cl=cl)
+#' inv_mob_stats = get_mob_stats(inv_mob_in, 'group', ref_level = 'uninvaded',
+#'                               n_perm=999, cl=cl)
 #'
 #' stopCluster(cl)
 #' }
@@ -588,11 +589,11 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
     index = match.arg(index, INDICES, several.ok = TRUE)
     
     groups  = factor(mob_in$env[ , group_var])
+    group_levels = levels(groups) 
     # ensure that proper contrasts in groups specify the reference level as 
     # first group so downstream graphics have reference level in
     # leftmost boxplot panel
     if (!is.null(ref_level)) { 
-        group_levels = levels(groups) 
         if (ref_level %in% group_levels) {
             if (group_levels[1] != ref_level)
                 groups = factor(groups, levels = c(ref_level, group_levels[group_levels != ref_level]))

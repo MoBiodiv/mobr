@@ -216,7 +216,8 @@ library(parallel)
 cl = makeCluster(2L)
 clusterEvalQ(cl, library(mobr))
 clusterExport(cl, 'inv_mob_in')
-inv_mob_stats = get_mob_stats(inv_mob_in, 'group', n_perm=999, cl=cl)
+inv_mob_stats = get_mob_stats(inv_mob_in, 'group', ref_level = 'uninvaded',
+                              n_perm=999, cl=cl)
 
 stopCluster(cl)
 }

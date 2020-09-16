@@ -49,7 +49,7 @@ library(mobr)
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-inv_stats = get_mob_stats(inv_mob_in, 'group')
+inv_stats = get_mob_stats(inv_mob_in, 'group', ref_level = 'uninvaded')
 plot(inv_stats)
 inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
                              type='discrete', log_scale=TRUE, n_perm = 5)

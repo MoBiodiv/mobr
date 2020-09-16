@@ -83,7 +83,7 @@ First let's look at the spatial, sample-based rarefaction (sSBR) in which sample
 added depending on their spatial proximity. 
 
 ```{r, fig.width = 5, fig.height = 5}
-plot_rarefaction(inv_mob_in, 'group', 'sSBR', lwd = 4)
+plot_rarefaction(inv_mob_in, 'group', ref_level = 'uninvaded', 'sSBR', lwd = 4)
 ```
 
 We can see that invasion decreases richness and that the magnitude of the effect
@@ -96,9 +96,9 @@ only reflect the shape of the SAD (i.e., no individual density or aggregation ef
 ```{r, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)       
 par(mfrow = c(1, 2))
-plot_rarefaction(inv_mob_in, 'group', 'IBR', pooled = FALSE, lwd = 2,
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR', pooled = FALSE, lwd = 2,
                  leg_loc = 'topright')
-plot_rarefaction(inv_mob_in, 'group', 'IBR', pooled = TRUE, lwd = 4,
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR', pooled = TRUE, lwd = 4,
                  leg_loc = NA)
 par(oldpar)
 ```
@@ -150,7 +150,7 @@ turnover it is most sensitive too (McGlinn et al. 2018, Chase et al. 2018).
 
 
 ```{r run two-scale analysis, eval = FALSE}
-inv_stats <- get_mob_stats(inv_mob_in, group_var = "group", 
+inv_stats <- get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
                            n_perm = 199)
 ```
 
@@ -273,8 +273,8 @@ dataset before attempting to analyze its patterns. We will start our exploration
 with the sSBR.
 
 ```{r}
-plot_rarefaction(fire_mob_in, 'group', 'IBR')
-plot_rarefaction(fire_mob_in, 'group', 'sSBR')
+plot_rarefaction(fire_mob_in, 'group', ref_level = 'unburned', 'IBR')
+plot_rarefaction(fire_mob_in, 'group', ref_level = 'unburned', 'sSBR')
 ```
 
 The sSBR indicates that the unburned site has higher species richness across
@@ -286,8 +286,8 @@ observed shift in S.
 ```{r}
 oldpar <- par(no.readonly = TRUE) 
 par(mfrow = c(1, 2))
-plot_abu(fire_mob_in, 'group', 'rad', leg_loc = 'topright',)
-plot_abu(fire_mob_in, 'group', 'sad', leg_loc = NA)
+plot_abu(fire_mob_in, 'group', ref_level = 'unburned', 'rad', leg_loc = 'topright',)
+plot_abu(fire_mob_in, 'group', ref_level = 'unburned', 'sad', leg_loc = NA)
 par(oldpar)
 ```
 
@@ -301,7 +301,7 @@ test some hypotheses regarding which components are driving this decrease in S
 in the burned sites. 
 
 ```{r, eval = FALSE}
-fire_stats = get_mob_stats(fire_mob_in, 'group')
+fire_stats = get_mob_stats(fire_mob_in, 'group', ref_level = 'unburned')
 ```
 ```{r, echo = FALSE}
 load('../vignettes/fire_stats.Rdata')
@@ -329,14 +329,14 @@ conclude that fire: 1) decreases *N* which decreases *S*, 2) increases
 aggregation, and 3) decreases evenness.
 
 Let's now look at the multi-scale analysis to examine the scale-dependence and
-relative strength of these effects. Note here we set the argument \code{log_scale}
-to \code{TRUE} because there is a large number of individuals and it is not
+relative strength of these effects. Note here we set the argument `log_scale`
+to `TRUE` because there is a large number of individuals and it is not
 necessary to compute the differences between the curves at all possible scales.
 
 ```{r, eval = FALSE}
 fire_deltaS = get_delta_stats(fire_mob_in, 'group', ref_level = 'unburned',
-                              type = 'discrete', log_scale = T, n_perm = 199,
-                              overall_p = T)
+                              type = 'discrete', log_scale = TRUE, n_perm = 199,
+                              overall_p = TRUE)
 ```
 ```{r, echo = FALSE}
 load('../vignettes/fire_deltaS.Rdata')
@@ -375,7 +375,7 @@ tank_mob_in = make_mob_in(tank_comm, tank_plot_attr,
 The data is loaded let's examine the sSBR. 
 
 ```{r, fig.width = 5, fig.height = 5}
-plot_rarefaction(tank_mob_in, 'group', 'sSBR')
+plot_rarefaction(tank_mob_in, 'group', ref_level = 'low', 'sSBR')
 ```
 
 Clearly enrichment had a big effect on species richness as it is larger in the "high" productivity (i.e., enriched) community compared to the "low" community
@@ -384,8 +384,8 @@ at all scales. It is rare to see such a strong asymptote on a rarefaction curve 
 ```{r, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE) 
 par(mfrow = c(1, 2))
-plot_abu(tank_mob_in, 'group', 'rad')
-plot_abu(tank_mob_in, 'group', 'sad', leg_loc = NA)
+plot_abu(tank_mob_in, 'group', ref_level = 'low', 'rad')
+plot_abu(tank_mob_in, 'group', ref_level = 'low', 'sad', leg_loc = NA)
 par(oldpar)
 ```
 
@@ -394,7 +394,7 @@ although clearly from the sSBR we know that the size of the species pool is larg
 in the high community. 
 
 ```{r, eval = FALSE}
-tank_stats = get_mob_stats(tank_mob_in, 'group')
+tank_stats = get_mob_stats(tank_mob_in, 'group', ref_level = 'low')
 ```
 ```{r, echo = FALSE}
 load('../vignettes/tank_stats.Rdata')

@@ -6,7 +6,8 @@
 \usage{
 plot_rarefaction(
   mob_in,
-  env_var,
+  group_var,
+  ref_level = NULL,
   method,
   dens_ratio = 1,
   pooled = TRUE,
@@ -19,10 +20,14 @@ plot_rarefaction(
 )
 }
 \arguments{
-\item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
+\item{mob_in}{an object of class mob_in created by make_mob_in()}
 
-\item{env_var}{a string that specifies the column name in mob_in$env that
-specifies the grouping variable.}
+\item{group_var}{String that specifies which field in \code{mob_in$env} the
+data should be grouped by}
+
+\item{ref_level}{String that defines the reference level of \code{group_var}
+to which all other groups are compared with, defaults to \code{NULL}.
+If \code{NULL} then the default contrasts of \code{group_var} are used.}
 
 \item{method}{a character string that specifies the method of rarefaction 
   curve construction it can be one of the following: 
@@ -78,12 +83,12 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 # random individual based rarefaction curves
-plot_rarefaction(inv_mob_in, 'group', 'IBR',
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
                  pooled=TRUE, leg_loc='bottomright')
-plot_rarefaction(inv_mob_in, 'group', 'IBR',
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
                  pooled=FALSE, log='x')
 # random sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'SBR', log='xy')
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy')
 # spatial sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'sSBR', log='xy')
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy')
 }

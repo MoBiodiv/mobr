@@ -1189,10 +1189,9 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 }
 
 #' Plot distributions of species abundance
-#'
+#' @inheritParams get_mob_stats
+#' 
 #' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
-#' @param env_var a string that specifies the column name in mob_in$env that
-#'   specifies the grouping variable.
 #' @param type either 'sad' or 'rad' for species abundance vs rank abundance
 #'   distribution
 #' @param pooled Boolean defaults to FALSE which specifies that abundances should
@@ -1211,24 +1210,34 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' plot_abu(inv_mob_in, 'group', type='sad', pooled=FALSE, log='x')
-#' plot_abu(inv_mob_in, 'group', type='rad', pooled=TRUE, log='x')
-plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', pooled=FALSE, log='x')
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', pooled=TRUE, log='x')
+plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
                     pooled=FALSE, col=NULL, lwd=3, log='', leg_loc = 'topleft') {
-    env_data = mob_in$env[ , env_var]
-    grps = sort(unique(as.character(env_data)))
+    groups  = factor(mob_in$env[ , group_var])
+    group_levels = levels(groups) 
+    # ensure that proper contrasts in groups 
+    if (!is.null(ref_level)) { 
+        if (ref_level %in% group_levels) {
+            if (group_levels[1] != ref_level)
+                groups = factor(groups, levels = c(ref_level, group_levels[group_levels != ref_level]))
+            group_levels = levels(groups)
+        } else
+            stop(paste(ref_level, "is not in", group_var))
+    }
+    
     if (is.null(col)) 
         col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
                 "#E2C288", "#F7B0E6", "#AAD28C")    
-    else if (length(col) != length(grps))
+    else if (length(col) != length(group_levels))
       stop('Length of col vector must match the number of unique groups')
     title = ifelse(pooled, 'Group Scale', 'Sample Scale')
     if ('sad' == type) {
         plot(1, type = "n", xlab = "% abundance", ylab = "% species", 
              xlim = c(0.01, 1), ylim = c(0.01, 1), log = log, main = title)
-        for (i in 1:length(grps)) {
+        for (i in 1:length(group_levels)) {
             col_grp = col[i]
-            comm_grp = mob_in$comm[env_data == grps[i], ]
+            comm_grp = mob_in$comm[groups == group_levels[i], ]
             comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
             if (pooled) {
                 sad_grp = colSums(comm_grp)
@@ -1254,9 +1263,9 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
              log = log, xlim = c(1, ncol(mob_in$comm)), 
              ylim = range(0.01, 1), cex.lab = 1.5, cex.axis = 1.5,
              main = title)
-        for (i in 1:length(grps)) {
+        for (i in 1:length(group_levels)) {
              col_grp = col[i]
-             comm_grp = mob_in$comm[env_data == grps[i], ]
+             comm_grp = mob_in$comm[groups == group_levels[i], ]
              comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
              if (pooled) {
                 sad_grp = colSums(comm_grp)
@@ -1274,7 +1283,7 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
         }
     }
     if (!is.na(leg_loc))
-        legend(leg_loc, legend = grps, col = col, lwd = lwd, bty = 'n')
+        legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
 }
     
 #' Plot rarefaction curves for each treatment group
@@ -1283,9 +1292,11 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #'  level or not. Defaults to TRUE. This argument only applies when
 #'  the individual based rarefaction is used (i.e., \code{method = 'indiv'})
 #' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
+#' @inheritParams get_mob_stats
 #' @inheritParams plot.mob_out
 #' @inheritParams plot_abu
 #' @inheritParams rarefaction
+#' @inheritParms 
 #' @importFrom scales alpha
 #' @importFrom graphics lines legend
 #' @export
@@ -1294,33 +1305,44 @@ plot_abu = function(mob_in, env_var, type=c('sad', 'rad'),
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # random individual based rarefaction curves
-#' plot_rarefaction(inv_mob_in, 'group', 'IBR',
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
 #'                  pooled=TRUE, leg_loc='bottomright')
-#' plot_rarefaction(inv_mob_in, 'group', 'IBR',
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
 #'                  pooled=FALSE, log='x')
 #' # random sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'SBR', log='xy')
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy')
 #' # spatial sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'sSBR', log='xy')
-plot_rarefaction = function(mob_in, env_var, method, dens_ratio = 1, pooled = TRUE, 
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy')
+plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
+                            method, dens_ratio = 1, pooled = TRUE, 
                             spat_algo = NULL, col = NULL, lwd = 3, log = '',
                             leg_loc = 'topleft', ...) {
     if (pooled == FALSE & method != 'IBR')
         stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
-    env_data = mob_in$env[ , env_var]
-    grps = sort(unique(as.character(env_data)))
+    groups  = factor(mob_in$env[ , group_var])
+    group_levels = levels(groups) 
+    # ensure that proper contrasts in groups 
+    if (!is.null(ref_level)) { 
+        if (ref_level %in% group_levels) {
+            if (group_levels[1] != ref_level)
+                groups = factor(groups, levels = c(ref_level, group_levels[group_levels != ref_level]))
+            group_levels = levels(groups)
+        } else
+            stop(paste(ref_level, "is not in", group_var))
+    }
+  
     if (is.null(col)) 
         col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
                 "#E2C288", "#F7B0E6", "#AAD28C")    
-    else if (length(col) != length(grps))
+    else if (length(col) != length(group_levels))
         stop('Length of col vector must match the number of unique groups')
     if (method == 'indiv')
         xlab = 'Number of individuals'
     else
         xlab = 'Number of samples'
     if (pooled) {
-        Srare = lapply(grps, function(x) 
-                       rarefaction(subset(mob_in, env_data == x, 'logical'),
+        Srare = lapply(group_levels, function(x) 
+                       rarefaction(subset(mob_in, groups == x, 'logical'),
                                    method, spat_algo = spat_algo, ...))
         xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
         ylim = c(1, max(unlist(Srare)))
@@ -1328,14 +1350,14 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio = 1, pooled = TR
         plot(n, Srare[[1]], type = "n", main = "Group scale",
              xlab = xlab, ylab = "Species richness", 
              xlim = xlim, ylim = ylim, log = log)
-        for (i in seq_along(grps)) {
+        for (i in seq_along(group_levels)) {
             col_grp = col[i]
             n = as.numeric(names(Srare[[i]]))
             lines(n, Srare[[i]], col = col_grp, lwd = lwd, type = "l")
         }
     } else {
-        Srare = lapply(grps, function(x)
-                       apply(mob_in$comm[env_data == x, ], 1,
+        Srare = lapply(group_levels, function(x)
+                       apply(mob_in$comm[groups == x, ], 1,
                              function(y)  rarefaction(y, method, ...)))
         xlim = c(1, max(unlist(lapply(Srare, function(x)
                                  lapply(x, function(y)
@@ -1345,7 +1367,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio = 1, pooled = TR
         plot(n, Srare[[1]][[1]], type = "n", main = "Sample scale",
              xlab = xlab, ylab = "Species richness", 
              xlim = xlim, ylim = ylim, log = log)        
-        for (i in seq_along(grps)) {
+        for (i in seq_along(group_levels)) {
             col_grp = col[i]
             for (j in seq_along(Srare[[i]])) {
                  n = as.numeric(names(Srare[[i]][[j]]))
@@ -1356,7 +1378,7 @@ plot_rarefaction = function(mob_in, env_var, method, dens_ratio = 1, pooled = TR
         }
     }
     if (!is.na(leg_loc))
-        legend(leg_loc, legend = grps, col = col, lwd = lwd, bty = 'n')
+        legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
 }
 
 #' Plot the multiscale MoB analysis output generated by \code{get_delta_stats}.

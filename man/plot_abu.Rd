@@ -6,7 +6,8 @@
 \usage{
 plot_abu(
   mob_in,
-  env_var,
+  group_var,
+  ref_level = NULL,
   type = c("sad", "rad"),
   pooled = FALSE,
   col = NULL,
@@ -18,8 +19,12 @@ plot_abu(
 \arguments{
 \item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
 
-\item{env_var}{a string that specifies the column name in mob_in$env that
-specifies the grouping variable.}
+\item{group_var}{String that specifies which field in \code{mob_in$env} the
+data should be grouped by}
+
+\item{ref_level}{String that defines the reference level of \code{group_var}
+to which all other groups are compared with, defaults to \code{NULL}.
+If \code{NULL} then the default contrasts of \code{group_var} are used.}
 
 \item{type}{either 'sad' or 'rad' for species abundance vs rank abundance
 distribution}
@@ -45,6 +50,6 @@ Plot distributions of species abundance
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-plot_abu(inv_mob_in, 'group', type='sad', pooled=FALSE, log='x')
-plot_abu(inv_mob_in, 'group', type='rad', pooled=TRUE, log='x')
+plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', pooled=FALSE, log='x')
+plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', pooled=TRUE, log='x')
 }
