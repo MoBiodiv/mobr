@@ -1,4 +1,10 @@
-mobr [![Travis build status](https://travis-ci.org/MoBiodiv/mobr.svg?branch=master)](https://travis-ci.org/MoBiodiv/mobr) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4014111.svg)](https://doi.org/10.5281/zenodo.4014111)
+# mobr
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![cran checks](https://cranchecks.info/badges/worst/mobr)](https://cranchecks.info/pkgs/mobr)
+[![Travis build status](https://travis-ci.org/MoBiodiv/mobr.svg?branch=master)](https://travis-ci.org/MoBiodiv/mobr)
+[![rstudio mirror downloads](https://cranlogs.r-pkg.org/badges/mobr)](https://github.com/r-hub/cranlogs.app)
+[![cran version](https://www.r-pkg.org/badges/version/mobr)](https://cran.r-project.org/package=mobr)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4014111.svg)](https://doi.org/10.5281/zenodo.4014111)
 ============
 
 # Measurement of Biodiversity in R 
@@ -15,14 +21,23 @@ The concepts and methods behind this R package are described in three publicatio
 
 McGlinn, D.J. X. Xiao, F. May, N.J Gotelli, T. Engel, S.A Blowes, T.M. Knight, O. Purschke, J.M Chase, and B.J. McGill. 2019. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. Methods in Ecology and Evolution. 10:258–269. https://doi.org/10.1111/2041-210X.13102
 
-McGlinn, D.J. T. Engel, S.A. Blowes, N.J. Gotelli, T.M. Knight, B.J. McGill, N. Sanders, and J.M. Chase. *accepted*. A multiscale framework for disentangling the roles of evenness, density, and aggregation on diversity gradients. Ecology. https://doi.org/10.1101/851717
+McGlinn, D.J. T. Engel, S.A. Blowes, N.J. Gotelli, T.M. Knight, B.J. McGill, N. Sanders, and J.M. Chase. 2020. A multiscale framework for disentangling the roles of evenness, density, and aggregation on diversity gradients. Ecology. https://doi.org/10.1002/ecy.3233
 
 Chase, J.M., B. McGill, D.J. McGlinn, F. May, S.A. Blowes, X. Xiao, T. Knight. 2018. Embracing scale-dependence to achieve a deeper understanding of biodiversity and its change across communities. Ecology Letters. 21: 1737–1751. https://doi.org/10.1111/ele.13151 
 
+Please cite `mobr`. Run the following to get the appropriate citation for the version you're using:
+
+```r
+citation(package = "mobr")
+```
 
 ## Installation
 
-The easiest option is to install the package directly from GitHub using the package `devtools`. If you do not already have `devtools` installed then need to install it.
+```r
+install.packages('mobr')
+```
+
+Or, install development version
 
 ```r
 install.packages('devtools')
@@ -34,9 +49,6 @@ Now that `devtools` is installed you can install `mobr using the following R cod
 ```r
 install_github('MoBiodiv/mobr')
 ```
-
-Note: the installation may take some time due to numerous dependencies. We are 
-working on reducing the number of dependencies. 
 
 ## Examples
 
