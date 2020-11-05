@@ -403,7 +403,7 @@ get_group_delta = function(abund_mat, groups, index, effort, extrapolate,
 #'   best small sample behavior. 
 #'   
 #' @param n_perm The number of permutations to use for testing for treatment
-#'   effects. Defaults to 199. 
+#'   effects. Defaults to 0 (i.e., no permutations)
 #'   
 #' @param boot_groups Use bootstrap resampling within groups to derive
 #'   gamma-scale confidence intervals for all biodiversity indices. Default is
@@ -577,7 +577,7 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
                          index = c("N", "S", "S_n", "S_PIE"),
                          effort_samples = NULL, effort_min = 5,
                          extrapolate = TRUE, return_NA = FALSE, 
-                         rare_thres = 0.05, n_perm = 199, 
+                         rare_thres = 0.05, n_perm = 0, 
                          boot_groups = FALSE, conf_level = 0.95, cl=NULL, 
                          ...) {
     EPS <- sqrt(.Machine$double.eps)

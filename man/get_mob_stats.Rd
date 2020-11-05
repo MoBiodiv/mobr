@@ -14,7 +14,7 @@ get_mob_stats(
   extrapolate = TRUE,
   return_NA = FALSE,
   rare_thres = 0.05,
-  n_perm = 199,
+  n_perm = 0,
   boot_groups = FALSE,
   conf_level = 0.95,
   cl = NULL,
@@ -76,7 +76,7 @@ average abundance as the threshold which McGill (2011) found to have the
 best small sample behavior.}
 
 \item{n_perm}{The number of permutations to use for testing for treatment
-effects. Defaults to 199.}
+effects. Defaults to 0 (i.e., no permutations)}
 
 \item{boot_groups}{Use bootstrap resampling within groups to derive
 gamma-scale confidence intervals for all biodiversity indices. Default is
