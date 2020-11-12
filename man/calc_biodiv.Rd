@@ -6,21 +6,16 @@
 \usage{
 calc_biodiv(
   abund_mat,
-  groups,
   index,
-  effort,
-  extrapolate,
-  return_NA,
-  rare_thres
+  effort = NA,
+  extrapolate = TRUE,
+  return_NA = FALSE,
+  rare_thres = 0.05
 )
 }
 \arguments{
 \item{abund_mat}{Sites by species table with species abundances
 in the respective cells}
-
-\item{groups}{Vector with group labels for the sites. The length
-of the vector has to correspond to the number of rows of the
-sites by species table.}
 
 \item{index}{The calculated biodiversity indices. The options are
 \itemize{
@@ -41,11 +36,11 @@ biodiversity indices.}
 calculation of rarefied species richness. This can a be
 single value or an integer vector.}
 
-\item{extrapolate}{Boolean which specifies if richness should be extrapolated
-when effort is larger than the number of individuals using the chao1
-method.}
+\item{extrapolate}{Boolean which specifies if richness should be
+extrapolated when \code{effort_samples} is larger than the number of
+individuals using the chao1 method. Defaults to TRUE.}
 
-\item{return_NA}{Boolean in which the rarefaction function
+\item{return_NA}{Boolean defaults to FALSE in which the rarefaction function
 returns the observed S when \code{effort} is larger than the number of
 individuals. If set to TRUE then NA is returned. Note that this argument
 is only relevant when \code{extrapolate = FALSE}.}
@@ -73,6 +68,11 @@ Calculate biodiversity statistics from sites by species table.
 \details{
 This function is primarily intended as auxiliary function used in
 \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
+}
+\examples{
+data(inv_comm)
+div_metrics = calc_biodiv(inv_comm, c('S', 'S_PIE', 'S_n'))
+div_metrics
 }
 \references{
 McGill, B. J. 2011. Species abundance distributions. Pages 105-122 Biological

@@ -153,10 +153,6 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' @param abund_mat Sites by species table with species abundances
 #' in the respective cells
 #' 
-#' @param groups Vector with group labels for the sites. The length
-#' of the vector has to correspond to the number of rows of the
-#' sites by species table.
-#' 
 #' @param index The calculated biodiversity indices. The options are
 #' \itemize{
 #'    \item \code{N} ... Number of individuals (total abundance)
@@ -175,22 +171,6 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' @param effort The standardized number of individuals used for the 
 #'   calculation of rarefied species richness. This can a be
 #'   single value or an integer vector. 
-#'   
-#' @param extrapolate Boolean which specifies if richness should be extrapolated
-#'   when effort is larger than the number of individuals using the chao1
-#'   method.
-#'
-#' @param return_NA Boolean in which the rarefaction function
-#'   returns the observed S when \code{effort} is larger than the number of
-#'   individuals. If set to TRUE then NA is returned. Note that this argument
-#'   is only relevant when \code{extrapolate = FALSE}.
-#'   
-#' @param rare_thres The threshold that determines how pct_rare is computed.
-#'   It can range from (0, 1] and defaults to 0.05 which specifies that any 
-#'   species with less than or equal to 5% of the total abundance in a sample is
-#'   considered rare. It can also be specified as "N/S" which results in using
-#'   average abundance as the threshold which McGill (2011) found to have the 
-#'   best small sample behavior. 
 #'   
 #' @details This function is primarily intended as auxiliary function used in
 #' \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
@@ -212,15 +192,35 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' McGill, B. J. 2011. Species abundance distributions. Pages 105-122 Biological
 #' Diversity: Frontiers in Measurement and Assessment, eds. A.E. Magurran and
 #' B.J. McGill.
-#'
+#' @inheritParams get_mob_stats
+#' @examples 
+#' data(inv_comm)
+#' div_metrics = calc_biodiv(inv_comm, c('S', 'S_PIE', 'S_n'))
+#' div_metrics
 #' @export
-calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
-                       rare_thres) {
-    out = expand.grid(group = groups,
-                      index = index[index != "S_n"],
-                      effort = NA, value = NA)
+calc_biodiv = function(abund_mat, index, effort = NA, extrapolate = TRUE,
+                       return_NA = FALSE, rare_thres = 0.05) {
+    # setup output data.frame
+    if ('S_n' %in% index) {
+        if (any(is.na(effort)))
+            effort = max(min(N), 5) # puts a hard lower bound at 5 individuals 
+        dat_S_n = expand.grid(index = rep('S_n', nrow(abund_mat)),
+                              effort = effort, value = NA)
+    }
+    if (any(index != 'S_n')) { # if diversity indices other than S_n considered
+        out = data.frame(index = rep(index[index != "S_n"], each = nrow(abund_mat)),
+                          effort = NA, value = NA)
+        if ('S_n' %in% index) {
+            out = rbind(out, dat_S_n)
+        }    
+    } else {
+        out = dat_S_n
+    }
+  
+    # Number of individuals in each sample
+  
     N = rowSums(abund_mat) 
-   
+    
     # Number of individuals -----------------------------------------------------
     if (any(index == "N")) {
         out$value[out$index == "N"] = N
@@ -229,15 +229,11 @@ calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
     # Number of species ---------------------------------------------------------
     if (any(index == "S")) {
         out$value[out$index == "S"] = rowSums(abund_mat > 0)
+        out$effort[out$index == "S"] = N
     }  
    
     # Rarefied richness ---------------------------------------------------------
     if (any(index == "S_n")) {
-      
-        dat_S_n = expand.grid(group = groups,
-                                 index = 'S_n',
-                                 effort = effort, value = NA)
-        out = rbind(out, dat_S_n)
         S_n  = apply(abund_mat, 1, rarefaction, method = 'IBR', effort = effort,
                      extrapolate = extrapolate, return_NA = return_NA,
                      quiet_mode = TRUE)
@@ -290,7 +286,7 @@ calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
     if (any(index == "S_asymp" | index == "f_0")) {
         S_asymp = try(calc_chao1(abund_mat))
         if (class(S_asymp) == "try_error") 
-            warning("The Chao richness estimator cannot be calculated for all groups.")
+            warning("The Chao richness estimator cannot be calculated for all samples.")
         else 
             S_asymp[!is.finite(S_asymp)] = NA
         S = apply(abund_mat, 1, function(x) sum(x > 0))
@@ -301,6 +297,7 @@ calc_biodiv = function(abund_mat, groups, index, effort, extrapolate, return_NA,
     }    
     return(out)
 }
+
 
 #' Get F statistics from diversity indices and grouping vector
 #' @importFrom rlang .data
@@ -588,15 +585,17 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
                 "pct_rare", "PIE", "S_PIE")
     index = match.arg(index, INDICES, several.ok = TRUE)
     
-    groups  = factor(mob_in$env[ , group_var])
+    groups = factor(mob_in$env[ , group_var])
     group_levels = levels(groups) 
     # ensure that proper contrasts in groups specify the reference level as 
     # first group so downstream graphics have reference level in
     # leftmost boxplot panel
     if (!is.null(ref_level)) { 
         if (ref_level %in% group_levels) {
-            if (group_levels[1] != ref_level)
+            if (group_levels[1] != ref_level) {
                 groups = factor(groups, levels = c(ref_level, group_levels[group_levels != ref_level]))
+                group_levels = levels(groups)
+            }
         } else
             stop(paste(ref_level, "is not in", group_var))
     }
@@ -622,125 +621,113 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
                     paste(effort_samples, collapse = ", ")))
     }
   
-    # Group-level indices
+    # compute study-level sampling effort
+    effort_study = c(effort_samples, effort_samples * nrow(mob_in$comm))
+    # compute group-level sampling effort
     effort_groups = c(effort_samples, effort_samples * min(samples_per_group))
-   
+    
+    # Abundance distribution pooled at study level (i.e., across all groups)
+    abund_study = matrix(colSums(mob_in$comm), ncol = ncol(mob_in$comm))
+
     # Abundance distribution pooled in groups
     abund_group = stats::aggregate(mob_in$comm, by = list(groups), FUN = "sum")
-   
-    dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
-                             groups = abund_group[ , 1],
-                             index = index, 
-                             effort = effort_groups, 
-                             extrapolate = extrapolate,
-                             return_NA = return_NA,
-                             rare_thres = rare_thres)
-   
-    dat_samples = calc_biodiv(abund_mat = mob_in$comm,
-                              groups = groups,
-                              index = index,
-                              effort = effort_samples, 
-                              extrapolate = extrapolate,
-                              return_NA = return_NA,
-                              rare_thres = rare_thres)
-   
-    # beta-diversity
-   
-    # Number of species ---------------------------------------------------------
-    if (any(index == "S")) {
-        gamma = with(dat_groups, value[index == "S"])
-        alpha = with(dat_samples,  value[index == "S"])
-      
-        beta_S = gamma[groups] / alpha
-        beta_S[!is.finite(beta_S)] = NA
-      
-        dat_beta_S = data.frame(group = groups,
-                               index = "beta_S",
-                               effort = NA,
-                               value = beta_S)
-        dat_samples = rbind(dat_samples, dat_beta_S)
-    }  
-   
-    # Rarefied richness ---------------------------------------------------------
-    if ("S_n" %in% index) {  
-        for (i in seq_along(effort_samples)) {
-             gamma = with(dat_groups, 
-                          value[index == "S_n" & effort == effort_groups[i]])
-             alpha = with(dat_samples,
-                          value[index == "S_n" & effort == effort_samples[i]])
-             beta_S_n = gamma[groups] / alpha
-             beta_S_n[!is.finite(beta_S_n)] = NA
-         
-             dat_beta_S_n = data.frame(group = groups,
-                                          index = "beta_S_n",
-                                          effort = effort_samples[i],
-                                          value = beta_S_n)
-             dat_samples = rbind(dat_samples, dat_beta_S_n)
-        }
-        # clean up dat_groups by removing S_n computed using alpha n-value
-        #dat_groups = subset(dat_groups, !(effort %in% effort_samples))
-    } # end rarefied richness
 
-    # Number of rare species ---------------------------------------------------------
-    if (any(index == "pct_rare")) {
-      gamma = with(dat_groups, value[index == "pct_rare"])
-      alpha = with(dat_samples,  value[index == "pct_rare"])
-      
-      beta_pct_rare = gamma[groups] / alpha
-      beta_pct_rare[!is.finite(beta_pct_rare)] = NA
-      
-      dat_beta_pct_rare = data.frame(group = groups,
-                                     index = "beta_pct_rare",
-                                     effort = NA,
-                                     value = beta_pct_rare)
-      dat_samples = rbind(dat_samples, dat_beta_pct_rare)
-    }  
     
     
-    # Asymptotic estimates species richness -------------------------------------
-    if ("S_asymp" %in% index) {
-        gamma = with(dat_groups, value[index == "S_asymp"])
-        alpha = with(dat_samples,  value[index == "S_asymp"])
-        beta_S_asymp = gamma[groups] / alpha
-        beta_S_asymp[!is.finite(beta_S_asymp)] = NA
-      
-        dat_beta_S_asymp = data.frame(group = groups,
-                                      index = "beta_S_asymp",
-                                      effort = NA,
-                                      value = beta_S_asymp)
-        dat_samples = rbind(dat_samples, dat_beta_S_asymp)
-    }
+    # calculate diversity statistics
+    dat_study = data.frame(scale = 'study',
+                           groups = paste(group_levels, collapse = '&'),
+                           calc_biodiv(abund_mat = abund_study,
+                                       index = index,
+                                       effort = effort_study,
+                                       extrapolate = extrapolate,
+                                       return_NA = return_NA,
+                                       rare_thres = rare_thres))
     
-    
-    # Estimated # of missing species richness -------------------------------------
-    if ("f_0" %in% index) {
-        gamma = with(dat_groups, value[index == "f_0"])
-        alpha = with(dat_samples,  value[index == "f_0"])
-        beta_f_0 = gamma[groups] / alpha
-        beta_f_0[!is.finite(beta_f_0)] = NA
-      
-        dat_beta_f_0 = data.frame(group = groups,
-                                      index = "beta_f_0",
-                                      effort = NA,
-                                      value = beta_f_0)
-        dat_samples = rbind(dat_samples, dat_beta_f_0)
-    }
+    dat_groups = data.frame(scale = 'gamma',
+                            groups = abund_group[ , 1],
+                            calc_biodiv(abund_mat = abund_group[ , -1],
+                                        index = index,
+                                        effort = effort_study,
+                                        extrapolate = extrapolate,
+                                        return_NA = return_NA,
+                                        rare_thres = rare_thres))
    
-    # Effective number of species based on PIE ----------------------------------
-    if ("S_PIE" %in% index) {
-        gamma = with(dat_groups, value[index == "S_PIE"])
-        alpha = with(dat_samples,  value[index == "S_PIE"])
-      
-        beta_S_PIE = gamma[groups] / alpha
-        beta_S_PIE[!is.finite(beta_S_PIE)] = NA
-      
-        dat_beta_S_PIE = data.frame(group = groups,
-                                    index = "beta_S_PIE",
-                                    effort = NA,
-                                    value = beta_S_PIE)
-        dat_samples = rbind(dat_samples, dat_beta_S_PIE)
-    }
+    dat_samples = data.frame(scale = 'alpha', groups = groups,
+                             calc_biodiv(abund_mat = mob_in$comm,
+                                         index = index,
+                                         effort = effort_study,
+                                         extrapolate = extrapolate,
+                                         return_NA = return_NA,
+                                         rare_thres = rare_thres))
    
+    # beta-diversity ----------------------------------------------------------
+    if ('S' %in% index) {
+        # beta-coverage ----------
+        # calculate beta coverage seperately because it requires SAD
+        # first drop any samples with no indiviuals (i.e., they are empty)
+        not_empty_samples = rowSums(mob_in$comm) > 0
+        groups_tmp = groups[not_empty_samples]
+        comm_tmp = mob_in$comm[not_empty_samples, ]
+        # now get target coverage while dropping any samples with zero individuals
+        target_coverage = min(sapply(group_levels, function(grp) 
+                              betaC::C_target(comm_tmp[groups_tmp == grp, ])))
+        # compute the number of individuals for each group this coverage matches with
+        N_coverage = sapply(group_levels, function(grp)
+                               betaC::invChat(comm_tmp[groups_tmp == grp, ],
+                                              target_coverage))
+        # next compute beta coverage at that target coverage
+        beta_coverage = sapply(group_levels, function(grp)
+                               betaC::beta_C(comm_tmp[groups_tmp == grp, ],
+                                             target_coverage))
+        dat_samples = rbind(dat_samples,
+                            data.frame(scale = 'gamma', group = group_levels,
+                                       index = 'beta_C', effort = N_coverage,
+                                       value = beta_coverage))
+    }
+    # other beta diversities --------
+    for (i in seq_along(index)) {
+        if (index[i] == 'S_n') {  #currently not working!!! 
+            for (j in seq_along(effort_samples)) {
+              ## NOTE Here - really intersting effort scale would be at same at 
+              ## group and study scales rather than always using sample 
+              ## scale -- will need more careful thoughts on this.
+               study = with(dat_study, value[index == index[i] & 
+                                            effort == effort_study[j]])
+               gamma = with(dat_groups, value[index == index[i] &
+                                              effort == effort_groups[j]])
+               alpha = with(dat_samples, value[index == index[i] & 
+                                               effort == effort_samples[j]])
+               beta_study = study / mean(gamma, na.rm = T)
+               beta_group = gamma[groups] / mean(alpha, na.rm = T) ## this is probably wrong
+               dat_beta = rbind(data.frame(scale = 'study', group = dat_study$group,
+                                      index = paste("beta", index[i], sep = "_"),
+                                      effort = effort_samples[j],
+                                      value = beta_study),
+                                 data.frame(scale = 'group', group = group_levels, 
+                                            index = paste("beta", index[i], sep = "_"),
+                                            effort = effort_samples[j], 
+                                            value = beta_group))
+              dat_samples = rbind(dat_samples, dat_beta)
+            }
+        } else {
+            study = dat_study$value[dat_study$index == index[i]]
+            gamma = dat_groups$value[dat_groups$index == index[i]]
+            alpha = dat_samples$value[dat_samples$index == index[i]]
+            beta_study = study / mean(gamma, na.rm = T)
+            beta_group = gamma / tapply(alpha, groups, mean, na.rm = T)
+            dat_beta = rbind(data.frame(scale = 'study', group = dat_study$group[i],
+                                        index = paste("beta", index[i], sep = "_"),
+                                        effort = NA,
+                                        value = beta_study),
+                             data.frame(scale = 'gamma', group = group_levels, 
+                                        index = paste("beta", index[i], sep = "_"),
+                                        effort = NA, 
+                                        value = beta_group))
+        }
+        dat_samples = rbind(dat_samples, dat_beta)
+    }
+    
     # Significance tests -------------------------------------------------------
    
     # alpha-scale
@@ -809,6 +796,7 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
         groups_tests = delta_rand %>% 
                        group_by(index, .data$effort) %>%
                        summarise(D_bar = first(.data$d_obs),
+                                 F_stat = NA, 
                                  p_val = (sum(.data$delta >= .data$d_obs - EPS) + 1) /
                                          (n_perm + 1)) %>%
                        ungroup()
@@ -832,18 +820,17 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
    
     #remove unused factor levels
     dat_samples$index = factor(dat_samples$index)
+    stats = rbind(dat_samples, dat_groups, dat_study)
     if (boot_groups) {
-        out = list(samples_stats = dat_samples,
-                   groups_stats  = dat_groups,
-                   samples_tests  = samples_tests)
+        out = list(stats = stats, 
+                   tests  = data.frame(scale = 'alpha', samples_tests))
     } else {      
         groups_tests$index = factor(groups_tests$index, levels = index)
         groups_tests = groups_tests[order(groups_tests$index), ]
        
-        out = list(samples_stats = dat_samples,
-                   groups_stats  = dat_groups,
-                   samples_tests  = samples_tests,
-                   groups_tests   = groups_tests)
+        out = list(stats = stats, 
+                   tests = rbind(data.frame(scale = 'alpha', samples_tests),
+                                 data.frame(scale = 'gamma', groups_tests)))
     }
     if ("pct_rare" %in% index)
         out$rare_thres = rare_thres
