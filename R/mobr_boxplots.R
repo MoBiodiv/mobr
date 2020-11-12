@@ -200,6 +200,10 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' @export
 calc_biodiv = function(abund_mat, index, effort = NA, extrapolate = TRUE,
                        return_NA = FALSE, rare_thres = 0.05) {
+    
+    # Number of individuals in each sample
+    N = rowSums(abund_mat) 
+    
     # setup output data.frame
     if ('S_n' %in% index) {
         if (any(is.na(effort)))
@@ -217,9 +221,6 @@ calc_biodiv = function(abund_mat, index, effort = NA, extrapolate = TRUE,
         out = dat_S_n
     }
   
-    # Number of individuals in each sample
-  
-    N = rowSums(abund_mat) 
     
     # Number of individuals -----------------------------------------------------
     if (any(index == "N")) {
