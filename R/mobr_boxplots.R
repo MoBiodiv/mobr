@@ -212,7 +212,16 @@ calc_div = function(x, index, effort = NA, rare_thres = 0.05, ...) {
 #' @param effort The standardized number of individuals used for the 
 #'   calculation of rarefied species richness. This can a be
 #'   single value or an integer vector. 
-#'   
+#' 
+#' @param scales The scales to compute the diversity indices for: 
+#' \itemize{
+#'     \item \code{alpha} ... for each row of the site x species community matrix
+#'     \item \code{gamma} ... for the entire site x species community matrix
+#'     \item \code{beta} ... the ratio of diversity at the \code{gamma} and 
+#'                            \code{alpha} scales.  
+#' } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}
+#' 
+#' 
 #' @details This function is primarily intended as auxiliary function used in
 #' \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
 #' 
@@ -242,20 +251,23 @@ calc_div = function(x, index, effort = NA, rare_thres = 0.05, ...) {
 calc_comm_div = function(abund_mat, index, effort = NA, 
                          extrapolate = TRUE,
                          return_NA = FALSE, rare_thres = 0.05,
-                         betas = TRUE, coverage = TRUE) {
+                         scales = c('alpha', 'gamma', 'beta'),
+                         coverage = TRUE) {
     
     # store each calculated index into its own data.frame in a list
     out = vector('list', length = length(index))
     names(out) = index
     # compute indices ---------------------------------------------------------
     for (i in seq_along(index)) {
-        alpha = apply(abund_mat, 1, calc_div, index[i], effort, rare_thres,
-                      extrapolate = extrapolate, return_NA = return_NA, 
-                      quiet = TRUE)
-        gamma = calc_div(colSums(abund_mat), index[i], effort, rare_thres,
-                         extrapolate = extrapolate, return_NA = return_NA, 
-                         quiet = TRUE)
-        if (betas) {
+        if (any(c('alpha','beta') %in% scales)) 
+            alpha = apply(abund_mat, 1, calc_div, index[i], effort, rare_thres,
+                          extrapolate = extrapolate, return_NA = return_NA, 
+                          quiet = TRUE)
+        if (any(c('gamma', 'beta') %in% scales))
+            gamma = calc_div(colSums(abund_mat), index[i], effort, rare_thres,
+                             extrapolate = extrapolate, return_NA = return_NA, 
+                             quiet = TRUE)
+        if ('beta' %in% scales) {
             # compute beta
             if (index[i] == 'S_n' & length(effort) > 1) {
                 beta = gamma / rowMeans(alpha, na.rm = TRUE)
@@ -265,34 +277,34 @@ calc_comm_div = function(abund_mat, index, effort = NA,
         }  
         if (index[i] == 'S_n') effort_out = effort else effort_out = NA
         # compute number of finite samples used for calculation
-        sample_size = sum(!is.na(alpha))
-        out[[i]] =  data.frame(scale = 'alpha', index = index[i], sample_size = 1,
-                            effort = effort_out, coverage = NA, 
-                            value = as.numeric(alpha))
-        out[[i]] = rbind(out[[i]],
-                      data.frame(scale = 'gamma', index = index[i], 
-                                 sample_size, effort = effort_out, coverage = NA,
-                                 value = gamma))
-        if (betas & index[i] != 'N') 
-            out[[i]] = rbind(out[[i]],
-                             data.frame(scale = 'beta',
-                                        index = paste('beta', index[i], sep = '_'),
+        sample_size = nrow(abund_mat)
+        if ('alpha' %in% scales) 
+            out[[i]]$alpha = data.frame(scale = 'alpha', index = index[i],
+                                        sample_size = 1, effort = effort_out,
+                                        coverage = NA, value = as.numeric(alpha))
+        if ('gamma' %in% scales) 
+            out[[i]]$gamma = data.frame(scale = 'gamma', index = index[i], 
                                         sample_size, effort = effort_out,
-                                        coverage = NA, value = beta))
+                                        coverage = NA, value = gamma)
+        if ('beta' %in% scales & index[i] != 'N') 
+            out[[i]]$beta = data.frame(scale = 'beta',
+                                       index = paste('beta', index[i], sep = '_'),
+                                       sample_size, effort = effort_out,
+                                       coverage = NA, value = beta)
         
-        if (index[i] == 'S' & coverage) { 
+        if ((index[i] == 'S') & ('beta' %in% scales) & coverage) { 
             # compute coverage beta estimate
             # first calc target coverages and find min
             targ_cov = betaC::C_target(abund_mat)
             beta_cov = betaC::beta_C(abund_mat, targ_cov)
-            out[[i]] = rbind(out[[i]], 
+            out[[i]]$beta = rbind(out[[i]]$beta, 
                          data.frame(scale = 'beta', index = 'beta_C',
                          sample_size,
                          effort = attributes(beta_cov)$N,
                          coverage = attributes(beta_cov)$C,
                          value = beta_cov))
         }
-        
+        out[[i]] = dplyr::bind_rows(out[[i]])
         if (index[i] == 'S_n' & length(effort) > 1) {
             out[[i]] = arrange(out[[i]], effort)
         }

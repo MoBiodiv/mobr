@@ -11,7 +11,7 @@ calc_comm_div(
   extrapolate = TRUE,
   return_NA = FALSE,
   rare_thres = 0.05,
-  betas = TRUE,
+  scales = c("alpha", "gamma", "beta"),
   coverage = TRUE
 )
 }
@@ -53,6 +53,14 @@ species with less than or equal to 5% of the total abundance in a sample is
 considered rare. It can also be specified as "N/S" which results in using
 average abundance as the threshold which McGill (2011) found to have the 
 best small sample behavior.}
+
+\item{scales}{The scales to compute the diversity indices for: 
+\itemize{
+    \item \code{alpha} ... for each row of the site x species community matrix
+    \item \code{gamma} ... for the entire site x species community matrix
+    \item \code{beta} ... the ratio of diversity at the \code{gamma} and 
+                           \code{alpha} scales.  
+} Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}}
 }
 \value{
 A \code{data.frame} with four columns:
