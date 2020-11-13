@@ -1296,7 +1296,6 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' @inheritParams plot.mob_out
 #' @inheritParams plot_abu
 #' @inheritParams rarefaction
-#' @inheritParms 
 #' @importFrom scales alpha
 #' @importFrom graphics lines legend
 #' @export

@@ -147,6 +147,47 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
     return(dat_groups)
 }
 
+#' Compute various diversity indices from a vector of species abundances (i.e.,
+#' one row of a community matrix)
+#'
+#' @param x is a vector of species abundances
+#'
+#' @inheritParams calc_comm_div
+#'
+#' @export
+#' @examples  
+#' data(inv_comm)
+#' calc_div(inv_comm[1, ], 'S_n', effort = c(5, 10))
+calc_div = function(x, index, effort = NA, rare_thres = 0.05, ...) {
+    if (index == 'N') out = sum(x)
+    if (index == 'S') out = sum(x > 0)
+    if (index == 'S_n') out = rarefaction(x, method = 'IBR', effort = effort, ...) 
+    if (index == 'PIE') out = calc_PIE(x, ENS = FALSE)
+    if (index == 'S_PIE') out = calc_PIE(x, ENS = TRUE)
+    if (index == 'f_0') out = calc_div(x, 'S_asymp') - calc_div(x, 'S')
+    if (index == 'S_asymp') {
+        S_asymp = try(calc_chao1(x))
+        if (class(S_asymp) == "try_error") 
+            warning("The Chao richness estimator cannot be calculated for all samples.")
+        else 
+            S_asymp[!is.finite(S_asymp)] = NA
+        out = S_asymp
+    }    
+    if (index == 'pct_rare') {
+        S = calc_div(x, 'S') 
+        if (S > 0) {
+            N = calc_div(x, 'N')
+            if (rare_thres == "N/S") {
+                rare_thres = N / S
+                out = 100 * (sum(x[x > 0] <= rare_thres) / S)
+            } else 
+                out = 100 * (sum(x[x > 0] <= (rare_thres * N)) / S)
+        } else
+            out = 0
+    }
+    return(out)
+}
+        
 
 #' Calculate biodiversity statistics from sites by species table.
 #' 
@@ -195,109 +236,103 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' @inheritParams get_mob_stats
 #' @examples 
 #' data(inv_comm)
-#' div_metrics = calc_biodiv(inv_comm, c('S', 'S_PIE', 'S_n'))
+#' div_metrics = calc_comm_div(inv_comm, 'S_n', effort = c(5, 10))
 #' div_metrics
 #' @export
-calc_biodiv = function(abund_mat, index, effort = NA, extrapolate = TRUE,
-                       return_NA = FALSE, rare_thres = 0.05) {
+calc_comm_div = function(abund_mat, index, effort = NA, 
+                         extrapolate = TRUE,
+                         return_NA = FALSE, rare_thres = 0.05,
+                         betas = TRUE, coverage = TRUE) {
     
-    # Number of individuals in each sample
-    N = rowSums(abund_mat) 
-    
-    # setup output data.frame
-    if ('S_n' %in% index) {
-        if (any(is.na(effort)))
-            effort = max(min(N), 5) # puts a hard lower bound at 5 individuals 
-        dat_S_n = expand.grid(index = rep('S_n', nrow(abund_mat)),
-                              effort = effort, value = NA)
-    }
-    if (any(index != 'S_n')) { # if diversity indices other than S_n considered
-        out = data.frame(index = rep(index[index != "S_n"], each = nrow(abund_mat)),
-                          effort = NA, value = NA)
-        if ('S_n' %in% index) {
-            out = rbind(out, dat_S_n)
-        }    
-    } else {
-        out = dat_S_n
-    }
-  
-    
-    # Number of individuals -----------------------------------------------------
-    if (any(index == "N")) {
-        out$value[out$index == "N"] = N
-    } 
-   
-    # Number of species ---------------------------------------------------------
-    if (any(index == "S")) {
-        out$value[out$index == "S"] = rowSums(abund_mat > 0)
-        out$effort[out$index == "S"] = N
+    # store each calculated index into its own data.frame in a list
+    out = vector('list', length = length(index))
+    names(out) = index
+    # compute indices ---------------------------------------------------------
+    for (i in seq_along(index)) {
+        alpha = apply(abund_mat, 1, calc_div, index[i], effort, rare_thres,
+                      extrapolate = extrapolate, return_NA = return_NA, 
+                      quiet = TRUE)
+        gamma = calc_div(colSums(abund_mat), index[i], effort, rare_thres,
+                         extrapolate = extrapolate, return_NA = return_NA, 
+                         quiet = TRUE)
+        if (betas) {
+            # compute beta
+            if (index[i] == 'S_n' & length(effort) > 1) {
+                beta = gamma / rowMeans(alpha, na.rm = TRUE)
+            } else {
+                beta = gamma / mean(alpha, na.rm = TRUE)
+            }
+        }  
+        if (index[i] == 'S_n') effort_out = effort else effort_out = NA
+        # compute number of finite samples used for calculation
+        sample_size = sum(!is.na(alpha))
+        out[[i]] =  data.frame(scale = 'alpha', index = index[i], sample_size = 1,
+                            effort = effort_out, coverage = NA, 
+                            value = as.numeric(alpha))
+        out[[i]] = rbind(out[[i]],
+                      data.frame(scale = 'gamma', index = index[i], 
+                                 sample_size, effort = effort_out, coverage = NA,
+                                 value = gamma))
+        if (betas & index[i] != 'N') 
+            out[[i]] = rbind(out[[i]],
+                             data.frame(scale = 'beta',
+                                        index = paste('beta', index[i], sep = '_'),
+                                        sample_size, effort = effort_out,
+                                        coverage = NA, value = beta))
+        
+        if (index[i] == 'S' & coverage) { 
+            # compute coverage beta estimate
+            # first calc target coverages and find min
+            targ_cov = betaC::C_target(abund_mat)
+            beta_cov = betaC::beta_C(abund_mat, targ_cov)
+            out[[i]] = rbind(out[[i]], 
+                         data.frame(scale = 'beta', index = 'beta_C',
+                         sample_size,
+                         effort = attributes(beta_cov)$N,
+                         coverage = attributes(beta_cov)$C,
+                         value = beta_cov))
+        }
+        
+        if (index[i] == 'S_n' & length(effort) > 1) {
+            out[[i]] = arrange(out[[i]], effort)
+        }
     }  
-   
-    # Rarefied richness ---------------------------------------------------------
-    if (any(index == "S_n")) {
-        S_n  = apply(abund_mat, 1, rarefaction, method = 'IBR', effort = effort,
-                     extrapolate = extrapolate, return_NA = return_NA,
-                     quiet_mode = TRUE)
-        out$value[out$index == "S_n"] = as.numeric(t(S_n))
-    } 
     
-    # Percent rare ------------------------------------------------------------
-    if (any(index == "pct_rare")) {
-        pct_rare = function(x, rare_thres) {
-            S = sum(x > 0)
-            if (S > 0) {
-                N = sum(x)
-                if (rare_thres == "N/S") {
-                    rare_thres = N / S
-                    100 * (sum(x[x > 0] <= rare_thres) / S)
-                } else 
-                    100 * (sum(x[x > 0] <= (rare_thres * N)) / S)
-            } else
-              0
-        }
-        out$value[out$index == "pct_rare"] = apply(abund_mat, 1, pct_rare, rare_thres)
-    }
- 
-    # Probability of Interspecific Encounter (PIE)-------------------------------
-    if (any(index == "PIE")) {
-        # Hurlbert's PIE can only be calculated for two or more individuals
-        plots_n01 = N <= 1 
-        if (sum(plots_n01) == 1) {
-            warning(paste("There is", sum(plots_n01), "plot with less than two individuals.
-                          This is removed for the calculation of PIE."))
-         
-        }
-        if (sum(plots_n01) > 1) {
-            warning(paste("There are", sum(plots_n01), "plots with less than two individuals.
-                          These are removed for the calculation of PIE."))
-         
-        }
-        out$value[out$index == "PIE"] = calc_PIE(abund_mat)
-    }
-   
-    # Effective number of species based on PIE ----------------------------------
-    if (any(index == "S_PIE")) {
-        plots_n01 = N <= 1
-        S_PIE = calc_PIE(abund_mat, ENS = TRUE)
-        S_PIE[plots_n01] = NA
-        out$value[out$index == "S_PIE"] = S_PIE
-    }
-   
-    # Asymptotic estimates species richness -------------------------------------
-    if (any(index == "S_asymp" | index == "f_0")) {
-        S_asymp = try(calc_chao1(abund_mat))
-        if (class(S_asymp) == "try_error") 
-            warning("The Chao richness estimator cannot be calculated for all samples.")
-        else 
-            S_asymp[!is.finite(S_asymp)] = NA
-        S = apply(abund_mat, 1, function(x) sum(x > 0))
-        if (any(index == "S_asymp"))
-            out$value[out$index == "S_asymp"] = S_asymp
-        if (any(index == "f_0"))
-            out$value[out$index == "f_0"] = S_asymp - S
-    }    
+    out = dplyr::bind_rows(out)
+    row.names(out) = 1:nrow(out)
     return(out)
 }
+
+calc_beta_div = function(x, index, effort = NA, coverage = TRUE, ...) {
+    divs <- calc_comm_div(x, index, effort, ...)
+    out = vector('list', length(index))
+    for (i in seq_along(index)) {
+         beta = with(divs, value[scale == 'gamma' & index == index[i]] /
+                           mean(value[scale == 'alpha' & index == index[i]],
+                                na.rm = TRUE))
+         out[[i]] = data.frame(scale = 'beta', index = paste('beta', index[i], sep = '_'),
+                          sample_size = sum(!is.na(with(divs, value[scale == 'alpha']))),
+                         effort = effort, coverage = NA, value = beta)
+
+        if (index[i] == 'S' & coverage) { 
+            # compute coverage beta estimate
+            # first calc target coverages and find min
+            targ_cov = betaC::C_target(x)
+            beta_cov = betaC::beta_C(x, targ_cov)
+            out[[i]] = rbind(out[[i]], 
+                         data.frame(scale = 'beta', index = 'beta_C',
+                         sample_size = sum(!is.na(with(divs, value[scale == 'alpha']))),
+                         effort = attributes(beta_cov)$N,
+                         coverage = attributes(beta_cov)$C,
+                         value = beta_cov))
+        }
+    }
+    out = dplyr::bind_rows(out)
+    row.names(out) = 1:nrow(out)
+    return(out)
+}
+
+
 
 
 #' Get F statistics from diversity indices and grouping vector
@@ -633,7 +668,11 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
     # Abundance distribution pooled in groups
     abund_group = stats::aggregate(mob_in$comm, by = list(groups), FUN = "sum")
 
-    
+    calc_comm_div(abund_group[ , -1], index = index,
+                                       effort = effort_study,
+                                       extrapolate = extrapolate,
+                                       return_NA = return_NA,
+                                       rare_thres = rare_thres)
     
     # calculate diversity statistics
     dat_study = data.frame(scale = 'study',
