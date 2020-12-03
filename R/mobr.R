@@ -1305,7 +1305,7 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # random individual based rarefaction curves
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
-#'                  pooled=TRUE, leg_loc='bottomright')
+#'                  leg_loc='bottomright')
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
 #'                  pooled=FALSE, log='x')
 #' # random sample based rarefaction curves 
@@ -1313,10 +1313,10 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' # spatial sample based rarefaction curves 
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy')
 plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
-                            method, dens_ratio = 1, pooled = TRUE, 
-                            spat_algo = NULL, col = NULL, lwd = 3, log = '',
+                            method, dens_ratio = 1, scales = c('alpha', 'gamma', 'study'),  
+                            avg = FALSE, spat_algo = NULL, col = NULL, lwd = 3, log = '',
                             leg_loc = 'topleft', ...) {
-    if (pooled == FALSE & method != 'IBR')
+    if ('gamma' %in% scales & method != 'IBR')
         stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
     groups  = factor(mob_in$env[ , group_var])
     group_levels = levels(groups) 
@@ -1339,43 +1339,67 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
         xlab = 'Number of individuals'
     else
         xlab = 'Number of samples'
-    if (pooled) {
-        Srare = lapply(group_levels, function(x) 
-                       rarefaction(subset(mob_in, groups == x, 'logical'),
-                                   method, spat_algo = spat_algo, ...))
-        xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
-        ylim = c(1, max(unlist(Srare)))
-        n = as.numeric(names(Srare[[1]]))
-        plot(n, Srare[[1]], type = "n", main = "Group scale",
-             xlab = xlab, ylab = "Species richness", 
-             xlim = xlim, ylim = ylim, log = log)
-        for (i in seq_along(group_levels)) {
-            col_grp = col[i]
-            n = as.numeric(names(Srare[[i]]))
-            lines(n, Srare[[i]], col = col_grp, lwd = lwd, type = "l")
-        }
-    } else {
-        Srare = lapply(group_levels, function(x)
+    if ('alpha' %in% scales) 
+        Salpha = lapply(group_levels, function(x)
                        apply(mob_in$comm[groups == x, ], 1,
                              function(y)  rarefaction(y, method, ...)))
-        xlim = c(1, max(unlist(lapply(Srare, function(x)
+    if ('gamma' %in% scales)
+        Sgamma = lapply(group_levels, function(x) 
+                        rarefaction(subset(mob_in, groups == x, 'logical'),
+                                    method, spat_algo = spat_algo, ...))
+    if ('study' %in% scales) 
+        Sstudy = rarefaction(colSums(mob_in$comm), method,
+                             spat_algo = spat_algo, ...) 
+    if ('alpha' %in% scales) {
+        xlim = c(1, max(unlist(lapply(Salpha, function(x)
                                  lapply(x, function(y)
                                         as.numeric(names(y)))))))
-        ylim = c(1, max(unlist(Srare)))
-        n = as.numeric(names(Srare[[1]][[1]]))
-        plot(n, Srare[[1]][[1]], type = "n", main = "Sample scale",
+        if ('gamma' %in% scales)
+          ylim = c(1, max(unlist(Salpha), unlist(Sgamma)))
+        else 
+          ylim = c(1, max(unlist(Salpha)))
+        n = as.numeric(names(Salpha[[1]][[1]]))
+        plot(n, Salpha[[1]][[1]], type = "n", main = "Alpha scale",
              xlab = xlab, ylab = "Species richness", 
              xlim = xlim, ylim = ylim, log = log)        
         for (i in seq_along(group_levels)) {
-            col_grp = col[i]
-            for (j in seq_along(Srare[[i]])) {
-                 n = as.numeric(names(Srare[[i]][[j]]))
-                 if (n[1] > 0)
-                     lines(n, Srare[[i]][[j]], col = scales::alpha(col_grp, 0.5),
-                           lwd = lwd, type = 'l')
-            }
+            if (avg) {
+                tmp <- lapply(Salpha[[i]], function(x) data.frame(n = 1:length(x), S = x))
+                tmp <- dplyr::bind_rows(tmp, .id = 'id')
+                Savg <- tapply(tmp$S, list(tmp$n), mean)
+                n <- as.numeric(names(Savg))
+                lines(n, Savg, col = col[i], lwd = lwd)
+                if ('gamma' %in% scales) 
+                    lines(as.numeric(names(Sgamma[[i]])), Sgamma[[i]],
+                          lwd = 2, lty = 2, col = col[i])
+            } else {
+                for (j in seq_along(Salpha[[i]])) {
+                     n = as.numeric(names(Salpha[[i]][[j]]))
+                     if (n[1] > 0)
+                         lines(n, Salpha[[i]][[j]], col = scales::alpha(col[i], 0.5),
+                               lwd = lwd, type = 'l')
+                }
+                if ('gamma' %in% scales) 
+                    lines(as.numeric(names(Sgamma[[i]])), Sgamma[[i]],
+                          lwd = 2, lty = 2, col = col[i])
+            }  
         }
-    }
+    }    
+    if ('gamma' %in% scales) {
+        xlim = c(1, max(unlist(sapply(Sgamma, function(x) as.numeric(names(x))))))
+        ylim = c(1, max(unlist(Sgamma)))
+        n = as.numeric(names(Sgamma[[1]]))
+        plot(n, Sgamma[[1]], type = "n", main = "Gamma scale",
+             xlab = xlab, ylab = "Species richness", 
+             xlim = xlim, ylim = ylim, log = log)
+        for (i in seq_along(group_levels)) {
+            n = as.numeric(names(Sgamma[[i]]))
+            lines(n, Sgamma[[i]], col = col[i], lwd = lwd, type = "l")
+        }
+        if ('study' %in% scales)
+            lines(as.numeric(names(Sstudy)), Sstudy, lwd = 2, lty = 2)
+    } 
+
     if (!is.na(leg_loc))
         legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
 }
