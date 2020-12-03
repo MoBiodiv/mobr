@@ -158,7 +158,7 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' @examples  
 #' data(inv_comm)
 #' calc_div(inv_comm[1, ], 'S_n', effort = c(5, 10))
-calc_div = function(x, index, effort = NA, rare_thres = 0.05, ...) {
+calc_div = function(x, index, effort, rare_thres = 0.05, ...) {
     if (index == 'N') out = sum(x)
     if (index == 'S') out = sum(x > 0)
     if (index == 'S_n') out = rarefaction(x, method = 'IBR', effort = effort, ...) 
@@ -258,6 +258,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
     out = vector('list', length = length(index))
     names(out) = index
     # compute indices ---------------------------------------------------------
+	if (any(index == 'S_n') && is.na(effort)) stop('effort value is needed to compute S_n')
     for (i in seq_along(index)) {
         if (any(c('alpha','beta') %in% scales)) 
             alpha = apply(abund_mat, 1, calc_div, index[i], effort, rare_thres,
