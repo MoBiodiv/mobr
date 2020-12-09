@@ -50,34 +50,24 @@ calc_chao1 = function(x) {
 
 #' Calculate probability of interspecific encounter (PIE)
 #' 
-#'  \code{calc_PIE} returns the probability of interspecific  encounter (PIE)
-#'  which is also known as Simpson's evenness index and Gini-Simpson index. For \code{ENS=TRUE},
-#'  PIE will be converted to an asymptotic effective number of species (S_PIE).
+#'  \code{calc_PIE} returns the probability of interspecific encounter (PIE)
+#'  which is also known as Simpson's evenness index and Gini-Simpson index. 
 #' 
-#' The formula of Hurlbert (1971) is used to calculate PIE:
+#' Per default, Hurlbert's (1971) sample-size corrected formula is used:
 #' 
-#' \eqn{PIE = N /(N - 1) * (1 - p_i^2)}
+#' \eqn{PIE = N /(N - 1) * (1 - sum(p_i^2))}
 #' 
 #' where N is the total number of individuals and \eqn{p_i} is the relative abundance
-#' of species i. This formulation uses sampling without replacement and it is
-#' sometimes referred to as the bias corrected formulation of PIE.
+#' of species i. This formulation uses sampling without replacement (\code{replace = F} )
+#' For the uncorrected version (i.e. using sampling with replacement), set \code{replace = T}.
 #' 
-#' For \code{ENS = TRUE}, S_PIE will be returned which represents the species richness of
-#' a hypothetical community with equally-abundant species and infinitely many individuals
-#' corresponding to the observed value of PIE. It is computed as
-#' \eqn{S_PIE = 1 /(1 - PIE)}, which is equal to the
-#' asymptotic estimator for Hill numbers of diversity order 2 provided by Chao et al (2014).
-#' Note that S_PIE is undefined for communities with exactly one individual per species.
-#'  
-#' The code in this function borrows heavily from the function vegan::diversity()
-#' but computes a different quantity. The function vegan::diversity() computes
-#' PIE when sampling with replacement is assumed. The difference between the two 
-#' formulations will decrease as N becomes large. Jari Oksanen and Bob O'Hara are
-#' the original authors of the function vegan::diversity().
+#' In earlier versions of \code{mobr}, there was an additional argument (\code{ENS}) for
+#' the conversion into an effective number of species (i.e S_PIE). Now, \code{calc_SPIE} has become 
+#' its own function and the (\code{ENS}) argument is no longer supported . Please, use \code{calc_SPIE} instead.
+#' 
 #' 
 #' @inheritParams rarefaction
-#' @param ENS Boolean that determines if the effective number of species should
-#' be returned or the raw PIE value. Defaults to FALSE
+#' @param replace if TRUE, sampling with replacement is used. Otherwise, sampling without replacement (default).
 #'
 #' @author Dan McGlinn, Thore Engel
 #' 
@@ -85,45 +75,89 @@ calc_chao1 = function(x) {
 #' Hurlbert, S. H. (1971) The nonconcept of species diversity: a critique and
 #'  alternative parameters. Ecology 52, 577-586.
 #'  
-#' Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R. K., & Ellison, A. M. (2014).
-#'  Rarefaction and extrapolation with Hill numbers: A framework for sampling and estimation in species diversity studies.
-#'  Ecological Monographs 84(1), 45-67.
-#'
 #' @export
 #' @examples 
 #' data(inv_comm)
 #' calc_PIE(inv_comm)
-#' calc_PIE(inv_comm, ENS=TRUE)
-calc_PIE = function(x, ENS=FALSE) {
+#' calc_PIE(c(23,21,12,5,1,2,3), replace=TRUE)
+calc_PIE = function(x, replace=FALSE, ...) {
+    
+    args = as.list(match.call())
+    if ( any(names(args) == "ENS")) 
+        stop("The ENS argumet was removed from this function. Please, use calc_SPIE() for the ENS transformation of PIE. ")
+    
     if ('mob_in' %in% class(x)) {
         x = x$comm
     }
     x = drop(as.matrix(x))
     if (any(x < 0, na.rm = TRUE)) 
         stop("input data must be non-negative")
+    
+    if (any(x%%1!=0, na.rm = TRUE))
+        stop("input data must be integers")
+    
     if (length(dim(x)) > 1) {
         total = apply(x, 1, sum)
         S = apply(x, 1, function(x) return(sum(x > 0)))
-        x = sweep(x, 1, total, "/")
+        p_i = sweep(x, 1, total, "/")
     } else {
         total = sum(x)
         S = sum(x > 0)
-        x = x / total
+        p_i = x / total
     }
-    x = x * x
+    p_i_sq = p_i * p_i
     if (length(dim(x)) > 1) {
-        H = rowSums(x, na.rm = TRUE)
+        H = rowSums(p_i_sq, na.rm = TRUE)
     } else {
-        H = sum(x, na.rm = TRUE)
-        }
+        H = sum(p_i_sq, na.rm = TRUE)
+    }
+    
     # calculate PIE without replacement (for total >= 2)
-    H = ifelse(total < 2, NA, (total / (total - 1) * (1 - H)))
-    if (ENS) {
-        # convert to effective number of species (except for PIE == 1)
-        H = ifelse(H == 1 | S == total, NA, (1 / (1 - H)))
-    }     
-    return(H)
+    if(replace){
+        PIE=1 - H
+    } else {
+        PIE = total / (total - 1) * (1 - H)
+    }
+    if (!replace) PIE [total==1 ] <- NA
+    if(any(is.na(PIE))) warning("NA was returned because because the sample just contains one individual.")
+    
+    return(PIE)
 }
+
+#' Calculate S_PIE
+#' 
+#' S_PIE is the effective number transformation of the probability of interspecific encounter (PIE). 
+#' 
+#' Per default the sample size corrected version is returned (\code{replace = F}), which is the asymptotic
+#' estimator for the Hill number of diversity order q=2 (Chao et al, 2014). If \code{replace = T} the uncorrected
+#' hill number is returned. This is the same as vegan::diversity(x, index="invsimpson").
+#' 
+#' 
+#' @inheritParams calc_PIE
+#' @return
+#' @export
+#' 
+#' @references 
+#' Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R. K., & Ellison, A. M. (2014).
+#'  Rarefaction and extrapolation with Hill numbers: A framework for sampling and estimation in species diversity studies.
+#'  Ecological Monographs 84(1), 45-67.
+#'
+#' @examples
+#' data(inv_comm)
+#' calc_SPIE(inv_comm)
+#' calc_SPIE(c(23,21,12,5,1,2,3), replace=TRUE)
+calc_SPIE = function(x, replace=F){
+    PIE=calc_PIE(x, replace = replace)
+    SPIE=1 / (1 - PIE)
+    SPIE[PIE==1]=NA
+    if(any(PIE==1, na.rm = T)) warning("NA was returned because PIE = 1. This happens in samples where all species are singletons.")
+    
+    return(SPIE)
+    
+}
+
+  
+
 
 # generate a single bootstrap sample of gamma-scale biodiversity indices
 boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
