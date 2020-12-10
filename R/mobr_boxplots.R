@@ -209,7 +209,7 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' @examples  
 #' data(inv_comm)
 #' calc_div(inv_comm[1, ], 'S_n', effort = c(5, 10))
-calc_div = function(x, index, effort, rare_thres = 0.05, replace = F, ...) {
+calc_div = function(x, index, effort, rare_thres = 0.05, replace = FALSE, ...) {
     if (index == 'N') out = sum(x)
     if (index == 'S') out = sum(x > 0)
     if (index == 'S_n') out = rarefaction(x, method = 'IBR', effort = effort, ...) 
@@ -272,8 +272,8 @@ calc_div = function(x, index, effort, rare_thres = 0.05, replace = F, ...) {
 #'                            \code{alpha} scales.  
 #' } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}
 #' 
-#' @param replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with replacement is used. Otherwise,
-#'   sampling without replacement (default).
+#' @param replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+#'   replacement is used. Otherwise, sampling without replacement (default).
 #'   
 #' @details This function is primarily intended as auxiliary function used in
 #' \code{\link{get_mob_stats}}, but can be also used directly for data exploration.

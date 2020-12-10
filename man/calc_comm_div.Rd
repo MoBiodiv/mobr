@@ -63,8 +63,8 @@ best small sample behavior.}
                            \code{alpha} scales.  
 } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}}
 
-\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with replacement is used. Otherwise,
-sampling without replacement (default).}
+\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+replacement is used. Otherwise, sampling without replacement (default).}
 }
 \value{
 A \code{data.frame} with four columns:

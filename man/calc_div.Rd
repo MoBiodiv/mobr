@@ -5,7 +5,7 @@
 \title{Compute various diversity indices from a vector of species abundances (i.e.,
 one row of a community matrix)}
 \usage{
-calc_div(x, index, effort, rare_thres = 0.05, replace = F, ...)
+calc_div(x, index, effort, rare_thres = 0.05, replace = FALSE, ...)
 }
 \arguments{
 \item{x}{is a vector of species abundances}
@@ -36,8 +36,8 @@ considered rare. It can also be specified as "N/S" which results in using
 average abundance as the threshold which McGill (2011) found to have the 
 best small sample behavior.}
 
-\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with replacement is used. Otherwise,
-sampling without replacement (default).}
+\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+replacement is used. Otherwise, sampling without replacement (default).}
 }
 \description{
 Compute various diversity indices from a vector of species abundances (i.e.,
