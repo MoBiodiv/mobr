@@ -130,7 +130,7 @@ calc_PIE = function(x, replace = FALSE, ...) {
     if (!replace) 
         PIE[total == 1] = NA
     if (any(is.na(PIE))) 
-        warning("NA was returned because because the sample just contains one individual.")
+        warning("NA was returned because the sample contains one or zero individuals.")
     
     return(PIE)
 }
