@@ -12,7 +12,8 @@ calc_comm_div(
   return_NA = FALSE,
   rare_thres = 0.05,
   scales = c("alpha", "gamma", "beta"),
-  coverage = TRUE
+  coverage = TRUE,
+  replace = FALSE
 )
 }
 \arguments{
@@ -61,6 +62,9 @@ best small sample behavior.}
     \item \code{beta} ... the ratio of diversity at the \code{gamma} and 
                            \code{alpha} scales.  
 } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}}
+
+\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with replacement is used. Otherwise,
+sampling without replacement (default).}
 }
 \value{
 A \code{data.frame} with four columns:

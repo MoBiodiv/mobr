@@ -209,12 +209,12 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' @examples  
 #' data(inv_comm)
 #' calc_div(inv_comm[1, ], 'S_n', effort = c(5, 10))
-calc_div = function(x, index, effort, rare_thres = 0.05, ...) {
+calc_div = function(x, index, effort, rare_thres = 0.05, replace = F, ...) {
     if (index == 'N') out = sum(x)
     if (index == 'S') out = sum(x > 0)
     if (index == 'S_n') out = rarefaction(x, method = 'IBR', effort = effort, ...) 
-    if (index == 'PIE') out = calc_PIE(x, ENS = FALSE)
-    if (index == 'S_PIE') out = calc_PIE(x, ENS = TRUE)
+    if (index == 'PIE') out = calc_PIE(x, replace = replace)
+    if (index == 'S_PIE') out = calc_SPIE(x, replace = replace)
     if (index == 'f_0') out = calc_div(x, 'S_asymp') - calc_div(x, 'S')
     if (index == 'S_asymp') {
         S_asymp = try(calc_chao1(x))
@@ -272,7 +272,9 @@ calc_div = function(x, index, effort, rare_thres = 0.05, ...) {
 #'                            \code{alpha} scales.  
 #' } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}
 #' 
-#' 
+#' @param replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with replacement is used. Otherwise,
+#'   sampling without replacement (default).
+#'   
 #' @details This function is primarily intended as auxiliary function used in
 #' \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
 #' 
@@ -303,7 +305,8 @@ calc_comm_div = function(abund_mat, index, effort = NA,
                          extrapolate = TRUE,
                          return_NA = FALSE, rare_thres = 0.05,
                          scales = c('alpha', 'gamma', 'beta'),
-                         coverage = TRUE) {
+                         coverage = TRUE,
+                         replace = FALSE) {
     
     # store each calculated index into its own data.frame in a list
     out = vector('list', length = length(index))
@@ -314,11 +317,11 @@ calc_comm_div = function(abund_mat, index, effort = NA,
         if (any(c('alpha','beta') %in% scales)) 
             alpha = apply(abund_mat, 1, calc_div, index[i], effort, rare_thres,
                           extrapolate = extrapolate, return_NA = return_NA, 
-                          quiet = TRUE)
+                          quiet = TRUE, replace = replace)
         if (any(c('gamma', 'beta') %in% scales))
             gamma = calc_div(colSums(abund_mat), index[i], effort, rare_thres,
                              extrapolate = extrapolate, return_NA = return_NA, 
-                             quiet = TRUE)
+                             quiet = TRUE, replace = replace)
         if ('beta' %in% scales) {
             # compute beta
             if (index[i] == 'S_n' & length(effort) > 1) {
