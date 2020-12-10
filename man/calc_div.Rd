@@ -5,7 +5,7 @@
 \title{Compute various diversity indices from a vector of species abundances (i.e.,
 one row of a community matrix)}
 \usage{
-calc_div(x, index, effort = NA, rare_thres = 0.05, ...)
+calc_div(x, index, effort, rare_thres = 0.05, ...)
 }
 \arguments{
 \item{x}{is a vector of species abundances}

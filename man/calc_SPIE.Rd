@@ -11,26 +11,32 @@ calc_SPIE(x, replace = F)
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{replace}{if TRUE, sampling with replacement is used. Otherwise, sampling without replacement (default).}
+\item{replace}{if TRUE, sampling with replacement is used. Otherwise,
+sampling without replacement (default).}
 }
 \value{
 
 }
 \description{
-S_PIE is the effective number transformation of the probability of interspecific encounter (PIE).
+S_PIE is the effective number of species transformation of the probability of
+interspecific encounter (PIE) which is equal to the number of equally common
+species that result in that value of PIE.
 }
 \details{
-Per default the sample size corrected version is returned (\code{replace = F}), which is the asymptotic
-estimator for the Hill number of diversity order q=2 (Chao et al, 2014). If \code{replace = T} the uncorrected
-hill number is returned. This is the same as vegan::diversity(x, index="invsimpson").
+By default the sample size corrected version is returned (\code{replace =
+F}), which is the asymptotic estimator for the Hill number of diversity order
+q=2 (Chao et al, 2014). If \code{replace = T} the uncorrected hill number is
+returned. This is the same as vegan::diversity(x, index="invsimpson").
 }
 \examples{
 data(inv_comm)
 calc_SPIE(inv_comm)
+calc_SPIE(inv_comm, replace = TRUE)
 calc_SPIE(c(23,21,12,5,1,2,3), replace=TRUE)
 }
 \references{
-Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R. K., & Ellison, A. M. (2014).
- Rarefaction and extrapolation with Hill numbers: A framework for sampling and estimation in species diversity studies.
- Ecological Monographs 84(1), 45-67.
+Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R.
+K., & Ellison, A. M. (2014). Rarefaction and extrapolation with Hill numbers:
+A framework for sampling and estimation in species diversity studies.
+Ecological Monographs 84(1), 45-67.
 }

@@ -10,7 +10,8 @@ plot_rarefaction(
   ref_level = NULL,
   method,
   dens_ratio = 1,
-  pooled = TRUE,
+  scales = c("alpha", "gamma", "study"),
+  avg = FALSE,
   spat_algo = NULL,
   col = NULL,
   lwd = 3,
@@ -52,10 +53,6 @@ and the community data (i.e., x) under consideration. This argument is
 used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
-\item{pooled}{Boolean specifying if samples should be pooled at the group
-level or not. Defaults to TRUE. This argument only applies when
-the individual based rarefaction is used (i.e., \code{method = 'indiv'})}
-
 \item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
 for k-nearest neighbor and k-nearest centroid neighbor sampling 
 respectively. It defaults to k-nearest neighbor which is a 
@@ -74,6 +71,10 @@ both axes are log transformed respectively}
 options include: 'lowerleft', 'topleft', 'loweright','topright'}
 
 \item{...}{other arguments to provide to \code{\link[mobr]{rarefaction}}}
+
+\item{pooled}{Boolean specifying if samples should be pooled at the group
+level or not. Defaults to TRUE. This argument only applies when
+the individual based rarefaction is used (i.e., \code{method = 'indiv'})}
 }
 \description{
 Plot rarefaction curves for each treatment group
@@ -84,7 +85,7 @@ data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 # random individual based rarefaction curves
 plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
-                 pooled=TRUE, leg_loc='bottomright')
+                 leg_loc='bottomright')
 plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
                  pooled=FALSE, log='x')
 # random sample based rarefaction curves 

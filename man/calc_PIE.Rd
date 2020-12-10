@@ -11,29 +11,35 @@ calc_PIE(x, replace = FALSE, ...)
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{replace}{if TRUE, sampling with replacement is used. Otherwise, sampling without replacement (default).}
+\item{replace}{if TRUE, sampling with replacement is used. Otherwise,
+sampling without replacement (default).}
 }
 \description{
 \code{calc_PIE} returns the probability of interspecific encounter (PIE)
  which is also known as Simpson's evenness index and Gini-Simpson index.
 }
 \details{
-Per default, Hurlbert's (1971) sample-size corrected formula is used:
+By default, Hurlbert's (1971) sample-size corrected formula is used:
 
 \eqn{PIE = N /(N - 1) * (1 - sum(p_i^2))}
 
-where N is the total number of individuals and \eqn{p_i} is the relative abundance
-of species i. This formulation uses sampling without replacement (\code{replace = F} )
-For the uncorrected version (i.e. using sampling with replacement), set \code{replace = T}.
+where N is the total number of individuals and \eqn{p_i} is the relative
+abundance of species i. This formulation uses sampling without replacement
+(\code{replace = F} ) For sampling with replacement (i.e., the sample-size
+uncorrected version), set \code{replace = T}.
 
-In earlier versions of \code{mobr}, there was an additional argument (\code{ENS}) for
-the conversion into an effective number of species (i.e S_PIE). Now, \code{calc_SPIE} has become 
-its own function and the (\code{ENS}) argument is no longer supported . Please, use \code{calc_SPIE} instead.
+In earlier versions of \code{mobr}, there was an additional argument
+(\code{ENS}) for the conversion into an effective number of species (i.e
+S_PIE). Now, \code{calc_SPIE} has become its own function and the
+(\code{ENS}) argument is no longer supported . Please, use \code{calc_SPIE}
+instead.
 }
 \examples{
 data(inv_comm)
 calc_PIE(inv_comm)
-calc_PIE(c(23,21,12,5,1,2,3), replace=TRUE)
+calc_PIE(inv_comm, replace = TRUE)
+calc_PIE(c(23,21,12,5,1,2,3))
+calc_PIE(c(23,21,12,5,1,2,3), replace = TRUE)
 }
 \references{
 Hurlbert, S. H. (1971) The nonconcept of species diversity: a critique and

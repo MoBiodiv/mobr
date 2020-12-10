@@ -50,24 +50,28 @@ calc_chao1 = function(x) {
 
 #' Calculate probability of interspecific encounter (PIE)
 #' 
-#'  \code{calc_PIE} returns the probability of interspecific encounter (PIE)
+#' \code{calc_PIE} returns the probability of interspecific encounter (PIE)
 #'  which is also known as Simpson's evenness index and Gini-Simpson index. 
 #' 
-#' Per default, Hurlbert's (1971) sample-size corrected formula is used:
+#' By default, Hurlbert's (1971) sample-size corrected formula is used:
 #' 
 #' \eqn{PIE = N /(N - 1) * (1 - sum(p_i^2))}
 #' 
-#' where N is the total number of individuals and \eqn{p_i} is the relative abundance
-#' of species i. This formulation uses sampling without replacement (\code{replace = F} )
-#' For the uncorrected version (i.e. using sampling with replacement), set \code{replace = T}.
-#' 
-#' In earlier versions of \code{mobr}, there was an additional argument (\code{ENS}) for
-#' the conversion into an effective number of species (i.e S_PIE). Now, \code{calc_SPIE} has become 
-#' its own function and the (\code{ENS}) argument is no longer supported . Please, use \code{calc_SPIE} instead.
-#' 
+#' where N is the total number of individuals and \eqn{p_i} is the relative
+#' abundance of species i. This formulation uses sampling without replacement
+#' (\code{replace = F} ) For sampling with replacement (i.e., the sample-size
+#' uncorrected version), set \code{replace = T}.
+#'
+#' In earlier versions of \code{mobr}, there was an additional argument
+#' (\code{ENS}) for the conversion into an effective number of species (i.e
+#' S_PIE). Now, \code{calc_SPIE} has become its own function and the
+#' (\code{ENS}) argument is no longer supported . Please, use \code{calc_SPIE}
+#' instead.
+#'
 #' 
 #' @inheritParams rarefaction
-#' @param replace if TRUE, sampling with replacement is used. Otherwise, sampling without replacement (default).
+#' @param replace if TRUE, sampling with replacement is used. Otherwise,
+#'   sampling without replacement (default).
 #'
 #' @author Dan McGlinn, Thore Engel
 #' 
@@ -79,11 +83,13 @@ calc_chao1 = function(x) {
 #' @examples 
 #' data(inv_comm)
 #' calc_PIE(inv_comm)
-#' calc_PIE(c(23,21,12,5,1,2,3), replace=TRUE)
-calc_PIE = function(x, replace=FALSE, ...) {
+#' calc_PIE(inv_comm, replace = TRUE)
+#' calc_PIE(c(23,21,12,5,1,2,3))
+#' calc_PIE(c(23,21,12,5,1,2,3), replace = TRUE)
+calc_PIE = function(x, replace = FALSE, ...) {
     
     args = as.list(match.call())
-    if ( any(names(args) == "ENS")) 
+    if (any(names(args) == "ENS")) 
         stop("The ENS argumet was removed from this function. Please, use calc_SPIE() for the ENS transformation of PIE. ")
     
     if ('mob_in' %in% class(x)) {
@@ -93,7 +99,7 @@ calc_PIE = function(x, replace=FALSE, ...) {
     if (any(x < 0, na.rm = TRUE)) 
         stop("input data must be non-negative")
     
-    if (any(x%%1!=0, na.rm = TRUE))
+    if (any(x %% 1 != 0, na.rm = TRUE))
         stop("input data must be integers")
     
     if (length(dim(x)) > 1) {
@@ -113,47 +119,58 @@ calc_PIE = function(x, replace=FALSE, ...) {
     }
     
     # calculate PIE without replacement (for total >= 2)
-    if(replace){
-        PIE=1 - H
+    if (replace) {
+        PIE = 1 - H
     } else {
         PIE = total / (total - 1) * (1 - H)
     }
-    if (!replace) PIE [total==1 ] <- NA
-    if(any(is.na(PIE))) warning("NA was returned because because the sample just contains one individual.")
+    # if sample had zero individuals set PIE to 0
+    PIE[total == 0] = 0
+    # if sample only contains 1 individual set PIE to NA
+    if (!replace) 
+        PIE[total == 1] = NA
+    if (any(is.na(PIE))) 
+        warning("NA was returned because because the sample just contains one individual.")
     
     return(PIE)
 }
 
 #' Calculate S_PIE
-#' 
-#' S_PIE is the effective number transformation of the probability of interspecific encounter (PIE). 
-#' 
-#' Per default the sample size corrected version is returned (\code{replace = F}), which is the asymptotic
-#' estimator for the Hill number of diversity order q=2 (Chao et al, 2014). If \code{replace = T} the uncorrected
-#' hill number is returned. This is the same as vegan::diversity(x, index="invsimpson").
-#' 
+#'
+#' S_PIE is the effective number of species transformation of the probability of
+#' interspecific encounter (PIE) which is equal to the number of equally common
+#' species that result in that value of PIE.
+#'
+#' By default the sample size corrected version is returned (\code{replace =
+#' F}), which is the asymptotic estimator for the Hill number of diversity order
+#' q=2 (Chao et al, 2014). If \code{replace = T} the uncorrected hill number is
+#' returned. This is the same as vegan::diversity(x, index="invsimpson").
+#'
 #' 
 #' @inheritParams calc_PIE
 #' @return
 #' @export
 #' 
 #' @references 
-#' Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R. K., & Ellison, A. M. (2014).
-#'  Rarefaction and extrapolation with Hill numbers: A framework for sampling and estimation in species diversity studies.
-#'  Ecological Monographs 84(1), 45-67.
+#' Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R.
+#' K., & Ellison, A. M. (2014). Rarefaction and extrapolation with Hill numbers:
+#' A framework for sampling and estimation in species diversity studies.
+#' Ecological Monographs 84(1), 45-67.
 #'
 #' @examples
 #' data(inv_comm)
 #' calc_SPIE(inv_comm)
+#' calc_SPIE(inv_comm, replace = TRUE)
 #' calc_SPIE(c(23,21,12,5,1,2,3), replace=TRUE)
-calc_SPIE = function(x, replace=F){
-    PIE=calc_PIE(x, replace = replace)
-    SPIE=1 / (1 - PIE)
-    SPIE[PIE==1]=NA
-    if(any(PIE==1, na.rm = T)) warning("NA was returned because PIE = 1. This happens in samples where all species are singletons.")
+calc_SPIE = function(x, replace = F) {
+    PIE = calc_PIE(x, replace = replace)
+    SPIE = 1 / (1 - PIE)
+    SPIE[PIE == 0] = 0
+    SPIE[PIE == 1] = NA
+    if (any(PIE == 1, na.rm = T))
+        warning("NA was returned because PIE = 1. This happens in samples where all species are singletons.")
     
     return(SPIE)
-    
 }
 
   
