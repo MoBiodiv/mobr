@@ -163,12 +163,18 @@ calc_PIE = function(x, replace = FALSE, ...) {
 #' calc_SPIE(inv_comm, replace = TRUE)
 #' calc_SPIE(c(23,21,12,5,1,2,3), replace=TRUE)
 calc_SPIE = function(x, replace = F) {
+    
     PIE = calc_PIE(x, replace = replace)
     SPIE = 1 / (1 - PIE)
-    SPIE[PIE == 0] = 0
-    SPIE[PIE == 1] = NA
-    if (any(PIE == 1, na.rm = T))
-        warning("NA was returned because PIE = 1. This happens in samples where all species are singletons.")
+    SPIE[sapply(PIE, function(x)
+        isTRUE(all.equal(x, 0)))] = 0
+    SPIE[sapply(PIE, function(x)
+        isTRUE(all.equal(x, 1)))] = NA
+    if (any(sapply(PIE, function(x)
+        isTRUE(all.equal(x, 1))), na.rm = T))
+        warning(
+            "NA was returned because PIE = 1. This happens in samples where all species are singletons."
+        )
     
     return(SPIE)
 }
