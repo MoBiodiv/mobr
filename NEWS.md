@@ -1,3 +1,9 @@
+## version 2.0.2
+---
+### change for CRAN
+- remove sort on a `data.frame` from the function `plot_abu` which does not
+change how this function behaves but adheres to CRAN standards.
+
 ## version 2.0.1
 ---
 

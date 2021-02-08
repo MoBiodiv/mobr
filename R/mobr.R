@@ -1248,7 +1248,7 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
                 lines(n_cul, s_cul, col = col_grp, lwd = lwd, type = "l")
             } else {
                 for (j in 1:nrow(comm_grp)) {
-                    sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0])
+                    sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0]))
                     s_cul = 1:length(sad_sort) / length(sad_sort)
                     n_cul = sapply(1:length(sad_sort), function(x)
                                    sum(sad_sort[1:x]) / sum(sad_sort))
@@ -1274,7 +1274,7 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
                       type = "l")
              } else {
                  for (j in 1:nrow(comm_grp)) {
-                     sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0], decreasing = TRUE)
+                     sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0], decreasing = TRUE))
                      lines(1:length(sad_sort), sad_sort / sum(sad_sort),
                            col = scales::alpha(col_grp, 0.5),
                            lwd = lwd, type = "l")
@@ -1296,7 +1296,6 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' @inheritParams plot.mob_out
 #' @inheritParams plot_abu
 #' @inheritParams rarefaction
-#' @inheritParms 
 #' @importFrom scales alpha
 #' @importFrom graphics lines legend
 #' @export
