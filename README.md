@@ -77,4 +77,5 @@ plot(inv_deltaS, 'b1')
 
 ## Thanks
 
-* [Gregor Seyer](https://www.jku.at/en/institute-of-applied-statistics/about/team/gregor-seyer/) for providing a constructive review of our CRAN submission
+* Gregor Seyer for providing a constructive review of our CRAN submission
+* Kurt Hornik for helping us keep up with CRAN changes. 
