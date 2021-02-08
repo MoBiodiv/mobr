@@ -3,11 +3,23 @@ library(betaC)
 library(tidyverse)
 library(devtools)
 load_all()
+
+# sad aggregator
+agg_sad <- function(x, by = '') { 
+    
+}
+
+
 # copy 4 functions from beta_cartoon.R 
 get_curves <- function(mob_in, group_var) {
   # drop rows with no occurrences
   mob_in <- subset(mob_in, subset = rowSums(mob_in$comm) > 0, type = 'logical')
   groups <- mob_in$env[ , group_var]
+  # look for groups that are not assigned NA
+  good_groups <- !is.na(groups)  
+  # drop rows that are not in a good group
+  mob_in <- subset(mob_in, subset = good_groups, type = 'logical')
+  groups <- groups[good_groups]
   group_lvs <- unique(groups)
   uber <- vegan::rarefy(colSums(mob_in$comm), sample = 1:sum(mob_in$comm),
                         se = TRUE)
@@ -18,40 +30,40 @@ get_curves <- function(mob_in, group_var) {
   N_lv <- rep(0, length(group_lvs))
   r_dat_pool <- array(NA, c(2, length(group_lvs), sum(mob_in$comm)))
   for (i in seq_along(group_lvs)) {
-    comm_lv <- mob_in$comm[groups == group_lvs[i], ]
-    N_lv[i] <- sum(comm_lv)
-    r_dat_pool[ , i, 1:N_lv[i]] <- vegan::rarefy(colSums(comm_lv), sample = 1:N_lv[i],
-                                   se = TRUE)
-    out <- rbind(out, 
-                 data.frame(scale = 'pool',
-                            group = group_lvs[i],
-                            sample = 0, 
-                            N = 1:N_lv[i],
-                            S = r_dat_pool[1, i, 1:N_lv[i]],
-                            se = r_dat_pool[2, i, 1:N_lv[i]]))
-    r_dat <- array(NA, c(2, nrow(comm_lv), max(rowSums(comm_lv))))
-    # now sample plots within groups
-    for (j in 1:nrow(comm_lv)) {
-      Nj <- sum(comm_lv[j, ]) 
-      r_dat[ , j, 1:Nj] <- vegan::rarefy(comm_lv[j, ], sample = 1:Nj,
-                             se = TRUE)
+      comm_lv <- mob_in$comm[groups == group_lvs[i], ]
+      N_lv[i] <- sum(comm_lv)
+      r_dat_pool[ , i, 1:N_lv[i]] <- vegan::rarefy(colSums(comm_lv), sample = 1:N_lv[i],
+                                                   se = TRUE)
       out <- rbind(out, 
-                 data.frame(scale = 'plot',
-                            group = group_lvs[i],
-                            sample = j,
-                            N = 1:Nj,
-                            S = r_dat[1, j, 1:Nj],
-                            se = r_dat[2, j, 1:Nj]))
-    }
-    # average across plots within a group
-    Nmin <- min(rowSums(comm_lv))
-    out <- rbind(out, 
-                 data.frame(scale = 'plot',
-                            group = group_lvs[i],
-                            sample = 'avg', 
-                            N = 1:Nmin,
-                            S = colMeans(r_dat[1, , 1:Nmin], na.rm = TRUE),
-                            se = colMeans(r_dat[2, , 1:Nmin], na.rm = TRUE)))
+                   data.frame(scale = 'pool',
+                              group = group_lvs[i],
+                              sample = 0, 
+                              N = 1:N_lv[i],
+                              S = r_dat_pool[1, i, 1:N_lv[i]],
+                              se = r_dat_pool[2, i, 1:N_lv[i]]))
+      r_dat <- array(NA, c(2, nrow(comm_lv), max(rowSums(comm_lv))))
+      # now sample plots within groups
+      for (j in 1:nrow(comm_lv)) {
+          Nj <- sum(comm_lv[j, ]) 
+          r_dat[ , j, 1:Nj] <- vegan::rarefy(comm_lv[j, ], sample = 1:Nj,
+                                             se = TRUE)
+          out <- rbind(out, 
+                       data.frame(scale = 'plot',
+                                  group = group_lvs[i],
+                                  sample = j,
+                                  N = 1:Nj,
+                                  S = r_dat[1, j, 1:Nj],
+                                  se = r_dat[2, j, 1:Nj]))
+      }
+      # average across plots within a group
+      Nmin <- min(rowSums(comm_lv))
+      out <- rbind(out, 
+                   data.frame(scale = 'plot',
+                              group = group_lvs[i],
+                              sample = 'avg', 
+                              N = 1:Nmin,
+                              S = colMeans(r_dat[1, , 1:Nmin], na.rm = TRUE),
+                              se = colMeans(r_dat[2, , 1:Nmin], na.rm = TRUE)))
   }
   # average pooled curves across groups
   Nmin <- min(N_lv)
@@ -74,16 +86,26 @@ add_CI <- function(dat, col='pink') {
 }
 plot_curves2 = function(dat, log='', lwd=2, cols = c('red', 'dodgerblue'), CI = FALSE,
                         CI_scale = c('gamma', 'study'), ...) {
-    scales = unique(dat$scale)
     plot(S ~ N, data = dat, log = log, type = 'n', ...)
     if (CI) 
         add_CI(subset(dat, subset = scale == CI_scale), col = 'grey80')
-    for (i in seq_along(scales)) { 
-        lines(S ~ N, data = dat, subset = scale == scales[i], col = cols[i],
-              lwd = lwd)
+    ict <- 1
+    scales = unique(dat$scale)
+    for (i in seq_along(scales)) {
+        groups <- unique(dat$group[dat$scale == scales[i]])
+        for (j in seq_along(groups)) {
+             samples = unique(dat$sample[dat$scale == scales[i] & dat$group == groups[j]])
+             for (k in seq_along(samples)) {
+                 lty = ifelse(groups[j] == 'avg' | samples[k] == 'avg', 2, 1)
+                 lines(S ~ N, data = dat,
+                       subset = scale == scales[i] & group == groups[j] & sample == samples[k],
+                       col = cols[ict], lwd = lwd, lty = lty)
+                 ict <- ict + 1
+             }  
+        }
     }
-        
 }
+
 get_turnover <- function(mob_in, method = 'bray', binary = FALSE) {
     groups <- mob_in$env[ , 'yr']
     sites <- mob_in$env$site
@@ -120,7 +142,139 @@ get_turnover <- function(mob_in, method = 'bray', binary = FALSE) {
     return(dat)
 }
 
-# Konza Patch-burn experiment Grasshopper community data url:
+plot_marb <- function(sad, cols, border_col = 'black', ...) {
+    x_coords <- unlist(sapply(sad, runif))
+    y_coords <- unlist(sapply(sad, runif))
+    cols <- unlist(mapply(rep, cols, sad))
+    plot(x_coords, y_coords, col = cols, pch = 19, cex = 1.5,
+         xlab ='', ylab='', axes = F, ...)
+    box(col = border_col, lwd = 2)
+}
+
+
+# Cartoon community -------------------------------------
+spp_col = c('species1' = '#a6cee3', 'species2' = '#1f78b4', 'species3' = '#b2df8a',
+            'species4' = '#33a02c', 'species5' = '#fb9a99','species6' = '#e31a1c', 
+            'species7' = '#fdbf6f', 'species8' = '#ff7f00', 'species9' = '#cab2d6',
+            'species10' = '#6a3d9a', 'species11' = '#ffff99', 'species12' = '#b15928')
+spp_col <- dichromat::colorschemes$Categorical.12
+line_col <- dichromat::colorschemes$Categorical.12
+
+cart <- read.csv('../mob-scripts/data/homogenization_cartoon_comm.csv')
+# add small amount of stochasticity to homo3 scenario
+tmp <- subset(cart, case == 'homo3')
+tmp_comm <-  tmp[ , -(1:4)]
+
+for (i in 1:nrow(tmp_comm)) {
+  for (j in 1:ncol(tmp_comm)) { 
+    if (runif(1) > 0.4)
+      tmp_comm[i, j] = tmp_comm[i, j] + 1
+    #tmp_comm[i, j] = ifelse(tmp_comm[i, j] > 0, tmp_comm[i, j] + sample(10, size = 1), 
+    #                        tmp_comm[i, j])
+  }
+}
+
+cart[cart$case == 'homo3', -c(1:4)] <- tmp_comm
+
+comm <- cart[ , -c(1:4)]
+comm <- as.matrix(comm)
+attrs <- cart[ , c(1:4)]
+cart_mob_in <- make_mob_in(comm, attrs)
+#stats <- get_mob_stats(cart_mob_in, group_var = 'case')
+#plot(stats)
+
+
+
+# focus on turnover case as example
+
+cases <- unique(cart_mob_in$env$case)
+cases <- c('homo3', 'homo4')
+for (i in seq_along(cases)) { 
+  cart_sub <- subset(cart_mob_in, case == cases[i])
+
+  cart_sub$env$yr2 <- c(1,1,1,2,2,2,NA,NA,NA)
+  curves_yr2 <- get_curves(cart_sub, 'yr2')
+
+  cart_sub$env$yr3 <- c(1,1,1,NA,NA,NA,3,3,3)
+  curves_yr3 <- get_curves(cart_sub, 'yr3')
+
+  
+  # plot each site and year combo as a seperate plots
+  curves_yr <- get_curves(cart_sub, 'yr')
+  curves_si <- get_curves(cart_sub, 'site')
+  maxS <- max(curves_yr$S)
+  
+  
+  pdf(paste('./figs/cartoon_case_', cases[i], '.pdf', sep = '')   )
+  ## community marble diagrams
+  par(mfrow = c(3,3))
+  #par(mfrow=c(2, 2))
+  ict <- 0
+  for (i in 1:3) { 
+       for (j in 1:3) { 
+           ict <- ict + 1
+           tmp <- with(cart_sub, subset(comm, env$site == i & env$yr == j))
+           plot_marb(tmp, spp_col, line_col[ict])
+           mtext(side = 3, paste('Year', j), padj = -1)
+           mtext(side = 2, paste('Site', i), padj = -1)
+       }
+  }
+  par(mfrow = c(2,3))
+  ## now curves
+  cols <- c('black', 'red', 'blue', 'purple')
+  #spatial beta - site 1&2 yr 1 curves
+  for (i in 1:3) {
+      plot_curves2(subset(curves_yr2, (scale == 'plot' | scale == 'pool') & group == i),
+                   ylim = c(1, maxS), main = paste('Spatial beta, year =', i),
+                   col = c('purple', 'red', 'blue', 'green3', 'purple'))
+  }   
+  
+#  plot_curves2(subset(curves_yr, 
+#                     (scale == 'plot' | scale == 'pool') & group == 2),
+#               ylim = c(1, maxS),
+#               main = 'Spatial beta, year = 2', col = c('yellowgreen', 'yellow3', 'green3', 'yellowgreen'))
+  for (i in 1:3) {
+      plot_curves2(subset(curves_si, (scale == 'plot' | scale == 'pool') & group == i),
+                   ylim = c(1, maxS), main = paste('Temporal beta, site =', i),
+                   col = c('darkorange', 'red', 'yellow3', 'dodgerblue', 'darkorange'))
+  }
+  
+#  plot_curves2(subset(curves_si, 
+#                     (scale == 'plot' | scale == 'pool') & group == 2),
+#               ylim = c(1, maxS),
+#               main = 'Temporal beta, site = 2', col = c('lightseagreen', 'blue', 'green3', 'lightseagreen'))
+    
+  par(mfrow=c(1,1))
+  plot_curves2(subset(curves_si,
+                      scale == 'uber' | scale == 'pool'),
+               ylim = c(1, maxS), lwd = 3, 
+               main = 'Spatial beta', col = c('#662F00', 'darkorange', 'lightseagreen', 'purple', '#662F00'))
+  plot_curves2(subset(curves_yr3,
+                      scale == 'uber' | scale == 'pool'),
+               ylim = c(1, maxS), lwd = 3, 
+               main = 'Temporal beta', col = c('#996222', 'purple', 'yellowgreen', 'green3', '#996222'))
+
+  dev.off()
+
+}
+
+
+par(mfrow=c(1,2))
+
+  plot_curves2(subset(curves_yr2,
+                      scale == 'uber' | scale == 'pool'),
+               ylim = c(1, maxS), lwd = 3, 
+               main = 'Temporal beta', col = c('#996222', 'purple', 'yellowgreen', '#996222'))
+
+  plot_curves2(subset(curves_yr3,
+                      scale == 'uber' | scale == 'pool'),
+               ylim = c(1, maxS), lwd = 3, 
+               main = 'Temporal beta', col = c('#996222', 'purple', 'yellowgreen', '#996222'))
+
+
+
+# Konza Patch-burn experiment Grasshopper community -------------------------
+# data url:
 # http://lter.konza.ksu.edu/content/pbg07-grasshopper-species-abundances-patch-burn-grazing-experiment-konza-prairie
 # Metadata ---------------------------------------------------------------------
 # Effects of patch-burn grazing management on plant and animal diversity and the
