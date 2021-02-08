@@ -808,8 +808,10 @@ get_ind_dens = function(comm, density_stat){
         ind_dens = sum(comm) / nrow(comm)
     } else if (density_stat == 'max') {
         ind_dens = max(rowSums(comm))
-    } else {
+    } else if (density_stat == 'min'){
         ind_dens = min(rowSums(comm))
+    } else {
+        stop('Argument density_stat must be "mean", "max", or "min"')
     }
     return(ind_dens)
 }
