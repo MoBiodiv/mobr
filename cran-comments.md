@@ -1,3 +1,11 @@
+# mobr 2.0.2
+
+This is an updated package submission.
+
+I have fixed the package so that it does not use sort() on a data.frame() as 
+detected as an error here: 
+https://cran.r-project.org/web/checks/check_results_mobr.html
+
 # mobr 2.0.0
 
 This is a new package submission.
