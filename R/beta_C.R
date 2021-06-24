@@ -158,13 +158,17 @@ beta_C <- function(x,
     if (N > 1) {
         gamma_value = rarefaction(x = total,
                                   method = "IBR",
-                                  effort = N)
+                                  effort = N,
+                                  extrapolate = TRUE,
+                                  quiet_mode = TRUE)
         alpha_value = mean(apply(
             x,
             1,
             rarefaction,
             method = "IBR",
-            effort = N
+            effort = N,
+            extrapolate = TRUE,
+            quiet_mode = TRUE
         ))
         beta = gamma_value / alpha_value
     } else {
