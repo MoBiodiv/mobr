@@ -356,8 +356,8 @@ calc_comm_div = function(abund_mat, index, effort = NA,
         if ((index[i] == 'S') & ('beta' %in% scales) & coverage) { 
             # compute coverage beta estimate
             # first calc target coverages and find min
-            targ_cov = betaC::C_target(abund_mat)
-            beta_cov = betaC::beta_C(abund_mat, targ_cov)
+            targ_cov = C_target(abund_mat)
+            beta_cov = beta_C(abund_mat, targ_cov)
             out[[i]]$beta = rbind(out[[i]]$beta, 
                          data.frame(scale = 'beta', index = 'beta_C',
                          sample_size,
@@ -376,6 +376,14 @@ calc_comm_div = function(abund_mat, index, effort = NA,
     return(out)
 }
 
+#' Calculate beta diversity from sites by species table.
+#' 
+#' @param x Sites by species table with species abundances
+#' @examples 
+#' data(inv_comm)
+#' beta_metrics = calc_beta_div(inv_comm, 'S_n', effort = c(5, 10))
+#' beta_metrics
+#' @export
 calc_beta_div = function(x, index, effort = NA, coverage = TRUE, ...) {
     divs <- calc_comm_div(x, index, effort, ...)
     out = vector('list', length(index))
@@ -390,8 +398,8 @@ calc_beta_div = function(x, index, effort = NA, coverage = TRUE, ...) {
         if (index[i] == 'S' & coverage) { 
             # compute coverage beta estimate
             # first calc target coverages and find min
-            targ_cov = betaC::C_target(x)
-            beta_cov = betaC::beta_C(x, targ_cov)
+            targ_cov = C_target(x)
+            beta_cov = beta_C(x, targ_cov)
             out[[i]] = rbind(out[[i]], 
                          data.frame(scale = 'beta', index = 'beta_C',
                          sample_size = sum(!is.na(with(divs, value[scale == 'alpha']))),
@@ -784,14 +792,14 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
         comm_tmp = mob_in$comm[not_empty_samples, ]
         # now get target coverage while dropping any samples with zero individuals
         target_coverage = min(sapply(group_levels, function(grp) 
-                              betaC::C_target(comm_tmp[groups_tmp == grp, ])))
+                              C_target(comm_tmp[groups_tmp == grp, ])))
         # compute the number of individuals for each group this coverage matches with
         N_coverage = sapply(group_levels, function(grp)
-                               betaC::invChat(comm_tmp[groups_tmp == grp, ],
+                               invChat(comm_tmp[groups_tmp == grp, ],
                                               target_coverage))
         # next compute beta coverage at that target coverage
         beta_coverage = sapply(group_levels, function(grp)
-                               betaC::beta_C(comm_tmp[groups_tmp == grp, ],
+                               beta_C(comm_tmp[groups_tmp == grp, ],
                                              target_coverage))
         dat_samples = rbind(dat_samples,
                             data.frame(scale = 'gamma', group = group_levels,
