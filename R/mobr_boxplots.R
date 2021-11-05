@@ -186,7 +186,7 @@ calc_SPIE = function(x, replace = F) {
 boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
                               rare_thres) {
     # sample rows and calculate abundance vector
-    sample_dat = by(abund_mat, INDICES = abund_mat$groups, FUN = sample_frac,
+    sample_dat = by(abund_mat, INDICES = abund_mat$groups, FUN = dplyr::sample_frac,
                     replace = TRUE)
     class(sample_dat) = "list"
     sample_dat = bind_rows(sample_dat)
@@ -674,7 +674,7 @@ get_group_delta = function(abund_mat, groups, index, effort, extrapolate,
 #' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
 #'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
-#' 
+#' #' 
 #' \donttest{
 #' # parallel evaluation using the parallel package 
 #' # run in parallel
@@ -694,6 +694,7 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
                          rare_thres = 0.05, n_perm = 0, 
                          boot_groups = FALSE, conf_level = 0.95, cl=NULL, 
                          ...) {
+    warning('This function is buggy and not recommend for use. This function  will be deprecated')
     EPS <- sqrt(.Machine$double.eps)
     if (n_perm < 1) 
         stop('Set nperm to a value greater than 1') 
@@ -749,16 +750,16 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
     # Abundance distribution pooled in groups
     abund_group = stats::aggregate(mob_in$comm, by = list(groups), FUN = "sum")
 
-    calc_comm_div(abund_group[ , -1], index = index,
-                                       effort = effort_study,
-                                       extrapolate = extrapolate,
-                                       return_NA = return_NA,
-                                       rare_thres = rare_thres)
+    #calc_comm_div(abund_study, index = index,
+    #                                   effort = effort_study,
+    #                                   extrapolate = extrapolate,
+    #                                   return_NA = return_NA,
+    #                                   rare_thres = rare_thres)
     
     # calculate diversity statistics
     dat_study = data.frame(scale = 'study',
-                           groups = paste(group_levels, collapse = '&'),
                            calc_biodiv(abund_mat = abund_study,
+                                       groups = paste(group_levels, collapse = '&'),
                                        index = index,
                                        effort = effort_study,
                                        extrapolate = extrapolate,
@@ -766,16 +767,17 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
                                        rare_thres = rare_thres))
     
     dat_groups = data.frame(scale = 'gamma',
-                            groups = abund_group[ , 1],
                             calc_biodiv(abund_mat = abund_group[ , -1],
+                                        groups = group_levels,
                                         index = index,
                                         effort = effort_study,
                                         extrapolate = extrapolate,
                                         return_NA = return_NA,
                                         rare_thres = rare_thres))
    
-    dat_samples = data.frame(scale = 'alpha', groups = groups,
+    dat_samples = data.frame(scale = 'alpha', 
                              calc_biodiv(abund_mat = mob_in$comm,
+                                         groups = groups,
                                          index = index,
                                          effort = effort_study,
                                          extrapolate = extrapolate,
