@@ -1316,7 +1316,8 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy')
 plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                             method, dens_ratio = 1, scales = c('alpha', 'gamma', 'study'),  
-                            avg = FALSE, spat_algo = NULL, col = NULL, lwd = 3, log = '',
+                            raw = TRUE, avg = FALSE, smooth = FALSE,
+                            spat_algo = NULL, col = NULL, lwd = 3, log = '',
                             leg_loc = 'topleft', ...) {
     if ('gamma' %in% scales & method != 'IBR')
         stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
@@ -1345,7 +1346,7 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
         Salpha = lapply(group_levels, function(x)
                        apply(mob_in$comm[groups == x, ], 1,
                              function(y)  rarefaction(y, method, ...)))
-    if ('gamma' %in% scales)
+    if (any(c('alpha', 'gamma', 'study') %in% scales))
         Sgamma = lapply(group_levels, function(x) 
                         rarefaction(subset(mob_in, groups == x, 'logical'),
                                     method, spat_algo = spat_algo, ...))
@@ -1365,26 +1366,37 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
              xlab = xlab, ylab = "Species richness", 
              xlim = xlim, ylim = ylim, log = log)        
         for (i in seq_along(group_levels)) {
-            if (avg) {
+             if (raw){
+                 for (j in seq_along(Salpha[[i]])) {
+                      n = as.numeric(names(Salpha[[i]][[j]]))
+                      if (n[1] > 0)
+                          lines(n, Salpha[[i]][[j]], col = scales::alpha(col[i], 0.5),
+                          lwd = lwd, type = 'l')
+                 }
+             }   
+             #if ('gamma' %in% scales) 
+                 lines(as.numeric(names(Sgamma[[i]])), Sgamma[[i]],
+                       lwd = 2, lty = 2, col = col[i])
+        }
+        if (avg) {
+            for (i in seq_along(group_levels)) {
                 tmp <- lapply(Salpha[[i]], function(x) data.frame(n = 1:length(x), S = x))
                 tmp <- dplyr::bind_rows(tmp, .id = 'id')
-                Savg <- tapply(tmp$S, list(tmp$n), mean)
+                nmax <- (tmp %>% group_by(id) %>% summarize(nmax = max(n)) %>%
+                                mutate(nmin = min(nmax)))$nmin[1]
+                Savg <- tapply(tmp$S, list(tmp$n), mean) #function(x) exp(mean(log(x))))
                 n <- as.numeric(names(Savg))
-                lines(n, Savg, col = col[i], lwd = lwd)
-                if ('gamma' %in% scales) 
-                    lines(as.numeric(names(Sgamma[[i]])), Sgamma[[i]],
-                          lwd = 2, lty = 2, col = col[i])
-            } else {
-                for (j in seq_along(Salpha[[i]])) {
-                     n = as.numeric(names(Salpha[[i]][[j]]))
-                     if (n[1] > 0)
-                         lines(n, Salpha[[i]][[j]], col = scales::alpha(col[i], 0.5),
-                               lwd = lwd, type = 'l')
-                }
-                if ('gamma' %in% scales) 
-                    lines(as.numeric(names(Sgamma[[i]])), Sgamma[[i]],
-                          lwd = 2, lty = 2, col = col[i])
-            }  
+                lines(1:nmax, Savg[1:nmax], col = col[i], lwd = lwd)
+           }
+        }
+        if (smooth) {
+            for (i in seq_along(group_levels)) {
+               Stmp = unlist(Salpha[[i]])
+               ntmp = c()
+               for(j in seq_along(Salpha[[i]]))
+                   ntmp = c(ntmp, as.numeric(names(Salpha[[i]][[j]])))
+               lines(lowess(ntmp, Stmp, f=.1), col = col[i], lwd = lwd, type = 'l')
+          }
         }
     }    
     if ('gamma' %in% scales) {
@@ -1400,7 +1412,31 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
         }
         if ('study' %in% scales)
             lines(as.numeric(names(Sstudy)), Sstudy, lwd = 2, lty = 2)
-    } 
+    }
+    if ('study' %in% scales) {
+      xlim = c(1, max(as.numeric(names(Sstudy))))
+      ylim = c(1, max(Sstudy))
+      plot(as.numeric(names(Sstudy)), Sstudy, type = "l", lwd = lwd, lty = 2,
+           main = "Gamma scale", xlab = xlab, ylab = "Species richness", 
+           xlim = xlim, ylim = ylim, log = log)
+      if (raw) {
+        for (i in seq_along(group_levels)) {
+          n = as.numeric(names(Sgamma[[i]]))
+          lines(n, Sgamma[[i]], col = col[i], lwd = lwd, type = "l")
+        }
+      }
+      if (avg) {
+          tmp <- lapply(Sgamma, function(x)
+                        data.frame(n = as.numeric(names(x)), S = x))
+          tmp <- dplyr::bind_rows(tmp, .id = 'id')
+          nmax <- (tmp %>% group_by(id) %>% summarize(nmax = max(n)) %>%
+                     mutate(nmin = min(nmax)))$nmin[1]
+          Savg <- tapply(tmp$S, list(tmp$n), mean) 
+          n <- as.numeric(names(Savg))
+          lines(1:nmax, Savg[1:nmax], lwd = lwd)
+      }
+      
+    }
 
     if (!is.na(leg_loc))
         legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
