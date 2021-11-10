@@ -1318,7 +1318,7 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                             method, dens_ratio = 1, scales = c('alpha', 'gamma', 'study'),  
                             raw = TRUE, avg = FALSE, smooth = FALSE,
                             spat_algo = NULL, col = NULL, lwd = 3, log = '',
-                            leg_loc = 'topleft', ...) {
+                            leg_loc = 'topleft', one_panel = FALSE, ...) {
     if ('gamma' %in% scales & method != 'IBR')
         stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
     groups  = factor(mob_in$env[ , group_var])
@@ -1353,18 +1353,38 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
     if ('study' %in% scales) 
         Sstudy = rarefaction(colSums(mob_in$comm), method,
                              spat_algo = spat_algo, ...) 
+    # setup x and y limits for graphs
     if ('alpha' %in% scales) {
-        xlim = c(1, max(unlist(lapply(Salpha, function(x)
-                                 lapply(x, function(y)
-                                        as.numeric(names(y)))))))
-        if ('gamma' %in% scales)
-          ylim = c(1, max(unlist(Salpha), unlist(Sgamma)))
-        else 
-          ylim = c(1, max(unlist(Salpha)))
+      xlim_alpha = c(1, max(unlist(lapply(Salpha, function(x)
+        lapply(x, function(y)
+          as.numeric(names(y)))))))
+      if ('gamma' %in% scales)
+        ylim_alpha = c(1, max(unlist(Salpha), unlist(Sgamma)))
+      else 
+        ylim_alpha = c(1, max(unlist(Salpha)))
+    }
+    if ('gamma' %in% scales) {
+      xlim_gamma = c(1, max(unlist(sapply(Sgamma, function(x) as.numeric(names(x))))))
+      ylim_gamma = c(1, max(unlist(Sgamma)))
+    }
+    if ('study' %in% scales) {
+      xlim_study = c(1, max(as.numeric(names(Sstudy))))
+      ylim_study = c(1, max(Sstudy))
+    }
+    if ('alpha' %in% scales) {
+        if (one_panel) {
+          xlim_tmp <- xlim_study
+          ylim_tmp <- ylim_study
+        }else{
+          xlim_tmp <- xlim_alpha
+          ylim_tmp <- ylim_alpha
+        }
         n = as.numeric(names(Salpha[[1]][[1]]))
-        plot(n, Salpha[[1]][[1]], type = "n", main = "Alpha scale",
+        plot(n, Salpha[[1]][[1]], type = "n",
              xlab = xlab, ylab = "Species richness", 
-             xlim = xlim, ylim = ylim, log = log)        
+             xlim = xlim_tmp, ylim = ylim_tmp, log = log, bty='n')        
+        if (!one_panel)
+           title("Within Groups")
         for (i in seq_along(group_levels)) {
              if (raw){
                  for (j in seq_along(Salpha[[i]])) {
@@ -1376,7 +1396,7 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
              }   
              #if ('gamma' %in% scales) 
                  lines(as.numeric(names(Sgamma[[i]])), Sgamma[[i]],
-                       lwd = 2, lty = 2, col = col[i])
+                       lwd = 2, col = col[i])
         }
         if (avg) {
             for (i in seq_along(group_levels)) {
@@ -1386,7 +1406,7 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                                 mutate(nmin = min(nmax)))$nmin[1]
                 Savg <- tapply(tmp$S, list(tmp$n), mean) #function(x) exp(mean(log(x))))
                 n <- as.numeric(names(Savg))
-                lines(1:nmax, Savg[1:nmax], col = col[i], lwd = lwd)
+                lines(1:nmax, Savg[1:nmax], col = col[i], lwd = lwd, lty=2)
            }
         }
         if (smooth) {
@@ -1395,30 +1415,33 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                ntmp = c()
                for(j in seq_along(Salpha[[i]]))
                    ntmp = c(ntmp, as.numeric(names(Salpha[[i]][[j]])))
-               lines(lowess(ntmp, Stmp, f=.1), col = col[i], lwd = lwd, type = 'l')
+               lines(lowess(ntmp, Stmp, f=.1), col = col[i], lwd = lwd, lty=2,
+                     type = 'l')
           }
         }
     }    
     if ('gamma' %in% scales) {
-        xlim = c(1, max(unlist(sapply(Sgamma, function(x) as.numeric(names(x))))))
-        ylim = c(1, max(unlist(Sgamma)))
+      if (!one_panel) {
+        xlim_tmp <- xlim_gamma
+        ylim_tmp <- ylim_gamma
         n = as.numeric(names(Sgamma[[1]]))
-        plot(n, Sgamma[[1]], type = "n", main = "Gamma scale",
-             xlab = xlab, ylab = "Species richness", 
-             xlim = xlim, ylim = ylim, log = log)
+        plot(n, Sgamma[[1]], type = "n", main = "Between Groups",
+               xlab = xlab, ylab = "Species richness", 
+               xlim = xlim_tmp, ylim = ylim_tmp, log = log, bty='n')
         for (i in seq_along(group_levels)) {
             n = as.numeric(names(Sgamma[[i]]))
-            lines(n, Sgamma[[i]], col = col[i], lwd = lwd, type = "l")
+            lines(n, Sgamma[[i]], col = col[i], lwd = lwd, type = "l", lty=2)
         }
         if ('study' %in% scales)
-            lines(as.numeric(names(Sstudy)), Sstudy, lwd = 2, lty = 2)
+            lines(as.numeric(names(Sstudy)), Sstudy, lwd = 2, lty = 1)
+      }
     }
     if ('study' %in% scales) {
-      xlim = c(1, max(as.numeric(names(Sstudy))))
-      ylim = c(1, max(Sstudy))
-      plot(as.numeric(names(Sstudy)), Sstudy, type = "l", lwd = lwd, lty = 2,
-           main = "Gamma scale", xlab = xlab, ylab = "Species richness", 
-           xlim = xlim, ylim = ylim, log = log)
+      if (!one_panel)
+        plot(as.numeric(names(Sstudy)), Sstudy, type = "n",
+             main = "Between Groups", xlab = xlab, ylab = "Species richness", 
+             xlim = xlim_study, ylim = ylim_study, log = log, bty='n')
+      lines(as.numeric(names(Sstudy)), Sstudy,lwd = lwd, lty = 1)
       if (raw) {
         for (i in seq_along(group_levels)) {
           n = as.numeric(names(Sgamma[[i]]))
@@ -1433,7 +1456,7 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                      mutate(nmin = min(nmax)))$nmin[1]
           Savg <- tapply(tmp$S, list(tmp$n), mean) 
           n <- as.numeric(names(Savg))
-          lines(1:nmax, Savg[1:nmax], lwd = lwd)
+          lines(1:nmax, Savg[1:nmax], lwd = lwd, lty=2)
       }
       
     }
