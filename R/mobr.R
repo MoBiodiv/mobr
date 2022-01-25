@@ -457,11 +457,10 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         if (dens_ratio == 1) {
             ldiv = lchoose(n, effort)
         } else {
-            effort = effort[effort / dens_ratio <= n]
-            ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
+            effort = effort / dens_ratio
+            ldiv = lgamma(n - effort + 1) - lgamma(n + 1)
         }
         p = matrix(0, sum(effort <= n), S)
-        out = rep(NA, length(effort))
         S_ext = NULL
         for (i in seq_along(effort)) {
             if (effort[i] <= n) {
@@ -469,10 +468,9 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                     p[i, ] = ifelse(n - x < effort[i], 0, 
                                     exp(lchoose(n - x, effort[i]) - ldiv[i]))
                 } else {
-                    p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
+                    p[i, ] = ifelse(n - x < effort[i], 0, 
                                     exp(suppressWarnings(lgamma(n - x + 1)) -
-                                        suppressWarnings(lgamma(n - x - effort[i] /
-                                                                dens_ratio + 1)) +
+                                        suppressWarnings(lgamma(n - x - effort[i] + 1)) +
                                          ldiv[i]))
                 }
             } else if (extrapolate) {
