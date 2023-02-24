@@ -253,6 +253,8 @@ sphere_dist = function(coords, r = 6378.137){
 #' respectively. It defaults to k-nearest neighbor which is a 
 #' more computationally efficient algorithm that closely approximates the 
 #' potentially more correct k-NCN algo (see Details). 
+#' @param sd Boolean defaults to FALSE, if TRUE then standard deviation of 
+#' richness is also returned using the formulation of Heck 1975 Eq. 2.
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #'   the random sampling expectation for the individual and sampled based
@@ -280,7 +282,11 @@ sphere_dist = function(coords, r = 6378.137){
 #' \code{iNEXT} package. 
 #' 
 #' If effort is greater than sample size and \code{extrapolate = FALSE} then the 
-#' observed number of species is returned. 
+#' observed number of species is returned.
+#' 
+#' Standard deviation of richness can only be computed for individual based rarefaction 
+#' and it is assigned as an attribute (see examples). The code for this
+#' computation was ported from vegan::rarefy (Oksansen et al. 2022)
 #' 
 #' @return A vector of rarefied species richness values
 #' @author Dan McGlinn and Xiao Xiao
@@ -302,8 +308,15 @@ sphere_dist = function(coords, r = 6378.137){
 #'  Ecology, 10, 209-214.
 #'  
 #' Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
-#' and pitfalls in the measurement and comparison of species richness. Ecology
-#' Letters, 4, 379-391.
+#'  and pitfalls in the measurement and comparison of species richness. Ecology
+#'  Letters, 4, 379-391.
+#' 
+#' Heck, K.L., van Belle, G. & Simberloff, D. (1975). Explicit calculation of
+#'  the rarefaction diversity measurement and the determination of sufficient
+#'  sample size. Ecology 56, 1459–1461.
+#'
+#' Oksanen, J. et al. 2022. Vegan: community ecology package. R package version 2.6-4.
+#'  https://CRAN.R-project.org/package=vegan
 #'
 #' @importFrom stats dist
 #' @export
@@ -319,9 +332,21 @@ sphere_dist = function(coords, r = 6378.137){
 #' # 2) the SAD of the community
 #' rarefaction(inv_comm, method='IBR', effort=1:10)
 #' # 3) a mob_in class object
+#' # the standard deviation of the richness estimates for IBR may be returned
+#' # which is helpful for computing confidence intervals
+#' S_n <- rarefaction(inv_comm, method='IBR', effort=1:10, sd=TRUE)
+#' attr(S_n, 'sd')
+#' plot(1:10, S_n, ylim=c(0,8), type = 'n')
+#' z <- qnorm(1 - 0.05 / 2)
+#' hi <- S_n + z * attr(S_n, 'sd')
+#' lo <- S_n - z * attr(S_n, 'sd')
+#' attributes(hi) <- NULL
+#' attributes(lo) <- NULL
+#' polygon(c(1:10, 10:1),  c(hi, rev(lo)), col='grey', border = NA)
+#' lines(1:10, S_n, type = 'o')
 #' # rescaling of individual based rarefaction 
 #' # when the density ratio is 1 the richness values are 
-#' # identical to unscale rarefaction
+#' # identical to the unscaled rarefaction
 #' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1)
 #' # however the curve is either shrunk when density is higher than 
 #' # the reference value (i.e., dens_ratio < 1)
@@ -341,7 +366,7 @@ sphere_dist = function(coords, r = 6378.137){
 #' }
 rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
                        dens_ratio=1, extrapolate=FALSE, return_NA=FALSE, 
-                       quiet_mode=FALSE, spat_algo=NULL) {
+                       quiet_mode=FALSE, spat_algo=NULL, sd=FALSE) {
     
     if (method == 'indiv') {
         warning('method == "indiv" is depreciated and should be set to "IBR" for individual-based rarefaction')
@@ -460,14 +485,32 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             effort = effort[effort / dens_ratio <= n]
             ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
         }
+        # create an effort by species matrix which will contain
+        # the probability of each species NOT occurring at a given sample
+        # size.
         p = matrix(0, sum(effort <= n), S)
         out = rep(NA, length(effort))
         S_ext = NULL
+        if (sd)
+          std_dev = rep(NA, length(effort))
         for (i in seq_along(effort)) {
             if (effort[i] <= n) {
                 if (dens_ratio == 1) {
                     p[i, ] = ifelse(n - x < effort[i], 0, 
                                     exp(lchoose(n - x, effort[i]) - ldiv[i]))
+                    if (sd) {
+                      # compute the std dev using Heck 1978 Eq. 2
+                      # code adapted from vegan::rarefy by Jari Oksanen
+                      V = sum(p[i, ] * (1 - p[i, ]))
+                      Jxx = n - outer(x, x, "+")
+                      ind = lower.tri(Jxx)
+                      Jxx = Jxx[ind]
+                      V = V + 2 * sum(ifelse(Jxx < effort[i], 0, 
+                          exp(lchoose(Jxx, effort[i]) - ldiv[i])) - outer(p[i, ], p[i, ])[ind])
+                      ## V is >= 0, but numerical zero can be negative (e.g,
+                      ## -1e-16), and we avoid taking its square root
+                      std_dev[i] = sqrt(max(V, 0))
+                    }  
                 } else {
                     p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
                                     exp(suppressWarnings(lgamma(n - x + 1)) -
@@ -492,8 +535,13 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                   S_ext = c(S_ext, S)
         }
         out = rep(NA, length(effort))
+        # richness is the sum of 1 - probability NOT occurring which is what p is
         out[effort <= n] = rowSums(1 - p)
+        # or if effort is greater than the number of samples then set to 
+        # the extrapolated value of richness. 
         out[effort > n] = S_ext
+        if (sd)
+          attr(out, 'sd') <- std_dev
     }
       
     names(out) = effort

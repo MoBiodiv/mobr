@@ -14,7 +14,8 @@ rarefaction(
   extrapolate = FALSE,
   return_NA = FALSE,
   quiet_mode = FALSE,
-  spat_algo = NULL
+  spat_algo = NULL,
+  sd = FALSE
 )
 }
 \arguments{
@@ -78,6 +79,9 @@ for k-nearest neighbor and k-nearest centroid neighbor sampling
 respectively. It defaults to k-nearest neighbor which is a 
 more computationally efficient algorithm that closely approximates the 
 potentially more correct k-NCN algo (see Details).}
+
+\item{sd}{Boolean defaults to FALSE, if TRUE then standard deviation of 
+richness is also returned using the formulation of Heck 1975 Eq. 2.}
 }
 \value{
 A vector of rarefied species richness values
@@ -114,6 +118,10 @@ T. C. Hsieh, K. H. Ma and Anne Chao are the original authors of the
 
 If effort is greater than sample size and \code{extrapolate = FALSE} then the 
 observed number of species is returned.
+
+Standard deviation of richness can only be computed for individual based rarefaction 
+and it is assigned as an attribute (see examples). The code for this
+computation was ported from vegan::rarefy (Oksansen et al. 2022)
 }
 \examples{
 data(inv_comm)
@@ -127,9 +135,21 @@ rarefaction(inv_comm, method='IBR', effort=1:10)
 # 2) the SAD of the community
 rarefaction(inv_comm, method='IBR', effort=1:10)
 # 3) a mob_in class object
+# the standard deviation of the richness estimates for IBR may be returned
+# which is helpful for computing confidence intervals
+S_n <- rarefaction(inv_comm, method='IBR', effort=1:10, sd=TRUE)
+attr(S_n, 'sd')
+plot(1:10, S_n, ylim=c(0,8), type = 'n')
+z <- qnorm(1 - 0.05 / 2)
+hi <- S_n + z * attr(S_n, 'sd')
+lo <- S_n - z * attr(S_n, 'sd')
+attributes(hi) <- NULL
+attributes(lo) <- NULL
+polygon(c(1:10, 10:1),  c(hi, rev(lo)), col='grey', border = NA)
+lines(1:10, S_n, type = 'o')
 # rescaling of individual based rarefaction 
 # when the density ratio is 1 the richness values are 
-# identical to unscale rarefaction
+# identical to the unscaled rarefaction
 rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1)
 # however the curve is either shrunk when density is higher than 
 # the reference value (i.e., dens_ratio < 1)
@@ -166,8 +186,15 @@ Chiarucci, A., G. Bacaro, D. Rocchini, C. Ricotta, M. Palmer, & S. Scheiner
  Ecology, 10, 209-214.
  
 Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
-and pitfalls in the measurement and comparison of species richness. Ecology
-Letters, 4, 379-391.
+ and pitfalls in the measurement and comparison of species richness. Ecology
+ Letters, 4, 379-391.
+
+Heck, K.L., van Belle, G. & Simberloff, D. (1975). Explicit calculation of
+ the rarefaction diversity measurement and the determination of sufficient
+ sample size. Ecology 56, 1459–1461.
+
+Oksanen, J. et al. 2022. Vegan: community ecology package. R package version 2.6-4.
+ https://CRAN.R-project.org/package=vegan
 }
 \author{
 Dan McGlinn and Xiao Xiao
