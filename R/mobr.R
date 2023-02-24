@@ -482,8 +482,8 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         if (dens_ratio == 1) {
             ldiv = lchoose(n, effort)
         } else {
-            effort = effort[effort / dens_ratio <= n]
-            ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
+            effort = effort / dens_ratio
+            ldiv = lgamma(n - effort + 1) - lgamma(n + 1)
         }
         # create an effort by species matrix which will contain
         # the probability of each species NOT occurring at a given sample
@@ -514,8 +514,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                 } else {
                     p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
                                     exp(suppressWarnings(lgamma(n - x + 1)) -
-                                        suppressWarnings(lgamma(n - x - effort[i] /
-                                                                dens_ratio + 1)) +
+                                        suppressWarnings(lgamma(n - x - effort[i] + 1)) +
                                          ldiv[i]))
                 }
             } else if (extrapolate) {
