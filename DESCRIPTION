@@ -7,7 +7,7 @@ Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com",
                     role = "aut"),
              person("Brian", "McGill", email = "brimcgill@gmail.com",
                     role = "aut"),
-             person("Felix", "May", email = "felix.may@idiv.de", 
+             person("Felix", "May", email = "felix.may@posteo.de", 
                     role = "aut"),
              person("Thore", "Engel", email = "thore.engel@idiv.de",
                     role = "aut"),
@@ -51,6 +51,6 @@ Suggests:
     testthat
 License: MIT + file LICENSE
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.0
 Encoding: UTF-8
 VignetteBuilder: knitr
