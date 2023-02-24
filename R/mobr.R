@@ -1035,12 +1035,12 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
             obs_df = map(obs_df, function(x) data.frame(perm = 0, x))          
             null_df = map2(obs_df, null_df, rbind)
             p_val[[k]] = list(effect_p = null_df$S_df %>%
-                                  group_by(.data$test, .data$group) %>%
-                                  summarize(p = get_overall_p(.data$effort, .data$perm, .data$effect)),
+                                  group_by(test, group) %>%
+                                  summarize(p = get_overall_p(effort, perm, effect)),
                               mod_p = null_df$mod_df %>%
-                                  subset(!is.na(.data$value)) %>% 
-                                  group_by(.data$test, .data$index) %>% 
-                                  summarize(p = get_overall_p(.data$effort, .data$perm, .data$value)))
+                                  subset(!is.na(value)) %>% 
+                                  group_by(test, index) %>% 
+                                  summarize(p = get_overall_p(effort, perm, value)))
         }
     }
     if (overall_p)
