@@ -377,10 +377,11 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
     } else if (method == 'spat') {
         warning('method == "spat" is depreciated and should be set to "sSBR" for spatial, sample-based rarefaction')
         method = 'sSBR'
-    } else if (!any(method %in% c('IBR', 'SBR', 'nsSBR', 'sSBR')))
+    } else if (!any(method %in% c('IBR', 'SBR', 'nsSBR', 'sSBR', 'spexSBR')))
         stop('The argument "method" must be set to either "IBR", "SBR", "nsSBR",',
-             ' or "sSBR" for random individual, random sample, non-spatial,', 
-             ' sample-based (nsSBR), and spatial, sample-based rarefaction (sSBR)',
+             '"sSBR", or "spexSBR" for random individual (IBR), random sample (SBR), non-spatial,', 
+             ' sample-based (nsSBR), spatial, sample-based (sSBR),',
+             ' or spatially-explicit, sample-based rarefaction (spexSBR),',
              ' respectively.')
     if (method == 'nsSBR' & dens_ratio == 1)
         warning('The nonspatial, sample-based rarefaction (nsSBR) curve only differs from the IBR when compared with a reference density by setting "dens_ratio" not equal to 1')
@@ -392,7 +393,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         else if (latlong != x_mob_in$latlong)
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
-        if (method == 'sSBR') {
+        if (method == 'sSBR' | method == 'spexSBR') {
             if (is.null(coords)) {
                 if (is.null(x_mob_in$spat)) {
                     stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
@@ -401,7 +402,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             }
         }
     }
-    if (method == 'SBR' | method == 'sSBR') {
+    if (method == 'SBR' | method == 'sSBR' | method == 'spexSBR') {
         if (is.null(dim(x)))
             stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
         else {
@@ -440,7 +441,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
     } else if (extrapolate)
         if (!quiet_mode) 
             message('Richness was not extrapolated because effort less than or equal to the number of samples')
-    if (method == 'sSBR') {
+    if (method == 'sSBR' | method == 'spexSBR') {
         if (is.null(spat_algo)) 
             spat_algo = 'kNN'
         if (spat_algo == 'kNN') {
@@ -455,6 +456,10 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             } else {
                 pair_dist = as.matrix(dist(coords))
             }
+            
+            if (method == 'spexSBR')
+               dist_mat <- matrix(0, n, n)
+            
             for (i in 1:n) {
                 dist_to_site = pair_dist[i, ]
                 # Shuffle plots, so that tied grouping is not biased by original order.
@@ -468,8 +473,34 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                 comm_bool = as.data.frame((comm_ordered == 0) * 1) 
                 rich = cumprod(comm_bool)
                 explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+                if (method == 'spexSBR')
+                  dist_mat[,i] <- dist_to_site[order(dist_to_site)]
             }
-            out = apply(explicit_loop, 1, mean)[effort]
+            if (method == 'sSBR')
+               out = apply(explicit_loop, 1, mean)[effort]
+            
+            else if (method == 'spexSBR'){
+               out_dat <- data.frame(distance = as.vector(dist_mat),
+                                     S        = as.vector(explicit_loop))
+               
+               # Fit interpolation model
+               # GAM with monotonously increasing constraint
+               scam1 <- scam(S ~ s(distance, bs = "mpi"),
+                             data = out_dat, family = "poisson")
+               
+               # New distance vector
+               dist_vec <- seq(min(out_dat$distance), max(out_dat$distance),
+                             length = 200)
+               out_pred <- data.frame(distance = dist_vec)
+               
+               # SCAM predictions
+               out_pred$S  <- predict(scam1, out_pred, type = "response")
+               
+               # Create named output vector (maybe change to two-column table later)
+               out <- out_pred$S
+               names(out) <- out_pred$distance
+               
+            }
             
         }
         else if (spat_algo == "kNCN") 
@@ -543,7 +574,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
           attr(out, 'sd') <- std_dev
     }
       
-    names(out) = effort
+    if (method != 'spexSBR') names(out) = effort
     return(out)
 }
 
