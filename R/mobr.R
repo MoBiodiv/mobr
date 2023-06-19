@@ -364,9 +364,9 @@ sphere_dist = function(coords, r = 6378.137){
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
 #' }
-rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
-                       dens_ratio=1, extrapolate=FALSE, return_NA=FALSE, 
-                       quiet_mode=FALSE, spat_algo=NULL, sd=FALSE) {
+rarefaction = function(x, method, effort = NULL, coords = NULL, latlong = NULL, 
+                       dens_ratio = 1, extrapolate = FALSE, return_NA = FALSE, 
+                       quiet_mode = FALSE, spat_algo = NULL, sd = FALSE) {
     
     if (method == 'indiv') {
         warning('method == "indiv" is depreciated and should be set to "IBR" for individual-based rarefaction')
@@ -413,39 +413,43 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                 x = colSums(x)
         }
     } else if (!is.null(spat_algo))
-        warning("Setting spat_algo to a non-NULL value only has consequences when method = sSBR")
+        warning("Setting spat_algo to a non-NULL value only has consequences when method = sSBR or method = spexSBR")
     if (method == 'IBR' | method == 'nsSBR') {
         if (!is.null(dim(x)))
             x = colSums(x)
         n = sum(x)
     }
-    if (is.null(effort))
-        if (n == 0)
-            effort = 0
-        else
-            effort = 1:n
-    if (any(effort > n)) {
-        if (extrapolate & return_NA)
-            stop('It does not make sense to set "extrapolate" and "return_NA" to both be TRUE, see documentation')
-        if (!quiet_mode) {
-            warning_mess = paste('"effort" larger than total number of',
-                                 ifelse(method == 'IBR', 'individuals', 'samples'),
-                                 'returning')
-            if (extrapolate)
-                warning(paste(warning_mess, 'extrapolated S using Chao1'))
-            else if (return_NA)
-                warning(paste(warning_mess, 'NA'))
-            else
-                warning(paste(warning_mess, 'S'))
-        }
-    } else if (extrapolate)
-        if (!quiet_mode) 
-            message('Richness was not extrapolated because effort less than or equal to the number of samples')
+   
+    if (method != "spexSBR"){ # This block assumes that effort is in no. of samples
+                              # which can be different for spexSBR
+      if (is.null(effort))
+           if (n == 0)
+               effort = 0
+           else
+               effort = 1:n
+       if (any(effort > n)) {
+           if (extrapolate & return_NA)
+               stop('It does not make sense to set "extrapolate" and "return_NA" to both be TRUE, see documentation')
+           if (!quiet_mode) {
+               warning_mess = paste('"effort" larger than total number of',
+                                    ifelse(method == 'IBR', 'individuals', 'samples'),
+                                    'returning')
+               if (extrapolate)
+                   warning(paste(warning_mess, 'extrapolated S using Chao1'))
+               else if (return_NA)
+                   warning(paste(warning_mess, 'NA'))
+               else
+                   warning(paste(warning_mess, 'S'))
+           }
+       } else if (extrapolate)
+           if (!quiet_mode) 
+               message('Richness was not extrapolated because effort less than or equal to the number of samples')
+    } # end if method != spexSBR
+   
     if (method == 'sSBR' | method == 'spexSBR') {
         if (is.null(spat_algo)) 
             spat_algo = 'kNN'
-        if (spat_algo == 'kNN') {
-      
+        if (spat_algo == 'kNN' | spat_algo == 'full_path' | spat_algo == "convexhull") {
             explicit_loop = matrix(0, n, n)
             if (is.null(latlong))
                 stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
@@ -458,7 +462,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             }
             
             if (method == 'spexSBR')
-               dist_mat <- matrix(0, n, n)
+               dist_mat <- matrix(NA, n, n)
             
             for (i in 1:n) {
                 dist_to_site = pair_dist[i, ]
@@ -468,13 +472,37 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                 new_order = new_order[order(dist_new)]
                 # Move focal site to the front
                 new_order = c(i, new_order[new_order != i])
-                comm_ordered = x[new_order, ]
+                
+                pair_dist_ordered = pair_dist[new_order, new_order] # sort rows and cols of distance matrix b distance to focal sample
+                comm_ordered = x[new_order, ]             # same order for samples
                 # 1 for absence, 0 for presence
                 comm_bool = as.data.frame((comm_ordered == 0) * 1) 
                 rich = cumprod(comm_bool)
                 explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
                 if (method == 'spexSBR')
-                  dist_mat[,i] <- dist_to_site[order(dist_to_site)]
+                   if (spat_algo == 'kNN')
+                     dist_mat[,i] <- dist_to_site[order(dist_to_site)]
+                   else if (spat_algo == 'full_path'){
+                     dist_mat[1,i] <- 0
+                     # extract off-diagonal from distance matrix
+                     dist_mat[2:n,i] <- pair_dist_ordered[row(pair_dist_ordered) == col(pair_dist_ordered) + 1]
+                     # accumulate distances
+                     dist_mat[,i] <- cumsum(dist_mat[,i])
+                   } else if (spat_algo == 'convexhull') {
+                      coords_ordered <- coords[new_order, ]
+                      # Use 0 and distance between first two points as first entries
+                      dist_mat[1,i] <- dist_to_site[order(dist_to_site)][1]
+                      # calculate convex-hull for 3 to n points
+                      for (j in 3:n){
+                         #plot(coords_ordered[1:j,1], coords_ordered[1:j,2], pch = 20)
+                         hpts <- chull(coords_ordered[1:j,1], coords_ordered[1:j,2])
+                         hpts <- c(hpts, hpts[1])
+                         chull_coords <- as.matrix(coords_ordered[hpts,])
+                         chull_poly <- sf::st_polygon(list(chull_coords))
+                         chull_area <- sf::st_area(chull_poly)
+                         dist_mat[j,i] <- chull_area
+                      }
+                   }
             }
             if (method == 'sSBR')
                out = apply(explicit_loop, 1, mean)[effort]
@@ -485,12 +513,20 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                
                # Fit interpolation model
                # GAM with monotonously increasing constraint
-               scam1 <- scam(S ~ s(distance, bs = "mpi"),
-                             data = out_dat, family = "poisson")
+               scam1 <- scam::scam(S ~ s(distance, bs = "mpi"),
+                                   data = out_dat, family = "poisson")
                
-               # New distance vector
-               dist_vec <- seq(min(out_dat$distance), max(out_dat$distance),
-                             length = 200)
+               # Plot just for testing
+               #plot(S ~ distance, data = out_dat)
+               
+               # Distance / area vector for interpolation
+               if (is.null(effort)) {
+                  dist_vec <- seq(min(out_dat$distance, na.rm = T),
+                                  max(out_dat$distance, na.rm = T), length = 200)
+               } else {
+                  dist_vec <- effort
+               }
+               
                out_pred <- data.frame(distance = dist_vec)
                
                # SCAM predictions
@@ -499,14 +535,12 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                # Create named output vector (maybe change to two-column table later)
                out <- out_pred$S
                names(out) <- out_pred$distance
-               
             }
-            
         }
         else if (spat_algo == "kNCN") 
             out = kNCN_average(x=x, coords=coords, latlong=latlong)[effort]
     } 
-    else { 
+    else { # if method == IBR | method == nsSBR
         # drop species with no observations  
         x = x[x > 0] 
         S = length(x)
