@@ -38,7 +38,11 @@ a vector which contains the abundance of each species.}
     aggregation). The argument \code{dens_ratio} must also be set otherwise 
     this sampling results in a curve identical to the IBR (see Details). 
     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
-    are accumulated by including spatially proximate samples first. 
+    are accumulated by including spatially proximate samples first.
+    \item \code{'spexSBR'}  ... spatially-explicit sample-based rarefaction
+    in which species are accumulated as in \code{'spexSBR'} but sampling
+    effort is not measured by no. of samples, but by cumulative distance or
+    cumulative area as specified by \code{'spat_algo'} (see details)
 }}
 
 \item{effort}{optional argument to specify what number of individuals or 
