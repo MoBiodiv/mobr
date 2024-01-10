@@ -51,6 +51,8 @@ Suggests:
     testthat
 License: MIT + file LICENSE
 LazyData: true
+URL: https://github.com/MoBiodiv/mobr
+BugReports: https://github.com/MoBiodiv/mobr/issues
 RoxygenNote: 7.1.1
 Encoding: UTF-8
 VignetteBuilder: knitr
