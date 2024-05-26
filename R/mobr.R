@@ -254,13 +254,13 @@ sphere_dist = function(coords, r = 6378.137){
 #' @param quiet_mode Boolean defaults to FALSE, if TRUE then warnings and other
 #'   non-error messages are suppressed.
 #' @param spat_algo character string that can be either: \code{'kNN'},
-#' \code{'kNCN'}, or \code{'convexhull'} for k-nearest neighbor, 
-#' k-nearest centroid neighbor sampling, or convex-hull polygon calculation 
-#' respectively. It defaults to k-nearest neighbor which is a 
-#' more computationally efficient algorithm that closely approximates the 
-#' potentially more correct k-NCN algo (see Details). Currently, \code{'kNN'} and
-#' \code {'k-NCN'} are available for method \code{'ssBR'}, while \code{'kNN'}
-#' \code{'convexhull'} are available for method \code{'spexSBR'}. 
+#'  \code{'kNCN'}, or \code{'convexhull'} for k-nearest neighbor, 
+#'  k-nearest centroid neighbor sampling, or convex-hull polygon calculation 
+#'  respectively. It defaults to k-nearest neighbor which is a 
+#'  more computationally efficient algorithm that closely approximates the 
+#'  potentially more correct k-NCN algo (see Details). Currently, \code{'kNN'} and
+#'  \code{'k-NCN'} are available for method \code{'ssBR'}, while \code{'kNN'}
+#'  \code{'convexhull'} are available for method \code{'spexSBR'}. 
 #' @param sd Boolean defaults to FALSE, if TRUE then standard deviation of 
 #' richness is also returned using the formulation of Heck 1975 Eq. 2.
 #'   
