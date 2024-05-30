@@ -7,24 +7,23 @@
 invChat(x, C)
 }
 \arguments{
-\item{x}{integer vector.}
+\item{x}{integer vector (species abundances)}
 
-\item{C}{numeric. between 0 and 1}
+\item{C}{coverage value between 0 and 1}
 }
 \value{
-a numeric value
+a numeric value which is the number of individuals for a given
+level of coverage \code{C}.
 }
 \description{
-If you wanted to resample a vector to a certain expected sample coverage, how many individuals would you have to draw?
-This is C_hat solved for the number of individuals. This code is a modification of INEXT's internal function invChat.Ind() (Hsieh et al 2016).
+If you wanted to resample a vector to a certain expected sample coverage, how
+many individuals would you have to draw? This is C_hat solved for the number
+of individuals. This code is a modification of INEXT's internal function
+invChat.Ind() (Hsieh et al 2016).
 }
 \examples{
-\donttest{
-library(vegan)
-data(BCI)
-
+data(inv_comm)
 # What sample size corresponds to an expected sample coverage of 55\%?
-invChat(colSums(BCI), 0.55)
-}
+invChat(colSums(inv_comm), 0.55)
 
 }

@@ -4,16 +4,49 @@
 \alias{calc_beta_div}
 \title{Calculate beta diversity from sites by species table.}
 \usage{
-calc_beta_div(x, index, effort = NA, coverage = TRUE, ...)
+calc_beta_div(abund_mat, index, effort = NA, C_target_gamma = NA, ...)
 }
 \arguments{
-\item{x}{Sites by species table with species abundances}
+\item{abund_mat}{Abundance based site-by-species table. Species as
+columns}
+
+\item{index}{The calculated biodiversity indices. The options are
+\itemize{
+   \item \code{N} ... Number of individuals (total abundance)
+   \item \code{S} ... Number of species
+   \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
+   \item \code{S_C} ... Rarefied or extrapolated number of species for C coverage
+   \item \code{S_asymp} ... Estimated asymptotic species richness
+   \item \code{f_0} ... Estimated number of undetected species 
+   \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
+   \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
+   \item \code{S_PIE} ... Effective number of species based on PIE
+}
+
+See the documentation of \code{\link{get_mob_stats}} for further details on the
+biodiversity indices.}
+
+\item{effort}{The standardized number of individuals used for the 
+calculation of rarefied species richness. This can a be
+single integer or a vector of integers.}
+
+\item{C_target_gamma}{When computing coverage based richness (\code{S_C}) then 
+this argument can be used to specify the coverage to be used for the gamma scale
+richness estimate. This defaults to \code{NA} in which case the target cover
+is computed by \code{\link{calc_C_target}} (i.e., the largest allowable sample
+size).}
+
+\item{...}{other arguments to pass to \code{calc_comm_div}}
 }
 \description{
-Calculate beta diversity from sites by species table.
+A wrapper for the function \code{calc_comm_div} that only returns
+scales = 'beta'
 }
 \examples{
 data(inv_comm)
 beta_metrics = calc_beta_div(inv_comm, 'S_n', effort = c(5, 10))
 beta_metrics
+}
+\seealso{
+\code{\link{calc_comm_div}}
 }

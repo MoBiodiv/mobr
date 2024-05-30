@@ -1,22 +1,21 @@
 #' Calculate expected sample coverage C_hat
 #'
-#' Returns expected sample coverage  of a sample x for a smaller than observed sample size m (Chao & Jost, 2012).
-#' This code was copied from INEXT's internal function Chat.Ind() (Hsieh et al 2016).
-#'
+#' Returns expected sample coverage of a sample `x` for a smaller than observed
+#' sample size `m` (Chao & Jost, 2012). This code was copied from INEXT's internal
+#' function \code{iNEXT::Chat.Ind} (Hsieh et al 2016).
+#' 
 #' @param x integer vector (species abundances)
-#' @param m integer. (smaller than observed sample size)
+#' @param m integer a number of individuals that is smaller than observed total
+#' community abundance. 
 #'
-#' @return a numeric value.
+#' @return a numeric value that is the expected coverage. 
+#' 
 #' @export
 #'
 #' @examples
-#' \donttest{
-#' library(vegan)
-#' data(BCI)
-#'
-#' # What is the expected coverage corresponding to a sample size of 50 at the gamma scale?
-#' Chat(colSums(BCI), 50)
-#' }
+#' data(inv_comm)
+#' # What is the expected coverage at a sample size of 50 at the gamma scale?
+#' Chat(colSums(inv_comm), 50)
 Chat <- function (x, m)
 {
     x <- x[x > 0]
@@ -46,23 +45,22 @@ Chat <- function (x, m)
 
 #' Number of individuals corresponding to a desired coverage (inverse C_hat)
 #'
-#' If you wanted to resample a vector to a certain expected sample coverage, how many individuals would you have to draw?
-#' This is C_hat solved for the number of individuals. This code is a modification of INEXT's internal function invChat.Ind() (Hsieh et al 2016).
+#' If you wanted to resample a vector to a certain expected sample coverage, how
+#' many individuals would you have to draw? This is C_hat solved for the number
+#' of individuals. This code is a modification of INEXT's internal function
+#' invChat.Ind() (Hsieh et al 2016).
+#' 
+#' @param x integer vector (species abundances)
+#' @param C coverage value between 0 and 1
 #'
-#' @param x integer vector.
-#' @param C numeric. between 0 and 1
-#'
-#' @return a numeric value
+#' @return a numeric value which is the number of individuals for a given
+#' level of coverage \code{C}.
 #' @export
 #' @import stats
 #' @examples
-#' \donttest{
-#' library(vegan)
-#' data(BCI)
-#'
+#' data(inv_comm)
 #' # What sample size corresponds to an expected sample coverage of 55%?
-#' invChat(colSums(BCI), 0.55)
-#' }
+#' invChat(colSums(inv_comm), 0.55)
 #'
 invChat <- function (x, C)
 {
@@ -107,106 +105,103 @@ invChat <- function (x, C)
 }
 
 
-#' Calculate beta_C
+#' Calculate species richness for a given coverage level. 
 #'
-#' Beta_C uses coverage-based rarefaction to standardize beta-diversity. Calculates the ratio between 
-#' gamma and alpha scale IBR curve for a target gamma-scale sample coverage (i.e. a measure of sample completeness).
-#'
+#' Beta_C uses coverage-based rarefaction to standardize beta-diversity.
+#' Specifically, the metric is computed as the Calculates the ratio between gamma and alpha scale IBR curve for a target
+#' gamma-scale sample coverage (i.e. a measure of sample completeness).
+#' 
 #' @param x a site by species matrix
-#' @param C target coverage. value between 0 and 1.
-#' @param extrapolation logical. should extrapolation be used?
-#' @param interrupt logical. SHould the function throw an error when C exceeds the maximum recommendable coverage?
+#' @param C_target target coverage between 0 and 1 (default is NULL). If not
+#' provided then target coverage is computed by \code{\link{calc_C_target}}
+#' @param extrapolate logical. Defaults to TRUE in which case richness is 
+#' extrapolated to sample sizes larger than observed in the dataset.
+#' @param interrupt logical. Should the function throw an error when \code{C_target}
+#'  exceeds the maximum recommendable coverage?
 #'
 #' @return a numeric value
 #' @export
 #'
 #' @examples
-#' \donttest{
-#' library(vegan)
-#' data(BCI)
-#'
+#' data(tank_comm)
 #' # What is beta_C for a coverage value of 60%?
-#' beta_C(BCI,C = 0.6)
-#' }
-beta_C <- function(x,
-                   C,
-                   extrapolation = T,
-                   interrupt = T) {
+#' calc_S_C(tank_comm, C_target = 0.6)
+calc_S_C <- function(x,
+                   C_target = NULL,
+                   extrapolate = TRUE,
+                   interrupt = TRUE) {
     x <- as.matrix(x)
-    total <- colSums(x)
-    N <- round(invChat(total, C))
-    C_max = C_target(x, factor = ifelse(extrapolation, 2, 1))
-    if (C > C_max & interrupt == T) {
-        if (extrapolation == F) {
-            stop(
-                paste0(
-                    "Coverage exceeds the maximum possible value for interpolation (i.e. C_target = ",
-                    round(C_max, 4),
-                    "). Use extrapolation or reduce the value of C."
-                )
+    if (any(dim(x) == 1))
+      sad <- as.numeric(x)
+    else
+      sad <- colSums(x)
+    if (is.null(C_target))
+      C_target <- calc_C_target(x)
+    N <- round(invChat(sad, C_target))
+    C_max = calc_C_target(x, factor = ifelse(extrapolate, 2, 1))
+    if (C_target > C_max & interrupt) {
+        if (extrapolate) {
+          stop(
+            paste0(
+              "Coverage exceeds the maximum possible value recommendable for extrapolation (i.e. C_target = ",
+              round(C_max, 4),
+              "). Reduce the value of C_target."
             )
+          )
         } else{
-            stop(
-                paste0(
-                    "Coverage exceeds the maximum possible value recommendable for extrapolation (i.e. C_target = ",
-                    round(C_max, 4),
-                    "). Reduce the value of C."
-                )
+          stop(
+            paste0(
+              "Coverage exceeds the maximum possible value for interpolation (i.e. C_target = ",
+              round(C_max, 4),
+              "). Use extrapolation or reduce the value of C_target."
             )
+          )
         }
     }
     if (N > 1) {
-        gamma_value = rarefaction(x = total,
-                                  method = "IBR",
-                                  effort = N,
-                                  extrapolate = TRUE,
-                                  quiet_mode = TRUE)
-        alpha_value = mean(apply(
-            x,
-            1,
-            rarefaction,
-            method = "IBR",
-            effort = N,
-            extrapolate = TRUE,
-            quiet_mode = TRUE
-        ))
-        beta = gamma_value / alpha_value
+        S_C = rarefaction(x = sad,
+                            method = "IBR",
+                            effort = N,
+                            extrapolate = extrapolate,
+                            quiet_mode = TRUE)
     } else {
-        beta = NA
+        S_C = NA
     }
-    attr(beta, "C") = C
-    attr(beta, "N") = N
-    return(beta)
-    
+    attr(S_C, "C") = C_target
+    attr(S_C, "N") = N
+    return(S_C)
 }
 
-#' Calculate the recommended maximum coverage value for the computation of beta_C 
+#' Calculate the recommended target coverage value for the computation of beta_C 
 #'
-#' Returns the estimated gamma-scale coverage that corresponds to the largest allowable sample size 
-#' (i.e. the smallest observed sample size at the alpha scale multiplied by an extrapolation factor).
-#' The default (factor = 2) allows for extrapolation up to 2 times the observed sample size of the 
-#' smallest alpha sample. For factor= 1, only interpolation is applied.
-#' Its not recommendable to use factors larger than 2.
+#' Returns the estimated gamma-scale coverage that corresponds to the largest
+#' allowable sample size (i.e. the smallest observed sample size at the alpha
+#' scale multiplied by an extrapolation factor). The default (factor = 2) allows
+#' for extrapolation up to 2 times the observed sample size of the smallest
+#' alpha sample. For factor= 1, only interpolation is applied. Factors larger
+#' than 2 are not recommended.
 #'
-#' @param x a site by specie matrix
-#' @param factor numeric. how far do you want to extrapolate? 
+#' @param x a site by species abundance matrix
+#' @param factor numeric. A multiplier for how much larger than total community 
+#' abundance to extrapolate to. Defaults to 2. 
 #'
 #' @return numeric value
 #' @export
 #'
 #' @examples
-#' \donttest{
-#' library(vegan)
-#' data(BCI)
+#' data(tank_comm)
 #'
-#' # What is the largest possible C that I can use to calculate beta_C for my site by species matrix?
-#' C_target(BCI)
-#' }
-#'
-
-C_target <- function(x, factor = 2) {
+#' # What is the largest possible C that I can use to calculate beta_C
+#' calc_C_target(tank_comm)
+calc_C_target <- function(x, factor = 2) {
     x <- as.matrix(x)
-    n = min(factor * rowSums(x))
-    out <- Chat(colSums(x), n)
-    return(out)
+    if (any(dim(x) == 1)) {
+        n <- factor * sum(x)
+        C_target <- Chat(x, n)
+    }
+    else {
+        n <- min(factor * rowSums(x))
+        C_target <- Chat(colSums(x), n)
+    }
+    return(C_target)
 }

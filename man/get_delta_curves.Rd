@@ -22,11 +22,14 @@ x is a vector of species abundances.}
 
 \item{tests}{what effects to compute defaults to 'SAD', 'N', and 'agg'}
 
-\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
-for k-nearest neighbor and k-nearest centroid neighbor sampling 
+\item{spat_algo}{character string that can be either: \code{'kNN'},
+\code{'kNCN'}, or \code{'convexhull'} for k-nearest neighbor, 
+k-nearest centroid neighbor sampling, or convex-hull polygon calculation 
 respectively. It defaults to k-nearest neighbor which is a 
 more computationally efficient algorithm that closely approximates the 
-potentially more correct k-NCN algo (see Details).}
+potentially more correct k-NCN algo (see Details). Currently, \code{'kNN'} and
+\code{'k-NCN'} are available for method \code{'ssBR'}, while \code{'kNN'}
+\code{'convexhull'} are available for method \code{'spexSBR'}.}
 
 \item{ind_dens}{the density of individuals to compare against for computing
 N effect}

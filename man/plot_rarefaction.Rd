@@ -11,12 +11,15 @@ plot_rarefaction(
   method,
   dens_ratio = 1,
   scales = c("alpha", "gamma", "study"),
+  raw = TRUE,
   avg = FALSE,
+  smooth = FALSE,
   spat_algo = NULL,
   col = NULL,
   lwd = 3,
   log = "",
   leg_loc = "topleft",
+  one_panel = FALSE,
   ...
 )
 }
@@ -45,7 +48,11 @@ If \code{NULL} then the default contrasts of \code{group_var} are used.}
     aggregation). The argument \code{dens_ratio} must also be set otherwise 
     this sampling results in a curve identical to the IBR (see Details). 
     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
-    are accumulated by including spatially proximate samples first. 
+    are accumulated by including spatially proximate samples first.
+    \item \code{'spexSBR'}  ... spatially-explicit sample-based rarefaction
+    in which species are accumulated as in \code{'sSBR'} but sampling
+    effort is not measured by no. of samples, but by cumulative distance or
+    cumulative area as specified by \code{'spat_algo'} (see details)
 }}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
@@ -53,11 +60,14 @@ and the community data (i.e., x) under consideration. This argument is
 used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
-\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
-for k-nearest neighbor and k-nearest centroid neighbor sampling 
+\item{spat_algo}{character string that can be either: \code{'kNN'},
+\code{'kNCN'}, or \code{'convexhull'} for k-nearest neighbor, 
+k-nearest centroid neighbor sampling, or convex-hull polygon calculation 
 respectively. It defaults to k-nearest neighbor which is a 
 more computationally efficient algorithm that closely approximates the 
-potentially more correct k-NCN algo (see Details).}
+potentially more correct k-NCN algo (see Details). Currently, \code{'kNN'} and
+\code{'k-NCN'} are available for method \code{'ssBR'}, while \code{'kNN'}
+\code{'convexhull'} are available for method \code{'spexSBR'}.}
 
 \item{col}{optional vector of colors.}
 

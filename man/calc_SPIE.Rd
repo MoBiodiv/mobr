@@ -15,7 +15,7 @@ a vector which contains the abundance of each species.}
 sampling without replacement (default).}
 }
 \value{
-
+either a single S_PIE value or vector of S_PIE values.
 }
 \description{
 S_PIE is the effective number of species transformation of the probability of
@@ -39,4 +39,7 @@ Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R.
 K., & Ellison, A. M. (2014). Rarefaction and extrapolation with Hill numbers:
 A framework for sampling and estimation in species diversity studies.
 Ecological Monographs 84(1), 45-67.
+}
+\seealso{
+\code{\link{calc_PIE}}
 }

@@ -10,7 +10,7 @@
 #' 
 #' @param x a vector of species abundances or a site-by-species matrix
 #' 
-#' @return a vector of species richness estimates
+#' @returns a vector of species richness estimates
 #' 
 #' @examples 
 #' data(inv_comm)
@@ -72,6 +72,10 @@ calc_chao1 = function(x) {
 #' @inheritParams rarefaction
 #' @param replace if TRUE, sampling with replacement is used. Otherwise,
 #'   sampling without replacement (default).
+#'
+#' @returns either a single PIE value or vector of PIE values. 
+#' 
+#' @seealso \code{\link{calc_SPIE}}
 #'
 #' @author Dan McGlinn, Thore Engel
 #' 
@@ -148,7 +152,11 @@ calc_PIE = function(x, replace = FALSE, ...) {
 #'
 #' 
 #' @inheritParams calc_PIE
-#' @return
+#'
+#' @returns either a single S_PIE value or vector of S_PIE values. 
+#' 
+#' @seealso \code{\link{calc_PIE}}
+#' 
 #' @export
 #' 
 #' @references 
@@ -213,12 +221,17 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #'
 #' @export
 #' @examples  
-#' data(inv_comm)
-#' calc_div(inv_comm[1, ], 'S_n', effort = c(5, 10))
-calc_div = function(x, index, effort, rare_thres = 0.05, replace = FALSE, ...) {
+#' data(inv_tank)
+#' calc_div(tank_comm[1, ], 'S_n', effort = c(5, 10))
+#' calc_div(tank_comm[1, ], 'S_C', C_target = 0.9)
+calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
+                    C_target = NULL, extrapolate = TRUE, ...) {
     if (index == 'N') out = sum(x)
     if (index == 'S') out = sum(x > 0)
-    if (index == 'S_n') out = rarefaction(x, method = 'IBR', effort = effort, ...) 
+    if (index == 'S_n') out = rarefaction(x, method = 'IBR', effort = effort,
+                                          extrapolate = extrapolate, ...) 
+    if (index == 'S_C') out = calc_S_C(x, C_target, extrapolate = extrapolate,
+                                       interrupt = FALSE)
     if (index == 'PIE') out = calc_PIE(x, replace = replace)
     if (index == 'S_PIE') out = calc_SPIE(x, replace = replace)
     if (index == 'f_0') out = calc_div(x, 'S_asymp') - calc_div(x, 'S')
@@ -248,14 +261,14 @@ calc_div = function(x, index, effort, rare_thres = 0.05, replace = FALSE, ...) {
 
 #' Calculate biodiversity statistics from sites by species table.
 #' 
-#' @param abund_mat Sites by species table with species abundances
-#' in the respective cells
-#' 
+#' @param abund_mat Abundance based site-by-species table. Species as
+#' columns
 #' @param index The calculated biodiversity indices. The options are
 #' \itemize{
 #'    \item \code{N} ... Number of individuals (total abundance)
 #'    \item \code{S} ... Number of species
 #'    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
+#'    \item \code{S_C} ... Rarefied or extrapolated number of species for C coverage
 #'    \item \code{S_asymp} ... Estimated asymptotic species richness
 #'    \item \code{f_0} ... Estimated number of undetected species 
 #'    \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
@@ -268,7 +281,7 @@ calc_div = function(x, index, effort, rare_thres = 0.05, replace = FALSE, ...) {
 #' 
 #' @param effort The standardized number of individuals used for the 
 #'   calculation of rarefied species richness. This can a be
-#'   single value or an integer vector. 
+#'   single integer or a vector of integers. 
 #' 
 #' @param scales The scales to compute the diversity indices for: 
 #' \itemize{
@@ -280,17 +293,26 @@ calc_div = function(x, index, effort, rare_thres = 0.05, replace = FALSE, ...) {
 #' 
 #' @param replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 #'   replacement is used. Otherwise, sampling without replacement (default).
-#'   
+#'
+#' @param C_target_gamma When computing coverage based richness (\code{S_C}) then 
+#' this argument can be used to specify the coverage to be used for the gamma scale
+#' richness estimate. This defaults to \code{NA} in which case the target cover
+#' is computed by \code{\link{calc_C_target}} (i.e., the largest allowable sample
+#' size).
+#' 
 #' @details This function is primarily intended as auxiliary function used in
 #' \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
 #' 
 #' 
-#' @return A \code{data.frame} with four columns:
+#' @returns A \code{data.frame} with four columns:
 #' \itemize{
 #'    \item \code{group} ... Group label for sites
 #'    \item \code{index} ... Name of the biodiversity index
 #'    \item \code{effort} ... Sampling effort for rarefied richness 
 #'    (NA for the other indices)
+#'    \item \code{gamma_coverage} ... The coverage value for that particular 
+#'    effort value on the gamma scale rarefaction curve. Will be \code{NA} unless
+#'    coverage based richness (\code{S_C}) and/or beta diveristy is computed.  
 #'    \item \code{value} ... Value of the biodiversity index
 #' }
 #'   
@@ -303,31 +325,42 @@ calc_div = function(x, index, effort, rare_thres = 0.05, replace = FALSE, ...) {
 #' B.J. McGill.
 #' @inheritParams get_mob_stats
 #' @examples 
-#' data(inv_comm)
-#' div_metrics = calc_comm_div(inv_comm, 'S_n', effort = c(5, 10))
+#' data(tank_comm)
+#' div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = c(5, 10))
+#' div_metrics
+#' div_metrics <- calc_comm_div(tank_comm, 'S_C', C_target_gamma = 0.75)
 #' div_metrics
 #' @export
 calc_comm_div = function(abund_mat, index, effort = NA, 
                          extrapolate = TRUE,
                          return_NA = FALSE, rare_thres = 0.05,
                          scales = c('alpha', 'gamma', 'beta'),
-                         coverage = TRUE,
-                         replace = FALSE) {
+                         replace = FALSE, C_target_gamma = NA, ...) {
     
     # store each calculated index into its own data.frame in a list
     out = vector('list', length = length(index))
     names(out) = index
+    if (any(index == 'S_n') && any(is.na(effort))) 
+        stop('effort value is needed to compute S_n')
+    if (any(index == 'S_C') & is.na(C_target_gamma))
+        C_target_gamma <- calc_C_target(abund_mat)
     # compute indices ---------------------------------------------------------
-	if (any(index == 'S_n') && is.na(effort)) stop('effort value is needed to compute S_n')
     for (i in seq_along(index)) {
-        if (any(c('alpha','beta') %in% scales)) 
-            alpha = apply(abund_mat, 1, calc_div, index[i], effort, rare_thres,
-                          extrapolate = extrapolate, return_NA = return_NA, 
-                          quiet = TRUE, replace = replace)
         if (any(c('gamma', 'beta') %in% scales))
             gamma = calc_div(colSums(abund_mat), index[i], effort, rare_thres,
-                             extrapolate = extrapolate, return_NA = return_NA, 
-                             quiet = TRUE, replace = replace)
+                         extrapolate = extrapolate, return_NA = return_NA, 
+                         quiet = TRUE, replace = replace, C_target = C_target_gamma, ...)
+        if (any(c('alpha', 'beta') %in% scales)) {
+            if (index[i] == 'S_C' & 'beta' %in% scales) {
+                effort = attributes(gamma)$N
+                index_eff = 'S_n'
+            }
+            else 
+                index_eff = index[i]
+            alpha = apply(abund_mat, 1, calc_div, index_eff, effort, rare_thres,
+                          extrapolate = extrapolate, return_NA = return_NA, 
+                          quiet = TRUE, replace = replace, C_target = C_target_gamma, ...)
+        }
         if ('beta' %in% scales) {
             # compute beta
             if (index[i] == 'S_n' & length(effort) > 1) {
@@ -336,80 +369,57 @@ calc_comm_div = function(abund_mat, index, effort = NA,
                 beta = gamma / mean(alpha, na.rm = TRUE)
             }
         }  
-        if (index[i] == 'S_n') effort_out = effort else effort_out = NA
+        if (index[i] == 'S_n' | index[i] == 'S_C')
+            effort_out <- effort 
+        else
+            effort_out <- NA
+        gamma_coverage <- ifelse(index[i] == 'S_C', C_target_gamma, NA)
         # compute number of finite samples used for calculation
         sample_size = nrow(abund_mat)
-        if ('alpha' %in% scales) 
+        if ('alpha' %in% scales) {
             out[[i]]$alpha = data.frame(scale = 'alpha', index = index[i],
                                         sample_size = 1, effort = effort_out,
-                                        coverage = NA, value = as.numeric(alpha))
+                                        gamma_coverage = gamma_coverage,
+                                        value = as.numeric(alpha))
+        }    
         if ('gamma' %in% scales) 
             out[[i]]$gamma = data.frame(scale = 'gamma', index = index[i], 
                                         sample_size, effort = effort_out,
-                                        coverage = NA, value = gamma)
+                                        gamma_coverage = gamma_coverage,
+                                        value = gamma)
         if ('beta' %in% scales & index[i] != 'N') 
             out[[i]]$beta = data.frame(scale = 'beta',
                                        index = paste('beta', index[i], sep = '_'),
                                        sample_size, effort = effort_out,
-                                       coverage = NA, value = beta)
+                                       gamma_coverage = gamma_coverage,
+                                       value = beta)
         
-        if ((index[i] == 'S') & ('beta' %in% scales) & coverage) { 
-            # compute coverage beta estimate
-            # first calc target coverages and find min
-            targ_cov = C_target(abund_mat)
-            beta_cov = beta_C(abund_mat, targ_cov)
-            out[[i]]$beta = rbind(out[[i]]$beta, 
-                         data.frame(scale = 'beta', index = 'beta_C',
-                         sample_size,
-                         effort = attributes(beta_cov)$N,
-                         coverage = attributes(beta_cov)$C,
-                         value = beta_cov))
+        if (index[i] == 'S_n' & length(effort) > 1) {
+            out[[i]] = lapply(out[[i]], dplyr::arrange, effort)
         }
         out[[i]] = dplyr::bind_rows(out[[i]])
-        if (index[i] == 'S_n' & length(effort) > 1) {
-            out[[i]] = arrange(out[[i]], effort)
-        }
-    }  
-    
+        row.names(out[[i]]) = 1:nrow(out[[i]])
+    }
     out = dplyr::bind_rows(out)
-    row.names(out) = 1:nrow(out)
     return(out)
 }
 
 #' Calculate beta diversity from sites by species table.
 #' 
-#' @param x Sites by species table with species abundances
+#' A wrapper for the function \code{calc_comm_div} that only returns
+#' scales = 'beta'
+#' 
+#' @inheritParams calc_comm_div
+#' @param ... other arguments to pass to \code{calc_comm_div}
+#' @seealso \code{\link{calc_comm_div}}
 #' @examples 
 #' data(inv_comm)
 #' beta_metrics = calc_beta_div(inv_comm, 'S_n', effort = c(5, 10))
 #' beta_metrics
 #' @export
-calc_beta_div = function(x, index, effort = NA, coverage = TRUE, ...) {
-    divs <- calc_comm_div(x, index, effort, ...)
-    out = vector('list', length(index))
-    for (i in seq_along(index)) {
-         beta = with(divs, value[scale == 'gamma' & index == index[i]] /
-                           mean(value[scale == 'alpha' & index == index[i]],
-                                na.rm = TRUE))
-         out[[i]] = data.frame(scale = 'beta', index = paste('beta', index[i], sep = '_'),
-                          sample_size = sum(!is.na(with(divs, value[scale == 'alpha']))),
-                         effort = effort, coverage = NA, value = beta)
-
-        if (index[i] == 'S' & coverage) { 
-            # compute coverage beta estimate
-            # first calc target coverages and find min
-            targ_cov = C_target(x)
-            beta_cov = beta_C(x, targ_cov)
-            out[[i]] = rbind(out[[i]], 
-                         data.frame(scale = 'beta', index = 'beta_C',
-                         sample_size = sum(!is.na(with(divs, value[scale == 'alpha']))),
-                         effort = attributes(beta_cov)$N,
-                         coverage = attributes(beta_cov)$C,
-                         value = beta_cov))
-        }
-    }
-    out = dplyr::bind_rows(out)
-    row.names(out) = 1:nrow(out)
+calc_beta_div = function(abund_mat, index, effort = NA, C_target_gamma = NA, ...) {
+    out <- calc_comm_div(abund_mat, index, effort,scales = 'beta', 
+                         C_target_gamma = C_target_gamma, ...)
     return(out)
 }
 
@@ -622,7 +632,7 @@ get_group_delta = function(abund_mat, groups, index, effort, extrapolate,
 #' samples occur several times in the resampled data sets.
 #' 
 #' 
-#' @return A list of class \code{mob_stats} that contains alpha-scale and 
+#' @returns A list of class \code{mob_stats} that contains alpha-scale and 
 #'   gamma-scale biodiversity statistics, as well as the p-values for
 #'   permutation tests at both scales.
 #'   

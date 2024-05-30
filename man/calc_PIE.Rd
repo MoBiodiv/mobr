@@ -14,6 +14,9 @@ a vector which contains the abundance of each species.}
 \item{replace}{if TRUE, sampling with replacement is used. Otherwise,
 sampling without replacement (default).}
 }
+\value{
+either a single PIE value or vector of PIE values.
+}
 \description{
 \code{calc_PIE} returns the probability of interspecific encounter (PIE)
  which is also known as Simpson's evenness index and Gini-Simpson index.
@@ -44,6 +47,9 @@ calc_PIE(c(23,21,12,5,1,2,3), replace = TRUE)
 \references{
 Hurlbert, S. H. (1971) The nonconcept of species diversity: a critique and
  alternative parameters. Ecology 52, 577-586.
+}
+\seealso{
+\code{\link{calc_SPIE}}
 }
 \author{
 Dan McGlinn, Thore Engel

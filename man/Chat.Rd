@@ -9,21 +9,19 @@ Chat(x, m)
 \arguments{
 \item{x}{integer vector (species abundances)}
 
-\item{m}{integer. (smaller than observed sample size)}
+\item{m}{integer a number of individuals that is smaller than observed total
+community abundance.}
 }
 \value{
-a numeric value.
+a numeric value that is the expected coverage.
 }
 \description{
-Returns expected sample coverage  of a sample x for a smaller than observed sample size m (Chao & Jost, 2012).
-This code was copied from INEXT's internal function Chat.Ind() (Hsieh et al 2016).
+Returns expected sample coverage of a sample `x` for a smaller than observed
+sample size `m` (Chao & Jost, 2012). This code was copied from INEXT's internal
+function \code{iNEXT::Chat.Ind} (Hsieh et al 2016).
 }
 \examples{
-\donttest{
-library(vegan)
-data(BCI)
-
-# What is the expected coverage corresponding to a sample size of 50 at the gamma scale?
-Chat(colSums(BCI), 50)
-}
+data(inv_comm)
+# What is the expected coverage at a sample size of 50 at the gamma scale?
+Chat(colSums(inv_comm), 50)
 }

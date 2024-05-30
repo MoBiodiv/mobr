@@ -5,7 +5,16 @@
 \title{Compute various diversity indices from a vector of species abundances (i.e.,
 one row of a community matrix)}
 \usage{
-calc_div(x, index, effort, rare_thres = 0.05, replace = FALSE, ...)
+calc_div(
+  x,
+  index,
+  effort = NA,
+  rare_thres = 0.05,
+  replace = FALSE,
+  C_target = NULL,
+  extrapolate = TRUE,
+  ...
+)
 }
 \arguments{
 \item{x}{is a vector of species abundances}
@@ -15,6 +24,7 @@ calc_div(x, index, effort, rare_thres = 0.05, replace = FALSE, ...)
    \item \code{N} ... Number of individuals (total abundance)
    \item \code{S} ... Number of species
    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
+   \item \code{S_C} ... Rarefied or extrapolated number of species for C coverage
    \item \code{S_asymp} ... Estimated asymptotic species richness
    \item \code{f_0} ... Estimated number of undetected species 
    \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
@@ -27,7 +37,7 @@ biodiversity indices.}
 
 \item{effort}{The standardized number of individuals used for the 
 calculation of rarefied species richness. This can a be
-single value or an integer vector.}
+single integer or a vector of integers.}
 
 \item{rare_thres}{The threshold that determines how pct_rare is computed.
 It can range from (0, 1] and defaults to 0.05 which specifies that any 
@@ -38,6 +48,16 @@ best small sample behavior.}
 
 \item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 replacement is used. Otherwise, sampling without replacement (default).}
+
+\item{extrapolate}{Boolean which specifies if richness should be
+extrapolated when \code{effort_samples} is larger than the number of
+individuals using the chao1 method. Defaults to TRUE.}
+
+\item{...}{
+Optional arguments to \code{FUN} and also to underlying functions (e.g.
+\code{\link{parLapply}} and \code{\link{mclapply}} when \code{cl}
+is not \code{NULL}).
+}
 }
 \description{
 Compute various diversity indices from a vector of species abundances (i.e.,
@@ -45,6 +65,7 @@ one row of a community matrix)
 }
 \examples{
  
-data(inv_comm)
-calc_div(inv_comm[1, ], 'S_n', effort = c(5, 10))
+data(inv_tank)
+calc_div(tank_comm[1, ], 'S_n', effort = c(5, 10))
+calc_div(tank_comm[1, ], 'S_C', C_target = 0.9)
 }

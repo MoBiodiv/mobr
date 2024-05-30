@@ -12,19 +12,21 @@ calc_comm_div(
   return_NA = FALSE,
   rare_thres = 0.05,
   scales = c("alpha", "gamma", "beta"),
-  coverage = TRUE,
-  replace = FALSE
+  replace = FALSE,
+  C_target_gamma = NA,
+  ...
 )
 }
 \arguments{
-\item{abund_mat}{Sites by species table with species abundances
-in the respective cells}
+\item{abund_mat}{Abundance based site-by-species table. Species as
+columns}
 
 \item{index}{The calculated biodiversity indices. The options are
 \itemize{
    \item \code{N} ... Number of individuals (total abundance)
    \item \code{S} ... Number of species
    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
+   \item \code{S_C} ... Rarefied or extrapolated number of species for C coverage
    \item \code{S_asymp} ... Estimated asymptotic species richness
    \item \code{f_0} ... Estimated number of undetected species 
    \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
@@ -37,7 +39,7 @@ biodiversity indices.}
 
 \item{effort}{The standardized number of individuals used for the 
 calculation of rarefied species richness. This can a be
-single value or an integer vector.}
+single integer or a vector of integers.}
 
 \item{extrapolate}{Boolean which specifies if richness should be
 extrapolated when \code{effort_samples} is larger than the number of
@@ -65,6 +67,18 @@ best small sample behavior.}
 
 \item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 replacement is used. Otherwise, sampling without replacement (default).}
+
+\item{C_target_gamma}{When computing coverage based richness (\code{S_C}) then 
+this argument can be used to specify the coverage to be used for the gamma scale
+richness estimate. This defaults to \code{NA} in which case the target cover
+is computed by \code{\link{calc_C_target}} (i.e., the largest allowable sample
+size).}
+
+\item{...}{
+Optional arguments to \code{FUN} and also to underlying functions (e.g.
+\code{\link{parLapply}} and \code{\link{mclapply}} when \code{cl}
+is not \code{NULL}).
+}
 }
 \value{
 A \code{data.frame} with four columns:
@@ -73,6 +87,9 @@ A \code{data.frame} with four columns:
    \item \code{index} ... Name of the biodiversity index
    \item \code{effort} ... Sampling effort for rarefied richness 
    (NA for the other indices)
+   \item \code{gamma_coverage} ... The coverage value for that particular 
+   effort value on the gamma scale rarefaction curve. Will be \code{NA} unless
+   coverage based richness (\code{S_C}) and/or beta diveristy is computed.  
    \item \code{value} ... Value of the biodiversity index
 }
 }
@@ -84,8 +101,10 @@ This function is primarily intended as auxiliary function used in
 \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
 }
 \examples{
-data(inv_comm)
-div_metrics = calc_comm_div(inv_comm, 'S_n', effort = c(5, 10))
+data(tank_comm)
+div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = c(5, 10))
+div_metrics
+div_metrics <- calc_comm_div(tank_comm, 'S_C', C_target_gamma = 0.75)
 div_metrics
 }
 \references{

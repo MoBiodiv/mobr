@@ -1415,11 +1415,11 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' @param pooled Boolean specifying if samples should be pooled at the group
 #'  level or not. Defaults to TRUE. This argument only applies when
 #'  the individual based rarefaction is used (i.e., \code{method = 'indiv'})
-#' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
 #' @inheritParams get_mob_stats
 #' @inheritParams plot.mob_out
 #' @inheritParams plot_abu
 #' @inheritParams rarefaction
+#' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
 #' @importFrom scales alpha
 #' @importFrom graphics lines legend
 #' @export
@@ -1428,10 +1428,11 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # random individual based rarefaction curves
+#' par(mfrow=c(1,3))
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
 #'                  leg_loc='bottomright')
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
-#'                  pooled=FALSE, log='x')
+#'                  log='xy')
 #' # random sample based rarefaction curves 
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy')
 #' # spatial sample based rarefaction curves 

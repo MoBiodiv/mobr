@@ -91,10 +91,14 @@ A cluster object created by \code{\link{makeCluster}},
 or an integer to indicate number of child-processes
 (integer values are ignored on Windows) for parallel evaluations
 (see Details on performance).
+It can also be \code{"future"} to use a future backend (see Details),
+\code{NULL} (default) refers to sequential evaluation.
 }
 
 \item{...}{
-Optional arguments to \code{FUN}.
+Optional arguments to \code{FUN} and also to underlying functions (e.g.
+\code{\link{parLapply}} and \code{\link{mclapply}} when \code{cl}
+is not \code{NULL}).
 }
 }
 \value{
@@ -208,7 +212,7 @@ inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, c('x', 'y'))
 inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
                           n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
-
+#' 
 \donttest{
 # parallel evaluation using the parallel package 
 # run in parallel
