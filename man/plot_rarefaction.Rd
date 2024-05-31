@@ -9,12 +9,12 @@ plot_rarefaction(
   group_var,
   ref_level = NULL,
   method,
+  spat_algo = NULL,
   dens_ratio = 1,
   scales = c("alpha", "gamma", "study"),
   raw = TRUE,
-  avg = FALSE,
   smooth = FALSE,
-  spat_algo = NULL,
+  avg = FALSE,
   col = NULL,
   lwd = 3,
   log = "",
@@ -55,11 +55,6 @@ If \code{NULL} then the default contrasts of \code{group_var} are used.}
     cumulative area as specified by \code{'spat_algo'} (see details)
 }}
 
-\item{dens_ratio}{the ratio of individual density between a reference group
-and the community data (i.e., x) under consideration. This argument is
-used to rescale the rarefaction curve when estimating the effect of
-individual density on group differences in richness.}
-
 \item{spat_algo}{character string that can be either: \code{'kNN'},
 \code{'kNCN'}, or \code{'convexhull'} for k-nearest neighbor, 
 k-nearest centroid neighbor sampling, or convex-hull polygon calculation 
@@ -68,6 +63,24 @@ more computationally efficient algorithm that closely approximates the
 potentially more correct k-NCN algo (see Details). Currently, \code{'kNN'} and
 \code{'k-NCN'} are available for method \code{'ssBR'}, while \code{'kNN'}
 \code{'convexhull'} are available for method \code{'spexSBR'}.}
+
+\item{dens_ratio}{the ratio of individual density between a reference group
+and the community data (i.e., x) under consideration. This argument is
+used to rescale the rarefaction curve when estimating the effect of
+individual density on group differences in richness.}
+
+\item{scales}{character string which defaults to c('alpha', 'gamma', 'study')
+indicating that rarefaction curves at the alpha (i.e., single plot), gamma 
+(i.e., group of plots), and study (i.e., all plots) scales should be computed
+and plotted.}
+
+\item{raw}{boolean. Defaults to TRUE so that raw rarefaction curves
+without averaging or smoothing are plotted}
+
+\item{smooth}{boolean. Defaults to FALSE. If set to TRUE a lowess smoother is 
+used on the 'alpha' scale curves. Has no effect at gamma or study scales}
+
+\item{avg}{= FALSE}
 
 \item{col}{optional vector of colors.}
 
@@ -81,10 +94,6 @@ both axes are log transformed respectively}
 options include: 'lowerleft', 'topleft', 'loweright','topright'}
 
 \item{...}{other arguments to provide to \code{\link[mobr]{rarefaction}}}
-
-\item{pooled}{Boolean specifying if samples should be pooled at the group
-level or not. Defaults to TRUE. This argument only applies when
-the individual based rarefaction is used (i.e., \code{method = 'indiv'})}
 }
 \description{
 Plot rarefaction curves for each treatment group
@@ -94,12 +103,15 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 # random individual based rarefaction curves
+par(mfrow=c(1,2))
 plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
                  leg_loc='bottomright')
 plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
-                 pooled=FALSE, log='x')
+                 log='xy')
 # random sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy')
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy',
+                 leg_loc='bottomright')
 # spatial sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy')
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy',
+                 leg_loc='bottomright', avg = TRUE, smooth = TRUE)
 }

@@ -677,6 +677,7 @@ get_group_delta = function(abund_mat, groups, index, effort, extrapolate,
 #' @export
 #' 
 #' @examples 
+#' \donttest{
 #' # a binary grouping variable (uninvaded or invaded)
 #' data(inv_comm)
 #' data(inv_plot_attr)
@@ -685,7 +686,6 @@ get_group_delta = function(abund_mat, groups, index, effort, extrapolate,
 #'                           n_perm = 19, effort_samples = c(5,10))
 #' plot(inv_stats)
 #' #' 
-#' \donttest{
 #' # parallel evaluation using the parallel package 
 #' # run in parallel
 #' library(parallel)
@@ -768,16 +768,16 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
     
     # calculate diversity statistics
     dat_study = data.frame(scale = 'study',
-                           calc_biodiv(abund_mat = abund_study,
-                                       groups = paste(group_levels, collapse = '&'),
-                                       index = index,
-                                       effort = effort_study,
-                                       extrapolate = extrapolate,
-                                       return_NA = return_NA,
-                                       rare_thres = rare_thres))
+                           calc_div(abund_mat = abund_study,
+                                    groups = paste(group_levels, collapse = '&'),
+                                    index = index,
+                                    effort = effort_study,
+                                    extrapolate = extrapolate,
+                                    return_NA = return_NA,
+                                    rare_thres = rare_thres))
     
     dat_groups = data.frame(scale = 'gamma',
-                            calc_biodiv(abund_mat = abund_group[ , -1],
+                            calc_div(abund_mat = abund_group[ , -1],
                                         groups = group_levels,
                                         index = index,
                                         effort = effort_study,
@@ -1065,7 +1065,8 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' 
 #' @export
 #' 
-#' @examples 
+#' @examples
+#' \dontest{ 
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
@@ -1076,10 +1077,12 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
 #'                                boot_groups=TRUE)
 #' plot(inv_stats_boot)
+#' }
 plot.mob_stats = function(x, index = NULL, multi_panel = FALSE, 
                           col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
                                   "#E2C288", "#F7B0E6", "#AAD28C"), 
                           cex.axis=1.2, ...) {
+    warning("This function is buggy and depreciated and will be removed")
     oldpar <- par(no.readonly = TRUE)
     on.exit(par(oldpar))
     mob_stats = x

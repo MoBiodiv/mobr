@@ -176,6 +176,7 @@ rarefaction(inv_comm, method='sSBR', coords=inv_plot_attr[ , c('x','y')],
 # the syntax is simpler if supplying a mob_in object
 rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
 rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
+rarefaction(inv_mob_in, method='spexSBR', spat_algo = 'kNN')
 }
 }
 \references{

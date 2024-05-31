@@ -47,6 +47,7 @@ The user may specify which results to plot or simply to plot
 all the results.
 }
 \examples{
+\dontest{ 
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
@@ -57,6 +58,7 @@ plot(inv_stats)
 inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
                                boot_groups=TRUE)
 plot(inv_stats_boot)
+}
 }
 \author{
 Felix May, Xiao Xiao, and Dan McGlinn

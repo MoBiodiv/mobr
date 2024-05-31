@@ -373,6 +373,7 @@ sphere_dist = function(coords, r = 6378.137){
 #' # the syntax is simpler if supplying a mob_in object
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
+#' rarefaction(inv_mob_in, method='spexSBR', spat_algo = 'kNN')
 #' }
 rarefaction = function(x, method, effort = NULL, coords = NULL, latlong = NULL, 
                        dens_ratio = 1, extrapolate = FALSE, return_NA = FALSE, 
@@ -1409,12 +1410,45 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
     if (!is.na(leg_loc))
         legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
 }
-    
+
+#' Compute average color
+#'
+#' `mean_col()` computes an average color.
+#'
+#' Inernal function to compute an average color
+#' by using the quadratic mean of the colors' RGBA values.
+#' 
+#' Used by \code{\link{plot_rarefaction}}
+#'
+#' @param ... Colors to average
+#' @return A color string of 9 characters: `"#"` followed by the
+#'         red, blue, green, and alpha values in hexadecimal.
+#' @details this function was copied from gridpattern::mean_col (Davis et al. 2024)
+#' @references Davis, T., Mike FC, and ggplot2 authors. 2024. gridpattern. 1.2.1
+#' @keywords internal
+#' @examples
+#'  mean_col("black", "white")
+#'  mean_col(c("black", "white"))
+#'  mean_col("red", "blue")
+mean_col <- function(...) {
+    cols <- unlist(list(...))
+    m <- grDevices::col2rgb(cols, alpha=TRUE) / 255.0
+    # quadratic mean suggested at https://stackoverflow.com/a/29576746
+    v <- apply(m, 1, function(x) sqrt(mean(x^2)))
+    grDevices::rgb(v[1], v[2], v[3], v[4])
+}
+
 #' Plot rarefaction curves for each treatment group
 #' 
-#' @param pooled Boolean specifying if samples should be pooled at the group
-#'  level or not. Defaults to TRUE. This argument only applies when
-#'  the individual based rarefaction is used (i.e., \code{method = 'indiv'})
+#' @param scales character string which defaults to c('alpha', 'gamma', 'study')
+#' indicating that rarefaction curves at the alpha (i.e., single plot), gamma 
+#' (i.e., group of plots), and study (i.e., all plots) scales should be computed
+#' and plotted. 
+#' @param raw boolean. Defaults to TRUE so that raw rarefaction curves
+#' without averaging or smoothing are plotted
+#' @param smooth boolean. Defaults to FALSE. If set to TRUE a lowess smoother is 
+#' used on the 'alpha' scale curves. Has no effect at gamma or study scales
+#' @param avg = FALSE 
 #' @inheritParams get_mob_stats
 #' @inheritParams plot.mob_out
 #' @inheritParams plot_abu
@@ -1428,22 +1462,26 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # random individual based rarefaction curves
-#' par(mfrow=c(1,3))
+#' par(mfrow=c(1,2))
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
 #'                  leg_loc='bottomright')
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
 #'                  log='xy')
 #' # random sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy')
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy',
+#'                  leg_loc='bottomright')
 #' # spatial sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy')
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy',
+#'                  leg_loc='bottomright', avg = TRUE, smooth = TRUE)
 plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
-                            method, dens_ratio = 1, scales = c('alpha', 'gamma', 'study'),  
-                            raw = TRUE, avg = FALSE, smooth = FALSE,
-                            spat_algo = NULL, col = NULL, lwd = 3, log = '',
+                            method, spat_algo = NULL, dens_ratio = 1, scales = c('alpha', 'gamma', 'study'),  
+                            raw = TRUE, smooth = FALSE, avg = FALSE, 
+                            col = NULL, lwd = 3, log = '',
                             leg_loc = 'topleft', one_panel = FALSE, ...) {
-    if ('gamma' %in% scales & method != 'IBR')
-        stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
+    if ('alpha' %in% scales & method != 'IBR') {
+        warning('Sample based rarefaction methods do not make sense at alpha scale, dropping alpha scale curves')
+        scales <- scales[scales != 'alpha']
+    }
     groups  = factor(mob_in$env[ , group_var])
     group_levels = levels(groups) 
     # ensure that proper contrasts in groups 
@@ -1463,7 +1501,9 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
         stop('Length of col vector must match the number of unique groups')
     if (method == 'indiv')
         xlab = 'Number of individuals'
-    else
+    else if (method == 'spexSBR')
+        xlab = 'Distance'
+    else 
         xlab = 'Number of samples'
     if ('alpha' %in% scales) 
         Salpha = lapply(group_levels, function(x)
@@ -1472,10 +1512,13 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
     if (any(c('alpha', 'gamma', 'study') %in% scales))
         Sgamma = lapply(group_levels, function(x) 
                         rarefaction(subset(mob_in, groups == x, 'logical'),
-                                    method, spat_algo = spat_algo, ...))
+                                    method, 
+                                    coords = subset(mob_in, groups == x, 'logical')$spat,
+                                    spat_algo = spat_algo, 
+                                    latlong = mob_in$latlong, ...))
     if ('study' %in% scales) 
-        Sstudy = rarefaction(colSums(mob_in$comm), method,
-                             spat_algo = spat_algo, ...) 
+        Sstudy = rarefaction(mob_in$comm, method, coords = mob_in$spat,
+                             spat_algo = spat_algo, latlong = mob_in$latlong, ...) 
     # setup x and y limits for graphs
     if ('alpha' %in% scales) {
       xlim_alpha = c(1, max(unlist(lapply(Salpha, function(x)
@@ -1517,9 +1560,9 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                           lwd = lwd, type = 'l')
                  }
              }   
-             #if ('gamma' %in% scales) 
+             if ('gamma' %in% scales) 
                  lines(as.numeric(names(Sgamma[[i]])), Sgamma[[i]],
-                       lwd = 2, col = col[i])
+                       lwd = lwd*1.5, col = col[i])
         }
         if (avg) {
             for (i in seq_along(group_levels)) {
@@ -1545,26 +1588,44 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
     }    
     if ('gamma' %in% scales) {
       if (!one_panel) {
-        xlim_tmp <- xlim_gamma
-        ylim_tmp <- ylim_gamma
+        if ('study' %in% scales) {
+            xlim_tmp <- xlim_study
+            ylim_tmp <- ylim_study
+        } else {
+            xlim_tmp <- xlim_gamma
+            ylim_tmp <- ylim_gamma
+        }
         n = as.numeric(names(Sgamma[[1]]))
         plot(n, Sgamma[[1]], type = "n", main = "Between Groups",
                xlab = xlab, ylab = "Species richness", 
                xlim = xlim_tmp, ylim = ylim_tmp, log = log, bty='n')
-        for (i in seq_along(group_levels)) {
-            n = as.numeric(names(Sgamma[[i]]))
-            lines(n, Sgamma[[i]], col = col[i], lwd = lwd, type = "l", lty=2)
+        if (raw) { 
+            for (i in seq_along(group_levels)) {
+                n = as.numeric(names(Sgamma[[i]]))
+                lines(n, Sgamma[[i]], col = col[i], lwd = lwd, type = "l", lty=1)
+            }
         }
         if ('study' %in% scales)
-            lines(as.numeric(names(Sstudy)), Sstudy, lwd = 2, lty = 1)
+            lines(as.numeric(names(Sstudy)), Sstudy, lwd = lwd*1.5, lty = 1)
+        if (avg) {
+          tmp <- lapply(Sgamma, function(x)
+            data.frame(n = as.numeric(names(x)), S = x))
+          tmp <- dplyr::bind_rows(tmp, .id = 'id')
+          nmax <- (tmp %>% group_by(id) %>% summarize(nmax = max(n)) %>%
+                     mutate(nmin = min(nmax)))$nmin[1]
+          Savg <- tapply(tmp$S, list(tmp$n), mean) 
+          n <- as.numeric(names(Savg))
+          lines(n, Savg, lwd = lwd, lty=2, 
+                col=mean_col(col[1:length(group_levels)]))
+        }
       }
     }
-    if ('study' %in% scales) {
+    if ('study' %in% scales & !('gamma' %in% scales)) {
       if (!one_panel)
         plot(as.numeric(names(Sstudy)), Sstudy, type = "n",
              main = "Between Groups", xlab = xlab, ylab = "Species richness", 
              xlim = xlim_study, ylim = ylim_study, log = log, bty='n')
-      lines(as.numeric(names(Sstudy)), Sstudy,lwd = lwd, lty = 1)
+      lines(as.numeric(names(Sstudy)), Sstudy, lwd = lwd*1.5, lty = 1)
       if (raw) {
         for (i in seq_along(group_levels)) {
           n = as.numeric(names(Sgamma[[i]]))
@@ -1579,13 +1640,29 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                      mutate(nmin = min(nmax)))$nmin[1]
           Savg <- tapply(tmp$S, list(tmp$n), mean) 
           n <- as.numeric(names(Savg))
-          lines(1:nmax, Savg[1:nmax], lwd = lwd, lty=2)
+          lines(1:nmax, Savg[1:nmax], lwd = lwd, lty=2, 
+                col=mean_col(col[1:length(group_levels)]))
       }
       
     }
 
-    if (!is.na(leg_loc))
-        legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
+    if (!is.na(leg_loc)) {
+        leg_col <- col[1:length(group_levels)]
+        leg_txt <- group_levels
+        leg_lty <- rep(1, length(group_levels))
+        if (avg) {
+          leg_col <- c(leg_col, mean_col(col[1:length(group_levels)]))
+          leg_txt <- c(leg_txt, 'group avg.')
+          leg_lty <- c(leg_lty, 2)
+        }
+        if ('study' %in% scales) {
+            leg_col <- c(leg_col, 'black')
+            leg_txt <- c(leg_txt, 'all groups')
+            leg_lty <- c(leg_lty, 1)
+        }
+        legend(leg_loc, legend = leg_txt, col = leg_col, lty = leg_lty,
+               lwd = lwd, bty = 'n')
+    }  
 }
 
 #' Plot the multiscale MoB analysis output generated by \code{get_delta_stats}.

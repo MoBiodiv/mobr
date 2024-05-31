@@ -205,6 +205,7 @@ corresponds to rarefaction to ca. 2/3 of the individuals, because the same
 samples occur several times in the resampled data sets.
 }
 \examples{
+\donttest{
 # a binary grouping variable (uninvaded or invaded)
 data(inv_comm)
 data(inv_plot_attr)
@@ -213,7 +214,6 @@ inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvade
                           n_perm = 19, effort_samples = c(5,10))
 plot(inv_stats)
 #' 
-\donttest{
 # parallel evaluation using the parallel package 
 # run in parallel
 library(parallel)
