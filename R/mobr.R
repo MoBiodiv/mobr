@@ -183,7 +183,7 @@ print.mob_in = function(x, nrows = 6, nsp = 5, ...) {
 #'
 #' @description This calculation uses the Haversine method of computing great
 #'   circle distances in kilometers on a spherical Earth (r = 6378.137 km). This
-#'   code was taken from fields::rdist.earth by Doug Nychka, John Paige, Florian
+#'   code was copied from fields::rdist.earth by Doug Nychka, John Paige, Florian
 #'   Gerber.
 #' @keywords internal
 sphere_dist = function(coords, r = 6378.137){

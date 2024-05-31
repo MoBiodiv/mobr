@@ -2,7 +2,8 @@
 % Please edit documentation in R/mobr_boxplots.R
 \name{plot.mob_stats}
 \alias{plot.mob_stats}
-\title{Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis}
+\title{Obsolete function that used to plot alpha- and gamma-scale biodiversity
+ statistics for a MoB analysis}
 \usage{
 \method{plot}{mob_stats}(
   x,

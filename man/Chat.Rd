@@ -25,3 +25,17 @@ data(inv_comm)
 # What is the expected coverage at a sample size of 50 at the gamma scale?
 Chat(colSums(inv_comm), 50)
 }
+\references{
+Chao, A., and L. Jost. 2012. Coverage-based rarefaction and extrapolation:
+ standardizing samples by completeness rather than size. Ecology 93:2533–2547.
+ 
+Anne Chao, Nicholas J. Gotelli, T. C. Hsieh, Elizabeth L. Sander, K. H. Ma,
+ Robert K. Colwell, and Aaron M. Ellison 2014. Rarefaction and extrapolation
+ with Hill numbers: a framework for sampling and estimation in species
+ diversity studies.  Ecological Monographs 84:45-67.
+
+T. C. Hsieh, K. H. Ma and Anne Chao. 2024. 
+ iNEXT: iNterpolation and EXTrapolation for
+ species diversity. R package version 3.0.1
+ URL: http://chao.stat.nthu.edu.tw/wordpress/software-download/.
+}

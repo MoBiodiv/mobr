@@ -10,6 +10,21 @@
 #'
 #' @return a numeric value that is the expected coverage. 
 #' 
+#' @references 
+#' Chao, A., and L. Jost. 2012. Coverage-based rarefaction and extrapolation:
+#'  standardizing samples by completeness rather than size. Ecology 93:2533–2547.
+#'  
+#' Anne Chao, Nicholas J. Gotelli, T. C. Hsieh, Elizabeth L. Sander, K. H. Ma,
+#'  Robert K. Colwell, and Aaron M. Ellison 2014. Rarefaction and extrapolation
+#'  with Hill numbers: a framework for sampling and estimation in species
+#'  diversity studies.  Ecological Monographs 84:45-67.
+#' 
+#' T. C. Hsieh, K. H. Ma and Anne Chao. 2024. 
+#'  iNEXT: iNterpolation and EXTrapolation for
+#'  species diversity. R package version 3.0.1
+#'  URL: http://chao.stat.nthu.edu.tw/wordpress/software-download/.
+#' 
+#' 
 #' @export
 #'
 #' @examples
@@ -48,15 +63,29 @@ Chat <- function (x, m)
 #' If you wanted to resample a vector to a certain expected sample coverage, how
 #' many individuals would you have to draw? This is C_hat solved for the number
 #' of individuals. This code is a modification of INEXT's internal function
-#' invChat.Ind() (Hsieh et al 2016).
+#' `invChat.Ind` (Hsieh et al 2016).
 #' 
 #' @param x integer vector (species abundances)
 #' @param C coverage value between 0 and 1
 #'
 #' @return a numeric value which is the number of individuals for a given
 #' level of coverage \code{C}.
+#' @references 
+#' Chao, A., and L. Jost. 2012. Coverage-based rarefaction and extrapolation:
+#'  standardizing samples by completeness rather than size. Ecology 93:2533–2547.
+#'  
+#' Anne Chao, Nicholas J. Gotelli, T. C. Hsieh, Elizabeth L. Sander, K. H. Ma,
+#'  Robert K. Colwell, and Aaron M. Ellison 2014. Rarefaction and extrapolation
+#'  with Hill numbers: a framework for sampling and estimation in species
+#'  diversity studies.  Ecological Monographs 84:45-67.
+#' 
+#' T. C. Hsieh, K. H. Ma and Anne Chao. 2024. 
+#'  iNEXT: iNterpolation and EXTrapolation for
+#'  species diversity. R package version 3.0.1
+#'  URL: http://chao.stat.nthu.edu.tw/wordpress/software-download/.
+#' @seealso \code{\link{calc_S_C}}
 #' @export
-#' @import stats
+#' @importFrom stats optimize
 #' @examples
 #' data(inv_comm)
 #' # What sample size corresponds to an expected sample coverage of 55%?
@@ -71,7 +100,7 @@ invChat <- function (x, C)
         abs(Chat(x, m) - C)
     # for interpolation
     if (refC > C) {
-        opt <- optimize(f,
+        opt <- stats::optimize(f,
                         C = C,
                         lower = 0,
                         upper = sum(x))
@@ -107,11 +136,10 @@ invChat <- function (x, C)
 
 #' Calculate species richness for a given coverage level. 
 #'
-#' Beta_C uses coverage-based rarefaction to standardize beta-diversity.
-#' Specifically, the metric is computed as the Calculates the ratio between gamma and alpha scale IBR curve for a target
-#' gamma-scale sample coverage (i.e. a measure of sample completeness).
+#' This function uses coverage-based rarefaction to compute species richness.
+#' Specifically, the metric is computed as the
 #' 
-#' @param x a site by species matrix
+#' @param x a site by species matrix or a species abundance distribution
 #' @param C_target target coverage between 0 and 1 (default is NULL). If not
 #' provided then target coverage is computed by \code{\link{calc_C_target}}
 #' @param extrapolate logical. Defaults to TRUE in which case richness is 
@@ -119,12 +147,28 @@ invChat <- function (x, C)
 #' @param interrupt logical. Should the function throw an error when \code{C_target}
 #'  exceeds the maximum recommendable coverage?
 #'
-#' @return a numeric value
+#' @returns numeric value which is the species richness at a specific level of 
+#' coverage.
+#' @references 
+#' Chao, A., and L. Jost. 2012. Coverage-based rarefaction and extrapolation:
+#'  standardizing samples by completeness rather than size. Ecology 93:2533–2547.
+#'  
+#' Anne Chao, Nicholas J. Gotelli, T. C. Hsieh, Elizabeth L. Sander, K. H. Ma,
+#'  Robert K. Colwell, and Aaron M. Ellison 2014. Rarefaction and extrapolation
+#'  with Hill numbers: a framework for sampling and estimation in species
+#'  diversity studies.  Ecological Monographs 84:45-67.
+#' 
+#' T. C. Hsieh, K. H. Ma and Anne Chao. 2024. 
+#'  iNEXT: iNterpolation and EXTrapolation for
+#'  species diversity. R package version 3.0.1
+#'  URL: http://chao.stat.nthu.edu.tw/wordpress/software-download/.
+#' 
+#' @seealso \code{\link{invChat}}
 #' @export
 #'
 #' @examples
 #' data(tank_comm)
-#' # What is beta_C for a coverage value of 60%?
+#' # What is species richness for a coverage value of 60%?
 #' calc_S_C(tank_comm, C_target = 0.6)
 calc_S_C <- function(x,
                    C_target = NULL,

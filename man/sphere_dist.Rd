@@ -21,7 +21,7 @@ distance matrix between all pairwise coordinates.
 \description{
 This calculation uses the Haversine method of computing great
   circle distances in kilometers on a spherical Earth (r = 6378.137 km). This
-  code was taken from fields::rdist.earth by Doug Nychka, John Paige, Florian
+  code was copied from fields::rdist.earth by Doug Nychka, John Paige, Florian
   Gerber.
 }
 \keyword{internal}

@@ -2,7 +2,8 @@
 % Please edit documentation in R/mobr_boxplots.R
 \name{get_mob_stats}
 \alias{get_mob_stats}
-\title{Calculate sample based and group based biodiversity statistics.}
+\title{A now obsolete function that used to calculate sample based and group based
+biodiversity statistics.}
 \usage{
 get_mob_stats(
   mob_in,
@@ -111,7 +112,8 @@ A list of class \code{mob_stats} that contains alpha-scale and
   index derived from the bootstrap within groups.
 }
 \description{
-Calculate sample based and group based biodiversity statistics.
+A now obsolete function that used to calculate sample based and group based
+biodiversity statistics.
 }
 \details{
 \strong{BIODIVERSITY INDICES}
