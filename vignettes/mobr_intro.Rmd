@@ -96,10 +96,8 @@ only reflect the shape of the SAD (i.e., no individual density or aggregation ef
 ```{r, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)       
 par(mfrow = c(1, 2))
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR', pooled = FALSE, lwd = 2,
-                 leg_loc = 'topright')
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR', pooled = TRUE, lwd = 4,
-                 leg_loc = NA)
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR', 
+                 leg_loc = 'bottomright')
 par(oldpar)
 ```
 
@@ -109,6 +107,8 @@ numbers of individuals the invaded sites are actually more diverse! This is
 a bit surprising and it implies that the invaded sites have greater evenness. 
 We can directly examine the species abundance distribution (SAD):
 
+
+### THIS IS BROKEN
 ```{r, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)
 par(mfrow = c(1, 2))
@@ -148,9 +148,9 @@ species turnover or \(\beta\)-diversity. Depending on which metric the
 \(\beta\)-diversity is derived from will determine what aspects of species
 turnover it is most sensitive too (McGlinn et al. 2018, Chase et al. 2018).
 
-
+### NEED TO FIX STARTING HERE
 ```{r run two-scale analysis, eval = FALSE}
-inv_stats <- get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
+inv_stats <- calc_comm_div(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
                            n_perm = 199)
 ```
 

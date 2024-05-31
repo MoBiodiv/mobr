@@ -1,3 +1,25 @@
+## version 3.0.0
+---
+
+Major update
+### new features
+- `calc_comm_div` now replaces `get_mob_stats`. The ancillary plotting function `plot.mob_stats` is also now obsolete. New plotting functions
+for the mob stats are not currently planned for development. Instead
+users can chose how to best display the statistics they compute using. If you
+would like to know more about this design decision see the discussion here:
+https://github.com/MoBiodiv/mobr/issues/255. 
+- `plot_rarefaction` is a bit more versitile with many new arguments 
+that provide options for smoothing or averaging rarefaction curves
+when making comparisons within or between groups respectively. 
+- The R package `beta_C` by Thore Engel has now been absorbed into
+the `mobr` package. Use function `calc_beta_div` or `calc_comm_div`
+with `beta` in the `scales` argument to compute coverage based beta
+diversity. Note the index in this case is `S_C` (i.e., richness S for a
+given level of coverage C)
+- a vignette was added to demonstrate how to make computations of beta
+diversity using `mobr` called `beta_div_demo`
+
+
 ## version 2.0.1
 ---
 
