@@ -53,6 +53,8 @@ This data set is included in `mobr`and available after loading the library
 
 ```{r load pkg and data, message=FALSE}
 library(mobr)
+library(dplyr)
+library(ggplot2)
 data(inv_comm)      # Community matrix
 data(inv_plot_attr) # Plot attributes data.frame
 ```
@@ -108,12 +110,11 @@ a bit surprising and it implies that the invaded sites have greater evenness.
 We can directly examine the species abundance distribution (SAD):
 
 
-### THIS IS BROKEN
 ```{r, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)
 par(mfrow = c(1, 2))
-plot_abu(inv_mob_in, 'group', type = 'rad', pooled = FALSE, log = 'x')
-plot_abu(inv_mob_in, 'group', type = 'rad', pooled = TRUE , log = 'x')
+plot_abu(inv_mob_in, 'group', type = 'rad', scale = 'alpha', log = 'x')
+plot_abu(inv_mob_in, 'group', type = 'rad', scale = 'gamma' , log = 'x')
 par(oldpar)
 ```
 
@@ -148,11 +149,32 @@ species turnover or \(\beta\)-diversity. Depending on which metric the
 \(\beta\)-diversity is derived from will determine what aspects of species
 turnover it is most sensitive too (McGlinn et al. 2018, Chase et al. 2018).
 
-### NEED TO FIX STARTING HERE
-```{r run two-scale analysis, eval = FALSE}
-inv_stats <- calc_comm_div(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
-                           n_perm = 199)
+```{r compute diversity indices, eval = TRUE}
+indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
+inv_div <- tibble(inv_comm) %>% 
+  group_by(group = inv_plot_attr$group) %>% 
+  group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
+                               extrapolate = TRUE))
 ```
+
+***NOTES: 
+need to switch datasets because invasion has empty samples
+code: 
+1) plot stats
+2) 
+
+```{r}
+inv_div$index <- factor(inv_div$index, 
+                        levels = c('N', 
+                                   'S', 'beta_S', 
+                                   'S_C', 'beta_S_C',
+                                   'S_n', 'beta_S_n',
+                                   'S_PIE', 'beta_S_PIE'))
+ggplot(inv_div, aes(x = group, y = value)) +
+  geom_boxplot(aes(col = scale)) + 
+  facet_wrap(vars(index), scales = 'free')
+```
+
 
 ```{r, echo = FALSE}
 load('../vignettes/inv_stats.Rdata')
@@ -228,6 +250,8 @@ For the sake of speed we'll run the analysis with just 20 permutations but
 at least 200 are recommended for actual applications. 
 
 ```{r multi-scale analysis, eval=FALSE}
+inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, 
+                          coord_names = c('x', 'y'))
 inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
                              type='discrete', log_scale=TRUE, n_perm = 199)
 ```
