@@ -699,7 +699,7 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
 #' @export
 #' 
 #' @examples
-#' \dontest{ 
+#' \donttest{ 
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)

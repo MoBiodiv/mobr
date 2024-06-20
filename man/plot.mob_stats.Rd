@@ -48,7 +48,7 @@ The user may specify which results to plot or simply to plot
 all the results.
 }
 \examples{
-\dontest{ 
+\donttest{ 
 data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)

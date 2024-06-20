@@ -1319,8 +1319,8 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
 #' @param type either 'sad' or 'rad' for species abundance vs rank abundance
 #'   distribution
-#' @param pooled Boolean defaults to FALSE which specifies that abundances should
-#'   not be pooled at the group level, TRUE specifies that they should be pooled 
+#' @param scale character string either 'alpha' for sample scale or 
+#' 'gamma' for group scale. Defaults to 'gamma'.
 #' @param col optional vector of colors.
 #' @param lwd a number which specifies the width of the lines
 #' @param log a string that specifies if any axes are to be log transformed, 
@@ -1335,10 +1335,11 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #' data(inv_comm)
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', pooled=FALSE, log='x')
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', log='x')
 #' plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', pooled=TRUE, log='x')
 plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
-                    pooled=FALSE, col=NULL, lwd=3, log='', leg_loc = 'topleft') {
+                    scale = 'gamma', col=NULL, lwd=3, log='',
+                    leg_loc = 'topleft') {
     groups  = factor(mob_in$env[ , group_var])
     group_levels = levels(groups) 
     # ensure that proper contrasts in groups 
@@ -1356,7 +1357,7 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
                 "#E2C288", "#F7B0E6", "#AAD28C")    
     else if (length(col) != length(group_levels))
       stop('Length of col vector must match the number of unique groups')
-    title = ifelse(pooled, 'Group Scale', 'Sample Scale')
+    title = ifelse(scale == 'gamma', 'Group Scale', 'Sample Scale')
     if ('sad' == type) {
         plot(1, type = "n", xlab = "% abundance", ylab = "% species", 
              xlim = c(0.01, 1), ylim = c(0.01, 1), log = log, main = title)
@@ -1364,16 +1365,17 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
             col_grp = col[i]
             comm_grp = mob_in$comm[groups == group_levels[i], ]
             comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
-            if (pooled) {
+            if (scale == 'gamma') {
                 sad_grp = colSums(comm_grp)
                 sad_sort = sort(sad_grp[sad_grp != 0])
                 s_cul = 1:length(sad_sort) / length(sad_sort)
                 n_cul = sapply(1:length(sad_sort), function(x)
                                sum(sad_sort[1:x]) / sum(sad_sort))
                 lines(n_cul, s_cul, col = col_grp, lwd = lwd, type = "l")
-            } else {
+            } 
+            if (scale == 'alpha') {
                 for (j in 1:nrow(comm_grp)) {
-                    sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0])
+                    sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0]))
                     s_cul = 1:length(sad_sort) / length(sad_sort)
                     n_cul = sapply(1:length(sad_sort), function(x)
                                    sum(sad_sort[1:x]) / sum(sad_sort))
@@ -1392,14 +1394,15 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
              col_grp = col[i]
              comm_grp = mob_in$comm[groups == group_levels[i], ]
              comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
-             if (pooled) {
+             if (scale == 'gamma') {
                 sad_grp = colSums(comm_grp)
                 sad_sort = sort(sad_grp[sad_grp != 0], decreasing = TRUE)
                 lines(sad_sort / sum(sad_sort), col = col_grp, lwd = lwd,
                       type = "l")
-             } else {
+             } 
+             if (scale == 'alpha') {
                  for (j in 1:nrow(comm_grp)) {
-                     sad_sort = sort(comm_grp[j, comm_grp[j, ] != 0], decreasing = TRUE)
+                     sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0]), decreasing = TRUE)
                      lines(1:length(sad_sort), sad_sort / sum(sad_sort),
                            col = scales::alpha(col_grp, 0.5),
                            lwd = lwd, type = "l")
