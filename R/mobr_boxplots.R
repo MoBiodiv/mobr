@@ -352,12 +352,14 @@ calc_comm_div = function(abund_mat, index, effort = NA,
                          quiet = TRUE, replace = replace, C_target = C_target_gamma, ...)
         if (any(c('alpha', 'beta') %in% scales)) {
             if (index[i] == 'S_C' & 'beta' %in% scales) {
-                effort = attributes(gamma)$N
+                effort_eff = attributes(gamma)$N
                 index_eff = 'S_n'
             }
-            else 
+            else {
                 index_eff = index[i]
-            alpha = apply(abund_mat, 1, calc_div, index_eff, effort, rare_thres,
+                effort_eff = effort
+            }    
+            alpha = apply(abund_mat, 1, calc_div, index_eff, effort_eff, rare_thres,
                           extrapolate = extrapolate, return_NA = return_NA, 
                           quiet = TRUE, replace = replace, C_target = C_target_gamma, ...)
         }
@@ -370,7 +372,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
             }
         }  
         if (index[i] == 'S_n' | index[i] == 'S_C')
-            effort_out <- effort 
+            effort_out <- effort_eff 
         else
             effort_out <- NA
         gamma_coverage <- ifelse(index[i] == 'S_C', C_target_gamma, NA)
@@ -649,15 +651,15 @@ calc_beta_div = function(abund_mat, index, effort = NA, C_target_gamma = NA, ...
 #'
 #' stopCluster(cl)
 #' }
-get_mob_stats = function(mob_in, group_var, ref_level = NULL, 
-                         index = c("N", "S", "S_n", "S_PIE"),
-                         effort_samples = NULL, effort_min = 5,
-                         extrapolate = TRUE, return_NA = FALSE, 
-                         rare_thres = 0.05, n_perm = 0, 
-                         boot_groups = FALSE, conf_level = 0.95, cl=NULL, 
-                         ...) {
-    stop('This function is obsolete and no longer supported. Please use the function `calc_comm_div` to compute biodiveristy indices at different scales')
-}
+#get_mob_stats = function(mob_in, group_var, ref_level = NULL, 
+#                         index = c("N", "S", "S_n", "S_PIE"),
+#                         effort_samples = NULL, effort_min = 5,
+#                         extrapolate = TRUE, return_NA = FALSE, 
+#                         rare_thres = 0.05, n_perm = 0, 
+#                         boot_groups = FALSE, conf_level = 0.95, cl=NULL, 
+#                         ...) {
+#    stop('This function is obsolete and no longer supported. Please use the function `calc_comm_div` to compute biodiveristy indices at different scales')
+#}
 
 #' Obsolete function that used to plot alpha- and gamma-scale biodiversity
 #'  statistics for a MoB analysis
@@ -711,9 +713,348 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
 #'                                boot_groups=TRUE)
 #' plot(inv_stats_boot)
 #' }
-plot.mob_stats = function(x, index = NULL, multi_panel = FALSE, 
+#plot.mob_stats = function(x, index = NULL, multi_panel = FALSE, 
+#                          col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
+#                                  "#E2C288", "#F7B0E6", "#AAD28C"), 
+#                          cex.axis=1.2, ...) {
+#  stop('This function is obsolete and no longer supported.')
+#}
+
+#' Panel function for alpha-scale results
+#' @importFrom graphics boxplot mtext
+#' @keywords internal
+samples_panel1 = function(sample_dat, col, ylab = "",
+                          main = expression(alpha * "-scale"), 
+                          cex.axis=1.2, ...) {
+  #label = substitute(paste(italic(bar(D)), ' = ', D_bar, ', ', italic(p), 
+  #                         ' = ', p_val),
+  #                   list(D_bar = round(samples_tests$D_bar, 2),
+  #                        p_val = round(samples_tests$p_val, 3)))
+  boxplot(value ~ group, data = sample_dat, main = main,
+          ylab =  ylab, col = col, cex.axis = cex.axis, cex.main = 1.5,
+          frame.plot = TRUE, ...)
+  #groups = levels(sample_dat$group)
+  #axis(side=1, at=1:length(groups), labels=groups, tick=FALSE,
+  #      cex.axis=cex.axis)
+  #mtext(label, side = 3, line = 0)  
+}
+
+#' Panel function for gamma-scale results
+#' @importFrom graphics boxplot points mtext 
+#' @keywords internal
+groups_panel1 = function(group_dat, col, ylab = "",
+                         main = expression(gamma * "-scale"),
+                         cex.axis=1.2, ...) {
+  #label = substitute(paste(italic(bar(D)), ' = ', D_bar, ', ', italic(p), 
+  #                         ' = ', p_val), 
+  #                   list(D_bar = round(tests$D_bar, 2),
+  #                        p_val = round(tests$p_val, 3)))
+  boxplot(value ~ group, data = group_dat, main = main,
+          ylab = ylab, boxwex = 0, 
+          ylim = c(0, 1.1 * max(group_dat$value, na.rm = TRUE)),
+          col = col, cex.axis = cex.axis, cex.main = 1.5, frame.plot = TRUE,
+          ...)
+  groups = levels(group_dat$group)
+  points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2,
+         col = col, ...)
+  #mtext(label, side = 3, line = 0)
+}
+
+#' Panel function for gamma-scale results with confidence intervals
+#' @importFrom plotrix plotCI
+#' @keywords internal
+groups_panel2 = function(group_dat, col, ylab = "", 
+                         main = expression(gamma * "-scale"),
+                         cex.axis=1.2, ...) {
+  boxplot(median ~ group, data = group_dat, main = main,
+          ylab = ylab, boxwex = 0, ylim = c(0, 1.1 * max(group_dat$upper)),
+          col = col, cex.axis = cex.axis, cex.main = 1.5, frame.plot = TRUE, 
+          ...)
+  groups = levels(group_dat$group)
+  plotCI(1:nrow(group_dat), group_dat$median, li = group_dat$lower,
+         ui = group_dat$upper, add = TRUE, pch = 19, cex = 1.5,
+         sfrac = 0.02, col = col, ...)
+}
+
+#' Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis
+#' 
+#' Plots a \code{mob_stats} object which is produced by the 
+#' function \code{get_mob_stats}. The p-value for each statistic
+#' is displayed in the plot title if applicable.
+#' 
+#' The user may specify which results to plot or simply to plot 
+#' all the results. 
+#' 
+#' @param x a \code{mob_stats} object that has the samples and 
+#' treatment level statistics
+#' 
+#' @param index The biodiversity statistics that should be plotted.
+#' See \code{\link{get_mob_stats}} for information on the indices. By default there
+#' is one figure for each index, with panels for alpha- and gamma-scale results
+#' as well as for beta-diversity when applicable. 
+#' 
+#' @param multi_panel A logical variable. If \code{multi_panel = TRUE} then a 
+#' multipanel plot is produced, which shows observed, rarefied, and asymptotic 
+#' species richness and S_PIE at the alpha- and gamma-scale.
+#' This set of variables conveys a comprehensive picture of the underlying 
+#' biodiversity changes. 
+#' 
+#' @param col a vector of colors for the groups, set to NA if no color is
+#' preferred
+#' 
+#' @param cex.axis The magnification to be used for axis annotation relative to
+#' the current setting of cex. Defaults to 1.2. 
+#' 
+#' @param ... additional arguments to provide to \code{boxplot}, \code{points},
+#'   and confidence interval functions
+#' 
+#' @author Felix May, Xiao Xiao, and Dan McGlinn 
+#' 
+#' @importFrom rlang .data
+#' 
+#' @export
+#' 
+#' @examples 
+#' data(inv_comm)
+#' data(inv_plot_attr)
+#' indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
+#' inv_div <- tibble(inv_comm) %>% 
+#'   group_by(group = inv_plot_attr$group) %>% 
+#'   group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
+#'                                extrapolate = TRUE)))
+#' inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
+#' # without bootstrap CI for gamma-scale
+#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
+#' plot(inv_stats) 
+#' # with bootstrap CI for gamma-scale
+#' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
+#'                                boot_groups=TRUE)
+#' plot(inv_stats_boot)
+plot_comm_div = function(comm_div, index = NULL, multi_panel = FALSE, 
                           col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
                                   "#E2C288", "#F7B0E6", "#AAD28C"), 
                           cex.axis=1.2, ...) {
-  stop('This function is obsolete and no longer supported.')
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+  # default colors derived with colorspace::rainbow_hcl(5, c=60, l=80)
+  if (any(is.na(col)) & length(col) == 1) 
+    col_groups = 1
+  else
+    col_groups = col
+  if (is.null(index))
+    index = as.character(unique(comm_div$index))
+  INDICES = c("N", "S", "S_C", "S_n", "S_asymp", "f_0", 
+              "pct_rare", "PIE", "S_PIE")
+  if (multi_panel) 
+    index = c("S","S_n","pct_rare","S_PIE")
+  index = match.arg(index, INDICES, several.ok = TRUE)
+  
+  var_names = unique(comm_div$index)
+  var_names2 = var_names[var_names != "beta_S" & var_names != "beta_S_PIE"]
+  
+  index_match = intersect(index, var_names)
+  if (length(index_match) == 0)
+    stop(paste("The indices", paste(index, collapse = ", "), 
+               "are missing in the input. Please choose other indices or re-run get_comm_div with the indices of interest."))
+  
+  index_missing = setdiff(index, var_names2)
+  if (length(index_missing) > 0)
+    warning(paste("The indices", paste(index, collapse = ", "), 
+                  "are missing in the input and cannot be plotted."))
+  
+  if ("S_n" %in% index_match) {
+    S_n_samples = filter(comm_div, index == "S_n" & scale == "alpha")
+    S_n_groups = filter(comm_div, index == "S_n" & scale == "gamma")
+    S_n_len = length(unique(S_n_samples$effort))
+  } else {
+    S_n_len = 0
+  }
+  
+  if (multi_panel) {
+    n_rows = 3 + S_n_len
+    op = par(mfrow = c(n_rows,3), las = 1, cex.lab = 1.4, 
+             oma = c(0, 1, 0, 0), xpd = NA)
+  } 
+  
+  for (var in index_match) {
+    
+    if (var == "N") {
+      
+      if (!multi_panel)
+        op = par(mfrow = c(1, 3), cex.lab = 1.6,
+                 oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1), xpd = NA)
+      
+      #op = par(mfrow = c(1, 2), las = 1, cex.lab = 1.3,
+      #         oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1),
+      #         xpd = NA)
+      
+      
+      y_label = switch(var,
+                       "N" = expression("Abundance (" * italic(N) * ")"),
+                       "PvarIE" = "PIE")
+      
+      dat_samples = filter(comm_div, index == var & scale == 'alpha')
+      #dat_tests = filter(comm_div$samples_tests, index == var)
+      samples_panel1(dat_samples, ylab = y_label,
+                     main = expression(alpha * "-scale"), col = col,
+                     cex.axis = cex.axis, ...)
+      
+      # insert blank space b/c non beta plot for these stats
+      plot(1:10, 1:10, type = 'n', axes = F, xlab = '', ylab = '')
+      
+      dat_groups = filter(comm_div, index == var & scale == 'gamma')
+      
+      #if (is.null(comm_div$groups_tests)) {
+        # then plot median and quantiles
+      #  groups_panel2(dat_groups, col = col_groups, cex.axis = cex.axis, ...) 
+      #} else {  
+      #  tests = filter(comm_div$groups_tests, index == var)
+        groups_panel1(dat_groups, col = col_groups, cex.axis = cex.axis, ...) 
+      #}
+    }
+    
+    if (var %in% c("S", "S_C", "S_asymp", "pct_rare", "f0", "PIE", "S_PIE")) {
+      
+      if (!multi_panel)
+        op = par(mfrow = c(1, 3), cex.lab = 1.6,
+                 oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1), xpd = NA)
+      
+      if (multi_panel) {
+        if (var == "f_0") 
+          par(fig = c(0, 0.33, 1 / n_rows, 2 / n_rows), new = TRUE)
+        if (var == "S_PIE") 
+          par(fig = c(0, 0.33, 0         , 1 / n_rows), new = TRUE)
+      }
+      
+      y_label = switch(var,
+                       "S" = expression('Richness (' * italic(S) * ')'),
+                       "S_C" = expression('Richness (' * italic(S)[C] *')'),
+                       "S_asymp" = expression('Asympotic richness (' *
+                                                italic(S[asymp]) * ')'),
+                       "pct_rare" = paste("% of species in lower",
+                                          ifelse(is.character(comm_div$rare_thres),
+                                                 comm_div$rare_thres,
+                                                 comm_div$rare_thres * 100),
+                                          "% of abundance"),
+                       "f_0" = expression('Undetected richness (' * italic(f)[0] * ')'),
+                       "S_PIE" = expression('ENS of PIE (' * italic(S)[PIE] * ')'))
+      
+      dat_samples = filter(comm_div, index == var & scale == 'alpha')
+      #dat_tests = filter(comm_div$samples_tests, index == var)
+      samples_panel1(dat_samples, ylab =  y_label,
+                     main = expression(alpha * "-scale"), col = col, 
+                     cex.axis = cex.axis, ...)
+      
+      if (multi_panel) {
+        if (var == "pct_rare") 
+          par(fig = c(0.33, 0.67, 1/n_rows, 2/n_rows), new = TRUE)
+        if (var == "S_PIE") 
+          par(fig = c(0.33, 0.67, 0       , 1/n_rows), new = TRUE)
+      }
+      
+      beta_var = paste("beta", var, sep = "_")
+      dat_samples = filter(comm_div, index == beta_var & scale == 'beta')
+      #dat_tests = filter(comm_div$samples_tests, index == beta_var)
+      samples_panel1(dat_samples, ylab =  "",
+                     main = expression(beta * "-diversity (=" *
+                                         gamma / alpha * ")"),
+                     col = col, cex.axis = cex.axis, ...)
+      
+      if (multi_panel) {
+        if (var == "pct_rare")
+          par(fig = c(0.67, 1.0, 1 / n_rows, 2 / n_rows), new = TRUE)
+        if (var == "S_PIE")
+          par(fig = c(0.67, 1.0, 0         , 1 / n_rows), new = TRUE)
+      }
+      
+      dat_groups = filter(comm_div, index == var & scale == 'gamma')
+      
+      #if (is.null(comm_div$groups_tests)) {
+      #  groups_panel2(dat_groups, col = col_groups, ...) 
+      #} else {
+      #  tests = filter(comm_div$groups_tests, index == var)
+        groups_panel1(dat_groups, col = col_groups, cex.axis = cex.axis,
+                      ...) 
+      #}
+    }    
+    
+    if (var == "S_n") {
+      
+      if (!multi_panel) {
+        op = par(mfrow = c(S_n_len, 3), las = 1, cex.lab = 1.6,
+                 oma = c(0, 2, 0, 0), mar = c(4, 3, 5, 1), xpd = NA)
+      }
+      
+      y_label = expression('Rarefied richness (' * italic(S[n]) * ')')
+      
+      effort_samples = unique(S_n_samples$effort)
+      effort_groups = unique(S_n_groups$effort)
+      
+      for (i in seq_along(effort_samples)) {
+        
+        if (multi_panel)
+          par(fig = c(0, 0.33, (1 + i) / n_rows, (2 + i) / n_rows),
+              new = TRUE)
+        
+        dat_samples = filter(S_n_samples, .data$effort == effort_samples[i])
+        #dat_tests = filter(comm_div$samples_tests, 
+        #                   index == var & .data$effort == effort_samples[i])
+        
+        fig_title = substitute(paste(alpha, "-scale, n = ", n),
+                               list(n = effort_samples[i]))
+        
+        samples_panel1(dat_samples, 
+                       ylab = y_label,
+                       main = '', col = col, cex.axis = cex.axis,
+                       ...)
+        par(new = TRUE)
+        plot(1:10, 1:10, type = 'n', axes = F, xlab = '', ylab = '',
+             main = fig_title, cex.main = 1.5)
+        
+        if (multi_panel)
+          par(fig = c(0.33, 0.67, (1 + i) / n_rows, (2 + i) / n_rows),
+              new = TRUE)
+        
+        beta_var = paste("beta", var, sep = "_")
+        dat_samples = filter(comm_div, index == beta_var & scale == 'beta')
+        #dat_tests = filter(comm_div$samples_tests,
+        #                   index == beta_var & .data$effort == effort_samples[i])
+        n = effort_samples[i]
+        fig_title = substitute(paste(beta, "-diversity (=", gamma / alpha,
+                                     "), n = ", n), 
+                               list(n = effort_samples[i]))
+        samples_panel1(dat_samples, main = '',
+                       ylab = "", col = col, cex.axis = cex.axis, ...)
+        
+        par(new = TRUE)
+        plot(1:10, 1:10, type = 'n', axes = F, xlab = '', ylab = '',
+             main = fig_title, cex.main = 1.5)
+        
+        if (multi_panel)
+          par(fig = c(0.67, 1.0, (1 + i) / n_rows, (2 + i) / n_rows),
+              new = TRUE)
+        
+        dat_groups = filter(S_n_groups, .data$effort == effort_groups[i])
+        fig_title = substitute(paste(gamma, "-scale, n = ", n),
+                               list(n = effort_groups[i]))            
+        #if (is.null(comm_div$groups_test)) {
+        #  groups_panel2(dat_groups, main = '', col = col_groups,
+        #                ...) 
+        #  par(new = TRUE)
+        #  plot(1:10, 1:10, type = 'n', axes = F, xlab = '', ylab = '',
+        #       main = fig_title, cex.main = 1.5)
+        #} else {
+        #  tests = filter(comm_div$groups_tests, 
+        #                 index == var & .data$effort == effort_groups[i])
+          groups_panel1(dat_groups, ylab = "", main = '',
+                        col = col_groups, cex.axis = cex.axis, ...)
+          par(new = TRUE)
+          plot(1:10, 1:10, type = 'n', axes = F, xlab = '', ylab = '',
+               main = fig_title, cex.main = 1.5)
+        #}
+      }
+      y_coords = (S_n_len:0) / S_n_len
+    }
+  }
+  par(op)
 }
