@@ -108,3 +108,24 @@ par(oldpar)
 done
 
 Thank you for the constructive and helpful package review. 
+
+
+# mobr 3.0.0
+
+This is a revised package submission.
+
+## Test environments
+* windows X (local), R 4.3.3
+* ubuntu 22.04.3 (personal server), R 4.3.1
+* win-builder (devel & release)
+
+## R CMD check results
+
+### Windows X
+* No warnings or errors
+
+### ubuntu (personal server)
+* No warnings or errors
+
+### on win-builder (devel & release)
+* No warnings or errors
