@@ -3,12 +3,12 @@
 
 Major update
 ### new features
-- `calc_comm_div` now replaces `get_mob_stats`. The ancillary plotting function `plot.mob_stats` is also now obsolete. New plotting functions
-for the mob stats are not currently planned for development. Instead
-users can chose how to best display the statistics they compute using. If you
-would like to know more about this design decision see the discussion here:
-https://github.com/MoBiodiv/mobr/issues/255. 
-- `plot_rarefaction` is a bit more versitile with many new arguments 
+- `calc_comm_div` now replaces `get_mob_stats`. The ancillary plotting function
+`plot.mob_stats` is now replaced with `plot_comm_div`. We hope to eventually
+add back in bootstrapping confidence intervals for the statistics but that is
+not currently supported. If you would like to know more about this design
+decision see the discussion here: https://github.com/MoBiodiv/mobr/issues/255. 
+- `plot_rarefaction` is a bit more versatile with many new arguments 
 that provide options for smoothing or averaging rarefaction curves
 when making comparisons within or between groups respectively. 
 - The R package `beta_C` by Thore Engel has now been absorbed into

@@ -4,7 +4,7 @@
 \alias{calc_PIE}
 \title{Calculate probability of interspecific encounter (PIE)}
 \usage{
-calc_PIE(x, replace = FALSE, ...)
+calc_PIE(x, replace = FALSE)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like

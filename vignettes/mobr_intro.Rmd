@@ -150,47 +150,28 @@ species turnover or \(\beta\)-diversity. Depending on which metric the
 turnover it is most sensitive too (McGlinn et al. 2018, Chase et al. 2018).
 
 ```{r compute diversity indices, eval = TRUE}
-indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
+indices <- c('N', 'S', 'S_n', 'S_PIE')
 inv_div <- tibble(inv_comm) %>% 
   group_by(group = inv_plot_attr$group) %>% 
   group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
                                extrapolate = TRUE))
 ```
 
-***NOTES: 
-need to switch datasets because invasion has empty samples
-code: 
-1) plot stats
-2) 
-
-```{r}
-inv_div$index <- factor(inv_div$index, 
-                        levels = c('N', 
-                                   'S', 'beta_S', 
-                                   'S_C', 'beta_S_C',
-                                   'S_n', 'beta_S_n',
-                                   'S_PIE', 'beta_S_PIE'))
-ggplot(inv_div, aes(x = group, y = value)) +
-  geom_boxplot(aes(col = scale)) + 
-  facet_wrap(vars(index), scales = 'free')
-```
-
-
 ```{r, echo = FALSE}
-load('../vignettes/inv_stats.Rdata')
+#load('../vignettes/inv_stats.Rdata')
 ```
 
-We can examine the `inv_stats` object 
+We can examine the `inv_div` object 
 
 ```{r}
-names(inv_stats)
+head(inv_div)
 ```
 
 There are also functions for plotting the indices at the sample and group levels.
 First let's examine species richness:
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot(inv_stats, 'S')
+plot_comm_div(inv_div, 'S')
 ```
 
 Invasion appears to decrease local sample diversity but not gamma diversity.
@@ -201,7 +182,7 @@ that the invaded sites appeared to have fewer individuals, let's examine the
 test of that:
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot(inv_stats, 'N')
+plot_comm_div(inv_div, 'N')
 ```
 
 Clearly our intuition was correct there is a very strong negative effect of 
@@ -209,11 +190,11 @@ invasion on N. So it appears that the changes we observed in S may be due to
 the negative effect of invasion on N. Let's examine `S_n` to test this:
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot(inv_stats, 'S_n')
+plot_comm_div(inv_div, 'S_n')
 ```
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot(inv_stats, 'S_PIE')
+plot_comm_div(inv_div, 'S_PIE')
 ```
 
 We can also plot `f_0` but for this dataset this metric
@@ -221,7 +202,7 @@ does not show strong patterns so we'll stop here for now. If you
 want to plot all the biodiversity metrics at once you can simply use:
 
 ```{r, eval=FALSE}
-plot(inv_stats)
+plot_comm_div(inv_div)
 ```
 
 # Multi-scale analysis
@@ -252,7 +233,7 @@ at least 200 are recommended for actual applications.
 ```{r multi-scale analysis, eval=FALSE}
 inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, 
                           coord_names = c('x', 'y'))
-inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
+inv_deltaS <- get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
                              type='discrete', log_scale=TRUE, n_perm = 199)
 ```
 
@@ -287,7 +268,7 @@ collected 26 sites that had been recently burned and 26 sites that they consider
 # central US woodland
 data(fire_comm)
 data(fire_plot_attr)
-fire_mob_in = make_mob_in(fire_comm, fire_plot_attr,
+fire_mob_in <- make_mob_in(fire_comm, fire_plot_attr,
                           coord_names = c('x', 'y'))
 ```
 
@@ -297,8 +278,11 @@ dataset before attempting to analyze its patterns. We will start our exploration
 with the sSBR.
 
 ```{r}
-plot_rarefaction(fire_mob_in, 'group', ref_level = 'unburned', 'IBR')
-plot_rarefaction(fire_mob_in, 'group', ref_level = 'unburned', 'sSBR')
+par(mfrow=c(1,3))
+plot_rarefaction(fire_mob_in, 'group', ref_level = 'unburned', 'IBR', 
+                 leg_loc = NA)
+plot_rarefaction(fire_mob_in, 'group', ref_level = 'unburned', 'sSBR',
+                 leg_loc = 'bottomright')
 ```
 
 The sSBR indicates that the unburned site has higher species richness across
@@ -324,15 +308,18 @@ Let's use the two-scale analysis to continue this exploration of the data and to
 test some hypotheses regarding which components are driving this decrease in S
 in the burned sites. 
 
-```{r, eval = FALSE}
-fire_stats = get_mob_stats(fire_mob_in, 'group', ref_level = 'unburned')
-```
-```{r, echo = FALSE}
-load('../vignettes/fire_stats.Rdata')
+```{r}
+indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
+fire_div <- tibble(fire_comm) %>% 
+  group_by(group = fire_plot_attr$group) %>% 
+  group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
+                               extrapolate = TRUE))
 ```
 
+Let's graphically examine the metrics: 
+
 ```{r, fig.width = 7, fig.height = 3.5}
-plot(fire_stats)
+plot_comm_div(fire_div)
 ```
 
 It is clear that the fire decreased abundance of woody plants - that is likely
@@ -358,7 +345,7 @@ to `TRUE` because there is a large number of individuals and it is not
 necessary to compute the differences between the curves at all possible scales.
 
 ```{r, eval = FALSE}
-fire_deltaS = get_delta_stats(fire_mob_in, 'group', ref_level = 'unburned',
+fire_deltaS <- get_delta_stats(fire_mob_in, 'group', ref_level = 'unburned',
                               type = 'discrete', log_scale = TRUE, n_perm = 199,
                               overall_p = TRUE)
 ```
@@ -392,7 +379,7 @@ Here we reanalyze data from Chase (2010) in which freshwater aquatic communities
 ```{r}
 data(tank_comm)
 data(tank_plot_attr)
-tank_mob_in = make_mob_in(tank_comm, tank_plot_attr,
+tank_mob_in <- make_mob_in(tank_comm, tank_plot_attr,
                           coord_names = c('x', 'y'))
 ```
 
@@ -417,15 +404,18 @@ The SAD plots indicate only a modest shift in the evenness component of the SAD
 although clearly from the sSBR we know that the size of the species pool is larger
 in the high community. 
 
-```{r, eval = FALSE}
-tank_stats = get_mob_stats(tank_mob_in, 'group', ref_level = 'low')
-```
-```{r, echo = FALSE}
-load('../vignettes/tank_stats.Rdata')
+```{r}
+indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
+tank_div <- tibble(tank_comm) %>% 
+  group_by(group = tank_plot_attr$group) %>% 
+  group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
+                               extrapolate = TRUE))
 ```
 
+Let's graphically examine the metrics: 
+
 ```{r, fig.width = 7, fig.height = 3.5}
-plot(tank_stats)
+plot_comm_div(tank_div)
 ```
 
 The two-scale analysis indicates that enrichment does not affect *N* but that it
@@ -438,7 +428,7 @@ common species was not changed by enrichment (as we observed in the plots of the
 SADs).
 
 ```{r, eval = FALSE}
-tank_deltaS = get_delta_stats(tank_mob_in, 'group', ref_level = 'low',
+tank_deltaS <- get_delta_stats(tank_mob_in, 'group', ref_level = 'low',
                               inds = 10, log_scale = TRUE, type = 'discrete',
                               n_perm=199) 
 ```

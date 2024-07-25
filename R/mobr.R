@@ -147,6 +147,7 @@ subset.mob_in = function(x, subset, type = 'string', drop_levels = FALSE, ...) {
 #' @param ... parameters passed to other functions
 #' @importFrom utils head
 #' @keywords internal
+#' @noRd
 #' @rdname print.mob_in
 #' @export
 print.mob_in = function(x, nrows = 6, nsp = 5, ...) {
@@ -186,6 +187,7 @@ print.mob_in = function(x, nrows = 6, nsp = 5, ...) {
 #'   code was copied from fields::rdist.earth by Doug Nychka, John Paige, Florian
 #'   Gerber.
 #' @keywords internal
+#' @noRd
 sphere_dist = function(coords, r = 6378.137){
     coslat1 <- cos((coords[ , 2] * pi) / 180)
     sinlat1 <- sin((coords[ , 2] * pi) / 180)
@@ -506,7 +508,7 @@ rarefaction = function(x, method, effort = NULL, coords = NULL, latlong = NULL,
                       # calculate convex-hull for 3 to n points
                       for (j in 3:n){
                          #plot(coords_ordered[1:j,1], coords_ordered[1:j,2], pch = 20)
-                         hpts <- chull(coords_ordered[1:j,1], coords_ordered[1:j,2])
+                         hpts <- grDevices::chull(coords_ordered[1:j,1], coords_ordered[1:j,2])
                          hpts <- c(hpts, hpts[1])
                          chull_coords <- as.matrix(coords_ordered[hpts,])
                          chull_poly <- sf::st_polygon(list(chull_coords))
@@ -634,6 +636,7 @@ rarefaction = function(x, method, effort = NULL, coords = NULL, latlong = NULL,
 #' @param n_indiv the number of individuals to evaluate the rarefaction curve
 #' at. The default behavior is to evaluate it on a log2 interval from 1 to N 
 #' @keywords internal
+#' @noRd
 ind_rare_perm = function(abu, n_perm = 100, n_indiv = NULL) {
     if (!is.vector(abu)) {
         stop('abu must be a vector of abundances')
@@ -699,6 +702,7 @@ avg_nn_dist = function(coords) {
 #' @inheritParams rarefaction
 #' @importFrom tibble tibble
 #' @keywords internal
+#' @noRd
 get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
                             inds=NULL, ind_dens=NULL, n_plots=NULL) {
     if (is.null(inds) & any(c('SAD', 'N') %in% tests))
@@ -757,6 +761,7 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
 #'  for sampling species abundances. Ecology Letters 10:1037-1045.
 #' 
 #' @keywords internal
+#' @noRd
 get_rand_sad = function(rad, N) {
   rand_samp = sample(1:length(rad), N, replace = T, prob = rad)
   rand_sad = table(factor(rand_samp, levels = 1:length(rad)))
@@ -894,6 +899,7 @@ get_null_comm = function(comm, null_model, groups = NULL) {
 #' Returns a vector of abundances where individual-based rarefaction 
 #' will be performed
 #' @keywords internal
+#' @noRd
 get_inds = function(N_max, inds = NULL, log_scale = FALSE) {
     # across the groups what is the smallest total number of
     # individuals - this will be the largest N we can compute to
@@ -926,6 +932,7 @@ get_inds = function(N_max, inds = NULL, log_scale = FALSE) {
 #' Returns the "assumed" density of individuals in 
 #' a plot given whether min, max or mean is used
 #' @keywords internal
+#' @noRd
 get_ind_dens = function(comm, density_stat){
     if (density_stat == 'mean') {
         ind_dens = sum(comm) / nrow(comm)
@@ -945,6 +952,7 @@ get_ind_dens = function(comm, density_stat){
 #' Method developed by Loosmore and Ford 2006 but algebraic simplifications 
 #' used as developed by Baddeley et al. 2014 Ecological Archives M084-017-A1
 #' @keywords internal
+#' @noRd
 get_overall_p = function(effort, perm, value){
     delta_effort = c(effort[1], diff(effort))[perm == 0]
     Hbarbar = tapply(value, effort, mean)  # Baddeley Eq. A.10
@@ -961,6 +969,7 @@ get_overall_p = function(effort, perm, value){
 #' @param stats the statistics to output
 #' @importFrom stats pf coef
 #' @keywords internal
+#' @noRd
 mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
     summary_lm = summary(x)
     out = list()
@@ -998,7 +1007,8 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
 #' @importFrom tibble as_tibble
 #' @importFrom rlang .data
 #' @importFrom stats lm
-#' @keywords internal 
+#' @keywords internal
+#' @noRd
 get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                        stats=NULL, spat_algo=NULL) {
   
@@ -1056,6 +1066,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
 #' @importFrom stats quantile
 #' @importFrom rlang .data
 #' @keywords internal
+#' @noRd
 run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                            stats, spat_algo, n_perm, overall_p) {
     if (overall_p)
@@ -1087,13 +1098,13 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
         # compute quantiles
         null_qt = list()
         null_qt$S_df = null_df$S_df %>% 
-                       group_by(env, .data$test, sample, .data$effort) %>%
+                       group_by(.data$env, .data$test, .data$sample, .data$effort) %>%
                        summarize(low_effect = quantile(.data$effect, 0.025, na.rm = TRUE),
                                  med_effect = quantile(.data$effect, 0.5, na.rm = TRUE), 
                                  high_effect = quantile(.data$effect, 0.975, na.rm = TRUE))
           
         null_qt$mod_df = null_df$mod_df %>%
-                         group_by(.data$test, sample, .data$effort, .data$index) %>%
+                         group_by(.data$test, .data$sample, .data$effort, .data$index) %>%
                          summarize(low_value = quantile(.data$value, 0.025, na.rm = TRUE),
                                    med_value = quantile(.data$value, 0.5, na.rm = TRUE), 
                                    high_value = quantile(.data$value, 0.975, na.rm = TRUE))
@@ -1111,12 +1122,12 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
             obs_df = map(obs_df, function(x) data.frame(perm = 0, x))          
             null_df = map2(obs_df, null_df, rbind)
             p_val[[k]] = list(effect_p = null_df$S_df %>%
-                                  group_by(test, group) %>%
-                                  summarize(p = get_overall_p(effort, perm, effect)),
+                                  group_by(.data$test, .data$group) %>%
+                                  summarize(p = get_overall_p(.data$effort, .data$perm, .data$effect)),
                               mod_p = null_df$mod_df %>%
-                                  subset(!is.na(value)) %>% 
-                                  group_by(test, index) %>% 
-                                  summarize(p = get_overall_p(effort, perm, value)))
+                                  subset(!is.na(.data$value)) %>% 
+                                  group_by(.data$test, .data$index) %>% 
+                                  summarize(p = get_overall_p(.data$effort, .data$perm, .data$value)))
         }
     }
     if (overall_p)
@@ -1218,7 +1229,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
                            density_stat = c('mean', 'max', 'min'),
                            n_perm=1000, overall_p = FALSE) {
     # perform preliminary checks and variable assignments
-    if (class(mob_in) != "mob_in")
+    if (!methods::is(mob_in, "mob_in"))
         stop('mob_in must be output of function make_mob_in (i.e., of class mob_in')
     if (!(env_var %in% names(mob_in$env)))
         stop(paste(env_var, ' is not one of the columns in mob_in$env.'))
@@ -1251,7 +1262,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
         }
     }    
     if (type == 'discrete') {
-        if (class(env) != 'factor') {
+        if (!methods::is(env, 'factor')) {
             warning(paste("Converting", env_var, "to a factor with the default contrasts because the argument type = 'discrete'."))
             env = as.factor(env)
         }
@@ -1314,9 +1325,13 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 }
 
 #' Plot distributions of species abundance
-#' @inheritParams get_mob_stats
-#' 
+
 #' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
+#' @param group_var String that specifies which field in \code{mob_in$env} the
+#'   data should be grouped by
+#' @param ref_level String that defines the reference level of \code{group_var}
+#'   to which all other groups are compared with, defaults to \code{NULL}.
+#'   If \code{NULL} then the default contrasts of \code{group_var} are used.    
 #' @param type either 'sad' or 'rad' for species abundance vs rank abundance
 #'   distribution
 #' @param scale character string either 'alpha' for sample scale or 
@@ -1334,9 +1349,9 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
+#' inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', log='x')
-#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', pooled=TRUE, log='x')
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', scale = 'alpha', log='x')
 plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
                     scale = 'gamma', col=NULL, lwd=3, log='',
                     leg_loc = 'topleft') {
@@ -1418,7 +1433,7 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #'
 #' `mean_col()` computes an average color.
 #'
-#' Inernal function to compute an average color
+#' Internal function to compute an average color
 #' by using the quadratic mean of the colors' RGBA values.
 #' 
 #' Used by \code{\link{plot_rarefaction}}
@@ -1429,6 +1444,7 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' @details this function was copied from gridpattern::mean_col (Davis et al. 2024)
 #' @references Davis, T., Mike FC, and ggplot2 authors. 2024. gridpattern. 1.2.1
 #' @keywords internal
+#' @noRd
 #' @examples
 #'  mean_col("black", "white")
 #'  mean_col(c("black", "white"))
@@ -1451,12 +1467,14 @@ mean_col <- function(...) {
 #' without averaging or smoothing are plotted
 #' @param smooth boolean. Defaults to FALSE. If set to TRUE a lowess smoother is 
 #' used on the 'alpha' scale curves. Has no effect at gamma or study scales
-#' @param avg = FALSE 
-#' @inheritParams get_mob_stats
-#' @inheritParams plot.mob_out
-#' @inheritParams plot_abu
-#' @inheritParams rarefaction
+#' @param avg boolean. Defaults to FALSE. If set to TRUE then the average richness
+#' across the groups is computed and plotted.  
+#' @param one_panel boolean. Defaults to FALSE. If set to TRUE then the alpha
+#' scale and gamma scale curves are put on the same graph. 
 #' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
+#' @inheritParams plot_abu
+#' @inheritParams plot.mob_out
+#' @inheritParams rarefaction
 #' @importFrom scales alpha
 #' @importFrom graphics lines legend
 #' @export
@@ -1477,7 +1495,8 @@ mean_col <- function(...) {
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy',
 #'                  leg_loc='bottomright', avg = TRUE, smooth = TRUE)
 plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
-                            method, spat_algo = NULL, dens_ratio = 1, scales = c('alpha', 'gamma', 'study'),  
+                            method, spat_algo = NULL, dens_ratio = 1,
+                            scales = c('alpha', 'gamma', 'study'),  
                             raw = TRUE, smooth = FALSE, avg = FALSE, 
                             col = NULL, lwd = 3, log = '',
                             leg_loc = 'topleft', one_panel = FALSE, ...) {
@@ -1553,7 +1572,7 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
              xlab = xlab, ylab = "Species richness", 
              xlim = xlim_tmp, ylim = ylim_tmp, log = log, bty='n')        
         if (!one_panel)
-           title("Within Groups")
+          graphics::title("Within Groups")
         for (i in seq_along(group_levels)) {
              if (raw){
                  for (j in seq_along(Salpha[[i]])) {
@@ -1584,7 +1603,7 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                ntmp = c()
                for(j in seq_along(Salpha[[i]]))
                    ntmp = c(ntmp, as.numeric(names(Salpha[[i]][[j]])))
-               lines(lowess(ntmp, Stmp, f=.1), col = col[i], lwd = lwd, lty=2,
+               lines(stats::lowess(ntmp, Stmp, f=.1), col = col[i], lwd = lwd, lty=2,
                      type = 'l')
           }
         }
@@ -1951,6 +1970,7 @@ plot_N = function(comm, n_perm=1000) {
 #' @importFrom graphics plot polygon par
 #' @importFrom grDevices rainbow 
 #' @keywords internal
+#' @noRd
 plotStacked <- function(
 	x, y, 
 	order.method="as.is",

@@ -24,7 +24,7 @@ plot_rarefaction(
 )
 }
 \arguments{
-\item{mob_in}{an object of class mob_in created by make_mob_in()}
+\item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
 
 \item{group_var}{String that specifies which field in \code{mob_in$env} the
 data should be grouped by}
@@ -80,7 +80,8 @@ without averaging or smoothing are plotted}
 \item{smooth}{boolean. Defaults to FALSE. If set to TRUE a lowess smoother is 
 used on the 'alpha' scale curves. Has no effect at gamma or study scales}
 
-\item{avg}{= FALSE}
+\item{avg}{boolean. Defaults to FALSE. If set to TRUE then the average richness
+across the groups is computed and plotted.}
 
 \item{col}{optional vector of colors.}
 
@@ -92,6 +93,9 @@ both axes are log transformed respectively}
 
 \item{leg_loc}{a string that specifies the location of the legend, 
 options include: 'lowerleft', 'topleft', 'loweright','topright'}
+
+\item{one_panel}{boolean. Defaults to FALSE. If set to TRUE then the alpha
+scale and gamma scale curves are put on the same graph.}
 
 \item{...}{other arguments to provide to \code{\link[mobr]{rarefaction}}}
 }

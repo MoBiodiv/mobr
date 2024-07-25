@@ -90,7 +90,7 @@ calc_chao1 = function(x) {
 #' calc_PIE(inv_comm, replace = TRUE)
 #' calc_PIE(c(23,21,12,5,1,2,3))
 #' calc_PIE(c(23,21,12,5,1,2,3), replace = TRUE)
-calc_PIE = function(x, replace = FALSE, ...) {
+calc_PIE = function(x, replace = FALSE) {
     
     args = as.list(match.call())
     if (any(names(args) == "ENS")) 
@@ -203,12 +203,12 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
     abund_group = stats::aggregate(sample_dat[ , -1], by = list(sample_dat[ , 1]),
                             FUN = "sum")
    
-    dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
-                             groups = abund_group[ , 1],
-                             index = index, effort = effort,
-                             extrapolate = extrapolate,
-                             return_NA = return_NA, 
-                             rare_thres = rare_thres)
+    dat_groups = calc_div(abund_mat = abund_group[ , -1],
+                          groups = abund_group[ , 1],
+                          index = index, effort = effort,
+                          extrapolate = extrapolate,
+                          return_NA = return_NA, 
+                          rare_thres = rare_thres)
     return(dat_groups)
 }
 
@@ -216,8 +216,16 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' one row of a community matrix)
 #'
 #' @param x is a vector of species abundances
+#' @param C_target When computing coverage based richness (\code{S_C}) then 
+#' this argument can be used to specify the coverage to be used for the richness
+#' estimate. This defaults to \code{NA} in which case the target cover
+#' is computed by \code{\link{calc_C_target}} (i.e., the largest allowable sample
+#' size).
+#' @param ... additional arguments that can be passed to the function
+#'  \code{rarefaction} when computing \code{S_n}. 
 #'
 #' @inheritParams calc_comm_div
+#' 
 #'
 #' @export
 #' @examples  
@@ -237,7 +245,7 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
     if (index == 'f_0') out = calc_div(x, 'S_asymp') - calc_div(x, 'S')
     if (index == 'S_asymp') {
         S_asymp = try(calc_chao1(x))
-        if (class(S_asymp) == "try_error") 
+        if (methods::is(S_asymp, "try_error"))
             warning("The Chao richness estimator cannot be calculated for all samples.")
         else 
             S_asymp[!is.finite(S_asymp)] = NA
@@ -268,20 +276,36 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
 #'    \item \code{N} ... Number of individuals (total abundance)
 #'    \item \code{S} ... Number of species
 #'    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
-#'    \item \code{S_C} ... Rarefied or extrapolated number of species for C coverage
+#'    \item \code{S_C} ... Estimate species richness of a given level of coverage by \code{C_target_gamma}
 #'    \item \code{S_asymp} ... Estimated asymptotic species richness
 #'    \item \code{f_0} ... Estimated number of undetected species 
-#'    \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
+#'    \item \code{pct_rare} ... The percent of rare species as defined by \code{rare_thres}
 #'    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
 #'    \item \code{S_PIE} ... Effective number of species based on PIE
+#'    
 #' }
-#' 
-#' See the documentation of \code{\link{get_mob_stats}} for further details on the
-#' biodiversity indices.
+#'   See \emph{Details} for additional information on the
+#'   biodiversity statistics.
 #' 
 #' @param effort The standardized number of individuals used for the 
 #'   calculation of rarefied species richness. This can a be
 #'   single integer or a vector of integers. 
+#'   
+#' @param extrapolate Boolean which specifies if richness should be extrapolated
+#'   when effort is larger than the number of individuals using the chao1
+#'   method.
+#'
+#' @param return_NA Boolean in which the rarefaction function
+#'   returns the observed S when \code{effort} is larger than the number of
+#'   individuals. If set to TRUE then NA is returned. Note that this argument
+#'   is only relevant when \code{extrapolate = FALSE}.
+#'
+#' @param rare_thres The threshold that determines how pct_rare is computed.
+#'   It can range from (0, 1] and defaults to 0.05 which specifies that any 
+#'   species with less than or equal to 5% of the total abundance in a sample is
+#'   considered rare. It can also be specified as "N/S" which results in using
+#'   average abundance as the threshold which McGill (2011) found to have the 
+#'   best small sample behavior. 
 #' 
 #' @param scales The scales to compute the diversity indices for: 
 #' \itemize{
@@ -300,19 +324,91 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
 #' is computed by \code{\link{calc_C_target}} (i.e., the largest allowable sample
 #' size).
 #' 
-#' @details This function is primarily intended as auxiliary function used in
-#' \code{\link{get_mob_stats}}, but can be also used directly for data exploration.
+#' @param ... additional arguments that can be passed to \code{\link{calc_div}}
 #' 
+#' @details 
+#' 
+#' \strong{BIODIVERSITY INDICES}
+#' 
+#' \strong{N: total community abundance} is the total number of individuals 
+#' observed across all species in the sample
+#' 
+#' \strong{S: species richess} is the observed number of species that occurs at
+#' least once in a sample
+#' 
+#' \strong{S_n: Rarefied species richness} is the expected number of species, given a
+#' defined number of sampled individuals (n) (Gotelli & Colwell 2001). Rarefied
+#' richness at the alpha-scale is calculated for the values provided in 
+#' \code{effort_samples} as long as these values are not smaller than the 
+#' user-defined minimum value \code{effort_min}. In this case the minimum value 
+#' is used and samples with less individuals are discarded. When no values for
+#' \code{effort_samples} are provided the observed minimum number of individuals
+#' of the samples is used, which is the standard in rarefaction analysis
+#' (Gotelli & Colwell 2001). Because the number of individuals is expected to
+#' scale linearly with sample area or effort, at the gamma-scale the number of
+#' individuals for rarefaction is calculated as the minimum number of samples
+#' within groups multiplied by \code{effort_samples}. For example, when there are 10
+#' samples within each group, \code{effort_groups} equals \code{10 *
+#' effort_samples}. If n is larger than the number of individuals in sample and
+#' \code{extrapolate = TRUE} then the Chao1 (Chao 1984, Chao 1987) method is
+#' used to extrapolate the rarefaction curve.
+#' 
+#' \strong{pct_rare: Percent of rare species} Is the ratio of the number of rare
+#' species to the number of observed species x 100 (McGill 2011). Species are 
+#' considered rare in a particular sample if they have fewer individuals than 
+#' \code{rare_thres * N} where \code{rare_thres} can be set by the user and 
+#' \code{N} is the total number of individuals in the sample. The default value 
+#' of \code{rare_thres} of 0.05 is arbitrary and was chosen because McGill 
+#' (2011) found this metric of rarity performed well and was generally less 
+#' correlated with other common metrics of biodiversity. Essentially this metric
+#' attempt to estimate what proportion of the species in the same occur in the
+#' tail of the species abundance distribution and is therefore sensitive to
+#' presence of rare species.
+#' 
+#' \strong{S_asymp: Asymptotic species richness} is the expected number of 
+#' species given complete sampling and here it is calculated using the Chao1
+#' estimator (Chao 1984, Chao 1987) see \code{\link{calc_chao1}}. Note: this metric
+#' is typically highly correlated with S (McGill 2011).
+#'  
+#' \strong{f_0: Undetected species richness} is the number of undetected species
+#' or the number of species observed 0 times which is an indicator of the degree
+#' of rarity in the community. If there is a greater rarity then f_0 is expected
+#' to increase. This metric is calculated as \code{S_asymp - S}. This metric is less 
+#' correlated with S than the raw \code{S_asymp} metric. 
+#' 
+#' \strong{PIE: Probability of intraspecific encounter} represents the
+#' probability that two randomly drawn individuals belong to the same species.
+#' Here we use the definition of Hurlbert (1971), which considers sampling
+#' without replacement. PIE is closely related to the well-known Simpson
+#' diversity index, but the latter assumes sampling with replacement.
+#' 
+#' \strong{S_PIE: Effective number of species for PIE} represents the effective
+#' number of species derived from the PIE. It is calculated using the asymptotic
+#' estimator for Hill numbers of diversity order 2 (Chao et al, 2014). S_PIE
+#' represents the species richness of a hypothetical community with
+#' equally-abundant species and infinitely many individuals corresponding to the
+#' same value of PIE as the real community. An intuitive interpretation of S_PIE
+#' is that it corresponds to the number of dominant (highly abundant) species in
+#' the species pool.
+#' 
+#' For species richness \code{S}, rarefied richness \code{S_n}, undetected
+#' richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
+#' calculate beta-diversity using multiplicative partitioning (Whittaker 1972,
+#' Jost 2007). That means for these indices we estimate beta-diversity as the
+#' ratio of gamma-diversity (total diversity across all plots) divided by
+#' alpha-diversity (i.e., average plot diversity).
 #' 
 #' @returns A \code{data.frame} with four columns:
 #' \itemize{
-#'    \item \code{group} ... Group label for sites
+#'    \item \code{scale} ... Group label for sites
 #'    \item \code{index} ... Name of the biodiversity index
+#'    \item \code{sample_size} ... The number of samples used to compute the
+#'     statistic, helpful for interpreting beta and gamma metrics. 
 #'    \item \code{effort} ... Sampling effort for rarefied richness 
 #'    (NA for the other indices)
 #'    \item \code{gamma_coverage} ... The coverage value for that particular 
 #'    effort value on the gamma scale rarefaction curve. Will be \code{NA} unless
-#'    coverage based richness (\code{S_C}) and/or beta diveristy is computed.  
+#'    coverage based richness (\code{S_C}) and/or beta diversity is computed.  
 #'    \item \code{value} ... Value of the biodiversity index
 #' }
 #'   
@@ -323,7 +419,6 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
 #' McGill, B. J. 2011. Species abundance distributions. Pages 105-122 Biological
 #' Diversity: Frontiers in Measurement and Assessment, eds. A.E. Magurran and
 #' B.J. McGill.
-#' @inheritParams get_mob_stats
 #' @examples 
 #' data(tank_comm)
 #' div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = c(5, 10))
@@ -629,37 +724,15 @@ calc_beta_div = function(abund_mat, index, effort = NA, C_target_gamma = NA, ...
 #' @importFrom rlang .data
 #' 
 #' @export
-#' 
-#' @examples 
-#' \donttest{
-#' # a binary grouping variable (uninvaded or invaded)
-#' data(inv_comm)
-#' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, c('x', 'y'))
-#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
-#'                           n_perm = 19, effort_samples = c(5,10))
-#' plot(inv_stats)
-#' #' 
-#' # parallel evaluation using the parallel package 
-#' # run in parallel
-#' library(parallel)
-#' cl = makeCluster(2L)
-#' clusterEvalQ(cl, library(mobr))
-#' clusterExport(cl, 'inv_mob_in')
-#' inv_mob_stats = get_mob_stats(inv_mob_in, 'group', ref_level = 'uninvaded',
-#'                               n_perm=999, cl=cl)
-#'
-#' stopCluster(cl)
-#' }
-#get_mob_stats = function(mob_in, group_var, ref_level = NULL, 
-#                         index = c("N", "S", "S_n", "S_PIE"),
-#                         effort_samples = NULL, effort_min = 5,
-#                         extrapolate = TRUE, return_NA = FALSE, 
-#                         rare_thres = 0.05, n_perm = 0, 
-#                         boot_groups = FALSE, conf_level = 0.95, cl=NULL, 
-#                         ...) {
-#    stop('This function is obsolete and no longer supported. Please use the function `calc_comm_div` to compute biodiveristy indices at different scales')
-#}
+get_mob_stats = function(mob_in, group_var, ref_level = NULL, 
+                         index = c("N", "S", "S_n", "S_PIE"),
+                         effort_samples = NULL, effort_min = 5,
+                         extrapolate = TRUE, return_NA = FALSE, 
+                         rare_thres = 0.05, n_perm = 0, 
+                         boot_groups = FALSE, conf_level = 0.95, cl=NULL, 
+                         ...) {
+    stop('This function is obsolete and no longer supported. Please use the function `calc_comm_div` to compute biodiveristy indices at different scales')
+}
 
 #' Obsolete function that used to plot alpha- and gamma-scale biodiversity
 #'  statistics for a MoB analysis
@@ -699,30 +772,18 @@ calc_beta_div = function(abund_mat, index, effort = NA, C_target_gamma = NA, ...
 #' @importFrom rlang .data
 #' 
 #' @export
-#' 
-#' @examples
-#' \donttest{ 
-#' data(inv_comm)
-#' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr)
-#' # without bootstrap CI for gamma-scale
-#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
-#' plot(inv_stats) 
-#' # with bootstrap CI for gamma-scale
-#' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
-#'                                boot_groups=TRUE)
-#' plot(inv_stats_boot)
-#' }
-#plot.mob_stats = function(x, index = NULL, multi_panel = FALSE, 
-#                          col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
-#                                  "#E2C288", "#F7B0E6", "#AAD28C"), 
-#                          cex.axis=1.2, ...) {
-#  stop('This function is obsolete and no longer supported.')
-#}
+plot.mob_stats = function(x, index = NULL, multi_panel = FALSE, 
+                          col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
+                                  "#E2C288", "#F7B0E6", "#AAD28C"), 
+                          cex.axis=1.2, ...) {
+  stop('This function is obsolete and no longer supported. Now use "plot_comm_div"
+       to plot the output of "calc_comm_div"')
+}
 
 #' Panel function for alpha-scale results
 #' @importFrom graphics boxplot mtext
 #' @keywords internal
+#' @noRd
 samples_panel1 = function(sample_dat, col, ylab = "",
                           main = expression(alpha * "-scale"), 
                           cex.axis=1.2, ...) {
@@ -742,6 +803,7 @@ samples_panel1 = function(sample_dat, col, ylab = "",
 #' Panel function for gamma-scale results
 #' @importFrom graphics boxplot points mtext 
 #' @keywords internal
+#' @noRd
 groups_panel1 = function(group_dat, col, ylab = "",
                          main = expression(gamma * "-scale"),
                          cex.axis=1.2, ...) {
@@ -763,6 +825,7 @@ groups_panel1 = function(group_dat, col, ylab = "",
 #' Panel function for gamma-scale results with confidence intervals
 #' @importFrom plotrix plotCI
 #' @keywords internal
+#' @noRd
 groups_panel2 = function(group_dat, col, ylab = "", 
                          main = expression(gamma * "-scale"),
                          cex.axis=1.2, ...) {
@@ -776,20 +839,20 @@ groups_panel2 = function(group_dat, col, ylab = "",
          sfrac = 0.02, col = col, ...)
 }
 
-#' Plot alpha- and gamma-scale biodiversity statistics for a MoB analysis
+#' Plot alpha-, beta-, and gamma-scale biodiversity statistics for a MoB analysis
 #' 
-#' Plots a \code{mob_stats} object which is produced by the 
-#' function \code{get_mob_stats}. The p-value for each statistic
+#' Plots the community diversity metrics from produced by the function 
+#' \code{calc_comm_div}. The p-value for each statistic
 #' is displayed in the plot title if applicable.
 #' 
 #' The user may specify which results to plot or simply to plot 
 #' all the results. 
 #' 
-#' @param x a \code{mob_stats} object that has the samples and 
-#' treatment level statistics
+#' @param comm_div a table that is output by \code{calc_comm_div} that has the
+#' sample (alpha) and group (gamma) level statistics
 #' 
 #' @param index The biodiversity statistics that should be plotted.
-#' See \code{\link{get_mob_stats}} for information on the indices. By default there
+#' See \code{\link{calc_comm_div}} for information on the indices. By default there
 #' is one figure for each index, with panels for alpha- and gamma-scale results
 #' as well as for beta-diversity when applicable. 
 #' 
@@ -810,26 +873,24 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' 
 #' @author Felix May, Xiao Xiao, and Dan McGlinn 
 #' 
-#' @importFrom rlang .data
+#' @importFrom rlang .data 
 #' 
 #' @export
 #' 
 #' @examples 
-#' data(inv_comm)
-#' data(inv_plot_attr)
+#' library(dplyr)
+#' data(tank_comm)
+#' data(tank_plot_attr)
 #' indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
-#' inv_div <- tibble(inv_comm) %>% 
-#'   group_by(group = inv_plot_attr$group) %>% 
+#' tank_div <- tibble(tank_comm) %>% 
+#'   group_by(group = tank_plot_attr$group) %>% 
 #'   group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
-#'                                extrapolate = TRUE)))
-#' inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' # without bootstrap CI for gamma-scale
-#' inv_stats = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20)
-#' plot(inv_stats) 
-#' # with bootstrap CI for gamma-scale
-#' inv_stats_boot = get_mob_stats(inv_mob_in, group_var = "group", n_perm = 20,
-#'                                boot_groups=TRUE)
-#' plot(inv_stats_boot)
+#'                                extrapolate = TRUE))
+#' # plot the community metrics                                 
+#' plot_comm_div(tank_div, index = "S")
+#' plot_comm_div(tank_div, index = "S_n")
+#' # or plot all of the indices at once with
+#' plot_comm_div(tank_div)
 plot_comm_div = function(comm_div, index = NULL, multi_panel = FALSE, 
                           col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
                                   "#E2C288", "#F7B0E6", "#AAD28C"), 

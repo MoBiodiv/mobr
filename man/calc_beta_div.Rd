@@ -15,16 +15,16 @@ columns}
    \item \code{N} ... Number of individuals (total abundance)
    \item \code{S} ... Number of species
    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
-   \item \code{S_C} ... Rarefied or extrapolated number of species for C coverage
+   \item \code{S_C} ... Estimate species richness of a given level of coverage by \code{C_target_gamma}
    \item \code{S_asymp} ... Estimated asymptotic species richness
    \item \code{f_0} ... Estimated number of undetected species 
-   \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
+   \item \code{pct_rare} ... The percent of rare species as defined by \code{rare_thres}
    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
    \item \code{S_PIE} ... Effective number of species based on PIE
+   
 }
-
-See the documentation of \code{\link{get_mob_stats}} for further details on the
-biodiversity indices.}
+  See \emph{Details} for additional information on the
+  biodiversity statistics.}
 
 \item{effort}{The standardized number of individuals used for the 
 calculation of rarefied species richness. This can a be

@@ -24,16 +24,16 @@ calc_div(
    \item \code{N} ... Number of individuals (total abundance)
    \item \code{S} ... Number of species
    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
-   \item \code{S_C} ... Rarefied or extrapolated number of species for C coverage
+   \item \code{S_C} ... Estimate species richness of a given level of coverage by \code{C_target_gamma}
    \item \code{S_asymp} ... Estimated asymptotic species richness
    \item \code{f_0} ... Estimated number of undetected species 
-   \item \code{pct_rare} ... The percent of species with abundances below \code{rare_thres}
+   \item \code{pct_rare} ... The percent of rare species as defined by \code{rare_thres}
    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
    \item \code{S_PIE} ... Effective number of species based on PIE
+   
 }
-
-See the documentation of \code{\link{get_mob_stats}} for further details on the
-biodiversity indices.}
+  See \emph{Details} for additional information on the
+  biodiversity statistics.}
 
 \item{effort}{The standardized number of individuals used for the 
 calculation of rarefied species richness. This can a be
@@ -49,15 +49,18 @@ best small sample behavior.}
 \item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 replacement is used. Otherwise, sampling without replacement (default).}
 
-\item{extrapolate}{Boolean which specifies if richness should be
-extrapolated when \code{effort_samples} is larger than the number of
-individuals using the chao1 method. Defaults to TRUE.}
+\item{C_target}{When computing coverage based richness (\code{S_C}) then 
+this argument can be used to specify the coverage to be used for the richness
+estimate. This defaults to \code{NA} in which case the target cover
+is computed by \code{\link{calc_C_target}} (i.e., the largest allowable sample
+size).}
 
-\item{...}{
-Optional arguments to \code{FUN} and also to underlying functions (e.g.
-\code{\link{parLapply}} and \code{\link{mclapply}} when \code{cl}
-is not \code{NULL}).
-}
+\item{extrapolate}{Boolean which specifies if richness should be extrapolated
+when effort is larger than the number of individuals using the chao1
+method.}
+
+\item{...}{additional arguments that can be passed to the function
+\code{rarefaction} when computing \code{S_n}.}
 }
 \description{
 Compute various diversity indices from a vector of species abundances (i.e.,

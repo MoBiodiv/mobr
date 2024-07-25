@@ -13,6 +13,7 @@
 #' @importFrom stats runif
 #' 
 #' @keywords internal
+#' @noRd
 centroid_accumulate = function(x, focal_sample = 1, n = NULL, coords = NULL, latlong = FALSE) {
 
     if ("mob_in" %in% class(x)) {

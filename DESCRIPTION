@@ -1,6 +1,6 @@
 Package: mobr
 Title: Measurement of Biodiversity
-Version: 2.0.1
+Version: 3.0.0
 Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com", 
                     role = c("aut", "cre")),
              person("Xiao", "Xiao", email = "xiao@weecology.org", 
@@ -28,8 +28,9 @@ Description: Functions for calculating metrics for the measurement biodiversity
     and its changes across scales, treatments, and gradients. The methods 
     implemented in this package are described in:
     Chase, J.M., et al. (2018) <doi:10.1111/ele.13151>, 
-    McGlinn, D.J., et al. (2019) <doi:10.1111/2041-210X.13102>, and
-    McGlinn, D.J., et al. (2020) <doi:10.1101/851717>. 
+    McGlinn, D.J., et al. (2019) <doi:10.1111/2041-210X.13102>,
+    McGlinn, D.J., et al. (2020) <doi:10.1101/851717>, and
+    McGlinn, D.J., et al. (2023) <doi:10.1101/2023.09.19.558467>. 
 Depends:
     R (>= 3.0.2)
 Imports:
@@ -45,11 +46,13 @@ Imports:
     vctrs,
     rlang,
     geosphere,
-    scam
+    scam,
+    sf
 Suggests:
     knitr,
     rmarkdown,
-    testthat
+    testthat,
+    methods
 License: MIT + file LICENSE
 LazyData: true
 RoxygenNote: 7.3.1

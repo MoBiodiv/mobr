@@ -206,28 +206,6 @@ samples. Please note that for the richness indices sampling with replacement
 corresponds to rarefaction to ca. 2/3 of the individuals, because the same
 samples occur several times in the resampled data sets.
 }
-\examples{
-\donttest{
-# a binary grouping variable (uninvaded or invaded)
-data(inv_comm)
-data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, c('x', 'y'))
-inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
-                          n_perm = 19, effort_samples = c(5,10))
-plot(inv_stats)
-#' 
-# parallel evaluation using the parallel package 
-# run in parallel
-library(parallel)
-cl = makeCluster(2L)
-clusterEvalQ(cl, library(mobr))
-clusterExport(cl, 'inv_mob_in')
-inv_mob_stats = get_mob_stats(inv_mob_in, 'group', ref_level = 'uninvaded',
-                              n_perm=999, cl=cl)
-
-stopCluster(cl)
-}
-}
 \references{
 Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved
 nonparametric lower bound of species richness via a modified good-turing
