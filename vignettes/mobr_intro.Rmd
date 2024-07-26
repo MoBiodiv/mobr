@@ -136,18 +136,24 @@ The metrics we have selected are:
 * **N - Number of individuals**
 * **S - Observed species richness**
 * **S_n - Rarefied species richness (Hurlbert 1971)**
+* **S_C - coverage based species richness (Chao & Jost 2012)**
 * **PIE - Probability of Interspecific Encounter (Hurlbert 1971)**
 * **S_PIE - Effective number of species based on PIE (Jost 2007)**
 
 Each of these metrics can be computed for either the sample or group scale individual rarefaction curves as shown in the figure below: 
 
-<center>![](../vignettes/metrics.png){ width=50%}</center>
+<center>![](../vignettes/metrics.png){ width=100%}</center>
 
 The ratio of a given biodiversity metric at the group and sample scales
 (i.e., $\beta_S = S_{group} / S_{sample}$ can provide simple measures of
 species turnover or \(\beta\)-diversity. Depending on which metric the 
 \(\beta\)-diversity is derived from will determine what aspects of species
 turnover it is most sensitive too (McGlinn et al. 2018, Chase et al. 2018).
+
+For the invasion dataset we will examine all of the metrics except for coverage
+based richness (*S_C*) because some of the samples in this dataset are empty
+which makes that calculation difficult for this example (see below for examples
+in which *S_C* is computed).
 
 ```{r compute diversity indices, eval = TRUE}
 indices <- c('N', 'S', 'S_n', 'S_PIE')
@@ -453,6 +459,8 @@ richness.
 # References
 
 Chase, J. M. (2010). Stochastic community assembly causes higher biodiversity in more productive environments. Science, 328: 1388-1391.
+
+Chao, A., and L. Jost. 2012. Coverage-based rarefaction and extrapolation: standardizing samples by completeness rather than size. Ecology 93:2533–2547.
 
 Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014). An improved nonparametric lower bound of species richness via a modified good-turing frequency formula. Biometrics, 70, 671-682.
 
