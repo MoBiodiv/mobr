@@ -1,8 +1,7 @@
 ---
 title: "Analysis of scale-dependent biodiversity changes with mobr"
-author: "Dan McGlinn and Felix May"
-date: "`r Sys.Date()`"
-vignette: rmarkdown::html_vignette
+output: rmarkdown::html_vignette
+vignette: >
   %\VignetteIndexEntry{Analysis of scale-dependent biodiversity changes with mobr}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
@@ -182,6 +181,16 @@ plot_comm_div(inv_div, 'S')
 
 Invasion appears to decrease local sample diversity but not gamma diversity.
 Somewhat surprisingly it appears to increase \(\beta\)diversity. 
+
+It is possible to compute beta diversity directly rather than using the 
+`calc_comm_div` function by using the `calc_beta_div` function. Here is a quick
+demonstration. We can caculate the beta diversity for raw richness (`S`), 
+rarefied richness at 5 individuals (`S_n`), and the richness transformed version
+of the probability of interspecific encounter (`S_PIE`). 
+
+```{r, beta demo}
+calc_beta_div(inv_comm, c('S', 'S_n', 'S_PIE'), effort = 5)
+```
 
 One of the major effects we observed in the individual rarefaction curve was 
 that the invaded sites appeared to have fewer individuals, let's examine the 
