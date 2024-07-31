@@ -1,0 +1,51 @@
+---
+title: "Beta diversity demonstration"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Beta diversity demonstration}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{setup, eval=FALSE}
+install.packages(devtools)
+library(devtools)
+install_github('mobiodiv/mobr', ref = 'dev')
+```
+
+Load mobr and example data
+```{r}
+library(mobr)
+data(inv_comm)
+```
+
+Calculate whittaker's beta
+```{r}
+calc_comm_div(inv_comm[1:2, ], 'S')
+```
+
+Calculate beta for ENS of PIE (beta S_PIE)
+```{r}
+calc_comm_div(inv_comm[1:2, ], 'S_PIE')
+```
+
+Calculate beta for S given a specific coverage (beta C)
+```{r}
+calc_comm_div(inv_comm[1:2, ], 'S_C')
+```
+
+Calculate beta for rarefied fiechness (S_n) for 20 individuals
+```{r}
+calc_comm_div(inv_comm[1:2, ], 'S_n', effort = 20)
+```
+
+More than two sites can be used at a time
+```{r}
+calc_comm_div(inv_comm[1:10, ], 'S')
+```
+
+It is also possible to just calculate beta diversity but it is generally not
+recommended to examine beta without reference to alpha and gamma diversity.
+```{r}
+calc_beta_div(inv_comm[1:10, ] , 'S')
+```
