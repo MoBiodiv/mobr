@@ -23,7 +23,7 @@ Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com",
                     role = "aut"),
              person("Jon", "Chase", email = "jonathan.chase@idiv.de",
                     role = "aut"))
-Date: 2020-08-15
+Date: 2021-02-09
 Description: Functions for calculating metrics for the measurement biodiversity
     and its changes across scales, treatments, and gradients. The methods 
     implemented in this package are described in:
@@ -56,5 +56,7 @@ Suggests:
 License: MIT + file LICENSE
 LazyData: true
 RoxygenNote: 7.3.1
+URL: https://github.com/MoBiodiv/mobr
+BugReports: https://github.com/MoBiodiv/mobr/issues
 Encoding: UTF-8
 VignetteBuilder: knitr

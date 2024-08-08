@@ -19,6 +19,11 @@ given level of coverage C)
 - a vignette was added to demonstrate how to make computations of beta
 diversity using `mobr` called `beta_div_demo`
 
+## version 2.0.2
+---
+### change for CRAN
+- remove sort on a `data.frame` from the function `plot_abu` which does not
+change how this function behaves but adheres to CRAN standards.
 
 ## version 2.0.1
 ---
@@ -35,7 +40,6 @@ others are compared to. This is similar to the implementation in the function
 
 
 ## version 2.0.0
-
 ---
 
 ### new features
@@ -67,7 +71,6 @@ the most computationally efficient solutions
 
 
 ## version 1.0.0
-
 ---
 
 - provided core functionality of mob tools described in McGlinn et al. 

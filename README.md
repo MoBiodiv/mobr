@@ -17,6 +17,8 @@ treatments or gradients, and 2) our framework emphasizes how changes in
 biodiversity are linked to changes in community structure: the SAD, total
 abundance, and spatial aggregation. 
 
+**Please use the [dev](https://github.com/MoBiodiv/mobr/tree/dev) branch for the beta version of the repository that has the most up-to-date methods. See examples of how to compute diversity metrics using the `dev` branch here: [R script](https://github.com/MoBiodiv/mobr/blob/dev/vignettes/beta_div_demo.R) and [pdf](https://github.com/MoBiodiv/mobr/blob/dev/vignettes/beta_div_demo.pdf). Instructions are provided below on how to use `devtools` to install the `dev` branch using R**
+
 The concepts and methods behind this R package are described in three publications.
 
 McGlinn, D.J. X. Xiao, F. May, N.J Gotelli, T. Engel, S.A Blowes, T.M. Knight, O. Purschke, J.M Chase, and B.J. McGill. 2019. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. Methods in Ecology and Evolution. 10:258–269. https://doi.org/10.1111/2041-210X.13102
@@ -48,6 +50,8 @@ Now that `devtools` is installed you can install `mobr using the following R cod
 
 ```r
 install_github('MoBiodiv/mobr')
+# if dev branch wanted used
+install_github('MoBiodiv/mobr', ref = 'dev')
 ```
 
 ## Examples
@@ -83,4 +87,5 @@ plot(tank_deltaS, 'b1')
 
 ## Thanks
 
-* [Gregor Seyer](https://www.jku.at/en/institute-of-applied-statistics/about/team/gregor-seyer/) for providing a constructive review of our CRAN submission
+* Gregor Seyer for providing a constructive review of our CRAN submission
+* Kurt Hornik for helping us keep up with CRAN changes. 
