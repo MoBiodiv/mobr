@@ -17,9 +17,10 @@ treatments or gradients, and 2) our framework emphasizes how changes in
 biodiversity are linked to changes in community structure: the SAD, total
 abundance, and spatial aggregation. 
 
-**Please use the [dev](https://github.com/MoBiodiv/mobr/tree/dev) branch for the beta version of the repository that has the most up-to-date methods. See examples of how to compute diversity metrics using the `dev` branch here: [R script](https://github.com/MoBiodiv/mobr/blob/dev/vignettes/beta_div_demo.R) and [pdf](https://github.com/MoBiodiv/mobr/blob/dev/vignettes/beta_div_demo.pdf). Instructions are provided below on how to use `devtools` to install the `dev` branch using R**
-
 The concepts and methods behind this R package are described in three publications.
+
+McGlinn, D.J., S.A. Blowes, M. Dornelas, T. Engel, I.S. Martins, H. Shimadzu,  N.J. Gotelli,  A. Magurran,  B.J. McGill,  and J.M. Chase. accepted. Disentangling non-random structure from random placement when estimating β-diversity through space or time. Ecosphere. https://doi.org/10.1101/2023.09.19.558467 
+
 
 McGlinn, D.J. X. Xiao, F. May, N.J Gotelli, T. Engel, S.A Blowes, T.M. Knight, O. Purschke, J.M Chase, and B.J. McGill. 2019. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. Methods in Ecology and Evolution. 10:258–269. https://doi.org/10.1111/2041-210X.13102
 
@@ -39,19 +40,16 @@ citation(package = "mobr")
 install.packages('mobr')
 ```
 
-Or, install development version
+Or, install github version
 
 ```r
-install.packages('devtools')
-library(devtools)
+install.packages('remotes')
 ```
 
-Now that `devtools` is installed you can install `mobr using the following R code:
+Now that `remotes` is installed you can install `mobr` using the following R code:
 
 ```r
-install_github('MoBiodiv/mobr')
-# if dev branch wanted used
-install_github('MoBiodiv/mobr', ref = 'dev')
+remotes::install_github('MoBiodiv/mobr')
 ```
 
 ## Examples
