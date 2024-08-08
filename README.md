@@ -62,14 +62,20 @@ that uses the two key analyses and related graphics.
 
 ```r
 library(mobr)
-data(inv_comm)
-data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-inv_stats = get_mob_stats(inv_mob_in, 'group', ref_level = 'uninvaded')
-plot(inv_stats)
-inv_deltaS = get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
+library(dplyr)
+
+data(tank_comm)
+data(tank_plot_attr)
+indices <- c('N', 'S', 'S_n', 'S_C', 'S_PIE')
+tank_div <- tibble(tank_comm) %>% 
+  group_by(group = tank_plot_attr$group) %>% 
+  group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
+                               extrapolate = TRUE))
+plot(tank_div)
+tank_mob_in <- make_mob_in(tank_comm, tank_plot_attr, coord_names = c('x', 'y'))
+tank_deltaS <- get_delta_stats(tank_mob_in, 'group', ref_level='low',
                              type='discrete', log_scale=TRUE, n_perm = 5)
-plot(inv_deltaS, 'b1')
+plot(tank_deltaS, 'b1')
 ```
 
 ## Meta

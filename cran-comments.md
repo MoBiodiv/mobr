@@ -1,3 +1,25 @@
+# mobr 3.0.0
+
+This is a revised package submission. 
+The change to version 3.0.0 from 2.0.0 reflects that this is a major changes
+that are not backward compatible with the 2.0.0 version of the package.
+
+## Test environments
+* windows X (local), R 4.3.3
+* ubuntu 22.04.3 (personal server), R 4.3.1
+* win-builder (devel & release)
+
+## R CMD check results
+
+### Windows X
+* No warnings or errors
+
+### ubuntu (personal server)
+* No warnings or errors
+
+### on win-builder (devel & release)
+* No warnings or errors
+---------------------------------------
 # mobr 2.0.2
 
 This is an updated package submission.
@@ -6,6 +28,7 @@ I have fixed the package so that it does not use sort() on a data.frame() as
 detected as an error here: 
 https://cran.r-project.org/web/checks/check_results_mobr.html
 
+---------------------------------------
 # mobr 2.0.0
 
 This is a new package submission.
@@ -116,3 +139,5 @@ par(oldpar)
 done
 
 Thank you for the constructive and helpful package review. 
+
+

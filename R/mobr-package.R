@@ -7,5 +7,5 @@
 #'   abundance, species commonness, and spatial aggregation of conspecifics.
 #' 
 #' @name mobr
-#' @docType package
-NULL
+"_PACKAGE"
+

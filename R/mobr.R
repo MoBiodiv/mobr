@@ -147,6 +147,7 @@ subset.mob_in = function(x, subset, type = 'string', drop_levels = FALSE, ...) {
 #' @param ... parameters passed to other functions
 #' @importFrom utils head
 #' @keywords internal
+#' @noRd
 #' @rdname print.mob_in
 #' @export
 print.mob_in = function(x, nrows = 6, nsp = 5, ...) {
@@ -183,9 +184,10 @@ print.mob_in = function(x, nrows = 6, nsp = 5, ...) {
 #'
 #' @description This calculation uses the Haversine method of computing great
 #'   circle distances in kilometers on a spherical Earth (r = 6378.137 km). This
-#'   code was taken from fields::rdist.earth by Doug Nychka, John Paige, Florian
+#'   code was copied from fields::rdist.earth by Doug Nychka, John Paige, Florian
 #'   Gerber.
 #' @keywords internal
+#' @noRd
 sphere_dist = function(coords, r = 6378.137){
     coslat1 <- cos((coords[ , 2] * pi) / 180)
     sinlat1 <- sin((coords[ , 2] * pi) / 180)
@@ -220,10 +222,15 @@ sphere_dist = function(coords, r = 6378.137){
 #'     aggregation). The argument \code{dens_ratio} must also be set otherwise 
 #'     this sampling results in a curve identical to the IBR (see Details). 
 #'     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
-#'     are accumulated by including spatially proximate samples first. 
+#'     are accumulated by including spatially proximate samples first.
+#'     \item \code{'spexSBR'}  ... spatially-explicit sample-based rarefaction
+#'     in which species are accumulated as in \code{'sSBR'} but sampling
+#'     effort is not measured by no. of samples, but by cumulative distance or
+#'     cumulative area as specified by \code{'spat_algo'} (see details)
 #' }
-#' @param effort optional argument to specify what number of individuals or 
-#'   number of samples depending on 'method' to compute rarefied richness as. If
+#' @param effort optional argument to specify what number of individuals, 
+#'   number of samples, or spatial sampling effort (i.e., cumulative distance
+#'   or area) depending on 'method' to compute rarefied richness as. If
 #'   not specified all possible values from 1 to the maximum sampling effort are
 #'   used
 #' @param coords an optional matrix of geographic coordinates of the samples.  
@@ -248,11 +255,16 @@ sphere_dist = function(coords, r = 6378.137){
 #'   \code{extrapolate = FALSE}.
 #' @param quiet_mode Boolean defaults to FALSE, if TRUE then warnings and other
 #'   non-error messages are suppressed.
-#' @param spat_algo character string that can be either: \code{'kNN'} or \code{'kNCN'}
-#' for k-nearest neighbor and k-nearest centroid neighbor sampling 
-#' respectively. It defaults to k-nearest neighbor which is a 
-#' more computationally efficient algorithm that closely approximates the 
-#' potentially more correct k-NCN algo (see Details). 
+#' @param spat_algo character string that can be either: \code{'kNN'},
+#'  \code{'kNCN'}, or \code{'convexhull'} for k-nearest neighbor, 
+#'  k-nearest centroid neighbor sampling, or convex-hull polygon calculation 
+#'  respectively. It defaults to k-nearest neighbor which is a 
+#'  more computationally efficient algorithm that closely approximates the 
+#'  potentially more correct k-NCN algo (see Details). Currently, \code{'kNN'} and
+#'  \code{'k-NCN'} are available for method \code{'ssBR'}, while \code{'kNN'}
+#'  \code{'convexhull'} are available for method \code{'spexSBR'}. 
+#' @param sd Boolean defaults to FALSE, if TRUE then standard deviation of 
+#' richness is also returned using the formulation of Heck 1975 Eq. 2.
 #'   
 #' @details The analytical formulas of Cayuela et al. (2015) are used to compute
 #'   the random sampling expectation for the individual and sampled based
@@ -271,6 +283,8 @@ sphere_dist = function(coords, r = 6378.137){
 #'   kNN and kNCN, each plot in the community matrix is treated as a starting
 #'   point and then the mean of these n possible accumulation curves is
 #'   computed.
+#'   
+#'   
 #' 
 #' For individual-based rarefaction if effort is greater than the number of
 #' individuals and \code{extrapolate = TRUE} then the Chao1 method is used 
@@ -280,7 +294,11 @@ sphere_dist = function(coords, r = 6378.137){
 #' \code{iNEXT} package. 
 #' 
 #' If effort is greater than sample size and \code{extrapolate = FALSE} then the 
-#' observed number of species is returned. 
+#' observed number of species is returned.
+#' 
+#' Standard deviation of richness can only be computed for individual based rarefaction 
+#' and it is assigned as an attribute (see examples). The code for this
+#' computation was ported from vegan::rarefy (Oksansen et al. 2022)
 #' 
 #' @return A vector of rarefied species richness values
 #' @author Dan McGlinn and Xiao Xiao
@@ -302,8 +320,15 @@ sphere_dist = function(coords, r = 6378.137){
 #'  Ecology, 10, 209-214.
 #'  
 #' Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
-#' and pitfalls in the measurement and comparison of species richness. Ecology
-#' Letters, 4, 379-391.
+#'  and pitfalls in the measurement and comparison of species richness. Ecology
+#'  Letters, 4, 379-391.
+#' 
+#' Heck, K.L., van Belle, G. & Simberloff, D. (1975). Explicit calculation of
+#'  the rarefaction diversity measurement and the determination of sufficient
+#'  sample size. Ecology 56, 1459–1461.
+#'
+#' Oksanen, J. et al. 2022. Vegan: community ecology package. R package version 2.6-4.
+#'  https://CRAN.R-project.org/package=vegan
 #'
 #' @importFrom stats dist
 #' @export
@@ -319,9 +344,21 @@ sphere_dist = function(coords, r = 6378.137){
 #' # 2) the SAD of the community
 #' rarefaction(inv_comm, method='IBR', effort=1:10)
 #' # 3) a mob_in class object
+#' # the standard deviation of the richness estimates for IBR may be returned
+#' # which is helpful for computing confidence intervals
+#' S_n <- rarefaction(inv_comm, method='IBR', effort=1:10, sd=TRUE)
+#' attr(S_n, 'sd')
+#' plot(1:10, S_n, ylim=c(0,8), type = 'n')
+#' z <- qnorm(1 - 0.05 / 2)
+#' hi <- S_n + z * attr(S_n, 'sd')
+#' lo <- S_n - z * attr(S_n, 'sd')
+#' attributes(hi) <- NULL
+#' attributes(lo) <- NULL
+#' polygon(c(1:10, 10:1),  c(hi, rev(lo)), col='grey', border = NA)
+#' lines(1:10, S_n, type = 'o')
 #' # rescaling of individual based rarefaction 
 #' # when the density ratio is 1 the richness values are 
-#' # identical to unscale rarefaction
+#' # identical to the unscaled rarefaction
 #' rarefaction(inv_comm, method='IBR', effort=1:10, dens_ratio=1)
 #' # however the curve is either shrunk when density is higher than 
 #' # the reference value (i.e., dens_ratio < 1)
@@ -338,10 +375,11 @@ sphere_dist = function(coords, r = 6378.137){
 #' # the syntax is simpler if supplying a mob_in object
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNCN')
 #' rarefaction(inv_mob_in, method='sSBR', spat_algo = 'kNN')
+#' rarefaction(inv_mob_in, method='spexSBR', spat_algo = 'kNN')
 #' }
-rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL, 
-                       dens_ratio=1, extrapolate=FALSE, return_NA=FALSE, 
-                       quiet_mode=FALSE, spat_algo=NULL) {
+rarefaction = function(x, method, effort = NULL, coords = NULL, latlong = NULL, 
+                       dens_ratio = 1, extrapolate = FALSE, return_NA = FALSE, 
+                       quiet_mode = FALSE, spat_algo = NULL, sd = FALSE) {
     
     if (method == 'indiv') {
         warning('method == "indiv" is depreciated and should be set to "IBR" for individual-based rarefaction')
@@ -352,10 +390,11 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
     } else if (method == 'spat') {
         warning('method == "spat" is depreciated and should be set to "sSBR" for spatial, sample-based rarefaction')
         method = 'sSBR'
-    } else if (!any(method %in% c('IBR', 'SBR', 'nsSBR', 'sSBR')))
+    } else if (!any(method %in% c('IBR', 'SBR', 'nsSBR', 'sSBR', 'spexSBR')))
         stop('The argument "method" must be set to either "IBR", "SBR", "nsSBR",',
-             ' or "sSBR" for random individual, random sample, non-spatial,', 
-             ' sample-based (nsSBR), and spatial, sample-based rarefaction (sSBR)',
+             '"sSBR", or "spexSBR" for random individual (IBR), random sample (SBR), non-spatial,', 
+             ' sample-based (nsSBR), spatial, sample-based (sSBR),',
+             ' or spatially-explicit, sample-based rarefaction (spexSBR),',
              ' respectively.')
     if (method == 'nsSBR' & dens_ratio == 1)
         warning('The nonspatial, sample-based rarefaction (nsSBR) curve only differs from the IBR when compared with a reference density by setting "dens_ratio" not equal to 1')
@@ -367,7 +406,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
         else if (latlong != x_mob_in$latlong)
             stop(paste('The "latlong" argument is set to', latlong, 
                        'but the value of x$latlong is', x_mob_in$latlong))
-        if (method == 'sSBR') {
+        if (method == 'sSBR' | method == 'spexSBR') {
             if (is.null(coords)) {
                 if (is.null(x_mob_in$spat)) {
                     stop('Coordinate name value(s) must be supplied in the make_mob_in object in order to plot using sample spatially explicit based (spat) rarefaction')
@@ -376,7 +415,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             }
         }
     }
-    if (method == 'SBR' | method == 'sSBR') {
+    if (method == 'SBR' | method == 'sSBR' | method == 'spexSBR') {
         if (is.null(dim(x)))
             stop('For random or spatially explicit sample based rarefaction "x" must be a site x species matrix as the input')
         else {
@@ -387,39 +426,43 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                 x = colSums(x)
         }
     } else if (!is.null(spat_algo))
-        warning("Setting spat_algo to a non-NULL value only has consequences when method = sSBR")
+        warning("Setting spat_algo to a non-NULL value only has consequences when method = sSBR or method = spexSBR")
     if (method == 'IBR' | method == 'nsSBR') {
         if (!is.null(dim(x)))
             x = colSums(x)
         n = sum(x)
     }
-    if (is.null(effort))
-        if (n == 0)
-            effort = 0
-        else
-            effort = 1:n
-    if (any(effort > n)) {
-        if (extrapolate & return_NA)
-            stop('It does not make sense to set "extrapolate" and "return_NA" to both be TRUE, see documentation')
-        if (!quiet_mode) {
-            warning_mess = paste('"effort" larger than total number of',
-                                 ifelse(method == 'IBR', 'individuals', 'samples'),
-                                 'returning')
-            if (extrapolate)
-                warning(paste(warning_mess, 'extrapolated S using Chao1'))
-            else if (return_NA)
-                warning(paste(warning_mess, 'NA'))
-            else
-                warning(paste(warning_mess, 'S'))
-        }
-    } else if (extrapolate)
-        if (!quiet_mode) 
-            message('Richness was not extrapolated because effort less than or equal to the number of samples')
-    if (method == 'sSBR') {
+   
+    if (method != "spexSBR"){ # This block assumes that effort is in no. of samples
+                              # which can be different for spexSBR
+      if (is.null(effort))
+           if (n == 0)
+               effort = 0
+           else
+               effort = 1:n
+       if (any(effort > n)) {
+           if (extrapolate & return_NA)
+               stop('It does not make sense to set "extrapolate" and "return_NA" to both be TRUE, see documentation')
+           if (!quiet_mode) {
+               warning_mess = paste('"effort" larger than total number of',
+                                    ifelse(method == 'IBR', 'individuals', 'samples'),
+                                    'returning')
+               if (extrapolate)
+                   warning(paste(warning_mess, 'extrapolated S using Chao1'))
+               else if (return_NA)
+                   warning(paste(warning_mess, 'NA'))
+               else
+                   warning(paste(warning_mess, 'S'))
+           }
+       } else if (extrapolate)
+           if (!quiet_mode) 
+               message('Richness was not extrapolated because effort less than or equal to the number of samples')
+    } # end if method != spexSBR
+   
+    if (method == 'sSBR' | method == 'spexSBR') {
         if (is.null(spat_algo)) 
             spat_algo = 'kNN'
-        if (spat_algo == 'kNN') {
-      
+        if (spat_algo == 'kNN' | spat_algo == 'full_path' | spat_algo == "convexhull") {
             explicit_loop = matrix(0, n, n)
             if (is.null(latlong))
                 stop('For spatial rarefaction the argument "latlong" must be set TRUE or FALSE')
@@ -430,6 +473,10 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
             } else {
                 pair_dist = as.matrix(dist(coords))
             }
+            
+            if (method == 'spexSBR')
+               dist_mat <- matrix(NA, n, n)
+            
             for (i in 1:n) {
                 dist_to_site = pair_dist[i, ]
                 # Shuffle plots, so that tied grouping is not biased by original order.
@@ -438,41 +485,114 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                 new_order = new_order[order(dist_new)]
                 # Move focal site to the front
                 new_order = c(i, new_order[new_order != i])
-                comm_ordered = x[new_order, ]
+                
+                pair_dist_ordered = pair_dist[new_order, new_order] # sort rows and cols of distance matrix b distance to focal sample
+                comm_ordered = x[new_order, ]             # same order for samples
                 # 1 for absence, 0 for presence
                 comm_bool = as.data.frame((comm_ordered == 0) * 1) 
                 rich = cumprod(comm_bool)
                 explicit_loop[ , i] = as.numeric(ncol(x) - rowSums(rich))
+                if (method == 'spexSBR')
+                   if (spat_algo == 'kNN')
+                     dist_mat[,i] <- dist_to_site[order(dist_to_site)]
+                   else if (spat_algo == 'full_path'){
+                     dist_mat[1,i] <- 0
+                     # extract off-diagonal from distance matrix
+                     dist_mat[2:n,i] <- pair_dist_ordered[row(pair_dist_ordered) == col(pair_dist_ordered) + 1]
+                     # accumulate distances
+                     dist_mat[,i] <- cumsum(dist_mat[,i])
+                   } else if (spat_algo == 'convexhull') {
+                      coords_ordered <- coords[new_order, ]
+                      # Use 0 and distance between first two points as first entries
+                      dist_mat[1,i] <- dist_to_site[order(dist_to_site)][1]
+                      # calculate convex-hull for 3 to n points
+                      for (j in 3:n){
+                         #plot(coords_ordered[1:j,1], coords_ordered[1:j,2], pch = 20)
+                         hpts <- grDevices::chull(coords_ordered[1:j,1], coords_ordered[1:j,2])
+                         hpts <- c(hpts, hpts[1])
+                         chull_coords <- as.matrix(coords_ordered[hpts,])
+                         chull_poly <- sf::st_polygon(list(chull_coords))
+                         chull_area <- sf::st_area(chull_poly)
+                         dist_mat[j,i] <- chull_area
+                      }
+                   }
             }
-            out = apply(explicit_loop, 1, mean)[effort]
+            if (method == 'sSBR')
+               out = apply(explicit_loop, 1, mean)[effort]
             
+            else if (method == 'spexSBR'){
+               out_dat <- data.frame(distance = as.vector(dist_mat),
+                                     S        = as.vector(explicit_loop))
+               
+               # Fit interpolation model
+               # GAM with monotonously increasing constraint
+               scam1 <- scam::scam(S ~ s(distance, bs = "mpi"),
+                                   data = out_dat, family = "poisson")
+               
+               # Plot just for testing
+               #plot(S ~ distance, data = out_dat)
+               
+               # Distance / area vector for interpolation
+               if (is.null(effort)) {
+                  dist_vec <- seq(min(out_dat$distance, na.rm = T),
+                                  max(out_dat$distance, na.rm = T), length = 200)
+               } else {
+                  dist_vec <- effort
+               }
+               
+               out_pred <- data.frame(distance = dist_vec)
+               
+               # SCAM predictions
+               out_pred$S  <- predict(scam1, out_pred, type = "response")
+               
+               # Create named output vector (maybe change to two-column table later)
+               out <- out_pred$S
+               names(out) <- out_pred$distance
+            }
         }
         else if (spat_algo == "kNCN") 
             out = kNCN_average(x=x, coords=coords, latlong=latlong)[effort]
     } 
-    else { 
+    else { # if method == IBR | method == nsSBR
         # drop species with no observations  
         x = x[x > 0] 
         S = length(x)
         if (dens_ratio == 1) {
             ldiv = lchoose(n, effort)
         } else {
-            effort = effort[effort / dens_ratio <= n]
-            ldiv = lgamma(n - effort / dens_ratio + 1) - lgamma(n + 1)
+            effort = effort / dens_ratio
+            ldiv = lgamma(n - effort + 1) - lgamma(n + 1)
         }
+        # create an effort by species matrix which will contain
+        # the probability of each species NOT occurring at a given sample
+        # size.
         p = matrix(0, sum(effort <= n), S)
         out = rep(NA, length(effort))
         S_ext = NULL
+        if (sd)
+          std_dev = rep(NA, length(effort))
         for (i in seq_along(effort)) {
             if (effort[i] <= n) {
                 if (dens_ratio == 1) {
                     p[i, ] = ifelse(n - x < effort[i], 0, 
                                     exp(lchoose(n - x, effort[i]) - ldiv[i]))
+                    if (sd) {
+                      # compute the std dev using Heck 1978 Eq. 2
+                      # code adapted from vegan::rarefy by Jari Oksanen
+                      V = sum(p[i, ] * (1 - p[i, ]))
+                      Jxx = n - outer(x, x, "+")
+                      ind = lower.tri(Jxx)
+                      Jxx = Jxx[ind]
+                      V = V + 2 * sum(ifelse(Jxx < effort[i], 0, 
+                          exp(lchoose(Jxx, effort[i]) - ldiv[i])) - outer(p[i, ], p[i, ])[ind])
+                      ## V is >= 0, but numerical zero can be negative (e.g,
+                      ## -1e-16), and we avoid taking its square root
+                      std_dev[i] = sqrt(max(V, 0))
+                    }  
                 } else {
                     p[i, ] = ifelse(n - x < effort[i] / dens_ratio, 0, 
                                     exp(suppressWarnings(lgamma(n - x + 1)) -
-                                        suppressWarnings(lgamma(n - x - effort[i] /
-                                                                dens_ratio + 1)) +
+                                        suppressWarnings(lgamma(n - x - effort[i] + 1)) +
                                          ldiv[i]))
                 }
             } else if (extrapolate) {
@@ -492,11 +612,16 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
                   S_ext = c(S_ext, S)
         }
         out = rep(NA, length(effort))
+        # richness is the sum of 1 - probability NOT occurring which is what p is
         out[effort <= n] = rowSums(1 - p)
+        # or if effort is greater than the number of samples then set to 
+        # the extrapolated value of richness. 
         out[effort > n] = S_ext
+        if (sd)
+          attr(out, 'sd') <- std_dev
     }
       
-    names(out) = effort
+    if (method != 'spexSBR') names(out) = effort
     return(out)
 }
 
@@ -511,6 +636,7 @@ rarefaction = function(x, method, effort=NULL, coords=NULL, latlong=NULL,
 #' @param n_indiv the number of individuals to evaluate the rarefaction curve
 #' at. The default behavior is to evaluate it on a log2 interval from 1 to N 
 #' @keywords internal
+#' @noRd
 ind_rare_perm = function(abu, n_perm = 100, n_indiv = NULL) {
     if (!is.vector(abu)) {
         stop('abu must be a vector of abundances')
@@ -576,6 +702,7 @@ avg_nn_dist = function(coords) {
 #' @inheritParams rarefaction
 #' @importFrom tibble tibble
 #' @keywords internal
+#' @noRd
 get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
                             inds=NULL, ind_dens=NULL, n_plots=NULL) {
     if (is.null(inds) & any(c('SAD', 'N') %in% tests))
@@ -634,6 +761,7 @@ get_delta_curves = function(x, tests=c('SAD', 'N', 'agg'), spat_algo=NULL,
 #'  for sampling species abundances. Ecology Letters 10:1037-1045.
 #' 
 #' @keywords internal
+#' @noRd
 get_rand_sad = function(rad, N) {
   rand_samp = sample(1:length(rad), N, replace = T, prob = rad)
   rand_sad = table(factor(rand_samp, levels = 1:length(rad)))
@@ -771,6 +899,7 @@ get_null_comm = function(comm, null_model, groups = NULL) {
 #' Returns a vector of abundances where individual-based rarefaction 
 #' will be performed
 #' @keywords internal
+#' @noRd
 get_inds = function(N_max, inds = NULL, log_scale = FALSE) {
     # across the groups what is the smallest total number of
     # individuals - this will be the largest N we can compute to
@@ -803,13 +932,16 @@ get_inds = function(N_max, inds = NULL, log_scale = FALSE) {
 #' Returns the "assumed" density of individuals in 
 #' a plot given whether min, max or mean is used
 #' @keywords internal
+#' @noRd
 get_ind_dens = function(comm, density_stat){
     if (density_stat == 'mean') {
         ind_dens = sum(comm) / nrow(comm)
     } else if (density_stat == 'max') {
         ind_dens = max(rowSums(comm))
-    } else {
+    } else if (density_stat == 'min'){
         ind_dens = min(rowSums(comm))
+    } else {
+        stop('Argument density_stat must be "mean", "max", or "min"')
     }
     return(ind_dens)
 }
@@ -820,6 +952,7 @@ get_ind_dens = function(comm, density_stat){
 #' Method developed by Loosmore and Ford 2006 but algebraic simplifications 
 #' used as developed by Baddeley et al. 2014 Ecological Archives M084-017-A1
 #' @keywords internal
+#' @noRd
 get_overall_p = function(effort, perm, value){
     delta_effort = c(effort[1], diff(effort))[perm == 0]
     Hbarbar = tapply(value, effort, mean)  # Baddeley Eq. A.10
@@ -836,6 +969,7 @@ get_overall_p = function(effort, perm, value){
 #' @param stats the statistics to output
 #' @importFrom stats pf coef
 #' @keywords internal
+#' @noRd
 mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
     summary_lm = summary(x)
     out = list()
@@ -873,7 +1007,8 @@ mod_sum = function(x, stats = c('betas', 'r', 'r2', 'r2adj', 'f', 'p')) {
 #' @importFrom tibble as_tibble
 #' @importFrom rlang .data
 #' @importFrom stats lm
-#' @keywords internal 
+#' @keywords internal
+#' @noRd
 get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                        stats=NULL, spat_algo=NULL) {
   
@@ -931,6 +1066,7 @@ get_results = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type
 #' @importFrom stats quantile
 #' @importFrom rlang .data
 #' @keywords internal
+#' @noRd
 run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, type,
                            stats, spat_algo, n_perm, overall_p) {
     if (overall_p)
@@ -962,13 +1098,13 @@ run_null_models = function(mob_in, env, groups, tests, inds, ind_dens, n_plots, 
         # compute quantiles
         null_qt = list()
         null_qt$S_df = null_df$S_df %>% 
-                       group_by(env, .data$test, sample, .data$effort) %>%
+                       group_by(.data$env, .data$test, .data$sample, .data$effort) %>%
                        summarize(low_effect = quantile(.data$effect, 0.025, na.rm = TRUE),
                                  med_effect = quantile(.data$effect, 0.5, na.rm = TRUE), 
                                  high_effect = quantile(.data$effect, 0.975, na.rm = TRUE))
           
         null_qt$mod_df = null_df$mod_df %>%
-                         group_by(.data$test, sample, .data$effort, .data$index) %>%
+                         group_by(.data$test, .data$sample, .data$effort, .data$index) %>%
                          summarize(low_value = quantile(.data$value, 0.025, na.rm = TRUE),
                                    med_value = quantile(.data$value, 0.5, na.rm = TRUE), 
                                    high_value = quantile(.data$value, 0.975, na.rm = TRUE))
@@ -1093,7 +1229,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
                            density_stat = c('mean', 'max', 'min'),
                            n_perm=1000, overall_p = FALSE) {
     # perform preliminary checks and variable assignments
-    if (class(mob_in) != "mob_in")
+    if (!methods::is(mob_in, "mob_in"))
         stop('mob_in must be output of function make_mob_in (i.e., of class mob_in')
     if (!(env_var %in% names(mob_in$env)))
         stop(paste(env_var, ' is not one of the columns in mob_in$env.'))
@@ -1126,7 +1262,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
         }
     }    
     if (type == 'discrete') {
-        if (class(env) != 'factor') {
+        if (!methods::is(env, 'factor')) {
             warning(paste("Converting", env_var, "to a factor with the default contrasts because the argument type = 'discrete'."))
             env = as.factor(env)
         }
@@ -1189,13 +1325,17 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 }
 
 #' Plot distributions of species abundance
-#' @inheritParams get_mob_stats
-#' 
+
 #' @param mob_in a 'mob_in' class object produced by 'make_mob_in'
+#' @param group_var String that specifies which field in \code{mob_in$env} the
+#'   data should be grouped by
+#' @param ref_level String that defines the reference level of \code{group_var}
+#'   to which all other groups are compared with, defaults to \code{NULL}.
+#'   If \code{NULL} then the default contrasts of \code{group_var} are used.    
 #' @param type either 'sad' or 'rad' for species abundance vs rank abundance
 #'   distribution
-#' @param pooled Boolean defaults to FALSE which specifies that abundances should
-#'   not be pooled at the group level, TRUE specifies that they should be pooled 
+#' @param scale character string either 'alpha' for sample scale or 
+#' 'gamma' for group scale. Defaults to 'gamma'.
 #' @param col optional vector of colors.
 #' @param lwd a number which specifies the width of the lines
 #' @param log a string that specifies if any axes are to be log transformed, 
@@ -1209,11 +1349,12 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #' @examples
 #' data(inv_comm)
 #' data(inv_plot_attr)
-#' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', pooled=FALSE, log='x')
-#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', pooled=TRUE, log='x')
+#' inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', log='x')
+#' plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', scale = 'alpha', log='x')
 plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
-                    pooled=FALSE, col=NULL, lwd=3, log='', leg_loc = 'topleft') {
+                    scale = 'gamma', col=NULL, lwd=3, log='',
+                    leg_loc = 'topleft') {
     groups  = factor(mob_in$env[ , group_var])
     group_levels = levels(groups) 
     # ensure that proper contrasts in groups 
@@ -1231,7 +1372,7 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
                 "#E2C288", "#F7B0E6", "#AAD28C")    
     else if (length(col) != length(group_levels))
       stop('Length of col vector must match the number of unique groups')
-    title = ifelse(pooled, 'Group Scale', 'Sample Scale')
+    title = ifelse(scale == 'gamma', 'Group Scale', 'Sample Scale')
     if ('sad' == type) {
         plot(1, type = "n", xlab = "% abundance", ylab = "% species", 
              xlim = c(0.01, 1), ylim = c(0.01, 1), log = log, main = title)
@@ -1239,14 +1380,15 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
             col_grp = col[i]
             comm_grp = mob_in$comm[groups == group_levels[i], ]
             comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
-            if (pooled) {
+            if (scale == 'gamma') {
                 sad_grp = colSums(comm_grp)
                 sad_sort = sort(sad_grp[sad_grp != 0])
                 s_cul = 1:length(sad_sort) / length(sad_sort)
                 n_cul = sapply(1:length(sad_sort), function(x)
                                sum(sad_sort[1:x]) / sum(sad_sort))
                 lines(n_cul, s_cul, col = col_grp, lwd = lwd, type = "l")
-            } else {
+            } 
+            if (scale == 'alpha') {
                 for (j in 1:nrow(comm_grp)) {
                     sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0]))
                     s_cul = 1:length(sad_sort) / length(sad_sort)
@@ -1267,14 +1409,15 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
              col_grp = col[i]
              comm_grp = mob_in$comm[groups == group_levels[i], ]
              comm_grp = comm_grp[rowSums(comm_grp) > 0, ]
-             if (pooled) {
+             if (scale == 'gamma') {
                 sad_grp = colSums(comm_grp)
                 sad_sort = sort(sad_grp[sad_grp != 0], decreasing = TRUE)
                 lines(sad_sort / sum(sad_sort), col = col_grp, lwd = lwd,
                       type = "l")
-             } else {
+             } 
+             if (scale == 'alpha') {
                  for (j in 1:nrow(comm_grp)) {
-                     sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0], decreasing = TRUE))
+                     sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0]), decreasing = TRUE)
                      lines(1:length(sad_sort), sad_sort / sum(sad_sort),
                            col = scales::alpha(col_grp, 0.5),
                            lwd = lwd, type = "l")
@@ -1285,16 +1428,52 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
     if (!is.na(leg_loc))
         legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
 }
-    
+
+#' Compute average color
+#'
+#' `mean_col()` computes an average color.
+#'
+#' Internal function to compute an average color
+#' by using the quadratic mean of the colors' RGBA values.
+#' 
+#' Used by \code{\link{plot_rarefaction}}
+#'
+#' @param ... Colors to average
+#' @return A color string of 9 characters: `"#"` followed by the
+#'         red, blue, green, and alpha values in hexadecimal.
+#' @details this function was copied from gridpattern::mean_col (Davis et al. 2024)
+#' @references Davis, T., Mike FC, and ggplot2 authors. 2024. gridpattern. 1.2.1
+#' @keywords internal
+#' @noRd
+#' @examples
+#'  mean_col("black", "white")
+#'  mean_col(c("black", "white"))
+#'  mean_col("red", "blue")
+mean_col <- function(...) {
+    cols <- unlist(list(...))
+    m <- grDevices::col2rgb(cols, alpha=TRUE) / 255.0
+    # quadratic mean suggested at https://stackoverflow.com/a/29576746
+    v <- apply(m, 1, function(x) sqrt(mean(x^2)))
+    grDevices::rgb(v[1], v[2], v[3], v[4])
+}
+
 #' Plot rarefaction curves for each treatment group
 #' 
-#' @param pooled Boolean specifying if samples should be pooled at the group
-#'  level or not. Defaults to TRUE. This argument only applies when
-#'  the individual based rarefaction is used (i.e., \code{method = 'indiv'})
+#' @param scales character string which defaults to c('alpha', 'gamma', 'study')
+#' indicating that rarefaction curves at the alpha (i.e., single plot), gamma 
+#' (i.e., group of plots), and study (i.e., all plots) scales should be computed
+#' and plotted. 
+#' @param raw boolean. Defaults to TRUE so that raw rarefaction curves
+#' without averaging or smoothing are plotted
+#' @param smooth boolean. Defaults to FALSE. If set to TRUE a lowess smoother is 
+#' used on the 'alpha' scale curves. Has no effect at gamma or study scales
+#' @param avg boolean. Defaults to FALSE. If set to TRUE then the average richness
+#' across the groups is computed and plotted.  
+#' @param one_panel boolean. Defaults to FALSE. If set to TRUE then the alpha
+#' scale and gamma scale curves are put on the same graph. 
 #' @param ... other arguments to provide to \code{\link[mobr]{rarefaction}}
-#' @inheritParams get_mob_stats
-#' @inheritParams plot.mob_out
 #' @inheritParams plot_abu
+#' @inheritParams plot.mob_out
 #' @inheritParams rarefaction
 #' @importFrom scales alpha
 #' @importFrom graphics lines legend
@@ -1304,20 +1483,27 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
 #' data(inv_plot_attr)
 #' inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' # random individual based rarefaction curves
+#' par(mfrow=c(1,2))
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
-#'                  pooled=TRUE, leg_loc='bottomright')
+#'                  leg_loc='bottomright')
 #' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
-#'                  pooled=FALSE, log='x')
+#'                  log='xy')
 #' # random sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy')
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy',
+#'                  leg_loc='bottomright')
 #' # spatial sample based rarefaction curves 
-#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy')
+#' plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy',
+#'                  leg_loc='bottomright', avg = TRUE, smooth = TRUE)
 plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
-                            method, dens_ratio = 1, pooled = TRUE, 
-                            spat_algo = NULL, col = NULL, lwd = 3, log = '',
-                            leg_loc = 'topleft', ...) {
-    if (pooled == FALSE & method != 'IBR')
-        stop('Samples can only not be pooled at the treatment level when individual-based rarefaction is used (i.e., method="IBR")')
+                            method, spat_algo = NULL, dens_ratio = 1,
+                            scales = c('alpha', 'gamma', 'study'),  
+                            raw = TRUE, smooth = FALSE, avg = FALSE, 
+                            col = NULL, lwd = 3, log = '',
+                            leg_loc = 'topleft', one_panel = FALSE, ...) {
+    if ('alpha' %in% scales & method != 'IBR') {
+        warning('Sample based rarefaction methods do not make sense at alpha scale, dropping alpha scale curves')
+        scales <- scales[scales != 'alpha']
+    }
     groups  = factor(mob_in$env[ , group_var])
     group_levels = levels(groups) 
     # ensure that proper contrasts in groups 
@@ -1337,47 +1523,168 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
         stop('Length of col vector must match the number of unique groups')
     if (method == 'indiv')
         xlab = 'Number of individuals'
-    else
+    else if (method == 'spexSBR')
+        xlab = 'Distance'
+    else 
         xlab = 'Number of samples'
-    if (pooled) {
-        Srare = lapply(group_levels, function(x) 
-                       rarefaction(subset(mob_in, groups == x, 'logical'),
-                                   method, spat_algo = spat_algo, ...))
-        xlim = c(1, max(unlist(sapply(Srare, function(x) as.numeric(names(x))))))
-        ylim = c(1, max(unlist(Srare)))
-        n = as.numeric(names(Srare[[1]]))
-        plot(n, Srare[[1]], type = "n", main = "Group scale",
-             xlab = xlab, ylab = "Species richness", 
-             xlim = xlim, ylim = ylim, log = log)
-        for (i in seq_along(group_levels)) {
-            col_grp = col[i]
-            n = as.numeric(names(Srare[[i]]))
-            lines(n, Srare[[i]], col = col_grp, lwd = lwd, type = "l")
-        }
-    } else {
-        Srare = lapply(group_levels, function(x)
+    if ('alpha' %in% scales) 
+        Salpha = lapply(group_levels, function(x)
                        apply(mob_in$comm[groups == x, ], 1,
                              function(y)  rarefaction(y, method, ...)))
-        xlim = c(1, max(unlist(lapply(Srare, function(x)
-                                 lapply(x, function(y)
-                                        as.numeric(names(y)))))))
-        ylim = c(1, max(unlist(Srare)))
-        n = as.numeric(names(Srare[[1]][[1]]))
-        plot(n, Srare[[1]][[1]], type = "n", main = "Sample scale",
+    if (any(c('alpha', 'gamma', 'study') %in% scales))
+        Sgamma = lapply(group_levels, function(x) 
+                        rarefaction(subset(mob_in, groups == x, 'logical'),
+                                    method, 
+                                    coords = subset(mob_in, groups == x, 'logical')$spat,
+                                    spat_algo = spat_algo, 
+                                    latlong = mob_in$latlong, ...))
+    if ('study' %in% scales) 
+        Sstudy = rarefaction(mob_in$comm, method, coords = mob_in$spat,
+                             spat_algo = spat_algo, latlong = mob_in$latlong, ...) 
+    # setup x and y limits for graphs
+    if ('alpha' %in% scales) {
+      xlim_alpha = c(1, max(unlist(lapply(Salpha, function(x)
+        lapply(x, function(y)
+          as.numeric(names(y)))))))
+      if ('gamma' %in% scales)
+        ylim_alpha = c(1, max(unlist(Salpha), unlist(Sgamma)))
+      else 
+        ylim_alpha = c(1, max(unlist(Salpha)))
+    }
+    if ('gamma' %in% scales) {
+      xlim_gamma = c(1, max(unlist(sapply(Sgamma, function(x) as.numeric(names(x))))))
+      ylim_gamma = c(1, max(unlist(Sgamma)))
+    }
+    if ('study' %in% scales) {
+      xlim_study = c(1, max(as.numeric(names(Sstudy))))
+      ylim_study = c(1, max(Sstudy))
+    }
+    if ('alpha' %in% scales) {
+        if (one_panel) {
+          xlim_tmp <- xlim_study
+          ylim_tmp <- ylim_study
+        }else{
+          xlim_tmp <- xlim_alpha
+          ylim_tmp <- ylim_alpha
+        }
+        n = as.numeric(names(Salpha[[1]][[1]]))
+        plot(n, Salpha[[1]][[1]], type = "n",
              xlab = xlab, ylab = "Species richness", 
-             xlim = xlim, ylim = ylim, log = log)        
+             xlim = xlim_tmp, ylim = ylim_tmp, log = log, bty='n')        
+        if (!one_panel)
+          graphics::title("Within Groups")
         for (i in seq_along(group_levels)) {
-            col_grp = col[i]
-            for (j in seq_along(Srare[[i]])) {
-                 n = as.numeric(names(Srare[[i]][[j]]))
-                 if (n[1] > 0)
-                     lines(n, Srare[[i]][[j]], col = scales::alpha(col_grp, 0.5),
-                           lwd = lwd, type = 'l')
+             if (raw){
+                 for (j in seq_along(Salpha[[i]])) {
+                      n = as.numeric(names(Salpha[[i]][[j]]))
+                      if (n[1] > 0)
+                          lines(n, Salpha[[i]][[j]], col = scales::alpha(col[i], 0.5),
+                          lwd = lwd, type = 'l')
+                 }
+             }   
+             if ('gamma' %in% scales) 
+                 lines(as.numeric(names(Sgamma[[i]])), Sgamma[[i]],
+                       lwd = lwd*1.5, col = col[i])
+        }
+        if (avg) {
+            for (i in seq_along(group_levels)) {
+                tmp <- lapply(Salpha[[i]], function(x) data.frame(n = 1:length(x), S = x))
+                tmp <- dplyr::bind_rows(tmp, .id = 'id')
+                nmax <- (tmp %>% group_by(id) %>% summarize(nmax = max(n)) %>%
+                                mutate(nmin = min(nmax)))$nmin[1]
+                Savg <- tapply(tmp$S, list(tmp$n), mean) #function(x) exp(mean(log(x))))
+                n <- as.numeric(names(Savg))
+                lines(1:nmax, Savg[1:nmax], col = col[i], lwd = lwd, lty=2)
+           }
+        }
+        if (smooth) {
+            for (i in seq_along(group_levels)) {
+               Stmp = unlist(Salpha[[i]])
+               ntmp = c()
+               for(j in seq_along(Salpha[[i]]))
+                   ntmp = c(ntmp, as.numeric(names(Salpha[[i]][[j]])))
+               lines(stats::lowess(ntmp, Stmp, f=.1), col = col[i], lwd = lwd, lty=2,
+                     type = 'l')
+          }
+        }
+    }    
+    if ('gamma' %in% scales) {
+      if (!one_panel) {
+        if ('study' %in% scales) {
+            xlim_tmp <- xlim_study
+            ylim_tmp <- ylim_study
+        } else {
+            xlim_tmp <- xlim_gamma
+            ylim_tmp <- ylim_gamma
+        }
+        n = as.numeric(names(Sgamma[[1]]))
+        plot(n, Sgamma[[1]], type = "n", main = "Between Groups",
+               xlab = xlab, ylab = "Species richness", 
+               xlim = xlim_tmp, ylim = ylim_tmp, log = log, bty='n')
+        if (raw) { 
+            for (i in seq_along(group_levels)) {
+                n = as.numeric(names(Sgamma[[i]]))
+                lines(n, Sgamma[[i]], col = col[i], lwd = lwd, type = "l", lty=1)
             }
         }
+        if ('study' %in% scales)
+            lines(as.numeric(names(Sstudy)), Sstudy, lwd = lwd*1.5, lty = 1)
+        if (avg) {
+          tmp <- lapply(Sgamma, function(x)
+            data.frame(n = as.numeric(names(x)), S = x))
+          tmp <- dplyr::bind_rows(tmp, .id = 'id')
+          nmax <- (tmp %>% group_by(id) %>% summarize(nmax = max(n)) %>%
+                     mutate(nmin = min(nmax)))$nmin[1]
+          Savg <- tapply(tmp$S, list(tmp$n), mean) 
+          n <- as.numeric(names(Savg))
+          lines(n, Savg, lwd = lwd, lty=2, 
+                col=mean_col(col[1:length(group_levels)]))
+        }
+      }
     }
-    if (!is.na(leg_loc))
-        legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
+    if ('study' %in% scales & !('gamma' %in% scales)) {
+      if (!one_panel)
+        plot(as.numeric(names(Sstudy)), Sstudy, type = "n",
+             main = "Between Groups", xlab = xlab, ylab = "Species richness", 
+             xlim = xlim_study, ylim = ylim_study, log = log, bty='n')
+      lines(as.numeric(names(Sstudy)), Sstudy, lwd = lwd*1.5, lty = 1)
+      if (raw) {
+        for (i in seq_along(group_levels)) {
+          n = as.numeric(names(Sgamma[[i]]))
+          lines(n, Sgamma[[i]], col = col[i], lwd = lwd, type = "l")
+        }
+      }
+      if (avg) {
+          tmp <- lapply(Sgamma, function(x)
+                        data.frame(n = as.numeric(names(x)), S = x))
+          tmp <- dplyr::bind_rows(tmp, .id = 'id')
+          nmax <- (tmp %>% group_by(id) %>% summarize(nmax = max(n)) %>%
+                     mutate(nmin = min(nmax)))$nmin[1]
+          Savg <- tapply(tmp$S, list(tmp$n), mean) 
+          n <- as.numeric(names(Savg))
+          lines(1:nmax, Savg[1:nmax], lwd = lwd, lty=2, 
+                col=mean_col(col[1:length(group_levels)]))
+      }
+      
+    }
+
+    if (!is.na(leg_loc)) {
+        leg_col <- col[1:length(group_levels)]
+        leg_txt <- group_levels
+        leg_lty <- rep(1, length(group_levels))
+        if (avg) {
+          leg_col <- c(leg_col, mean_col(col[1:length(group_levels)]))
+          leg_txt <- c(leg_txt, 'group avg.')
+          leg_lty <- c(leg_lty, 2)
+        }
+        if ('study' %in% scales) {
+            leg_col <- c(leg_col, 'black')
+            leg_txt <- c(leg_txt, 'all groups')
+            leg_lty <- c(leg_lty, 1)
+        }
+        legend(leg_loc, legend = leg_txt, col = leg_col, lty = leg_lty,
+               lwd = lwd, bty = 'n')
+    }  
 }
 
 #' Plot the multiscale MoB analysis output generated by \code{get_delta_stats}.
@@ -1663,6 +1970,7 @@ plot_N = function(comm, n_perm=1000) {
 #' @importFrom graphics plot polygon par
 #' @importFrom grDevices rainbow 
 #' @keywords internal
+#' @noRd
 plotStacked <- function(
 	x, y, 
 	order.method="as.is",

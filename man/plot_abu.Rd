@@ -9,7 +9,7 @@ plot_abu(
   group_var,
   ref_level = NULL,
   type = c("sad", "rad"),
-  pooled = FALSE,
+  scale = "gamma",
   col = NULL,
   lwd = 3,
   log = "",
@@ -29,8 +29,8 @@ If \code{NULL} then the default contrasts of \code{group_var} are used.}
 \item{type}{either 'sad' or 'rad' for species abundance vs rank abundance
 distribution}
 
-\item{pooled}{Boolean defaults to FALSE which specifies that abundances should
-not be pooled at the group level, TRUE specifies that they should be pooled}
+\item{scale}{character string either 'alpha' for sample scale or 
+'gamma' for group scale. Defaults to 'gamma'.}
 
 \item{col}{optional vector of colors.}
 
@@ -49,7 +49,7 @@ Plot distributions of species abundance
 \examples{
 data(inv_comm)
 data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
-plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', pooled=FALSE, log='x')
-plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', pooled=TRUE, log='x')
+inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
+plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', log='x')
+plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', scale = 'alpha', log='x')
 }

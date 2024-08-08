@@ -9,18 +9,22 @@ plot_rarefaction(
   group_var,
   ref_level = NULL,
   method,
-  dens_ratio = 1,
-  pooled = TRUE,
   spat_algo = NULL,
+  dens_ratio = 1,
+  scales = c("alpha", "gamma", "study"),
+  raw = TRUE,
+  smooth = FALSE,
+  avg = FALSE,
   col = NULL,
   lwd = 3,
   log = "",
   leg_loc = "topleft",
+  one_panel = FALSE,
   ...
 )
 }
 \arguments{
-\item{mob_in}{an object of class mob_in created by make_mob_in()}
+\item{mob_in}{a 'mob_in' class object produced by 'make_mob_in'}
 
 \item{group_var}{String that specifies which field in \code{mob_in$env} the
 data should be grouped by}
@@ -44,23 +48,40 @@ If \code{NULL} then the default contrasts of \code{group_var} are used.}
     aggregation). The argument \code{dens_ratio} must also be set otherwise 
     this sampling results in a curve identical to the IBR (see Details). 
     \item \code{'sSBR'} ... spatial sample-based rarefaction in which species 
-    are accumulated by including spatially proximate samples first. 
+    are accumulated by including spatially proximate samples first.
+    \item \code{'spexSBR'}  ... spatially-explicit sample-based rarefaction
+    in which species are accumulated as in \code{'sSBR'} but sampling
+    effort is not measured by no. of samples, but by cumulative distance or
+    cumulative area as specified by \code{'spat_algo'} (see details)
 }}
+
+\item{spat_algo}{character string that can be either: \code{'kNN'},
+\code{'kNCN'}, or \code{'convexhull'} for k-nearest neighbor, 
+k-nearest centroid neighbor sampling, or convex-hull polygon calculation 
+respectively. It defaults to k-nearest neighbor which is a 
+more computationally efficient algorithm that closely approximates the 
+potentially more correct k-NCN algo (see Details). Currently, \code{'kNN'} and
+\code{'k-NCN'} are available for method \code{'ssBR'}, while \code{'kNN'}
+\code{'convexhull'} are available for method \code{'spexSBR'}.}
 
 \item{dens_ratio}{the ratio of individual density between a reference group
 and the community data (i.e., x) under consideration. This argument is
 used to rescale the rarefaction curve when estimating the effect of
 individual density on group differences in richness.}
 
-\item{pooled}{Boolean specifying if samples should be pooled at the group
-level or not. Defaults to TRUE. This argument only applies when
-the individual based rarefaction is used (i.e., \code{method = 'indiv'})}
+\item{scales}{character string which defaults to c('alpha', 'gamma', 'study')
+indicating that rarefaction curves at the alpha (i.e., single plot), gamma 
+(i.e., group of plots), and study (i.e., all plots) scales should be computed
+and plotted.}
 
-\item{spat_algo}{character string that can be either: \code{'kNN'} or \code{'kNCN'}
-for k-nearest neighbor and k-nearest centroid neighbor sampling 
-respectively. It defaults to k-nearest neighbor which is a 
-more computationally efficient algorithm that closely approximates the 
-potentially more correct k-NCN algo (see Details).}
+\item{raw}{boolean. Defaults to TRUE so that raw rarefaction curves
+without averaging or smoothing are plotted}
+
+\item{smooth}{boolean. Defaults to FALSE. If set to TRUE a lowess smoother is 
+used on the 'alpha' scale curves. Has no effect at gamma or study scales}
+
+\item{avg}{boolean. Defaults to FALSE. If set to TRUE then the average richness
+across the groups is computed and plotted.}
 
 \item{col}{optional vector of colors.}
 
@@ -73,6 +94,9 @@ both axes are log transformed respectively}
 \item{leg_loc}{a string that specifies the location of the legend, 
 options include: 'lowerleft', 'topleft', 'loweright','topright'}
 
+\item{one_panel}{boolean. Defaults to FALSE. If set to TRUE then the alpha
+scale and gamma scale curves are put on the same graph.}
+
 \item{...}{other arguments to provide to \code{\link[mobr]{rarefaction}}}
 }
 \description{
@@ -83,12 +107,15 @@ data(inv_comm)
 data(inv_plot_attr)
 inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 # random individual based rarefaction curves
+par(mfrow=c(1,2))
 plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
-                 pooled=TRUE, leg_loc='bottomright')
+                 leg_loc='bottomright')
 plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
-                 pooled=FALSE, log='x')
+                 log='xy')
 # random sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy')
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'SBR', log='xy',
+                 leg_loc='bottomright')
 # spatial sample based rarefaction curves 
-plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy')
+plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'sSBR', log='xy',
+                 leg_loc='bottomright', avg = TRUE, smooth = TRUE)
 }

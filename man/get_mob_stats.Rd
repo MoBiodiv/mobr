@@ -2,7 +2,8 @@
 % Please edit documentation in R/mobr_boxplots.R
 \name{get_mob_stats}
 \alias{get_mob_stats}
-\title{Calculate sample based and group based biodiversity statistics.}
+\title{A now obsolete function that used to calculate sample based and group based
+biodiversity statistics.}
 \usage{
 get_mob_stats(
   mob_in,
@@ -14,7 +15,7 @@ get_mob_stats(
   extrapolate = TRUE,
   return_NA = FALSE,
   rare_thres = 0.05,
-  n_perm = 199,
+  n_perm = 0,
   boot_groups = FALSE,
   conf_level = 0.95,
   cl = NULL,
@@ -76,7 +77,7 @@ average abundance as the threshold which McGill (2011) found to have the
 best small sample behavior.}
 
 \item{n_perm}{The number of permutations to use for testing for treatment
-effects. Defaults to 199.}
+effects. Defaults to 0 (i.e., no permutations)}
 
 \item{boot_groups}{Use bootstrap resampling within groups to derive
 gamma-scale confidence intervals for all biodiversity indices. Default is
@@ -91,10 +92,14 @@ A cluster object created by \code{\link{makeCluster}},
 or an integer to indicate number of child-processes
 (integer values are ignored on Windows) for parallel evaluations
 (see Details on performance).
+It can also be \code{"future"} to use a future backend (see Details),
+\code{NULL} (default) refers to sequential evaluation.
 }
 
 \item{...}{
-Optional arguments to \code{FUN}.
+Optional arguments to \code{FUN} and also to underlying functions (e.g.
+\code{\link{parLapply}} and \code{\link{mclapply}} when \code{cl}
+is not \code{NULL}).
 }
 }
 \value{
@@ -107,7 +112,8 @@ A list of class \code{mob_stats} that contains alpha-scale and
   index derived from the bootstrap within groups.
 }
 \description{
-Calculate sample based and group based biodiversity statistics.
+A now obsolete function that used to calculate sample based and group based
+biodiversity statistics.
 }
 \details{
 \strong{BIODIVERSITY INDICES}
@@ -199,28 +205,6 @@ includes lower and upper confidence bounds and the median of the bootstrap
 samples. Please note that for the richness indices sampling with replacement
 corresponds to rarefaction to ca. 2/3 of the individuals, because the same
 samples occur several times in the resampled data sets.
-}
-\examples{
-# a binary grouping variable (uninvaded or invaded)
-data(inv_comm)
-data(inv_plot_attr)
-inv_mob_in = make_mob_in(inv_comm, inv_plot_attr, c('x', 'y'))
-inv_stats = get_mob_stats(inv_mob_in, group_var = "group", ref_level = 'uninvaded',
-                          n_perm = 19, effort_samples = c(5,10))
-plot(inv_stats)
-
-\donttest{
-# parallel evaluation using the parallel package 
-# run in parallel
-library(parallel)
-cl = makeCluster(2L)
-clusterEvalQ(cl, library(mobr))
-clusterExport(cl, 'inv_mob_in')
-inv_mob_stats = get_mob_stats(inv_mob_in, 'group', ref_level = 'uninvaded',
-                              n_perm=999, cl=cl)
-
-stopCluster(cl)
-}
 }
 \references{
 Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved

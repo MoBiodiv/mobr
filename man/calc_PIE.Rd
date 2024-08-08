@@ -4,55 +4,52 @@
 \alias{calc_PIE}
 \title{Calculate probability of interspecific encounter (PIE)}
 \usage{
-calc_PIE(x, ENS = FALSE)
+calc_PIE(x, replace = FALSE)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{ENS}{Boolean that determines if the effective number of species should
-be returned or the raw PIE value. Defaults to FALSE}
+\item{replace}{if TRUE, sampling with replacement is used. Otherwise,
+sampling without replacement (default).}
+}
+\value{
+either a single PIE value or vector of PIE values.
 }
 \description{
-\code{calc_PIE} returns the probability of interspecific  encounter (PIE)
- which is also known as Simpson's evenness index and Gini-Simpson index. For \code{ENS=TRUE},
- PIE will be converted to an asymptotic effective number of species (S_PIE).
+\code{calc_PIE} returns the probability of interspecific encounter (PIE)
+ which is also known as Simpson's evenness index and Gini-Simpson index.
 }
 \details{
-The formula of Hurlbert (1971) is used to calculate PIE:
+By default, Hurlbert's (1971) sample-size corrected formula is used:
 
-\eqn{PIE = N /(N - 1) * (1 - p_i^2)}
+\eqn{PIE = N /(N - 1) * (1 - sum(p_i^2))}
 
-where N is the total number of individuals and \eqn{p_i} is the relative abundance
-of species i. This formulation uses sampling without replacement and it is
-sometimes referred to as the bias corrected formulation of PIE.
+where N is the total number of individuals and \eqn{p_i} is the relative
+abundance of species i. This formulation uses sampling without replacement
+(\code{replace = F} ) For sampling with replacement (i.e., the sample-size
+uncorrected version), set \code{replace = T}.
 
-For \code{ENS = TRUE}, S_PIE will be returned which represents the species richness of
-a hypothetical community with equally-abundant species and infinitely many individuals
-corresponding to the observed value of PIE. It is computed as
-\eqn{S_PIE = 1 /(1 - PIE)}, which is equal to the
-asymptotic estimator for Hill numbers of diversity order 2 provided by Chao et al (2014).
-Note that S_PIE is undefined for communities with exactly one individual per species.
- 
-The code in this function borrows heavily from the function vegan::diversity()
-but computes a different quantity. The function vegan::diversity() computes
-PIE when sampling with replacement is assumed. The difference between the two 
-formulations will decrease as N becomes large. Jari Oksanen and Bob O'Hara are
-the original authors of the function vegan::diversity().
+In earlier versions of \code{mobr}, there was an additional argument
+(\code{ENS}) for the conversion into an effective number of species (i.e
+S_PIE). Now, \code{calc_SPIE} has become its own function and the
+(\code{ENS}) argument is no longer supported . Please, use \code{calc_SPIE}
+instead.
 }
 \examples{
 data(inv_comm)
 calc_PIE(inv_comm)
-calc_PIE(inv_comm, ENS=TRUE)
+calc_PIE(inv_comm, replace = TRUE)
+calc_PIE(c(23,21,12,5,1,2,3))
+calc_PIE(c(23,21,12,5,1,2,3), replace = TRUE)
 }
 \references{
 Hurlbert, S. H. (1971) The nonconcept of species diversity: a critique and
  alternative parameters. Ecology 52, 577-586.
- 
-Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R. K., & Ellison, A. M. (2014).
- Rarefaction and extrapolation with Hill numbers: A framework for sampling and estimation in species diversity studies.
- Ecological Monographs 84(1), 45-67.
+}
+\seealso{
+\code{\link{calc_SPIE}}
 }
 \author{
 Dan McGlinn, Thore Engel

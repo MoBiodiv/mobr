@@ -2,6 +2,7 @@
 % Please edit documentation in R/mobr-package.R
 \docType{package}
 \name{mobr}
+\alias{mobr-package}
 \alias{mobr}
 \title{Measurement of Biodiversity in R}
 \description{
@@ -10,4 +11,22 @@ The primary aim of this package is to provide ecologist's tools
   package provides a method to examine how a factor mediates species richness
   via its effects on different aspects of community structure: total
   abundance, species commonness, and spatial aggregation of conspecifics.
+}
+\author{
+\strong{Maintainer}: Daniel McGlinn \email{danmcglinn@gmail.com}
+
+Authors:
+\itemize{
+  \item Xiao Xiao \email{xiao@weecology.org}
+  \item Brian McGill \email{brimcgill@gmail.com}
+  \item Felix May \email{felix.may@posteo.de}
+  \item Thore Engel \email{thore.engel@idiv.de}
+  \item Caroline Oliver \email{olivercs@g.cofc.edu}
+  \item Shane Blowes \email{shane.blowes@idiv.de}
+  \item Tiffany Knight \email{tiffany.knight@idiv.de}
+  \item Oliver Purschke \email{oliverpurschke@web.de}
+  \item Nicholas Gotelli \email{Nicholas.Gotelli@uvm.edu}
+  \item Jon Chase \email{jonathan.chase@idiv.de}
+}
+
 }
