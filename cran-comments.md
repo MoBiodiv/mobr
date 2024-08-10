@@ -1,8 +1,8 @@
 # mobr 3.0.0
 
 This is a revised package submission. 
-The change to version 3.0.0 from 2.0.0 reflects that this is a major changes
-that are not backward compatible with the 2.0.0 version of the package.
+The change to version 3.0.0 from 2.0.2 reflects that this is a major changes
+that are not backward compatible with the 2.0.2 version of the package.
 
 ## Test environments
 * windows X (local), R 4.3.3
