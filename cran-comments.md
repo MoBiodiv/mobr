@@ -4,6 +4,28 @@ This is a revised package submission.
 The change to version 3.0.0 from 2.0.2 reflects that this is a major changes
 that are not backward compatible with the 2.0.2 version of the package.
 
+I received the warning 
+
+```
+❯ checking sizes of PDF files under ‘inst/doc’ ... WARNING
+    ‘gs+qpdf’ made some significant size reductions:
+       compacted ‘mobr_intro.pdf’ from 927Kb to 515Kb
+    consider running tools::compactPDF(gs_quality = "ebook") on these files,
+    or build the source package with --compact-vignettes=both
+```
+
+However, when I ran: 
+```
+compactPDF(paths = "./vignettes/", gs_quality = 'ebook', verbose = TRUE)
+qs_quality="ebook" : use_gs=FALSE, use_qpdf=TRUE
+#{pdf}s = length(paths) = 2
+- ./vignettes//beta_div_demo.pdf:  only qpdf: res=0; 
+    ==> (new=111813)/(old=112168) = 0.996835 .. not worth using
+- ./vignettes//mobr_intro.pdf:  only qpdf: res=0; 
+    ==> (new=939810)/(old=949424) = 0.989874 .. not worth using
+```
+which shows that qpdf will not compress these pdfs further. 
+
 ## Test environments
 * windows X (local), R 4.3.3
 * ubuntu 22.04.3 (personal server), R 4.3.1

@@ -32,7 +32,7 @@ Description: Functions for calculating metrics for the measurement biodiversity
     McGlinn, D.J., et al. (2020) <doi:10.1101/851717>, and
     McGlinn, D.J., et al. (2023) <doi:10.1101/2023.09.19.558467>. 
 Depends:
-    R (>= 3.0.2)
+    R (>= 3.5.0)
 Imports:
     plotrix,
     scales,
