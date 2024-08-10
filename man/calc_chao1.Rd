@@ -18,7 +18,7 @@ a vector of species richness estimates
 proposed in Chao (1984, 1987, 2005).
 }
 \details{
-This function is a trimmed version of \href{https://github.com/JohnsonHsieh/iNEXT}{\code{iNext::ChaoRichess}}.
+This function is a trimmed version of \href{https://github.com/JohnsonHsieh/iNEXT}{\code{iNext::ChaoRichness}}.
 T. C. Hsieh, K. H. Ma and Anne Chao are the original authors of the
 \code{iNEXT} package.
 }

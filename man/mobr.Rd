@@ -12,8 +12,16 @@ The primary aim of this package is to provide ecologist's tools
   via its effects on different aspects of community structure: total
   abundance, species commonness, and spatial aggregation of conspecifics.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/MoBiodiv/mobr}
+  \item Report bugs at \url{https://github.com/MoBiodiv/mobr/issues}
+}
+
+}
 \author{
-\strong{Maintainer}: Daniel McGlinn \email{danmcglinn@gmail.com}
+\strong{Maintainer}: Daniel McGlinn \email{danmcglinn@gmail.com} [copyright holder]
 
 Authors:
 \itemize{

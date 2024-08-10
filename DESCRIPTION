@@ -53,6 +53,7 @@ Suggests:
     rmarkdown,
     testthat,
     methods
+Language: en-US
 License: MIT + file LICENSE
 LazyData: true
 RoxygenNote: 7.3.1

@@ -4,7 +4,7 @@
 #' (\code{S_asymp}) of the species accumulation curve based on the methods
 #' proposed in Chao (1984, 1987, 2005). 
 #' 
-#' This function is a trimmed version of \href{https://github.com/JohnsonHsieh/iNEXT}{\code{iNext::ChaoRichess}}.
+#' This function is a trimmed version of \href{https://github.com/JohnsonHsieh/iNEXT}{\code{iNext::ChaoRichness}}.
 #' T. C. Hsieh, K. H. Ma and Anne Chao are the original authors of the
 #' \code{iNEXT} package. 
 #' 
@@ -333,7 +333,7 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
 #' \strong{N: total community abundance} is the total number of individuals 
 #' observed across all species in the sample
 #' 
-#' \strong{S: species richess} is the observed number of species that occurs at
+#' \strong{S: species richness} is the observed number of species that occurs at
 #' least once in a sample
 #' 
 #' \strong{S_n: Rarefied species richness} is the expected number of species, given a

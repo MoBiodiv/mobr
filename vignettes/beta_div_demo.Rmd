@@ -19,7 +19,7 @@ library(mobr)
 data(inv_comm)
 ```
 
-Calculate whittaker's beta
+Calculate Whittaker's beta
 ```{r}
 calc_comm_div(inv_comm[1:2, ], 'S')
 ```
@@ -34,7 +34,7 @@ Calculate beta for S given a specific coverage (beta C)
 calc_comm_div(inv_comm[1:2, ], 'S_C')
 ```
 
-Calculate beta for rarefied fiechness (S_n) for 20 individuals
+Calculate beta for rarefied richness (S_n) for 20 individuals
 ```{r}
 calc_comm_div(inv_comm[1:2, ], 'S_n', effort = 20)
 ```

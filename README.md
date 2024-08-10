@@ -40,7 +40,7 @@ citation(package = "mobr")
 install.packages('mobr')
 ```
 
-Or, install github version
+Or, install the Github version
 
 ```r
 install.packages('remotes')

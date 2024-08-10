@@ -100,7 +100,7 @@ Calculate biodiversity statistics from sites by species table.
 \strong{N: total community abundance} is the total number of individuals 
 observed across all species in the sample
 
-\strong{S: species richess} is the observed number of species that occurs at
+\strong{S: species richness} is the observed number of species that occurs at
 least once in a sample
 
 \strong{S_n: Rarefied species richness} is the expected number of species, given a
