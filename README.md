@@ -1,7 +1,5 @@
 # mobr
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-[![cran checks](https://cranchecks.info/badges/worst/mobr)](https://cranchecks.info/pkgs/mobr)
-[![Travis build status](https://travis-ci.org/MoBiodiv/mobr.svg?branch=master)](https://travis-ci.org/MoBiodiv/mobr)
 [![rstudio mirror downloads](https://cranlogs.r-pkg.org/badges/mobr)](https://github.com/r-hub/cranlogs.app)
 [![cran version](https://www.r-pkg.org/badges/version/mobr)](https://cran.r-project.org/package=mobr)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4014111.svg)](https://doi.org/10.5281/zenodo.4014111)

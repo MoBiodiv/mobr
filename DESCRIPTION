@@ -23,7 +23,7 @@ Authors@R: c(person("Daniel", "McGlinn", email = "danmcglinn@gmail.com",
                     role = "aut"),
              person("Jon", "Chase", email = "jonathan.chase@idiv.de",
                     role = "aut"))
-Date: 2021-02-09
+Date: 2024-08-10
 Description: Functions for calculating metrics for the measurement biodiversity
     and its changes across scales, treatments, and gradients. The methods 
     implemented in this package are described in:
