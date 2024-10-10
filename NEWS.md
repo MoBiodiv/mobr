@@ -1,3 +1,9 @@
+## version 3.0.1
+---
+Minor update
+- Improve documentation by including more references in help files
+- add argument `extrapolate` to the function `calc_beta_div`
+
 ## version 3.0.0
 ---
 
