@@ -62,7 +62,7 @@ to be higher than \code{effort_min}.}
 
 \item{extrapolate}{Boolean which specifies if richness should be
 extrapolated when \code{effort_samples} is larger than the number of
-individuals using the chao1 method. Defaults to TRUE.}
+individuals using the chao1 method (Chao 1984, 1987) . Defaults to TRUE.}
 
 \item{return_NA}{Boolean defaults to FALSE in which the rarefaction function
 returns the observed S when \code{effort} is larger than the number of
@@ -207,6 +207,12 @@ corresponds to rarefaction to ca. 2/3 of the individuals, because the same
 samples occur several times in the resampled data sets.
 }
 \references{
+Chao, A. 1984. Nonparametric Estimation of the Number of Classes in a
+ Population. Scandinavian Journal of Statistics 11:265–270.
+
+Chao, A. 1987. Estimating the population size for capture-recapture data with
+ unequal catchability. Biometrics, 43, 783-791.
+
 Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved
 nonparametric lower bound of species richness via a modified good-turing
 frequency formula. Biometrics, 70, 671-682.

@@ -143,24 +143,31 @@ invChat <- function (x, C)
 #' @param C_target target coverage between 0 and 1 (default is NULL). If not
 #' provided then target coverage is computed by \code{\link{calc_C_target}}
 #' @param extrapolate logical. Defaults to TRUE in which case richness is 
-#' extrapolated to sample sizes larger than observed in the dataset.
+#' extrapolated to sample sizes larger than observed in the dataset using the 
+#' Chao1 method (Chao 1984, 1987).
 #' @param interrupt logical. Should the function throw an error when \code{C_target}
 #'  exceeds the maximum recommendable coverage?
 #'
 #' @returns numeric value which is the species richness at a specific level of 
 #' coverage.
 #' @references 
+#' 
+#' Chao, A. 1984. Nonparametric Estimation of the Number of Classes in a
+#'  Population. Scandinavian Journal of Statistics 11:265–270.
+#' 
+#' Chao, A. 1987. Estimating the population size for capture-recapture data with
+#'  unequal catchability. Biometrics, 43, 783-791.
+#' 
 #' Chao, A., and L. Jost. 2012. Coverage-based rarefaction and extrapolation:
 #'  standardizing samples by completeness rather than size. Ecology 93:2533–2547.
 #'  
-#' Anne Chao, Nicholas J. Gotelli, T. C. Hsieh, Elizabeth L. Sander, K. H. Ma,
-#'  Robert K. Colwell, and Aaron M. Ellison 2014. Rarefaction and extrapolation
-#'  with Hill numbers: a framework for sampling and estimation in species
-#'  diversity studies.  Ecological Monographs 84:45-67.
+#' Chao, A., N.J. Gotelli, T.C. Hsieh, E.L. Sander, K.H. Ma, R.K. Colwell, and
+#'  A.M. Ellison 2014. Rarefaction and extrapolation with Hill numbers: a
+#'  framework for sampling and estimation in species diversity studies. 
+#'  Ecological Monographs 84:45-67.
 #' 
-#' T. C. Hsieh, K. H. Ma and Anne Chao. 2024. 
-#'  iNEXT: iNterpolation and EXTrapolation for
-#'  species diversity. R package version 3.0.1
+#' T. C. Hsieh, K. H. Ma and Anne Chao. 2024. iNEXT: iNterpolation and
+#'  EXTrapolation for species diversity. R package version 3.0.1
 #'  URL: http://chao.stat.nthu.edu.tw/wordpress/software-download/.
 #' 
 #' @seealso \code{\link{invChat}}
