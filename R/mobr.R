@@ -1333,7 +1333,7 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #'   to which all other groups are compared with, defaults to \code{NULL}.
 #'   If \code{NULL} then the default contrasts of \code{group_var} are used.    
 #' @param type either 'sad' or 'rad' for species abundance vs rank abundance
-#'   distribution
+#'   distribution, defaults to 'sad'.
 #' @param scale character string either 'alpha' for sample scale or 
 #' 'gamma' for group scale. Defaults to 'gamma'.
 #' @param col optional vector of colors.
@@ -1352,11 +1352,14 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #' inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', log='x')
 #' plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', scale = 'alpha', log='x')
-plot_abu = function(mob_in, group_var, ref_level = NULL, type=c('sad', 'rad'),
+plot_abu = function(mob_in, group_var, ref_level = NULL, type = 'sad',
                     scale = 'gamma', col=NULL, lwd=3, log='',
                     leg_loc = 'topleft') {
     groups  = factor(mob_in$env[ , group_var])
     group_levels = levels(groups) 
+    # issue warning if all groups do not have equal replication
+    if (length(unique(table(groups))) > 1)
+        warning('Some groups have more replicates than other groups which can influence the shape of the abundance distribution.')
     # ensure that proper contrasts in groups 
     if (!is.null(ref_level)) { 
         if (ref_level %in% group_levels) {
@@ -1505,7 +1508,11 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
         scales <- scales[scales != 'alpha']
     }
     groups  = factor(mob_in$env[ , group_var])
-    group_levels = levels(groups) 
+    group_levels = levels(groups)
+    group_n <- table(groups)
+    # issue warning if all groups do not have equal replication
+    if (length(unique(table(groups))) > 1)
+        warning('Some groups have more replicates than other groups which can influence the shape of the rarefaction curve.')
     # ensure that proper contrasts in groups 
     if (!is.null(ref_level)) { 
         if (ref_level %in% group_levels) {
@@ -1527,10 +1534,18 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
         xlab = 'Distance'
     else 
         xlab = 'Number of samples'
-    if ('alpha' %in% scales) 
+    if ('alpha' %in% scales) {
         Salpha = lapply(group_levels, function(x)
                        apply(mob_in$comm[groups == x, ], 1,
                              function(y)  rarefaction(y, method, ...)))
+        # if any groups only have a single replicate then the output
+        # must be changed to a list
+        for (i in which(group_n == 1)) {
+            tmp <- as.numeric(Salpha[[i]])
+            names(tmp) <- row.names(Salpha[[i]])
+            Salpha[[i]] <- list(tmp)
+        }  
+    }
     if (any(c('alpha', 'gamma', 'study') %in% scales))
         Sgamma = lapply(group_levels, function(x) 
                         rarefaction(subset(mob_in, groups == x, 'logical'),
@@ -1540,7 +1555,10 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                                     latlong = mob_in$latlong, ...))
     if ('study' %in% scales) 
         Sstudy = rarefaction(mob_in$comm, method, coords = mob_in$spat,
-                             spat_algo = spat_algo, latlong = mob_in$latlong, ...) 
+                             spat_algo = spat_algo, latlong = mob_in$latlong, ...)
+    # setup graphing window panels
+    if (!one_panel & all(c('alpha', 'gamma') %in% scales))
+      par(mfrow=c(1, 2))
     # setup x and y limits for graphs
     if ('alpha' %in% scales) {
       xlim_alpha = c(1, max(unlist(lapply(Salpha, function(x)
