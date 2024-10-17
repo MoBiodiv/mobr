@@ -170,7 +170,7 @@ calc_PIE = function(x, replace = FALSE) {
 #' calc_SPIE(inv_comm)
 #' calc_SPIE(inv_comm, replace = TRUE)
 #' calc_SPIE(c(23,21,12,5,1,2,3), replace=TRUE)
-calc_SPIE = function(x, replace = F) {
+calc_SPIE = function(x, replace = FALSE) {
     
     PIE = calc_PIE(x, replace = replace)
     SPIE = 1 / (1 - PIE)
@@ -232,7 +232,7 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' data(inv_tank)
 #' calc_div(tank_comm[1, ], 'S_n', effort = c(5, 10))
 #' calc_div(tank_comm[1, ], 'S_C', C_target = 0.9)
-calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
+calc_div = function(x, index, effort=NA, rare_thres = 0.05, PIE_replace = FALSE,
                     C_target = NULL, extrapolate = TRUE, ...) {
     if (index == 'N') out = sum(x)
     if (index == 'S') out = sum(x > 0)
@@ -240,8 +240,8 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
                                           extrapolate = extrapolate, ...) 
     if (index == 'S_C') out = calc_S_C(x, C_target, extrapolate = extrapolate,
                                        interrupt = FALSE)
-    if (index == 'PIE') out = calc_PIE(x, replace = replace)
-    if (index == 'S_PIE') out = calc_SPIE(x, replace = replace)
+    if (index == 'PIE') out = calc_PIE(x, replace = PIE_replace)
+    if (index == 'S_PIE') out = calc_SPIE(x, replace = PIE_replace)
     if (index == 'f_0') out = calc_div(x, 'S_asymp') - calc_div(x, 'S')
     if (index == 'S_asymp') {
         S_asymp = try(calc_chao1(x))
@@ -314,7 +314,7 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
 #'                            \code{alpha} scales.
 #' } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}
 #'
-#' @param replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+#' @param PIE_replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 #'   replacement is used. Otherwise, sampling without replacement (default).
 #'
 #' @param C_target_gamma When computing coverage based richness (\code{S_C})
@@ -451,7 +451,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
                          extrapolate = TRUE,
                          return_NA = FALSE, rare_thres = 0.05,
                          scales = c('alpha', 'gamma', 'beta'),
-                         replace = FALSE, C_target_gamma = NA, ...) {
+                         PIE_replace = FALSE, C_target_gamma = NA, ...) {
     
     # store each calculated index into its own data.frame in a list
     out = vector('list', length = length(index))
@@ -477,7 +477,8 @@ calc_comm_div = function(abund_mat, index, effort = NA,
             }    
             alpha = apply(abund_mat, 1, calc_div, index_eff, effort_eff, rare_thres,
                           extrapolate = extrapolate, return_NA = return_NA, 
-                          quiet = TRUE, replace = replace, C_target = C_target_gamma, ...)
+                          quiet = TRUE, PIE_replace = PIE_replace,
+                          C_target = C_target_gamma, ...)
         }
         if ('beta' %in% scales) {
             # compute beta

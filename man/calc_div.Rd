@@ -10,7 +10,7 @@ calc_div(
   index,
   effort = NA,
   rare_thres = 0.05,
-  replace = FALSE,
+  PIE_replace = FALSE,
   C_target = NULL,
   extrapolate = TRUE,
   ...
@@ -46,7 +46,7 @@ considered rare. It can also be specified as "N/S" which results in using
 average abundance as the threshold which McGill (2011) found to have the
 best small sample behavior.}
 
-\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+\item{PIE_replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 replacement is used. Otherwise, sampling without replacement (default).}
 
 \item{C_target}{When computing coverage based richness (\code{S_C}) then 

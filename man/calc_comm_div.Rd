@@ -12,7 +12,7 @@ calc_comm_div(
   return_NA = FALSE,
   rare_thres = 0.05,
   scales = c("alpha", "gamma", "beta"),
-  replace = FALSE,
+  PIE_replace = FALSE,
   C_target_gamma = NA,
   ...
 )
@@ -64,7 +64,7 @@ best small sample behavior.}
                            \code{alpha} scales.
 } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}}
 
-\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+\item{PIE_replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 replacement is used. Otherwise, sampling without replacement (default).}
 
 \item{C_target_gamma}{When computing coverage based richness (\code{S_C})
