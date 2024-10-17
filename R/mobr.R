@@ -1540,7 +1540,10 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                                     latlong = mob_in$latlong, ...))
     if ('study' %in% scales) 
         Sstudy = rarefaction(mob_in$comm, method, coords = mob_in$spat,
-                             spat_algo = spat_algo, latlong = mob_in$latlong, ...) 
+                             spat_algo = spat_algo, latlong = mob_in$latlong, ...)
+    # setup graphing window panels
+    if (!one_panel & all(c('alpha', 'gamma') %in% scales))
+      par(mfrow=c(1, 2))
     # setup x and y limits for graphs
     if ('alpha' %in% scales) {
       xlim_alpha = c(1, max(unlist(lapply(Salpha, function(x)
