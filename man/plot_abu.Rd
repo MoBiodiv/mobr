@@ -8,7 +8,7 @@ plot_abu(
   mob_in,
   group_var,
   ref_level = NULL,
-  type = c("sad", "rad"),
+  type = "sad",
   scale = "gamma",
   col = NULL,
   lwd = 3,
@@ -27,7 +27,7 @@ to which all other groups are compared with, defaults to \code{NULL}.
 If \code{NULL} then the default contrasts of \code{group_var} are used.}
 
 \item{type}{either 'sad' or 'rad' for species abundance vs rank abundance
-distribution}
+distribution, defaults to 'sad'.}
 
 \item{scale}{character string either 'alpha' for sample scale or 
 'gamma' for group scale. Defaults to 'gamma'.}
