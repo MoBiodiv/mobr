@@ -12,6 +12,7 @@ calc_comm_div(
   return_NA = FALSE,
   rare_thres = 0.05,
   scales = c("alpha", "gamma", "beta"),
+  avg_alpha = FALSE,
   PIE_replace = FALSE,
   C_target_gamma = NA,
   ...
@@ -63,6 +64,9 @@ best small sample behavior.}
     \item \code{beta} ... the ratio of diversity at the \code{gamma} and
                            \code{alpha} scales.
 } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}}
+
+\item{avg_alpha}{Boolean if TRUE then the alpha values are averaged. Defaults
+to FALSE.}
 
 \item{PIE_replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 replacement is used. Otherwise, sampling without replacement (default).}
@@ -167,6 +171,7 @@ alpha-diversity (i.e., average plot diversity).
 }
 \examples{
 data(tank_comm)
+div_metrics <- calc_comm_div(tank_comm, 'S')
 div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = c(5, 10))
 div_metrics
 div_metrics <- calc_comm_div(tank_comm, 'S_C', C_target_gamma = 0.75)

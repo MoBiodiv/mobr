@@ -4,14 +4,14 @@
 \alias{calc_PIE}
 \title{Calculate probability of interspecific encounter (PIE)}
 \usage{
-calc_PIE(x, replace = FALSE)
+calc_PIE(x, PIE_replace = FALSE)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{replace}{if TRUE, sampling with replacement is used. Otherwise,
+\item{PIE_replace}{if TRUE, sampling with replacement is used. Otherwise,
 sampling without replacement (default).}
 }
 \value{
@@ -28,8 +28,8 @@ By default, Hurlbert's (1971) sample-size corrected formula is used:
 
 where N is the total number of individuals and \eqn{p_i} is the relative
 abundance of species i. This formulation uses sampling without replacement
-(\code{replace = F} ) For sampling with replacement (i.e., the sample-size
-uncorrected version), set \code{replace = T}.
+(\code{replace = FALSE} ) For sampling with replacement (i.e., the sample-size
+uncorrected version), set \code{replace = TRUE}.
 
 In earlier versions of \code{mobr}, there was an additional argument
 (\code{ENS}) for the conversion into an effective number of species (i.e
@@ -40,9 +40,9 @@ instead.
 \examples{
 data(inv_comm)
 calc_PIE(inv_comm)
-calc_PIE(inv_comm, replace = TRUE)
+calc_PIE(inv_comm, PIE_replace = TRUE)
 calc_PIE(c(23,21,12,5,1,2,3))
-calc_PIE(c(23,21,12,5,1,2,3), replace = TRUE)
+calc_PIE(c(23,21,12,5,1,2,3), PIE_replace = TRUE)
 }
 \references{
 Hurlbert, S. H. (1971) The nonconcept of species diversity: a critique and

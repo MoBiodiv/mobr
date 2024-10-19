@@ -4,14 +4,14 @@
 \alias{calc_SPIE}
 \title{Calculate S_PIE}
 \usage{
-calc_SPIE(x, replace = FALSE)
+calc_SPIE(x, PIE_replace = FALSE)
 }
 \arguments{
 \item{x}{can either be a: 1) mob_in object, 2) community matrix-like
 object in which rows represent plots and columns represent species, or 3)
 a vector which contains the abundance of each species.}
 
-\item{replace}{if TRUE, sampling with replacement is used. Otherwise,
+\item{PIE_replace}{if TRUE, sampling with replacement is used. Otherwise,
 sampling without replacement (default).}
 }
 \value{
@@ -23,16 +23,16 @@ interspecific encounter (PIE) which is equal to the number of equally common
 species that result in that value of PIE.
 }
 \details{
-By default the sample size corrected version is returned (\code{replace =
-F}), which is the asymptotic estimator for the Hill number of diversity order
-q=2 (Chao et al, 2014). If \code{replace = T} the uncorrected hill number is
+By default the sample size corrected version is returned (\code{PIE_replace =
+FALSE}), which is the asymptotic estimator for the Hill number of diversity order
+q=2 (Chao et al, 2014). If \code{PIE_replace = TRUE} the uncorrected hill number is
 returned. This is the same as vegan::diversity(x, index="invsimpson").
 }
 \examples{
 data(inv_comm)
 calc_SPIE(inv_comm)
-calc_SPIE(inv_comm, replace = TRUE)
-calc_SPIE(c(23,21,12,5,1,2,3), replace=TRUE)
+calc_SPIE(inv_comm, PIE_replace = TRUE)
+calc_SPIE(c(23,21,12,5,1,2,3), PIE_replace=TRUE)
 }
 \references{
 Chao, A., Gotelli, N. J., Hsieh, T. C., Sander, E. L., Ma, K. H., Colwell, R.

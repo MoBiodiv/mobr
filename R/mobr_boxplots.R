@@ -59,8 +59,8 @@ calc_chao1 = function(x) {
 #' 
 #' where N is the total number of individuals and \eqn{p_i} is the relative
 #' abundance of species i. This formulation uses sampling without replacement
-#' (\code{replace = F} ) For sampling with replacement (i.e., the sample-size
-#' uncorrected version), set \code{replace = T}.
+#' (\code{replace = FALSE} ) For sampling with replacement (i.e., the sample-size
+#' uncorrected version), set \code{replace = TRUE}.
 #'
 #' In earlier versions of \code{mobr}, there was an additional argument
 #' (\code{ENS}) for the conversion into an effective number of species (i.e
@@ -70,7 +70,7 @@ calc_chao1 = function(x) {
 #'
 #' 
 #' @inheritParams rarefaction
-#' @param replace if TRUE, sampling with replacement is used. Otherwise,
+#' @param PIE_replace if TRUE, sampling with replacement is used. Otherwise,
 #'   sampling without replacement (default).
 #'
 #' @returns either a single PIE value or vector of PIE values. 
@@ -87,10 +87,10 @@ calc_chao1 = function(x) {
 #' @examples 
 #' data(inv_comm)
 #' calc_PIE(inv_comm)
-#' calc_PIE(inv_comm, replace = TRUE)
+#' calc_PIE(inv_comm, PIE_replace = TRUE)
 #' calc_PIE(c(23,21,12,5,1,2,3))
-#' calc_PIE(c(23,21,12,5,1,2,3), replace = TRUE)
-calc_PIE = function(x, replace = FALSE) {
+#' calc_PIE(c(23,21,12,5,1,2,3), PIE_replace = TRUE)
+calc_PIE = function(x, PIE_replace = FALSE) {
     
     args = as.list(match.call())
     if (any(names(args) == "ENS")) 
@@ -123,7 +123,7 @@ calc_PIE = function(x, replace = FALSE) {
     }
     
     # calculate PIE without replacement (for total >= 2)
-    if (replace) {
+    if (PIE_replace) {
         PIE = 1 - H
     } else {
         PIE = total / (total - 1) * (1 - H)
@@ -131,7 +131,7 @@ calc_PIE = function(x, replace = FALSE) {
     # if sample had zero individuals set PIE to 0
     PIE[total == 0] = 0
     # if sample only contains 1 individual set PIE to NA
-    if (!replace) 
+    if (!PIE_replace) 
         PIE[total == 1] = NA
     if (any(is.na(PIE))) 
         warning("NA was returned because the sample contains one or zero individuals.")
@@ -145,9 +145,9 @@ calc_PIE = function(x, replace = FALSE) {
 #' interspecific encounter (PIE) which is equal to the number of equally common
 #' species that result in that value of PIE.
 #'
-#' By default the sample size corrected version is returned (\code{replace =
-#' F}), which is the asymptotic estimator for the Hill number of diversity order
-#' q=2 (Chao et al, 2014). If \code{replace = T} the uncorrected hill number is
+#' By default the sample size corrected version is returned (\code{PIE_replace =
+#' FALSE}), which is the asymptotic estimator for the Hill number of diversity order
+#' q=2 (Chao et al, 2014). If \code{PIE_replace = TRUE} the uncorrected hill number is
 #' returned. This is the same as vegan::diversity(x, index="invsimpson").
 #'
 #' 
@@ -168,11 +168,11 @@ calc_PIE = function(x, replace = FALSE) {
 #' @examples
 #' data(inv_comm)
 #' calc_SPIE(inv_comm)
-#' calc_SPIE(inv_comm, replace = TRUE)
-#' calc_SPIE(c(23,21,12,5,1,2,3), replace=TRUE)
-calc_SPIE = function(x, replace = FALSE) {
+#' calc_SPIE(inv_comm, PIE_replace = TRUE)
+#' calc_SPIE(c(23,21,12,5,1,2,3), PIE_replace=TRUE)
+calc_SPIE = function(x, PIE_replace = FALSE) {
     
-    PIE = calc_PIE(x, replace = replace)
+    PIE = calc_PIE(x, PIE_replace = PIE_replace)
     SPIE = 1 / (1 - PIE)
     SPIE[sapply(PIE, function(x)
         isTRUE(all.equal(x, 0)))] = 0
@@ -215,8 +215,8 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, PIE_replace = FALSE,
                                           extrapolate = extrapolate, ...) 
     if (index == 'S_C') out = calc_S_C(x, C_target, extrapolate = extrapolate,
                                        interrupt = FALSE)
-    if (index == 'PIE') out = calc_PIE(x, replace = PIE_replace)
-    if (index == 'S_PIE') out = calc_SPIE(x, replace = PIE_replace)
+    if (index == 'PIE') out = calc_PIE(x, PIE_replace = PIE_replace)
+    if (index == 'S_PIE') out = calc_SPIE(x, PIE_replace = PIE_replace)
     if (index == 'f_0') out = calc_div(x, 'S_asymp') - calc_div(x, 'S')
     if (index == 'S_asymp') {
         S_asymp = try(calc_chao1(x))
@@ -289,6 +289,9 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, PIE_replace = FALSE,
 #'                            \code{alpha} scales.
 #' } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}
 #'
+#' @param avg_alpha Boolean if TRUE then the alpha values are averaged. Defaults
+#' to FALSE.
+#' 
 #' @param PIE_replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 #'   replacement is used. Otherwise, sampling without replacement (default).
 #'
@@ -417,6 +420,7 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, PIE_replace = FALSE,
 #'
 #' @examples
 #' data(tank_comm)
+#' div_metrics <- calc_comm_div(tank_comm, 'S')
 #' div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = c(5, 10))
 #' div_metrics
 #' div_metrics <- calc_comm_div(tank_comm, 'S_C', C_target_gamma = 0.75)
@@ -426,6 +430,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
                          extrapolate = TRUE,
                          return_NA = FALSE, rare_thres = 0.05,
                          scales = c('alpha', 'gamma', 'beta'),
+                         avg_alpha = FALSE, 
                          PIE_replace = FALSE, C_target_gamma = NA, ...) {
     
     # store each calculated index into its own data.frame in a list
@@ -440,7 +445,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
         if (any(c('gamma', 'beta') %in% scales))
             gamma = calc_div(colSums(abund_mat), index[i], effort, rare_thres,
                          extrapolate = extrapolate, return_NA = return_NA, 
-                         quiet = TRUE, replace = replace, C_target = C_target_gamma, ...)
+                         quiet = TRUE, PIE_replace = PIE_replace, C_target = C_target_gamma, ...)
         if (any(c('alpha', 'beta') %in% scales)) {
             if (index[i] == 'S_C' & 'beta' %in% scales) {
                 effort_eff = attributes(gamma)$N
@@ -471,20 +476,23 @@ calc_comm_div = function(abund_mat, index, effort = NA,
         # compute number of finite samples used for calculation
         sample_size = nrow(abund_mat)
         if ('alpha' %in% scales) {
+            if (avg_alpha) 
+                alpha <- mean(alpha)
             out[[i]]$alpha = data.frame(scale = 'alpha', index = index[i],
-                                        sample_size = 1, effort = effort_out,
+                                        sample_size = ifelse(avg_alpha, sample_size, 1),
+                                        effort = effort_out,
                                         gamma_coverage = gamma_coverage,
-                                        value = as.numeric(alpha))
+                                        value = alpha)
         }    
         if ('gamma' %in% scales) 
             out[[i]]$gamma = data.frame(scale = 'gamma', index = index[i], 
-                                        sample_size, effort = effort_out,
+                                        sample_size = 1, effort = effort_out,
                                         gamma_coverage = gamma_coverage,
                                         value = gamma)
         if ('beta' %in% scales & index[i] != 'N') 
             out[[i]]$beta = data.frame(scale = 'beta',
                                        index = paste('beta', index[i], sep = '_'),
-                                       sample_size, effort = effort_out,
+                                       sample_size = 1, effort = effort_out,
                                        gamma_coverage = gamma_coverage,
                                        value = beta)
         
@@ -587,34 +595,29 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
                              return_NA = FALSE, rare_thres = 0.05,
                              scales = c('alpha', 'gamma', 'beta'),
                              PIE_replace = FALSE, C_target_gamma = NA, ...) {
-  if (!is.numeric(ci) & length(ci) != 2)
-    stop('The ci argument must be a numeric vector of length 2 specifing the lower and upper quantiles of the confidence interval to return.')
-  # compute the diversity indices on a random sample of 
-  sample_div <- pblapply(samples, function(x)
-    calc_comm_div(x, index, effort, extrapolate, 
-                  return_NA, rare_thres, scales,
-                  PIE_replace, C_target_gamma, ...))
-  # aggregate the alpha values by averaging them
-  # technically this also averages the gamma and beta
-  # values but there is only one of each of those so it does
-  # not change the value of those metrics
-  sample_div <- lapply(sample_div, function(df) {
-    df %>% 
-      dplyr::group_by(scale, index) %>%
-      dplyr::summarize_if(is.numeric, mean)})
-  # bind across the bootstrap replicates
-  sample_div <- dplyr::bind_rows(sample_div, .id = 'id')
-  # compute quantiles across bootstraps. 
-  sample_qts <- sample_div %>% 
-    dplyr::group_by(scale, index) %>%        
-    dplyr::summarize(
-      sample_size = mean(sample_size),
-      effort = mean(effort),
-      gamma_coverage = mean(gamma_coverage),
-      me = ifelse(cent_stat == 'avg', mean(value), median(value)),
-      lo = quantile(value, ci[1]),
-      hi = quantile(value, ci[2]), .groups = 'keep')
-  return(data.frame(sample_qts))
+    if (!is.numeric(ci) & length(ci) != 2)
+        stop('The ci argument must be a numeric vector of length 2 specifing the lower and upper quantiles of the confidence interval to return.')
+    if (index == 'S_C' & is.na(C_target_gamma)) {
+        C_target_gamma <- min(sapply(samples, calc_C_target))
+    }
+    # compute the diversity indices on a random sample of 
+    sample_div <- pbapply::pblapply(samples, function(x)
+        calc_comm_div(x, index, effort, extrapolate, 
+                      return_NA, rare_thres, scales, avg_alpha = TRUE,
+                      PIE_replace, C_target_gamma, ...))
+    # bind across the bootstrap replicates
+    sample_div <- dplyr::bind_rows(sample_div, .id = 'id')
+    # compute quantiles across bootstraps. 
+    sample_qts <- sample_div %>% 
+        dplyr::group_by(scale, index) %>%        
+        dplyr::summarize(
+            sample_size = mean(sample_size),
+            effort = mean(effort),
+            gamma_coverage = mean(gamma_coverage),
+            me = ifelse(cent_stat == 'avg', mean(value), median(value)),
+            lo = quantile(value, ci[1]),
+            hi = quantile(value, ci[2]), .groups = 'keep')
+    return(data.frame(sample_qts))
 }
 
 
