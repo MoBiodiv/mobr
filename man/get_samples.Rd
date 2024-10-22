@@ -4,13 +4,13 @@
 \alias{get_samples}
 \title{Generate distribution of sampled community matrices from an original matrix.}
 \usage{
-get_samples(abund_mat, algo = "boot", n_boot = 199)
+get_samples(abund_mat, algo = "loo", n_boot = 199)
 }
 \arguments{
 \item{abund_mat}{Abundance based site-by-species table. Species as columns}
 
 \item{algo}{can be either 'boot' or 'loo' for bootstrap or leave-one-out 
-methods respectively.}
+methods respectively. Default value is 'loo'.}
 
 \item{n_boot}{how to many boot strapped samples to create, defaults to 199.}
 }

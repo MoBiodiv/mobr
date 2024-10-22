@@ -17,7 +17,7 @@ get_mob_stats(
   rare_thres = 0.05,
   n_perm = 0,
   boot_groups = FALSE,
-  conf_level = 0.95,
+  ci = FALSE,
   cl = NULL,
   ...
 )
@@ -83,10 +83,6 @@ effects. Defaults to 0 (i.e., no permutations)}
 gamma-scale confidence intervals for all biodiversity indices. Default is
 \code{FALSE}. See \emph{Details} for information on the bootstrap approach.}
 
-\item{conf_level}{Confidence level used for the calculation of gamma-scale 
-bootstrapped confidence intervals. Only used when \code{boot_groups =
-TRUE}.}
-
 \item{cl}{
 A cluster object created by \code{\link{makeCluster}},
 or an integer to indicate number of child-processes
@@ -101,6 +97,10 @@ Optional arguments to \code{FUN} and also to underlying functions (e.g.
 \code{\link{parLapply}} and \code{\link{mclapply}} when \code{cl}
 is not \code{NULL}).
 }
+
+\item{conf_level}{Confidence level used for the calculation of gamma-scale 
+bootstrapped confidence intervals. Only used when \code{boot_groups =
+TRUE}.}
 }
 \value{
 A list of class \code{mob_stats} that contains alpha-scale and 
