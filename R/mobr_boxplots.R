@@ -597,7 +597,7 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
                              PIE_replace = FALSE, C_target_gamma = NA, ...) {
     if (!is.numeric(ci) & length(ci) != 2)
         stop('The ci argument must be a numeric vector of length 2 specifing the lower and upper quantiles of the confidence interval to return.')
-    if (index == 'S_C' & is.na(C_target_gamma)) {
+    if (any(index %in% 'S_C') & is.na(C_target_gamma)) {
         C_target_gamma <- min(sapply(samples, calc_C_target))
     }
     # compute the diversity indices on a random sample of 
@@ -614,7 +614,7 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
             sample_size = mean(sample_size),
             effort = mean(effort),
             gamma_coverage = mean(gamma_coverage),
-            me = ifelse(cent_stat == 'avg', mean(value), median(value)),
+            value = ifelse(cent_stat == 'avg', mean(value), median(value)),
             lo = quantile(value, ci[1]),
             hi = quantile(value, ci[2]), .groups = 'keep')
     return(data.frame(sample_qts))
@@ -832,16 +832,18 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #' @importFrom rlang .data
 #' 
 #' @export
-get_mob_stats = function(mob_in, group_var, ref_level = NULL, 
-                         index = c("N", "S", "S_n", "S_PIE"),
-                         effort_samples = NULL, effort_min = 5,
-                         extrapolate = TRUE, return_NA = FALSE, 
-                         rare_thres = 0.05, n_perm = 0, 
-                         boot_groups = FALSE, ci = FALSE, cl=NULL, 
-                         ...) {
+get_mob_stats <- function(mob_in, group_var, ref_level = NULL, 
+                          index = c("N", "S", "S_n", "S_PIE"),
+                          effort_samples = NULL, effort_min = 5,
+                          extrapolate = TRUE, return_NA = FALSE, 
+                          rare_thres = 0.05, 
+                          scales = c('alpha', 'gamma', 'beta'),
+                          PIE_replace = FALSE, C_target_gamma = NA,
+                          n_perm = 199, cl = NULL, 
+                          ci = FALSE, ci_cent_stat = 'median', ci_algo = 'loo', ...) {
   EPS <- sqrt(.Machine$double.eps)
   if (n_perm < 1) 
-    stop('Set nperm to a value greater than 1') 
+    stop('Set n_perm to a value greater than 1') 
   
   INDICES <- c("N", "S", "S_n", "S_C", "S_asymp", "f_0",
               "pct_rare", "PIE", "S_PIE")
@@ -871,173 +873,109 @@ get_mob_stats = function(mob_in, group_var, ref_level = NULL,
                 paste(effort_samples, collapse = ", ")))
   }
   
-  # Group-level indices
-  effort_groups <- c(effort_samples, effort_samples * min(samples_per_group))
-  
-  # Abundance distribution pooled in groups
-  #abund_group = stats::aggregate(mob_in$comm, by = list(group_id), FUN = "sum")
-  
-  #dat_groups = calc_biodiv(abund_mat = abund_group[ , -1],
-  #                         groups = abund_group[ , 1],
-  #                         index = index, 
-  #                         effort = effort_groups, 
-  #                         extrapolate = extrapolate,
-  #                         return_NA = return_NA,
-  #                         rare_thres = rare_thres)
-  
-  #dat_samples = calc_biodiv(abund_mat = mob_in$comm,
-  #                          groups = group_id,
-  #                          index = index,
-  #                          effort = effort_samples, 
-  #                          extrapolate = extrapolate,
-  #                          return_NA = return_NA,
-  #                          rare_thres = rare_thres)
+
   if(ci) {
-    sample_list <- mob_in$comm %>%
-      group_by(group_id) %>%
+    sample_list <- data.frame(group_id, mob_in$comm) |> 
+      group_by(group_id) |> 
       group_map(~ get_samples(.x))
-    names(sample_list) <- group_lvs
-    sample_div <- lapply(sample_list, calc_comm_div_ci, index = 'S')
-    sample_div <- bind_rows(sample_div, .id = group_var)
+    names(sample_list) <- groups
+    if (is.null(C_target_gamma)) {
+      # compute C_target_gamma across two groups
+      C_target_gamma <- min(sapply(sample_list, function(x)
+                            sapply(x, calc_C_target)))
+    }
+    dat_div <- lapply(sample_list, calc_comm_div_ci, ci_cent_stat,
+                      index = index, effort = effort_samples,
+                      extrapolate = extrapolate, return_NA = return_NA,
+                      rare_thres = rare_thres, scales = scales, 
+                      PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...)
+    dat_div <- bind_rows(dat_div, .id = group_var)
   } else {
-    sample_div <- data.frame(group_id, mob_in$comm) %>% 
-      group_by(group_id) %>%
-      group_map(~ calc_comm_div(.x, index = 'S'))
-    names(sample_div) <- groups
-    sample_div <- bind_rows(sample_div, .id = group_var)
+    if (is.null(C_target_gamma)) {
+      # compute C_target_gamma across two groups
+      grpC <- data.frame(group_id, mob_in$comm) |>  
+                group_by(group_id) |> 
+                group_map(~ calc_C_target(.x))
+      C_target_gamma <- min(unlist(grpC))
+    }
+    dat_div <- data.frame(group_id, mob_in$comm) |>  
+      group_by(group_id) |> 
+      group_map(~ calc_comm_div(.x, index = index, effort = effort_samples,
+                                extrapolate = extrapolate, return_NA = return_NA,
+                                rare_thres = rare_thres, scales = scales, avg_alpha = TRUE, 
+                                PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...))
+    names(dat_div) <- groups
+    dat_div <- bind_rows(dat_div, .id = group_var)
   }
+  # D_bar is the average difference in a diversity metric between
+  # one or more groups. At the alpha scale the diversity metric is 
+  # averaged within groups and then the average of the differences 
+  # between groups is computed. 
+  D_bar <- dat_div |>
+    summarise(D_bar = mean(stats::dist(value)), 
+              .by = c(scale, index))
+  D_obs <- D_bar
   # Significance tests -------------------------------------------------------
+  cat('\nComputing permutation tests\n')
+  D_rand <- bind_rows(pbreplicate(n_perm,
+                                  data.frame(group_id = sample(group_id), mob_in$comm) |> 
+                                    group_by(group_id) |> 
+                                    group_map(~ calc_comm_div(.x, index = index,
+                                      effort = effort_samples, extrapolate = extrapolate,
+                                      return_NA = return_NA, rare_thres = rare_thres,
+                                      scales = scales, avg_alpha = TRUE, 
+                                      PIE_replace = FALSE,
+                                      C_target_gamma = C_target_gamma, ...)) |>
+                                    bind_rows(.id = 'id') |>
+                                    summarise(D_bar = mean(stats::dist(value)),
+                                              .by = c(scale, index)),
+                                  simplify = FALSE, cl = cl)) 
+  D_tmp <- D_obs |> mutate(D_bar_obs = .data$D_bar, D_bar = NULL)
+  D_rand <- left_join(D_rand, D_tmp, by = c("scale", "index"))
   
-  # alpha-scale
-  D_bar <- subset(sample_div, scale == 'alpha') %>%
-    group_by(group, index, effort) %>%
-    summarise(alpha_bar = mean(value, rm.na = TRUE), .groups = 'drop') %>%
-    summarise(D_bar = mean(stats::dist(alpha_bar))) %>%
-    data.frame
-  F_obs = subset(sample_div, scale == 'alpha') %>%
-    summarise(F = get_F_values(.x, permute = FALSE))
-              
-  cat('\nComputing null model at alpha-scale\n')
-  F_rand = bind_rows(pbreplicate(n_perm,
-                                 get_F_values(dat_samples, permute = T),
-                                 simplify = F, cl = cl)) %>%
+  perm_tests <- D_rand |> 
+    group_by(.data$scale, .data$index) |>
+    summarise(p_val = (sum(.data$D_bar >= .data$D_bar_obs - EPS) + 1) /
+                (n_perm + 1)) |>
     ungroup()
-  F_obs = F_obs %>% mutate(F_val_obs = .data$F_val, F_val = NULL)
-  F_rand = left_join(F_rand, F_obs, by = c("index", "effort"))
-  
-  samples_tests = F_rand %>% 
-    group_by(index, .data$effort) %>%
-    summarise(F_stat = first(.data$F_val_obs),
-              p_val = (sum(.data$F_val >= .data$F_val_obs - EPS) + 1) /
-                (n_perm + 1)) %>%
+  perm_tests <- left_join(D_bar, perm_tests, by = c("scale", "index"))
     
-    ungroup()
-  samples_tests = left_join(D_bar, samples_tests, by = c("index", "effort"))
-  
-  # gamma-scale
-  if (boot_groups) {
-    # bootstrap sampling within groups
-    
-    abund_dat = cbind(group_id, mob_in$comm)
-    cat('\nComputing bootstrap confidence intervals at the gamma-scale\n')
-    boot_repl_groups = pbreplicate(n_perm,
-                                   boot_sample_groups(abund_dat,
-                                                      index = index,
-                                                      effort = effort_groups,
-                                                      extrapolate = extrapolate,
-                                                      return_NA = return_NA, 
-                                                      rare_thres = rare_thres),
-                                   simplify = F, cl = cl)
-    boot_repl_groups = bind_rows(boot_repl_groups)
-    
-    alpha = 1 - conf_level
-    probs = c(alpha / 2, 0.5, 1 - alpha / 2)
-    
-    dat_groups = boot_repl_groups %>% 
-      group_by(.data$group, index, .data$effort) %>%
-      do(stats::setNames(data.frame(t(stats::quantile(.data$value, probs, na.rm = T))),
-                         c("lower","median","upper")))      
-  } else {
-    delta_obs = get_group_delta(mob_in$comm, group_id, index,
-                                effort_groups, extrapolate,
-                                return_NA, rare_thres, permute = F)
-    cat('\nComputing null model at gamma-scale\n')
-    delta_rand = bind_rows(pbapply::pbreplicate(n_perm, 
-                                                get_group_delta(mob_in$comm, group_id,
-                                                                index, effort_groups, extrapolate,
-                                                                return_NA, rare_thres, permute = T),
-                                                simplify = F, cl = cl))
-    delta_obs = delta_obs %>% mutate(d_obs = .data$delta, delta = NULL)
-    delta_rand = suppressMessages(left_join(delta_rand, delta_obs))
-    
-    groups_tests = delta_rand %>% 
-      group_by(index, .data$effort) %>%
-      summarise(D_bar = first(.data$d_obs),
-                p_val = (sum(.data$delta >= .data$d_obs - EPS) + 1) /
-                  (n_perm + 1)) %>%
-      ungroup()
-  }
   # order output data frames by indices
-  dat_samples$index = factor(dat_samples$index,
+  dat_div$index <- factor(dat_div$index,
                              levels = c("N",
                                         "S", "beta_S",
                                         "S_n", "beta_S_n",
+                                        "S_C", "beta_S_C",
                                         "S_asymp", "beta_S_asympS",
                                         "f_0", "beta_f_0",
                                         "pct_rare", "beta_pct_rare",
                                         "PIE",
                                         "S_PIE", "beta_S_PIE"))
-  dat_samples = dat_samples[order(dat_samples$index, dat_samples$effort,
-                                  dat_samples$group), ]
+  dat_div <- dat_div[order(dat_div$index, dat_div$effort, dat_div$group), ]
+  dat_div$index <- factor(dat_div$index)
+  perm_tests$index <- factor(perm_tests$index,
+                          levels = c("N",
+                                     "S", "beta_S",
+                                     "S_n", "beta_S_n",
+                                     "S_C", "beta_S_C",
+                                     "S_asymp", "beta_S_asympS",
+                                     "f_0", "beta_f_0",
+                                     "pct_rare", "beta_pct_rare",
+                                     "PIE",
+                                     "S_PIE", "beta_S_PIE"))
+  perm_tests <- perm_tests[order(perm_tests$index), ]
+  perm_tests$index <- factor(perm_tests$index)
   
-  dat_groups$index = factor(dat_groups$index, levels = index)
-  dat_groups = dat_groups[order(dat_groups$index, dat_groups$effort,
-                                dat_groups$group), ]
   
-  #remove unused factor levels
-  dat_samples$index = factor(dat_samples$index)
-  if (boot_groups) {
-    out = list(samples_stats = dat_samples,
-               groups_stats  = dat_groups,
-               samples_tests  = samples_tests)
-  } else {      
-    groups_tests$index = factor(groups_tests$index, levels = index)
-    groups_tests = groups_tests[order(groups_tests$index), ]
-    
-    out = list(samples_stats = dat_samples,
-               groups_stats  = dat_groups,
-               samples_tests  = samples_tests,
-               groups_tests   = groups_tests)
-  }
+  # create output
+  out <- list(comm_div = dat_div,
+              group_tests = perm_tests)
   if ("pct_rare" %in% index)
     out$rare_thres = rare_thres
   class(out) = 'mob_stats'
   return(out)
 }
 
-#' Get F statistics from diversity indices and grouping vector
-#' @importFrom rlang .data
-#' @keywords internal
-get_F_values = function(div_dat, permute = FALSE) {
-  if (permute)
-    div_dat = div_dat %>%
-      group_by(.data$index, .data$effort) %>%
-      mutate(group = sample(.data$group))
-  
-  models = div_dat %>%
-    group_by(.data$index, .data$effort) %>%
-    do(mod = try(stats::lm(.data$value ~ .data$group), silent=TRUE))
-  
-  models = models %>% 
-    mutate(F_val = ifelse(class(.data$mod) == 'lm',
-                          stats::anova(.data$mod)$F[1], NA)) %>%
-    ungroup()
-  
-  
-  models$F_val[!is.finite(models$F_val)] = NA
-  
-  return(models)
-}
 
 #' Obsolete function that used to plot alpha- and gamma-scale biodiversity
 #'  statistics for a MoB analysis
