@@ -33,8 +33,7 @@ calc_beta_div(
   statistics.}
 
 \item{effort}{The standardized number of individuals used for the calculation
-of rarefied species richness. This can a be single integer or a vector of
-integers.}
+of rarefied species richness. This must be a single integer.}
 
 \item{C_target_gamma}{When computing coverage based richness (\code{S_C})
 then this argument can be used to specify the coverage to be used for the
@@ -44,7 +43,7 @@ allowable sample size).}
 
 \item{extrapolate}{Boolean which specifies if richness should be extrapolated
 when effort is larger than the number of individuals using the chao1
-method (Chao 1984, 1987).}
+method (Chao 1984, 1987). Defaults to TRUE.}
 
 \item{...}{other arguments to pass to \code{calc_comm_div}}
 }

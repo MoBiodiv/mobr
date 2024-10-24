@@ -2,8 +2,7 @@
 % Please edit documentation in R/mobr_boxplots.R
 \name{plot.mob_stats}
 \alias{plot.mob_stats}
-\title{Obsolete function that used to plot alpha- and gamma-scale biodiversity
- statistics for a MoB analysis}
+\title{Plot statistics for a MoB analysis}
 \usage{
 \method{plot}{mob_stats}(
   x,
@@ -40,7 +39,7 @@ and confidence interval functions}
 }
 \description{
 Plots a \code{mob_stats} object which is produced by the 
-function \code{get_mob_stats}. The p-value for each statistic
+function \code{\link{get_mob_stats}}. The p-value for each statistic
 is displayed in the plot title if applicable.
 }
 \details{

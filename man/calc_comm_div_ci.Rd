@@ -46,24 +46,23 @@ the 0.025 and 0.975 quantiles in other words a 95 percent interval.}
   statistics.}
 
 \item{effort}{The standardized number of individuals used for the calculation
-of rarefied species richness. This can a be single integer or a vector of
-integers.}
+of rarefied species richness. This must be a single integer.}
 
 \item{extrapolate}{Boolean which specifies if richness should be extrapolated
 when effort is larger than the number of individuals using the chao1
-method (Chao 1984, 1987).}
+method (Chao 1984, 1987). Defaults to TRUE.}
 
 \item{return_NA}{Boolean in which the rarefaction function returns the
 observed S when \code{effort} is larger than the number of individuals. If
 set to TRUE then NA is returned. Note that this argument is only relevant
 when \code{extrapolate = FALSE}.}
 
-\item{rare_thres}{The threshold that determines how pct_rare is computed. It
-can range from (0, 1] and defaults to 0.05 which specifies that any species
-with less than or equal to 5% of the total abundance in a sample is
-considered rare. It can also be specified as "N/S" which results in using
-average abundance as the threshold which McGill (2011) found to have the
-best small sample behavior.}
+\item{rare_thres}{The threshold that determines how the metric
+\code{pct_rare} is computed. It can range from (0, 1] and defaults to 0.05
+which specifies that any species with less than or equal to 5% of the total
+abundance in a sample is considered rare. It can also be specified as "N/S"
+which results in using average abundance as the threshold which McGill
+(2011) found to have the best small sample behavior.}
 
 \item{scales}{The scales to compute the diversity indices for:
 \itemize{
@@ -90,17 +89,22 @@ a data.frame that has the lower, middle, and upper quantiles of the
 }
 \description{
 This function take a list of community matrices and returns the central tendency
-and the confidence interval for each diversity index of interest.
+and the confidence interval for each diversity index of interest across that
+list of communities.
 }
 \details{
 The measure of central tendency can be the median (default) or mean, and the
-range of the confidence interval can be specified as well but defaults to a 95% 
+range of the confidence interval can be specified but defaults to a 95% 
 confidence interval.
 }
 \examples{
 data(tank_comm)
-samples <- get_samples(tank_comm)
+samples <- get_samples(tank_comm, algo = 'loo')
 calc_comm_div_ci(samples, index = 'S_PIE')
+samples <- get_samples(tank_comm, algo = 'boot', n_boot = 20)
+calc_comm_div_ci(samples, index = 'S_PIE')
+# compute ci for average diversity (rather than median)
+calc_comm_div_ci(samples, index = 'S_PIE', cent_stat = 'avg')
 }
 \seealso{
 \code{\link{get_samples}} for generating samples, and \code{\link{calc_comm_div}}

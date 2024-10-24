@@ -51,8 +51,8 @@ library(dplyr)
 data(tank_comm)
 data(tank_plot_attr)
 indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
-tank_div <- tibble(tank_comm) \%>\% 
-  group_by(group = tank_plot_attr$group) \%>\% 
+tank_div <- tibble(tank_comm) |> 
+  group_by(group = tank_plot_attr$group) |> 
   group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
                                extrapolate = TRUE))
 # plot the community metrics                                 
