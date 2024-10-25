@@ -2,8 +2,7 @@
 % Please edit documentation in R/mobr_boxplots.R
 \name{get_mob_stats}
 \alias{get_mob_stats}
-\title{A now obsolete function that used to calculate sample based and group based
-biodiversity statistics.}
+\title{Carry out biodiversity metric comparisons between groups.}
 \usage{
 get_mob_stats(
   mob_in,
@@ -15,18 +14,22 @@ get_mob_stats(
   extrapolate = TRUE,
   return_NA = FALSE,
   rare_thres = 0.05,
-  n_perm = 0,
-  boot_groups = FALSE,
-  conf_level = 0.95,
+  scales = c("alpha", "gamma", "beta"),
+  PIE_replace = FALSE,
+  C_target_gamma = NA,
+  n_perm = 199,
   cl = NULL,
+  ci = TRUE,
+  ci_cent_stat = "median",
+  ci_algo = "loo",
   ...
 )
 }
 \arguments{
 \item{mob_in}{an object of class mob_in created by make_mob_in()}
 
-\item{group_var}{String that specifies which field in \code{mob_in$env} the
-data should be grouped by}
+\item{group_var}{String that specifies which variable in \code{mob_in$env} the
+data should be grouped by.}
 
 \item{ref_level}{String that defines the reference level of \code{group_var}
 to which all other groups are compared with, defaults to \code{NULL}.
@@ -37,22 +40,22 @@ If \code{NULL} then the default contrasts of \code{group_var} are used.}
    \item \code{N} ... Number of individuals (total abundance)
    \item \code{S} ... Number of species
    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
+   \item \code{S_C} ... Estimate species richness of a given level of coverage by \code{C_target_gamma}
    \item \code{S_asymp} ... Estimated asymptotic species richness
-   \item \code{f_0} ... Estimated number of undetected species 
+   \item \code{f_0} ... Estimated number of undetected species
    \item \code{pct_rare} ... The percent of rare species as defined by \code{rare_thres}
    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
    \item \code{S_PIE} ... Effective number of species based on PIE
-   
-}
-  If index is not specified then N, S, S_n, pct_rare, and S_PIE are computed
-  by default. See \emph{Details} for additional information on the
-  biodiversity statistics.}
 
-\item{effort_samples}{The standardized number of individuals used for the 
-calculation of rarefied species richness at the alpha-scale. This can a be
-single value or an integer vector. As default the minimum number of
-individuals found across the samples is used, when this is not smaller than
-\code{effort_min}.}
+}
+  See \emph{Details} for additional information on the biodiversity
+  statistics.}
+
+\item{effort_samples}{An integer that specifies the standardized number of
+individuals used for the calculation of rarefied species richness at the
+alpha-scale. It must be a single integer. The default value of \code{NULL}
+will result in the using the minimum number of individuals found across the
+samples is used, when this is not smaller than \code{effort_min}.}
 
 \item{effort_min}{The minimum number of individuals considered for the 
 calculation of rarefied richness (Default value of 5). Samples with less
@@ -60,32 +63,40 @@ individuals then \code{effort_min} are excluded from the analysis with a
 warning. Accordingly, when \code{effort_samples} is set by the user it has
 to be higher than \code{effort_min}.}
 
-\item{extrapolate}{Boolean which specifies if richness should be
-extrapolated when \code{effort_samples} is larger than the number of
-individuals using the chao1 method (Chao 1984, 1987) . Defaults to TRUE.}
+\item{extrapolate}{Boolean which specifies if richness should be extrapolated
+when effort is larger than the number of individuals using the chao1
+method (Chao 1984, 1987). Defaults to TRUE.}
 
-\item{return_NA}{Boolean defaults to FALSE in which the rarefaction function
-returns the observed S when \code{effort} is larger than the number of
-individuals. If set to TRUE then NA is returned. Note that this argument
-is only relevant when \code{extrapolate = FALSE}.}
+\item{return_NA}{Boolean in which the rarefaction function returns the
+observed S when \code{effort} is larger than the number of individuals. If
+set to TRUE then NA is returned. Note that this argument is only relevant
+when \code{extrapolate = FALSE}.}
 
-\item{rare_thres}{The threshold that determines how pct_rare is computed.
-It can range from (0, 1] and defaults to 0.05 which specifies that any 
-species with less than or equal to 5% of the total abundance in a sample is
-considered rare. It can also be specified as "N/S" which results in using
-average abundance as the threshold which McGill (2011) found to have the 
-best small sample behavior.}
+\item{rare_thres}{The threshold that determines how the metric
+\code{pct_rare} is computed. It can range from (0, 1] and defaults to 0.05
+which specifies that any species with less than or equal to 5% of the total
+abundance in a sample is considered rare. It can also be specified as "N/S"
+which results in using average abundance as the threshold which McGill
+(2011) found to have the best small sample behavior.}
 
-\item{n_perm}{The number of permutations to use for testing for treatment
-effects. Defaults to 0 (i.e., no permutations)}
+\item{scales}{The scales to compute the diversity indices for:
+\itemize{
+    \item \code{alpha} ... for each row of the site x species community matrix
+    \item \code{gamma} ... for the entire site x species community matrix
+    \item \code{beta} ... the ratio of diversity at the \code{gamma} and
+                           \code{alpha} scales.
+} Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}}
 
-\item{boot_groups}{Use bootstrap resampling within groups to derive
-gamma-scale confidence intervals for all biodiversity indices. Default is
-\code{FALSE}. See \emph{Details} for information on the bootstrap approach.}
+\item{PIE_replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+replacement is used. Otherwise, sampling without replacement (default).}
 
-\item{conf_level}{Confidence level used for the calculation of gamma-scale 
-bootstrapped confidence intervals. Only used when \code{boot_groups =
-TRUE}.}
+\item{C_target_gamma}{When computing coverage based richness (\code{S_C})
+then this argument can be used to specify the coverage to be used for the
+gamma scale richness estimate. This defaults to \code{NA} in which case the
+target cover is computed by \code{\link{calc_C_target}} (i.e., the largest
+allowable sample size).}
+
+\item{n_perm}{number of iterations to run for null tests, defaults to 1000.}
 
 \item{cl}{
 A cluster object created by \code{\link{makeCluster}},
@@ -96,149 +107,81 @@ It can also be \code{"future"} to use a future backend (see Details),
 \code{NULL} (default) refers to sequential evaluation.
 }
 
-\item{...}{
-Optional arguments to \code{FUN} and also to underlying functions (e.g.
-\code{\link{parLapply}} and \code{\link{mclapply}} when \code{cl}
-is not \code{NULL}).
-}
+\item{ci}{boolean, if TRUE then confidence intervals are calculated. Defaults
+to TRUE.}
+
+\item{ci_cent_stat}{a string that is either 'mean' or 'median' which
+specifies the measure of central tendency. Defaults to 'median'.}
+
+\item{ci_algo}{can be either 'boot' or 'loo' for bootstrap or leave-one-out
+methods respectively. Default value is 'loo'.}
+
+\item{...}{additional arguments that can be passed to \code{\link{calc_div}}}
 }
 \value{
-A list of class \code{mob_stats} that contains alpha-scale and 
-  gamma-scale biodiversity statistics, as well as the p-values for
-  permutation tests at both scales.
-  
-  When \code{boot_groups = TRUE} there are no p-values at the gamma-scale.
-  Instead there is lower bound, median, and upper bound for each biodiversity
-  index derived from the bootstrap within groups.
+A list of class \code{mob_stats} that contains two objects: 
+1) \code{comm_div} a data.frame of each diversity metrics for each group
+at each scale specified, and
+2) \code{gorup_tests} a data.frame of the average difference between groups
+in their diversity metric (\code{D_bar}) with an associated p-value derived 
+from the permutation test.
 }
 \description{
-A now obsolete function that used to calculate sample based and group based
-biodiversity statistics.
+This function can compute a range of biodiversity metrics, their uncertainty, 
+and carries out a permutation test to examine if groups differ in a particular
+metric more than would be expected due to random chance.
 }
 \details{
-\strong{BIODIVERSITY INDICES}
+This function is partially a wrapper for the functions
+\code{\link{calc_comm_div}} or \code{\link{calc_comm_div_ci}} that makes
+group comparisons easier to implement.
 
-\strong{S_n: Rarefied species richness} is the expected number of species, given a
-defined number of sampled individuals (n) (Gotelli & Colwell 2001). Rarefied
-richness at the alpha-scale is calculated for the values provided in 
-\code{effort_samples} as long as these values are not smaller than the 
-user-defined minimum value \code{effort_min}. In this case the minimum value 
-is used and samples with less individuals are discarded. When no values for
-\code{effort_samples} are provided the observed minimum number of individuals
-of the samples is used, which is the standard in rarefaction analysis
-(Gotelli & Colwell 2001). Because the number of individuals is expected to
-scale linearly with sample area or effort, at the gamma-scale the number of
-individuals for rarefaction is calculated as the minimum number of samples
-within groups multiplied by \code{effort_samples}. For example, when there are 10
-samples within each group, \code{effort_groups} equals \code{10 *
-effort_samples}. If n is larger than the number of individuals in sample and
-\code{extrapolate = TRUE} then the Chao1 (Chao 1984, Chao 1987) method is
-used to extrapolate the rarefaction curve.
 
-\strong{pct_rare: Percent of rare species} Is the ratio of the number of rare
-species to the number of observed species x 100 (McGill 2011). Species are 
-considered rare in a particular sample if they have fewer individuals than 
-\code{rare_thres * N} where \code{rare_thres} can be set by the user and 
-\code{N} is the total number of individuals in the sample. The default value 
-of \code{rare_thres} of 0.05 is arbitrary and was chosen because McGill 
-(2011) found this metric of rarity performed well and was generally less 
-correlated with other common metrics of biodiversity. Essentially this metric
-attempt to estimate what proportion of the species in the same occur in the
-tail of the species abundance distribution and is therefore sensitive to
-presence of rare species.
 
-\strong{S_asymp: Asymptotic species richness} is the expected number of 
-species given complete sampling and here it is calculated using the Chao1
-estimator (Chao 1984, Chao 1987) see \code{\link{calc_chao1}}. Note: this metric
-is typically highly correlated with S (McGill 2011).
- 
-\strong{f_0: Undetected species richness} is the number of undetected species
-or the number of species observed 0 times which is an indicator of the degree
-of rarity in the community. If there is a greater rarity then f_0 is expected
-to increase. This metric is calculated as \code{S_asymp - S}. This metric is less 
-correlated with S than the raw \code{S_asymp} metric. 
+See \code{\link{calc_comm_div}} for more details on the biodiversity indices. 
 
-\strong{PIE: Probability of intraspecific encounter} represents the
-probability that two randomly drawn individuals belong to the same species.
-Here we use the definition of Hurlbert (1971), which considers sampling
-without replacement. PIE is closely related to the well-known Simpson
-diversity index, but the latter assumes sampling with replacement.
+\strong{Group comparison metric and test}
 
-\strong{S_PIE: Effective number of species for PIE} represents the effective
-number of species derived from the PIE. It is calculated using the asymptotic
-estimator for Hill numbers of diversity order 2 (Chao et al, 2014). S_PIE
-represents the species richness of a hypothetical community with
-equally-abundant species and infinitely many individuals corresponding to the
-same value of PIE as the real community. An intuitive interpretation of S_PIE
-is that it corresponds to the number of dominant (highly abundant) species in
-the species pool.
+For each metric group comparison the function computes \code{D_bar}: the
+average absolute difference between the groups. At the alpha scale the
+indices are averaged first before computing \code{D_bar}.
 
-For species richness \code{S}, rarefied richness \code{S_n}, undetected
-richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
-calculate beta-diversity using multiplicative partitioning (Whittaker 1972,
-Jost 2007). That means for these indices we estimate beta-diversity as the
-ratio of gamma-diversity (total diversity across all plots) divided by
-alpha-diversity (i.e., average plot diversity).
-
-\strong{PERMUTATION TESTS AND BOOTSTRAP}
-
-For both the alpha and gamma scale analyses we summarize effect size in each
-biodiversity index by computing \code{D_bar}: the average absolute difference
-between the groups. At the alpha scale the indices are averaged first before
-computing \code{D_bar}.
-
-We used permutation tests for testing differences of the biodiversity
-statistics among the groups (Legendre & Legendre 1998). At the alpha-scale,
-one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
-labels across samples. The test statistic for this test is the F-statistic
-which is a pivotal statistic (Legendre & Legendre 1998). At the gamma-scale
-we carried out the permutation test by shuffling the treatment group labels
-and using \code{D_bar} as the test statistic. We could not use the
-F-statistic as the test statistic at the gamma scale because at this scale
-there are no replicates and therefore the F-statistic is undefined.
-
-A bootstrap approach can be used to also test differences at the gamma-scale.
-When \code{boot_groups = TRUE} instead of the gamma-scale permutation test,
-there will be resampling of samples within groups to derive gamma-scale
-confidence intervals for all biodiversity indices. The function output
-includes lower and upper confidence bounds and the median of the bootstrap
-samples. Please note that for the richness indices sampling with replacement
-corresponds to rarefaction to ca. 2/3 of the individuals, because the same
-samples occur several times in the resampled data sets.
+Permutation tests are carried out for testing differences of the biodiversity
+statistics among the groups (Legendre & Legendre 1998). This is accomplished
+by using \code{D_bar} as the test statistic and random shuffling the group 
+label across the samples. The p-value indicates how many of the permutations 
+result in a \code{D_bar} as large as the observed \code{D_bar} value.
+}
+\examples{
+# tank community analysis
+data(tank_comm)
+data(tank_plot_attr)
+tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
+tank_stats <- get_mob_stats(tank_mob, 'group', 'low', index = c('S', 'S_PIE', 'S_C'),
+                            n_perm = 19)
+tank_stats          
 }
 \references{
 Chao, A. 1984. Nonparametric Estimation of the Number of Classes in a
- Population. Scandinavian Journal of Statistics 11:265–270.
+Population. Scandinavian Journal of Statistics 11:265–270.
 
 Chao, A. 1987. Estimating the population size for capture-recapture data with
- unequal catchability. Biometrics, 43, 783-791.
+unequal catchability. Biometrics, 43, 783-791.
 
-Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved
-nonparametric lower bound of species richness via a modified good-turing
-frequency formula. Biometrics, 70, 671-682.
-
-Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
+Gotelli, N. J., and R. K. Colwell. 2001. Quantifying biodiversity: procedures
 and pitfalls in the measurement and comparison of species richness. Ecology
-letters, 4, 379-391.
+Letters 4:379–391.
 
-Hurlbert, S.H. (1971) The Nonconcept of Species Diversity: A Critique and
-Alternative Parameters. Ecology, 52, 577-586.
+Hurlbert, S. H. 1971. The nonconcept of species diversity: a critique and
+alternative parameters. Ecology 52:577–586.
 
-Jost, L. (2006) Entropy and diversity. Oikos, 113, 363-375.
+Jost, L. 2007. Partitioning diversity into independent alpha and beta
+components. Ecology 88:2427–2439.
 
-Jost, L. (2007) Partitioning Diversity into Independent Alpha and Beta
-Components. Ecology, 88, 2427-2439.
-
-Legendre, P. & Legendre, L.F.J. (1998) Numerical Ecology, Volume 24, 2nd
-Edition Elsevier, Amsterdam; Boston.
-
-McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological 
-Diversity: Frontiers in Measurement and Assessment. eds. A.E. Magurran
+McGill, B. J. 2011. Species abundance distributions. Pages 105-122 Biological
+Diversity: Frontiers in Measurement and Assessment, eds. A.E. Magurran and
 B.J. McGill.
 
-Whittaker, R.H. (1972) Evolution and Measurement of Species Diversity.
-Taxon, 21, 213-251.
-}
-\author{
-Felix May and Dan McGlinn
+Whittaker, R. H. 1972. Evolution and measurement of species diversity. Taxon
+21:213–251.
 }

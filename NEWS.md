@@ -1,3 +1,12 @@
+## version 3.0.2
+---
+Minor update
+- Decrease the amount of redundant documentation text by using `inherit` 
+- Create functions `get_samples` and `calc_comm_div_ci` which together allow
+the user to compute confidence intervals for diversity metrics
+- Resurrect the old `get_mob_stats` function for making comparisons in diversity
+metrics between groups using confidence intervals and permutation tests. 
+
 ## version 3.0.1
 ---
 Minor update

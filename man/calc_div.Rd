@@ -10,7 +10,7 @@ calc_div(
   index,
   effort = NA,
   rare_thres = 0.05,
-  replace = FALSE,
+  PIE_replace = FALSE,
   C_target = NULL,
   extrapolate = TRUE,
   ...
@@ -36,17 +36,16 @@ calc_div(
   statistics.}
 
 \item{effort}{The standardized number of individuals used for the calculation
-of rarefied species richness. This can a be single integer or a vector of
-integers.}
+of rarefied species richness. This must be a single integer.}
 
-\item{rare_thres}{The threshold that determines how pct_rare is computed. It
-can range from (0, 1] and defaults to 0.05 which specifies that any species
-with less than or equal to 5% of the total abundance in a sample is
-considered rare. It can also be specified as "N/S" which results in using
-average abundance as the threshold which McGill (2011) found to have the
-best small sample behavior.}
+\item{rare_thres}{The threshold that determines how the metric
+\code{pct_rare} is computed. It can range from (0, 1] and defaults to 0.05
+which specifies that any species with less than or equal to 5% of the total
+abundance in a sample is considered rare. It can also be specified as "N/S"
+which results in using average abundance as the threshold which McGill
+(2011) found to have the best small sample behavior.}
 
-\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+\item{PIE_replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 replacement is used. Otherwise, sampling without replacement (default).}
 
 \item{C_target}{When computing coverage based richness (\code{S_C}) then 
@@ -57,7 +56,7 @@ size).}
 
 \item{extrapolate}{Boolean which specifies if richness should be extrapolated
 when effort is larger than the number of individuals using the chao1
-method (Chao 1984, 1987).}
+method (Chao 1984, 1987). Defaults to TRUE.}
 
 \item{...}{additional arguments that can be passed to the function
 \code{rarefaction} when computing \code{S_n}.}

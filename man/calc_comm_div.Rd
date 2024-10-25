@@ -12,7 +12,8 @@ calc_comm_div(
   return_NA = FALSE,
   rare_thres = 0.05,
   scales = c("alpha", "gamma", "beta"),
-  replace = FALSE,
+  avg_alpha = FALSE,
+  PIE_replace = FALSE,
   C_target_gamma = NA,
   ...
 )
@@ -37,24 +38,23 @@ calc_comm_div(
   statistics.}
 
 \item{effort}{The standardized number of individuals used for the calculation
-of rarefied species richness. This can a be single integer or a vector of
-integers.}
+of rarefied species richness. This must be a single integer.}
 
 \item{extrapolate}{Boolean which specifies if richness should be extrapolated
 when effort is larger than the number of individuals using the chao1
-method (Chao 1984, 1987).}
+method (Chao 1984, 1987). Defaults to TRUE.}
 
 \item{return_NA}{Boolean in which the rarefaction function returns the
 observed S when \code{effort} is larger than the number of individuals. If
 set to TRUE then NA is returned. Note that this argument is only relevant
 when \code{extrapolate = FALSE}.}
 
-\item{rare_thres}{The threshold that determines how pct_rare is computed. It
-can range from (0, 1] and defaults to 0.05 which specifies that any species
-with less than or equal to 5% of the total abundance in a sample is
-considered rare. It can also be specified as "N/S" which results in using
-average abundance as the threshold which McGill (2011) found to have the
-best small sample behavior.}
+\item{rare_thres}{The threshold that determines how the metric
+\code{pct_rare} is computed. It can range from (0, 1] and defaults to 0.05
+which specifies that any species with less than or equal to 5% of the total
+abundance in a sample is considered rare. It can also be specified as "N/S"
+which results in using average abundance as the threshold which McGill
+(2011) found to have the best small sample behavior.}
 
 \item{scales}{The scales to compute the diversity indices for:
 \itemize{
@@ -64,7 +64,10 @@ best small sample behavior.}
                            \code{alpha} scales.
 } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}}
 
-\item{replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+\item{avg_alpha}{Boolean if TRUE then the alpha values are averaged. Defaults
+to FALSE.}
+
+\item{PIE_replace}{Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 replacement is used. Otherwise, sampling without replacement (default).}
 
 \item{C_target_gamma}{When computing coverage based richness (\code{S_C})
@@ -167,9 +170,13 @@ alpha-diversity (i.e., average plot diversity).
 }
 \examples{
 data(tank_comm)
-div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = c(5, 10))
+div_metrics <- calc_comm_div(tank_comm, 'S')
 div_metrics
-div_metrics <- calc_comm_div(tank_comm, 'S_C', C_target_gamma = 0.75)
+div_metrics <- calc_comm_div(tank_comm, 'S', avg_alpha = TRUE)
+div_metrics
+div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = 10, avg_alpha = TRUE)
+div_metrics
+div_metrics <- calc_comm_div(tank_comm, 'S_C', C_target_gamma = 0.75, avg_alpha = TRUE)
 div_metrics
 }
 \references{

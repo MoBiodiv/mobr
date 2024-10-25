@@ -59,8 +59,8 @@ calc_chao1 = function(x) {
 #' 
 #' where N is the total number of individuals and \eqn{p_i} is the relative
 #' abundance of species i. This formulation uses sampling without replacement
-#' (\code{replace = F} ) For sampling with replacement (i.e., the sample-size
-#' uncorrected version), set \code{replace = T}.
+#' (\code{replace = FALSE} ) For sampling with replacement (i.e., the sample-size
+#' uncorrected version), set \code{replace = TRUE}.
 #'
 #' In earlier versions of \code{mobr}, there was an additional argument
 #' (\code{ENS}) for the conversion into an effective number of species (i.e
@@ -70,7 +70,7 @@ calc_chao1 = function(x) {
 #'
 #' 
 #' @inheritParams rarefaction
-#' @param replace if TRUE, sampling with replacement is used. Otherwise,
+#' @param PIE_replace if TRUE, sampling with replacement is used. Otherwise,
 #'   sampling without replacement (default).
 #'
 #' @returns either a single PIE value or vector of PIE values. 
@@ -87,10 +87,10 @@ calc_chao1 = function(x) {
 #' @examples 
 #' data(inv_comm)
 #' calc_PIE(inv_comm)
-#' calc_PIE(inv_comm, replace = TRUE)
+#' calc_PIE(inv_comm, PIE_replace = TRUE)
 #' calc_PIE(c(23,21,12,5,1,2,3))
-#' calc_PIE(c(23,21,12,5,1,2,3), replace = TRUE)
-calc_PIE = function(x, replace = FALSE) {
+#' calc_PIE(c(23,21,12,5,1,2,3), PIE_replace = TRUE)
+calc_PIE = function(x, PIE_replace = FALSE) {
     
     args = as.list(match.call())
     if (any(names(args) == "ENS")) 
@@ -123,7 +123,7 @@ calc_PIE = function(x, replace = FALSE) {
     }
     
     # calculate PIE without replacement (for total >= 2)
-    if (replace) {
+    if (PIE_replace) {
         PIE = 1 - H
     } else {
         PIE = total / (total - 1) * (1 - H)
@@ -131,7 +131,7 @@ calc_PIE = function(x, replace = FALSE) {
     # if sample had zero individuals set PIE to 0
     PIE[total == 0] = 0
     # if sample only contains 1 individual set PIE to NA
-    if (!replace) 
+    if (!PIE_replace) 
         PIE[total == 1] = NA
     if (any(is.na(PIE))) 
         warning("NA was returned because the sample contains one or zero individuals.")
@@ -145,9 +145,9 @@ calc_PIE = function(x, replace = FALSE) {
 #' interspecific encounter (PIE) which is equal to the number of equally common
 #' species that result in that value of PIE.
 #'
-#' By default the sample size corrected version is returned (\code{replace =
-#' F}), which is the asymptotic estimator for the Hill number of diversity order
-#' q=2 (Chao et al, 2014). If \code{replace = T} the uncorrected hill number is
+#' By default the sample size corrected version is returned (\code{PIE_replace =
+#' FALSE}), which is the asymptotic estimator for the Hill number of diversity order
+#' q=2 (Chao et al, 2014). If \code{PIE_replace = TRUE} the uncorrected hill number is
 #' returned. This is the same as vegan::diversity(x, index="invsimpson").
 #'
 #' 
@@ -168,11 +168,11 @@ calc_PIE = function(x, replace = FALSE) {
 #' @examples
 #' data(inv_comm)
 #' calc_SPIE(inv_comm)
-#' calc_SPIE(inv_comm, replace = TRUE)
-#' calc_SPIE(c(23,21,12,5,1,2,3), replace=TRUE)
-calc_SPIE = function(x, replace = F) {
+#' calc_SPIE(inv_comm, PIE_replace = TRUE)
+#' calc_SPIE(c(23,21,12,5,1,2,3), PIE_replace=TRUE)
+calc_SPIE = function(x, PIE_replace = FALSE) {
     
-    PIE = calc_PIE(x, replace = replace)
+    PIE = calc_PIE(x, PIE_replace = PIE_replace)
     SPIE = 1 / (1 - PIE)
     SPIE[sapply(PIE, function(x)
         isTRUE(all.equal(x, 0)))] = 0
@@ -185,31 +185,6 @@ calc_SPIE = function(x, replace = F) {
         )
     
     return(SPIE)
-}
-
-  
-
-
-# generate a single bootstrap sample of gamma-scale biodiversity indices
-boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
-                              rare_thres) {
-    # sample rows and calculate abundance vector
-    sample_dat = by(abund_mat, INDICES = abund_mat$groups, FUN = dplyr::sample_frac,
-                    replace = TRUE)
-    class(sample_dat) = "list"
-    sample_dat = bind_rows(sample_dat)
-   
-    # abundance distribution pooled in groups
-    abund_group = stats::aggregate(sample_dat[ , -1], by = list(sample_dat[ , 1]),
-                            FUN = "sum")
-   
-    dat_groups = calc_div(abund_mat = abund_group[ , -1],
-                          groups = abund_group[ , 1],
-                          index = index, effort = effort,
-                          extrapolate = extrapolate,
-                          return_NA = return_NA, 
-                          rare_thres = rare_thres)
-    return(dat_groups)
 }
 
 #' Compute various diversity indices from a vector of species abundances (i.e.,
@@ -232,7 +207,7 @@ boot_sample_groups = function(abund_mat, index, effort, extrapolate, return_NA,
 #' data(inv_tank)
 #' calc_div(tank_comm[1, ], 'S_n', effort = c(5, 10))
 #' calc_div(tank_comm[1, ], 'S_C', C_target = 0.9)
-calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
+calc_div = function(x, index, effort=NA, rare_thres = 0.05, PIE_replace = FALSE,
                     C_target = NULL, extrapolate = TRUE, ...) {
     if (index == 'N') out = sum(x)
     if (index == 'S') out = sum(x > 0)
@@ -240,8 +215,8 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
                                           extrapolate = extrapolate, ...) 
     if (index == 'S_C') out = calc_S_C(x, C_target, extrapolate = extrapolate,
                                        interrupt = FALSE)
-    if (index == 'PIE') out = calc_PIE(x, replace = replace)
-    if (index == 'S_PIE') out = calc_SPIE(x, replace = replace)
+    if (index == 'PIE') out = calc_PIE(x, PIE_replace = PIE_replace)
+    if (index == 'S_PIE') out = calc_SPIE(x, PIE_replace = PIE_replace)
     if (index == 'f_0') out = calc_div(x, 'S_asymp') - calc_div(x, 'S')
     if (index == 'S_asymp') {
         S_asymp = try(calc_chao1(x))
@@ -287,24 +262,23 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
 #'   statistics.
 #'
 #' @param effort The standardized number of individuals used for the calculation
-#'   of rarefied species richness. This can a be single integer or a vector of
-#'   integers.
+#'   of rarefied species richness. This must be a single integer. 
 #'
 #' @param extrapolate Boolean which specifies if richness should be extrapolated
 #'   when effort is larger than the number of individuals using the chao1
-#'   method (Chao 1984, 1987).
+#'   method (Chao 1984, 1987). Defaults to TRUE.
 #'
 #' @param return_NA Boolean in which the rarefaction function returns the
 #'   observed S when \code{effort} is larger than the number of individuals. If
 #'   set to TRUE then NA is returned. Note that this argument is only relevant
 #'   when \code{extrapolate = FALSE}.
 #'
-#' @param rare_thres The threshold that determines how pct_rare is computed. It
-#'   can range from (0, 1] and defaults to 0.05 which specifies that any species
-#'   with less than or equal to 5% of the total abundance in a sample is
-#'   considered rare. It can also be specified as "N/S" which results in using
-#'   average abundance as the threshold which McGill (2011) found to have the
-#'   best small sample behavior.
+#' @param rare_thres The threshold that determines how the metric
+#'   \code{pct_rare} is computed. It can range from (0, 1] and defaults to 0.05
+#'   which specifies that any species with less than or equal to 5% of the total
+#'   abundance in a sample is considered rare. It can also be specified as "N/S"
+#'   which results in using average abundance as the threshold which McGill
+#'   (2011) found to have the best small sample behavior.
 #'
 #' @param scales The scales to compute the diversity indices for:
 #' \itemize{
@@ -314,7 +288,10 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
 #'                            \code{alpha} scales.
 #' } Defaults to all three scales: \code{c('alpha', 'gamma', 'beta')}
 #'
-#' @param replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
+#' @param avg_alpha Boolean if TRUE then the alpha values are averaged. Defaults
+#' to FALSE.
+#' 
+#' @param PIE_replace Used for \code{PIE} and \code{SPIE}.  If TRUE, sampling with
 #'   replacement is used. Otherwise, sampling without replacement (default).
 #'
 #' @param C_target_gamma When computing coverage based richness (\code{S_C})
@@ -442,16 +419,21 @@ calc_div = function(x, index, effort=NA, rare_thres = 0.05, replace = FALSE,
 #'
 #' @examples
 #' data(tank_comm)
-#' div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = c(5, 10))
+#' div_metrics <- calc_comm_div(tank_comm, 'S')
 #' div_metrics
-#' div_metrics <- calc_comm_div(tank_comm, 'S_C', C_target_gamma = 0.75)
+#' div_metrics <- calc_comm_div(tank_comm, 'S', avg_alpha = TRUE)
+#' div_metrics
+#' div_metrics <- calc_comm_div(tank_comm, 'S_n', effort = 10, avg_alpha = TRUE)
+#' div_metrics
+#' div_metrics <- calc_comm_div(tank_comm, 'S_C', C_target_gamma = 0.75, avg_alpha = TRUE)
 #' div_metrics
 #' @export
 calc_comm_div = function(abund_mat, index, effort = NA, 
                          extrapolate = TRUE,
                          return_NA = FALSE, rare_thres = 0.05,
                          scales = c('alpha', 'gamma', 'beta'),
-                         replace = FALSE, C_target_gamma = NA, ...) {
+                         avg_alpha = FALSE, 
+                         PIE_replace = FALSE, C_target_gamma = NA, ...) {
     
     # store each calculated index into its own data.frame in a list
     out = vector('list', length = length(index))
@@ -465,7 +447,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
         if (any(c('gamma', 'beta') %in% scales))
             gamma = calc_div(colSums(abund_mat), index[i], effort, rare_thres,
                          extrapolate = extrapolate, return_NA = return_NA, 
-                         quiet = TRUE, replace = replace, C_target = C_target_gamma, ...)
+                         quiet = TRUE, PIE_replace = PIE_replace, C_target = C_target_gamma, ...)
         if (any(c('alpha', 'beta') %in% scales)) {
             if (index[i] == 'S_C' & 'beta' %in% scales) {
                 effort_eff = attributes(gamma)$N
@@ -477,7 +459,8 @@ calc_comm_div = function(abund_mat, index, effort = NA,
             }    
             alpha = apply(abund_mat, 1, calc_div, index_eff, effort_eff, rare_thres,
                           extrapolate = extrapolate, return_NA = return_NA, 
-                          quiet = TRUE, replace = replace, C_target = C_target_gamma, ...)
+                          quiet = TRUE, PIE_replace = PIE_replace,
+                          C_target = C_target_gamma, ...)
         }
         if ('beta' %in% scales) {
             # compute beta
@@ -493,22 +476,25 @@ calc_comm_div = function(abund_mat, index, effort = NA,
             effort_out <- NA
         gamma_coverage <- ifelse(index[i] == 'S_C', C_target_gamma, NA)
         # compute number of finite samples used for calculation
-        sample_size = nrow(abund_mat)
+        sample_size <- nrow(abund_mat)
         if ('alpha' %in% scales) {
+            if (avg_alpha) 
+                alpha <- mean(alpha)
             out[[i]]$alpha = data.frame(scale = 'alpha', index = index[i],
-                                        sample_size = 1, effort = effort_out,
+                                        sample_size = ifelse(avg_alpha, sample_size, 1),
+                                        effort = effort_out,
                                         gamma_coverage = gamma_coverage,
-                                        value = as.numeric(alpha))
+                                        value = alpha)
         }    
         if ('gamma' %in% scales) 
             out[[i]]$gamma = data.frame(scale = 'gamma', index = index[i], 
-                                        sample_size, effort = effort_out,
+                                        sample_size = 1, effort = effort_out,
                                         gamma_coverage = gamma_coverage,
                                         value = gamma)
         if ('beta' %in% scales & index[i] != 'N') 
             out[[i]]$beta = data.frame(scale = 'beta',
                                        index = paste('beta', index[i], sep = '_'),
-                                       sample_size, effort = effort_out,
+                                       sample_size = 1, effort = effort_out,
                                        gamma_coverage = gamma_coverage,
                                        value = beta)
         
@@ -544,231 +530,366 @@ calc_beta_div = function(abund_mat, index, effort = NA, C_target_gamma = NA,
     return(out)
 }
 
-#' A now obsolete function that used to calculate sample based and group based
-#' biodiversity statistics.
-#' @inheritParams get_delta_stats
+#' Generate distribution of sampled community matrices from an original matrix. 
 #' 
-#' @param group_var String that specifies which field in \code{mob_in$env} the
-#'   data should be grouped by
+#' The sampled matrices are either bootstrap or leave-one-out (the default)
+#' samples. The bootstrap samples represent a random set of the rows sampled
+#' with replacement from the original matrix. The leave-one-out samples are
+#' generated by removing each sample one at a time from the original community
+#' matrix.
+#' 
+#' These sampled community matrices can become the input to \code{calc_comm_div_ci}
+#' for computing confidence intervals of diversity metrics. 
+#' 
+#' Note, it is unclear which sampling algorithm (bootstrap or loo) is least
+#' biased and most efficient for the purpose of generating confidence intervals.
+#' 
+#' @inherit calc_comm_div 
+#' @param algo can be either 'boot' or 'loo' for bootstrap or leave-one-out 
+#'   methods respectively. Default value is 'loo'. 
+#' @param n_boot how to many boot strapped samples to create, defaults to 1000.
+#'
+#' @returns a list of community matrices which are sampled from the original 
+#'   input matrix. 
+#' 
+#' @seealso \code{\link{calc_comm_div_ci}}
+#' @export
+#' @examples
+#' data(tank_comm)
+#' # 2 leave-one-out samples
+#' lapply(get_samples(tank_comm)[1:2], head)
+#' # 2 bootstrap samples
+#' lapply(get_samples(tank_comm, algo = 'boot', n_boot = 2), head)
+#' 
+get_samples <- function(abund_mat, algo = 'loo', n_boot = 1000) {
+  nsamp <- nrow(abund_mat)
+  if (algo == 'boot') {
+    # if bootstrap samples wanted
+    sample_out <- replicate(n_boot, abund_mat[sample(nsamp, replace = TRUE), ], 
+                            simplify = FALSE)
+  } else if (algo == 'loo') {
+    # if leave-one-out samples wanted
+    sample_out <- lapply(1:nsamp, function(i) abund_mat[-i, ])
+  }
+  return(sample_out)
+}
+
+#' Compute non-parametric confidence intervals across diversity indices. 
+#' 
+#' This function take a list of community matrices and returns the central tendency
+#' and the confidence interval for each diversity index of interest across that
+#' list of communities.  
+#' 
+#' The measure of central tendency can be the median (default) or mean, and the
+#' range of the confidence interval can be specified but defaults to a 95% 
+#' confidence interval.  
+#' 
+#' @param samples a list of community matrices (i.e., the output of \code{get_samples})
+#' @param cent_stat a string that is either 'mean' or 'median' which specifies the measure
+#'   of central tendency. Defaults to 'median'.
+#' @param ci a numeric vector of two numbers specifying the lower and upper
+#'   quantiles of the distribution to return. The default is to report
+#'   the 0.025 and 0.975 quantiles in other words a 95 percent interval.
+#' @inheritParams calc_comm_div
+#'
+#' @returns a data.frame that has the lower, middle, and upper quantiles of the 
+#'  sampled distribution of each diversity index. 
+#' 
+#' @seealso \code{\link{get_samples}} for generating samples, and \code{\link{calc_comm_div}}
+#'   for the calculation of diversity indices. 
+#' 
+#' @importFrom rlang .data
+#' @importFrom stats median
+#' 
+#' @export
+#' @examples
+#' data(tank_comm)
+#' samples <- get_samples(tank_comm, algo = 'loo')
+#' calc_comm_div_ci(samples, index = 'S_PIE')
+#' samples <- get_samples(tank_comm, algo = 'boot', n_boot = 20)
+#' calc_comm_div_ci(samples, index = 'S_PIE')
+#' # compute ci for average diversity (rather than median)
+#' calc_comm_div_ci(samples, index = 'S_PIE', cent_stat = 'avg')
+calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975),
+                             index, effort = NA, extrapolate = TRUE,
+                             return_NA = FALSE, rare_thres = 0.05,
+                             scales = c('alpha', 'gamma', 'beta'),
+                             PIE_replace = FALSE, C_target_gamma = NA, ...) {
+    if (!is.numeric(ci) & length(ci) != 2)
+        stop('The ci argument must be a numeric vector of length 2 specifing the lower and upper quantiles of the confidence interval to return.')
+    if (any(index %in% 'S_C') & is.na(C_target_gamma)) {
+        C_target_gamma <- min(sapply(samples, calc_C_target))
+    }
+    # compute the diversity indices on a random sample of 
+    sample_div <- pbapply::pblapply(samples, function(x)
+        calc_comm_div(x, index, effort, extrapolate, 
+                      return_NA, rare_thres, scales, avg_alpha = TRUE,
+                      PIE_replace, C_target_gamma, ...))
+    # bind across the bootstrap replicates
+    sample_div <- dplyr::bind_rows(sample_div, .id = 'id')
+    # compute quantiles across bootstraps. 
+    sample_qts <- sample_div |> 
+        dplyr::group_by(scale, index) |>        
+        dplyr::summarize(
+            sample_size = mean(.data$sample_size),
+            effort = mean(effort),
+            gamma_coverage = mean(.data$gamma_coverage),
+            lo_value = quantile(.data$value, ci[1]),
+            hi_value = quantile(.data$value, ci[2]), 
+            value = ifelse(cent_stat == 'avg', mean(.data$value), median(.data$value)),
+            .groups = 'keep')
+
+    return(data.frame(sample_qts))
+}
+
+
+
+#' Carry out biodiversity metric comparisons between groups. 
+#' 
+#' This function can compute a range of biodiversity metrics, their uncertainty, 
+#' and carries out a permutation test to examine if groups differ in a particular
+#' metric more than would be expected due to random chance. 
+#' 
+#' This function is partially a wrapper for the functions
+#' \code{\link{calc_comm_div}} or \code{\link{calc_comm_div_ci}} that makes
+#' group comparisons easier to implement.
+#' 
+#' @inheritParams get_delta_stats
+#' @inheritParams calc_comm_div
+#' @inheritParams pbapply::pbreplicate
+#' 
+#' @param group_var String that specifies which variable in \code{mob_in$env} the
+#'   data should be grouped by.
 #' 
 #' @param ref_level String that defines the reference level of \code{group_var}
 #'   to which all other groups are compared with, defaults to \code{NULL}.
 #'   If \code{NULL} then the default contrasts of \code{group_var} are used. 
 #' 
-#' @param index The calculated biodiversity indices. The options are
-#' \itemize{
-#'    \item \code{N} ... Number of individuals (total abundance)
-#'    \item \code{S} ... Number of species
-#'    \item \code{S_n} ... Rarefied or extrapolated number of species for n individuals
-#'    \item \code{S_asymp} ... Estimated asymptotic species richness
-#'    \item \code{f_0} ... Estimated number of undetected species 
-#'    \item \code{pct_rare} ... The percent of rare species as defined by \code{rare_thres}
-#'    \item \code{PIE} ... Hurlbert's PIE (Probability of Interspecific Encounter)
-#'    \item \code{S_PIE} ... Effective number of species based on PIE
-#'    
-#' }
-#'   If index is not specified then N, S, S_n, pct_rare, and S_PIE are computed
-#'   by default. See \emph{Details} for additional information on the
-#'   biodiversity statistics.
-#' 
-#' @param effort_samples The standardized number of individuals used for the 
-#'   calculation of rarefied species richness at the alpha-scale. This can a be
-#'   single value or an integer vector. As default the minimum number of
-#'   individuals found across the samples is used, when this is not smaller than
-#'   \code{effort_min}.
+#' @param effort_samples An integer that specifies the standardized number of
+#'   individuals used for the calculation of rarefied species richness at the
+#'   alpha-scale. It must be a single integer. The default value of \code{NULL}
+#'   will result in the using the minimum number of individuals found across the
+#'   samples is used, when this is not smaller than \code{effort_min}.
 #'   
 #' @param effort_min The minimum number of individuals considered for the 
 #'   calculation of rarefied richness (Default value of 5). Samples with less
 #'   individuals then \code{effort_min} are excluded from the analysis with a
 #'   warning. Accordingly, when \code{effort_samples} is set by the user it has
 #'   to be higher than \code{effort_min}.
-#'  
-#' @param extrapolate Boolean which specifies if richness should be
-#'   extrapolated when \code{effort_samples} is larger than the number of
-#'   individuals using the chao1 method (Chao 1984, 1987) . Defaults to TRUE. 
-#'   
-#' @param return_NA Boolean defaults to FALSE in which the rarefaction function
-#'   returns the observed S when \code{effort} is larger than the number of
-#'   individuals. If set to TRUE then NA is returned. Note that this argument
-#'   is only relevant when \code{extrapolate = FALSE}.
-#'     
-#' @param rare_thres The threshold that determines how pct_rare is computed.
-#'   It can range from (0, 1] and defaults to 0.05 which specifies that any 
-#'   species with less than or equal to 5% of the total abundance in a sample is
-#'   considered rare. It can also be specified as "N/S" which results in using
-#'   average abundance as the threshold which McGill (2011) found to have the 
-#'   best small sample behavior. 
-#'   
-#' @param n_perm The number of permutations to use for testing for treatment
-#'   effects. Defaults to 0 (i.e., no permutations)
-#'   
-#' @param boot_groups Use bootstrap resampling within groups to derive
-#'   gamma-scale confidence intervals for all biodiversity indices. Default is
-#'   \code{FALSE}. See \emph{Details} for information on the bootstrap approach.
-#'   
-#' @param conf_level Confidence level used for the calculation of gamma-scale 
-#'   bootstrapped confidence intervals. Only used when \code{boot_groups =
-#'   TRUE}.
-#'   
-#' @inheritParams pbapply::pbreplicate
 #'
-#' @details 
+#' @param ci boolean, if TRUE then confidence intervals are calculated. Defaults
+#'  to TRUE. 
 #' 
-#' \strong{BIODIVERSITY INDICES}
-#' 
-#' \strong{S_n: Rarefied species richness} is the expected number of species, given a
-#' defined number of sampled individuals (n) (Gotelli & Colwell 2001). Rarefied
-#' richness at the alpha-scale is calculated for the values provided in 
-#' \code{effort_samples} as long as these values are not smaller than the 
-#' user-defined minimum value \code{effort_min}. In this case the minimum value 
-#' is used and samples with less individuals are discarded. When no values for
-#' \code{effort_samples} are provided the observed minimum number of individuals
-#' of the samples is used, which is the standard in rarefaction analysis
-#' (Gotelli & Colwell 2001). Because the number of individuals is expected to
-#' scale linearly with sample area or effort, at the gamma-scale the number of
-#' individuals for rarefaction is calculated as the minimum number of samples
-#' within groups multiplied by \code{effort_samples}. For example, when there are 10
-#' samples within each group, \code{effort_groups} equals \code{10 *
-#' effort_samples}. If n is larger than the number of individuals in sample and
-#' \code{extrapolate = TRUE} then the Chao1 (Chao 1984, Chao 1987) method is
-#' used to extrapolate the rarefaction curve.
-#' 
-#' \strong{pct_rare: Percent of rare species} Is the ratio of the number of rare
-#' species to the number of observed species x 100 (McGill 2011). Species are 
-#' considered rare in a particular sample if they have fewer individuals than 
-#' \code{rare_thres * N} where \code{rare_thres} can be set by the user and 
-#' \code{N} is the total number of individuals in the sample. The default value 
-#' of \code{rare_thres} of 0.05 is arbitrary and was chosen because McGill 
-#' (2011) found this metric of rarity performed well and was generally less 
-#' correlated with other common metrics of biodiversity. Essentially this metric
-#' attempt to estimate what proportion of the species in the same occur in the
-#' tail of the species abundance distribution and is therefore sensitive to
-#' presence of rare species.
-#' 
-#' \strong{S_asymp: Asymptotic species richness} is the expected number of 
-#' species given complete sampling and here it is calculated using the Chao1
-#' estimator (Chao 1984, Chao 1987) see \code{\link{calc_chao1}}. Note: this metric
-#' is typically highly correlated with S (McGill 2011).
-#'  
-#' \strong{f_0: Undetected species richness} is the number of undetected species
-#' or the number of species observed 0 times which is an indicator of the degree
-#' of rarity in the community. If there is a greater rarity then f_0 is expected
-#' to increase. This metric is calculated as \code{S_asymp - S}. This metric is less 
-#' correlated with S than the raw \code{S_asymp} metric. 
-#' 
-#' \strong{PIE: Probability of intraspecific encounter} represents the
-#' probability that two randomly drawn individuals belong to the same species.
-#' Here we use the definition of Hurlbert (1971), which considers sampling
-#' without replacement. PIE is closely related to the well-known Simpson
-#' diversity index, but the latter assumes sampling with replacement.
-#' 
-#' \strong{S_PIE: Effective number of species for PIE} represents the effective
-#' number of species derived from the PIE. It is calculated using the asymptotic
-#' estimator for Hill numbers of diversity order 2 (Chao et al, 2014). S_PIE
-#' represents the species richness of a hypothetical community with
-#' equally-abundant species and infinitely many individuals corresponding to the
-#' same value of PIE as the real community. An intuitive interpretation of S_PIE
-#' is that it corresponds to the number of dominant (highly abundant) species in
-#' the species pool.
-#' 
-#' For species richness \code{S}, rarefied richness \code{S_n}, undetected
-#' richness \code{f_0}, and the Effective Number of Species \code{S_PIE} we also
-#' calculate beta-diversity using multiplicative partitioning (Whittaker 1972,
-#' Jost 2007). That means for these indices we estimate beta-diversity as the
-#' ratio of gamma-diversity (total diversity across all plots) divided by
-#' alpha-diversity (i.e., average plot diversity).
-#' 
-#' \strong{PERMUTATION TESTS AND BOOTSTRAP}
-#' 
-#' For both the alpha and gamma scale analyses we summarize effect size in each
-#' biodiversity index by computing \code{D_bar}: the average absolute difference
-#' between the groups. At the alpha scale the indices are averaged first before
-#' computing \code{D_bar}.
+#' @param ci_cent_stat a string that is either 'mean' or 'median' which
+#'   specifies the measure of central tendency. Defaults to 'median'.
 #'
-#' We used permutation tests for testing differences of the biodiversity
-#' statistics among the groups (Legendre & Legendre 1998). At the alpha-scale,
-#' one-way ANOVA (i.e. F-test) is implemented by shuffling treatment group
-#' labels across samples. The test statistic for this test is the F-statistic
-#' which is a pivotal statistic (Legendre & Legendre 1998). At the gamma-scale
-#' we carried out the permutation test by shuffling the treatment group labels
-#' and using \code{D_bar} as the test statistic. We could not use the
-#' F-statistic as the test statistic at the gamma scale because at this scale
-#' there are no replicates and therefore the F-statistic is undefined.
+#' @param ci_algo can be either 'boot' or 'loo' for bootstrap or leave-one-out
+#'   methods respectively. Default value is 'loo'.
+#'
+#' @details
 #' 
-#' A bootstrap approach can be used to also test differences at the gamma-scale.
-#' When \code{boot_groups = TRUE} instead of the gamma-scale permutation test,
-#' there will be resampling of samples within groups to derive gamma-scale
-#' confidence intervals for all biodiversity indices. The function output
-#' includes lower and upper confidence bounds and the median of the bootstrap
-#' samples. Please note that for the richness indices sampling with replacement
-#' corresponds to rarefaction to ca. 2/3 of the individuals, because the same
-#' samples occur several times in the resampled data sets.
+#' See \code{\link{calc_comm_div}} for more details on the biodiversity indices. 
 #' 
+#' \strong{Group comparison metric and test}
 #' 
-#' @returns A list of class \code{mob_stats} that contains alpha-scale and 
-#'   gamma-scale biodiversity statistics, as well as the p-values for
-#'   permutation tests at both scales.
-#'   
-#'   When \code{boot_groups = TRUE} there are no p-values at the gamma-scale.
-#'   Instead there is lower bound, median, and upper bound for each biodiversity
-#'   index derived from the bootstrap within groups.
-#
-#' @author Felix May and Dan McGlinn
+#' For each metric group comparison the function computes \code{D_bar}: the
+#' average absolute difference between the groups. At the alpha scale the
+#' indices are averaged first before computing \code{D_bar}.
 #' 
-#' @references 
+#' Permutation tests are carried out for testing differences of the biodiversity
+#' statistics among the groups (Legendre & Legendre 1998). This is accomplished
+#' by using \code{D_bar} as the test statistic and random shuffling the group 
+#' label across the samples. The p-value indicates how many of the permutations 
+#' result in a \code{D_bar} as large as the observed \code{D_bar} value.
 #' 
-#' Chao, A. 1984. Nonparametric Estimation of the Number of Classes in a
-#'  Population. Scandinavian Journal of Statistics 11:265–270.
+#' @returns A list of class \code{mob_stats} that contains two objects: 
+#' 1) \code{comm_div} a data.frame of each diversity metrics for each group
+#' at each scale specified, and
+#' 2) \code{gorup_tests} a data.frame of the average difference between groups
+#' in their diversity metric (\code{D_bar}) with an associated p-value derived 
+#' from the permutation test. 
+#'
+#' @inherit calc_comm_div references
 #' 
-#' Chao, A. 1987. Estimating the population size for capture-recapture data with
-#'  unequal catchability. Biometrics, 43, 783-791.
-#' 
-#' Chiu, C.-H., Wang, Y.-T., Walther, B.A. & Chao, A. (2014) An improved
-#' nonparametric lower bound of species richness via a modified good-turing
-#' frequency formula. Biometrics, 70, 671-682.
-#' 
-#' Gotelli, N.J. & Colwell, R.K. (2001) Quantifying biodiversity: procedures
-#' and pitfalls in the measurement and comparison of species richness. Ecology
-#' letters, 4, 379-391.
-#' 
-#' Hurlbert, S.H. (1971) The Nonconcept of Species Diversity: A Critique and
-#' Alternative Parameters. Ecology, 52, 577-586.
-#' 
-#' Jost, L. (2006) Entropy and diversity. Oikos, 113, 363-375.
-#' 
-#' Jost, L. (2007) Partitioning Diversity into Independent Alpha and Beta
-#' Components. Ecology, 88, 2427-2439.
-#' 
-#' Legendre, P. & Legendre, L.F.J. (1998) Numerical Ecology, Volume 24, 2nd
-#' Edition Elsevier, Amsterdam; Boston.
-#' 
-#' McGill, B.J. (2011) Species abundance distributions. 105-122 in Biological 
-#' Diversity: Frontiers in Measurement and Assessment. eds. A.E. Magurran
-#' B.J. McGill.
-#' 
-#' Whittaker, R.H. (1972) Evolution and Measurement of Species Diversity.
-#' Taxon, 21, 213-251.
 #' 
 #' @import dplyr
 #' @importFrom pbapply pbreplicate
 #' @importFrom rlang .data
+#' @importFrom stats median
 #' 
 #' @export
-get_mob_stats = function(mob_in, group_var, ref_level = NULL, 
-                         index = c("N", "S", "S_n", "S_PIE"),
-                         effort_samples = NULL, effort_min = 5,
-                         extrapolate = TRUE, return_NA = FALSE, 
-                         rare_thres = 0.05, n_perm = 0, 
-                         boot_groups = FALSE, conf_level = 0.95, cl=NULL, 
-                         ...) {
-    stop('This function is obsolete and no longer supported. Please use the function `calc_comm_div` to compute biodiveristy indices at different scales')
+#' @examples
+#' # tank community analysis
+#' data(tank_comm)
+#' data(tank_plot_attr)
+#' tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
+#' tank_stats <- get_mob_stats(tank_mob, 'group', 'low', index = c('S', 'S_PIE', 'S_C'),
+#'                             n_perm = 19)
+#' tank_stats          
+get_mob_stats <- function(mob_in, group_var, ref_level = NULL, 
+                          index = c("N", "S", "S_n", "S_PIE"),
+                          effort_samples = NULL, effort_min = 5,
+                          extrapolate = TRUE, return_NA = FALSE, 
+                          rare_thres = 0.05, 
+                          scales = c('alpha', 'gamma', 'beta'),
+                          PIE_replace = FALSE, C_target_gamma = NA,
+                          n_perm = 199, cl = NULL, 
+                          ci = TRUE, ci_cent_stat = 'median', ci_algo = 'loo', ...) {
+  EPS <- sqrt(.Machine$double.eps)
+  if (n_perm < 1) 
+    stop('Set n_perm to a value greater than 1') 
+  
+  INDICES <- c("N", "S", "S_n", "S_C", "S_asymp", "f_0",
+              "pct_rare", "PIE", "S_PIE")
+  index <- match.arg(index, INDICES, several.ok = TRUE)
+  
+  
+  groups <- factor(mob_in$env[ , group_var])
+  group_levels <- levels(groups) 
+  # ensure that proper contrasts in groups specify the reference level as 
+  # first group so downstream graphics have reference level in
+  # leftmost boxplot panel
+  if (!is.null(ref_level)) { 
+    if (ref_level %in% group_levels) {
+      if (group_levels[1] != ref_level) {
+        groups <- factor(groups, levels = c(ref_level, group_levels[group_levels != ref_level]))
+        group_levels <- levels(groups)
+      }
+    } else
+      stop(paste(ref_level, "is not in", group_var))
+  }
+  
+  
+  # Get rarefaction level
+  samples_N <- rowSums(mob_in$comm) 
+  samples_per_group <- table(groups)
+  
+  if (any(is.null(effort_samples)) | !is.numeric(effort_samples)) {
+    N_min_sample <- min(samples_N)
+    effort_samples <- N_min_sample
+  } else {
+    effort_samples <- floor(effort_samples)
+  }
+  
+  if (any(effort_samples < effort_min) & 'S_n' %in% index) {
+    warning(paste("The number of individuals for rarefaction analysis is too low and is set to the minimum of", effort_min,"individuals."))
+    
+    effort_samples[effort_samples < effort_min] <- effort_min
+    effort_samples <- unique(effort_samples)
+    
+    print(paste("Number of individuals for rarefaction:",
+                paste(effort_samples, collapse = ", ")))
+  }
+  
+
+  if(ci) {
+    cat('\nComputing confidence intervals\n')
+    sample_list <- data.frame(groups, mob_in$comm) |> 
+      group_by(groups) |> 
+      group_map(~ get_samples(.x))
+    names(sample_list) <- group_levels
+    if (is.null(C_target_gamma)) {
+      # compute C_target_gamma across two groups
+      C_target_gamma <- min(sapply(sample_list, function(x)
+                            sapply(x, calc_C_target)))
+    }
+    dat_div <- lapply(sample_list, calc_comm_div_ci, ci_cent_stat,
+                      index = index, effort = effort_samples,
+                      extrapolate = extrapolate, return_NA = return_NA,
+                      rare_thres = rare_thres, scales = scales, 
+                      PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...)
+    dat_div <- bind_rows(dat_div, .id = group_var)
+  } else {
+    if (is.null(C_target_gamma)) {
+      # compute C_target_gamma across two groups
+      grpC <- data.frame(groups, mob_in$comm) |>  
+                group_by(groups) |> 
+                group_map(~ calc_C_target(.x))
+      C_target_gamma <- min(unlist(grpC))
+    }
+    dat_div <- data.frame(groups, mob_in$comm) |>  
+      group_by(groups) |> 
+      group_map(~ calc_comm_div(.x, index = index, effort = effort_samples,
+                                extrapolate = extrapolate, return_NA = return_NA,
+                                rare_thres = rare_thres, scales = scales, avg_alpha = TRUE, 
+                                PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...))
+    names(dat_div) <- group_levels
+    dat_div <- bind_rows(dat_div, .id = group_var)
+  }
+  # D_bar is the average difference in a diversity metric between
+  # one or more groups. At the alpha scale the diversity metric is 
+  # averaged within groups and then the average of the differences 
+  # between groups is computed. 
+  D_bar <- dat_div |>
+    summarise(D_bar = mean(stats::dist(.data$value)), 
+              .by = c(scale, index))
+  D_obs <- D_bar
+  # Significance tests -------------------------------------------------------
+  cat('\nComputing permutation tests\n')
+  D_rand <- bind_rows(pbreplicate(n_perm,
+                                  data.frame(groups = sample(groups), mob_in$comm) |> 
+                                    group_by(groups) |> 
+                                    group_map(~ calc_comm_div(.x, index = index,
+                                      effort = effort_samples, extrapolate = extrapolate,
+                                      return_NA = return_NA, rare_thres = rare_thres,
+                                      scales = scales, avg_alpha = TRUE, 
+                                      PIE_replace = FALSE,
+                                      C_target_gamma = C_target_gamma, ...)) |>
+                                    bind_rows(.id = 'id') |>
+                                    summarise(D_bar = mean(stats::dist(.data$value)),
+                                              .by = c(scale, index)),
+                                  simplify = FALSE, cl = cl)) 
+  D_tmp <- D_obs |> mutate(D_bar_obs = .data$D_bar, D_bar = NULL)
+  D_rand <- left_join(D_rand, D_tmp, by = c("scale", "index"))
+  
+  perm_tests <- D_rand |> 
+    group_by(.data$scale, .data$index) |>
+    summarise(p_val = (sum(.data$D_bar >= .data$D_bar_obs - EPS) + 1) /
+                (n_perm + 1)) |>
+    ungroup()
+  perm_tests <- left_join(D_bar, perm_tests, by = c("scale", "index"))
+    
+  # order output data frames by indices
+  dat_div$index <- factor(dat_div$index,
+                             levels = c("N",
+                                        "S", "beta_S",
+                                        "S_n", "beta_S_n",
+                                        "S_C", "beta_S_C",
+                                        "S_asymp", "beta_S_asympS",
+                                        "f_0", "beta_f_0",
+                                        "pct_rare", "beta_pct_rare",
+                                        "PIE", "beta_PIE",
+                                        "S_PIE", "beta_S_PIE"))
+  dat_div <- dat_div[order(dat_div$index, dat_div$effort, dat_div[[group_var]]), ]
+  dat_div$index <- factor(dat_div$index)
+  perm_tests$index <- factor(perm_tests$index,
+                          levels = c("N",
+                                     "S", "beta_S",
+                                     "S_n", "beta_S_n",
+                                     "S_C", "beta_S_C",
+                                     "S_asymp", "beta_S_asympS",
+                                     "f_0", "beta_f_0",
+                                     "pct_rare", "beta_pct_rare",
+                                     "PIE", "beta_PIE",
+                                     "S_PIE", "beta_S_PIE"))
+  perm_tests <- perm_tests[order(perm_tests$index), ]
+  perm_tests$index <- factor(perm_tests$index)
+  
+  
+  # create output
+  out <- list(comm_div = dat_div,
+              group_tests = perm_tests)
+  if ("pct_rare" %in% index)
+    out$rare_thres = rare_thres
+  class(out) = 'mob_stats'
+  return(out)
 }
 
-#' Obsolete function that used to plot alpha- and gamma-scale biodiversity
-#'  statistics for a MoB analysis
+
+#' Plot statistics for a MoB analysis
 #' 
 #' Plots a \code{mob_stats} object which is produced by the 
-#' function \code{get_mob_stats}. The p-value for each statistic
+#' function \code{\link{get_mob_stats}}. The p-value for each statistic
 #' is displayed in the plot title if applicable.
 #' 
 #' The user may specify which results to plot or simply to plot 
@@ -912,8 +1033,8 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' data(tank_comm)
 #' data(tank_plot_attr)
 #' indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
-#' tank_div <- tibble(tank_comm) %>% 
-#'   group_by(group = tank_plot_attr$group) %>% 
+#' tank_div <- tibble(tank_comm) |> 
+#'   group_by(group = tank_plot_attr$group) |> 
 #'   group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
 #'                                extrapolate = TRUE))
 #' # plot the community metrics                                 
