@@ -108,5 +108,5 @@ calc_comm_div_ci(samples, index = 'S_PIE', cent_stat = 'avg')
 }
 \seealso{
 \code{\link{get_samples}} for generating samples, and \code{\link{calc_comm_div}}
-for the calculation of diversity indices.
+  for the calculation of diversity indices.
 }

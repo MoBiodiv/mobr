@@ -16,7 +16,7 @@ methods respectively. Default value is 'loo'.}
 }
 \value{
 a list of community matrices which are sampled from the original 
-input matrix.
+  input matrix.
 }
 \description{
 The sampled matrices are either bootstrap or leave-one-out (the default)

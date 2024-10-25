@@ -476,7 +476,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
             effort_out <- NA
         gamma_coverage <- ifelse(index[i] == 'S_C', C_target_gamma, NA)
         # compute number of finite samples used for calculation
-        sample_size = nrow(abund_mat)
+        sample_size <- nrow(abund_mat)
         if ('alpha' %in% scales) {
             if (avg_alpha) 
                 alpha <- mean(alpha)
@@ -546,11 +546,11 @@ calc_beta_div = function(abund_mat, index, effort = NA, C_target_gamma = NA,
 #' 
 #' @inherit calc_comm_div 
 #' @param algo can be either 'boot' or 'loo' for bootstrap or leave-one-out 
-#' methods respectively. Default value is 'loo'. 
+#'   methods respectively. Default value is 'loo'. 
 #' @param n_boot how to many boot strapped samples to create, defaults to 1000.
 #'
 #' @returns a list of community matrices which are sampled from the original 
-#' input matrix. 
+#'   input matrix. 
 #' 
 #' @seealso \code{\link{calc_comm_div_ci}}
 #' @export
@@ -586,17 +586,20 @@ get_samples <- function(abund_mat, algo = 'loo', n_boot = 1000) {
 #' 
 #' @param samples a list of community matrices (i.e., the output of \code{get_samples})
 #' @param cent_stat a string that is either 'mean' or 'median' which specifies the measure
-#' of central tendency. Defaults to 'median'.
+#'   of central tendency. Defaults to 'median'.
 #' @param ci a numeric vector of two numbers specifying the lower and upper
-#' quantiles of the distribution to return. The default is to report
-#' the 0.025 and 0.975 quantiles in other words a 95 percent interval.
+#'   quantiles of the distribution to return. The default is to report
+#'   the 0.025 and 0.975 quantiles in other words a 95 percent interval.
 #' @inheritParams calc_comm_div
 #'
 #' @returns a data.frame that has the lower, middle, and upper quantiles of the 
 #'  sampled distribution of each diversity index. 
 #' 
 #' @seealso \code{\link{get_samples}} for generating samples, and \code{\link{calc_comm_div}}
-#' for the calculation of diversity indices. 
+#'   for the calculation of diversity indices. 
+#' 
+#' @importFrom rlang .data
+#' @importFrom stats median
 #' 
 #' @export
 #' @examples
@@ -628,12 +631,12 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
     sample_qts <- sample_div |> 
         dplyr::group_by(scale, index) |>        
         dplyr::summarize(
-            sample_size = mean(sample_size),
+            sample_size = mean(.data$sample_size),
             effort = mean(effort),
-            gamma_coverage = mean(gamma_coverage),
-            lo_value = quantile(value, ci[1]),
-            hi_value = quantile(value, ci[2]), 
-            value = ifelse(cent_stat == 'avg', mean(value), median(value)),
+            gamma_coverage = mean(.data$gamma_coverage),
+            lo_value = quantile(.data$value, ci[1]),
+            hi_value = quantile(.data$value, ci[2]), 
+            value = ifelse(cent_stat == 'avg', mean(.data$value), median(.data$value)),
             .groups = 'keep')
 
     return(data.frame(sample_qts))
@@ -674,6 +677,14 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #'   warning. Accordingly, when \code{effort_samples} is set by the user it has
 #'   to be higher than \code{effort_min}.
 #'
+#' @param ci boolean, if TRUE then confidence intervals are calculated. Defaults
+#'  to TRUE. 
+#' 
+#' @param ci_cent_stat a string that is either 'mean' or 'median' which
+#'   specifies the measure of central tendency. Defaults to 'median'.
+#'
+#' @param ci_algo can be either 'boot' or 'loo' for bootstrap or leave-one-out
+#'   methods respectively. Default value is 'loo'.
 #'
 #' @details
 #' 
@@ -704,6 +715,7 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #' @import dplyr
 #' @importFrom pbapply pbreplicate
 #' @importFrom rlang .data
+#' @importFrom stats median
 #' 
 #' @export
 #' @examples
@@ -711,8 +723,8 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #' data(tank_comm)
 #' data(tank_plot_attr)
 #' tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
-#' tank_stats <- get_mob_stats(tank_mob, 'group', 'low', index = c('S', 'S_PIE'),
-#'                             ci = TRUE)
+#' tank_stats <- get_mob_stats(tank_mob, 'group', 'low', index = c('S', 'S_PIE', 'S_C'),
+#'                             n_perm = 19)
 #' tank_stats          
 get_mob_stats <- function(mob_in, group_var, ref_level = NULL, 
                           index = c("N", "S", "S_n", "S_PIE"),
@@ -722,7 +734,7 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
                           scales = c('alpha', 'gamma', 'beta'),
                           PIE_replace = FALSE, C_target_gamma = NA,
                           n_perm = 199, cl = NULL, 
-                          ci = FALSE, ci_cent_stat = 'median', ci_algo = 'loo', ...) {
+                          ci = TRUE, ci_cent_stat = 'median', ci_algo = 'loo', ...) {
   EPS <- sqrt(.Machine$double.eps)
   if (n_perm < 1) 
     stop('Set n_perm to a value greater than 1') 
@@ -809,7 +821,7 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
   # averaged within groups and then the average of the differences 
   # between groups is computed. 
   D_bar <- dat_div |>
-    summarise(D_bar = mean(stats::dist(value)), 
+    summarise(D_bar = mean(stats::dist(.data$value)), 
               .by = c(scale, index))
   D_obs <- D_bar
   # Significance tests -------------------------------------------------------
@@ -824,7 +836,7 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
                                       PIE_replace = FALSE,
                                       C_target_gamma = C_target_gamma, ...)) |>
                                     bind_rows(.id = 'id') |>
-                                    summarise(D_bar = mean(stats::dist(value)),
+                                    summarise(D_bar = mean(stats::dist(.data$value)),
                                               .by = c(scale, index)),
                                   simplify = FALSE, cl = cl)) 
   D_tmp <- D_obs |> mutate(D_bar_obs = .data$D_bar, D_bar = NULL)
@@ -846,9 +858,9 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
                                         "S_asymp", "beta_S_asympS",
                                         "f_0", "beta_f_0",
                                         "pct_rare", "beta_pct_rare",
-                                        "PIE",
+                                        "PIE", "beta_PIE",
                                         "S_PIE", "beta_S_PIE"))
-  dat_div <- dat_div[order(dat_div$index, dat_div$effort, dat_div$group), ]
+  dat_div <- dat_div[order(dat_div$index, dat_div$effort, dat_div[[group_var]]), ]
   dat_div$index <- factor(dat_div$index)
   perm_tests$index <- factor(perm_tests$index,
                           levels = c("N",
@@ -858,7 +870,7 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
                                      "S_asymp", "beta_S_asympS",
                                      "f_0", "beta_f_0",
                                      "pct_rare", "beta_pct_rare",
-                                     "PIE",
+                                     "PIE", "beta_PIE",
                                      "S_PIE", "beta_S_PIE"))
   perm_tests <- perm_tests[order(perm_tests$index), ]
   perm_tests$index <- factor(perm_tests$index)

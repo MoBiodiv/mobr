@@ -19,7 +19,7 @@ get_mob_stats(
   C_target_gamma = NA,
   n_perm = 199,
   cl = NULL,
-  ci = FALSE,
+  ci = TRUE,
   ci_cent_stat = "median",
   ci_algo = "loo",
   ...
@@ -107,6 +107,15 @@ It can also be \code{"future"} to use a future backend (see Details),
 \code{NULL} (default) refers to sequential evaluation.
 }
 
+\item{ci}{boolean, if TRUE then confidence intervals are calculated. Defaults
+to TRUE.}
+
+\item{ci_cent_stat}{a string that is either 'mean' or 'median' which
+specifies the measure of central tendency. Defaults to 'median'.}
+
+\item{ci_algo}{can be either 'boot' or 'loo' for bootstrap or leave-one-out
+methods respectively. Default value is 'loo'.}
+
 \item{...}{additional arguments that can be passed to \code{\link{calc_div}}}
 }
 \value{
@@ -148,8 +157,8 @@ result in a \code{D_bar} as large as the observed \code{D_bar} value.
 data(tank_comm)
 data(tank_plot_attr)
 tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
-tank_stats <- get_mob_stats(tank_mob, 'group', 'low', index = c('S', 'S_PIE'),
-                            ci = TRUE)
+tank_stats <- get_mob_stats(tank_mob, 'group', 'low', index = c('S', 'S_PIE', 'S_C'),
+                            n_perm = 19)
 tank_stats          
 }
 \references{
