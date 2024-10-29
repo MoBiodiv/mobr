@@ -22,6 +22,7 @@ get_mob_stats(
   ci = TRUE,
   ci_cent_stat = "median",
   ci_algo = "loo",
+  ci_n_boot = 1000,
   ...
 )
 }
