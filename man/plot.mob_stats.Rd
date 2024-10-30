@@ -4,7 +4,7 @@
 \alias{plot.mob_stats}
 \title{Plot statistics for a MoB analysis}
 \usage{
-\method{plot}{mob_stats}(mob_stats, group_var)
+\method{plot}{mob_stats}(mob_stats, group_var, group_order = NULL)
 }
 \arguments{
 \item{mob_stats}{a \code{mob_stats} object produced by the function
@@ -12,6 +12,10 @@
 
 \item{group_var}{a character string which specifies which variable provides
 the groups that the diversity indices are compared across.}
+
+\item{group_order}{Optional vector of group levels the order of 
+which defines the order in which the groups are plotted from left-to-right. 
+Note that the default in R is to order groups alphabetically.}
 }
 \description{
 Plots a \code{mob_stats} object which is produced by the 
@@ -25,14 +29,13 @@ tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
 # for quick results we specify a low number of permutations 
 # and bootstrap samples these should be increased in real 
 # analyses. 
-tank_stats <- get_mob_stats(tank_mob, 'group', 'low',
-                            index = c('S', 'S_PIE', 'S_C'),
-                            n_perm = 19, ci_algo = 'boot', ci_n_boot = 20)
+tank_stats <- get_mob_stats(tank_mob, 'group',
+                            index = c('N', 'S', 'S_n', 'S_PIE', 'S_C'),
+                            n_perm = 19, ci_n_boot = 20)
 p <- plot(tank_stats, 'group')
 # plot of S
 p$S
-# plot of S_PIE
-p$S_PIE
-# plot of S_C
-p$S_C
+# change the order of the groups on the plot
+p <- plot(tank_stats, 'group', group_order = c('low', 'high'))
+p$S
 }

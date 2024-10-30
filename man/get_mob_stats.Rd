@@ -7,7 +7,6 @@
 get_mob_stats(
   mob_in,
   group_var,
-  ref_level = NULL,
   index = c("N", "S", "S_n", "S_PIE"),
   effort_samples = NULL,
   effort_min = 5,
@@ -21,7 +20,7 @@ get_mob_stats(
   cl = NULL,
   ci = TRUE,
   ci_cent_stat = "median",
-  ci_algo = "loo",
+  ci_algo = "boot",
   ci_n_boot = 1000,
   ...
 )
@@ -31,10 +30,6 @@ get_mob_stats(
 
 \item{group_var}{String that specifies which variable in \code{mob_in$env} the
 data should be grouped by.}
-
-\item{ref_level}{String that defines the reference level of \code{group_var}
-to which all other groups are compared with, defaults to \code{NULL}.
-If \code{NULL} then the default contrasts of \code{group_var} are used.}
 
 \item{index}{The calculated biodiversity indices. The options are
 \itemize{
@@ -115,7 +110,7 @@ to TRUE.}
 specifies the measure of central tendency. Defaults to 'median'.}
 
 \item{ci_algo}{can be either 'boot' or 'loo' for bootstrap or leave-one-out
-methods respectively. Default value is 'loo'.}
+methods respectively. Default value is 'boot'.}
 
 \item{...}{additional arguments that can be passed to \code{\link{calc_div}}}
 }
@@ -158,9 +153,9 @@ result in a \code{D_bar} as large as the observed \code{D_bar} value.
 data(tank_comm)
 data(tank_plot_attr)
 tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
-tank_stats <- get_mob_stats(tank_mob, 'group', 'low', index = c('S', 'S_PIE', 'S_C'),
+tank_stats <- get_mob_stats(tank_mob, 'group', index = c('S', 'S_PIE', 'S_C'),
                             n_perm = 19)
-tank_stats          
+tank_stats    
 }
 \references{
 Chao, A. 1984. Nonparametric Estimation of the Number of Classes in a
