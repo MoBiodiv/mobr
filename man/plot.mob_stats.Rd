@@ -4,48 +4,38 @@
 \alias{plot.mob_stats}
 \title{Plot statistics for a MoB analysis}
 \usage{
-\method{plot}{mob_stats}(
-  x,
-  index = NULL,
-  multi_panel = FALSE,
-  col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE", "#E2C288", "#F7B0E6", "#AAD28C"),
-  cex.axis = 1.2,
-  ...
-)
+\method{plot}{mob_stats}(mob_stats, group_var, group_order = NULL)
 }
 \arguments{
-\item{x}{a \code{mob_stats} object that has the samples and 
-treatment level statistics}
+\item{mob_stats}{a \code{mob_stats} object produced by the function
+\code{\link{get_mob_stats}}}
 
-\item{index}{The biodiversity statistics that should be plotted.
-See \code{\link{get_mob_stats}} for information on the indices. By default there
-is one figure for each index, with panels for alpha- and gamma-scale results
-as well as for beta-diversity when applicable.}
+\item{group_var}{a character string which specifies which variable provides
+the groups that the diversity indices are compared across.}
 
-\item{multi_panel}{A logical variable. If \code{multi_panel = TRUE} then a 
-multipanel plot is produced, which shows observed, rarefied, and asymptotic 
-species richness and S_PIE at the alpha- and gamma-scale.
-This set of variables conveys a comprehensive picture of the underlying 
-biodiversity changes.}
-
-\item{col}{a vector of colors for the groups, set to NA if no color is
-preferred}
-
-\item{cex.axis}{The magnification to be used for axis annotation relative to
-the current setting of cex. Defaults to 1.2.}
-
-\item{...}{additional arguments to provide to \code{boxplot}, \code{points},
-and confidence interval functions}
+\item{group_order}{Optional vector of group levels the order of 
+which defines the order in which the groups are plotted from left-to-right. 
+Note that the default in R is to order groups alphabetically.}
 }
 \description{
 Plots a \code{mob_stats} object which is produced by the 
 function \code{\link{get_mob_stats}}. The p-value for each statistic
 is displayed in the plot title if applicable.
 }
-\details{
-The user may specify which results to plot or simply to plot 
-all the results.
-}
-\author{
-Felix May, Xiao Xiao, and Dan McGlinn
+\examples{
+data(tank_comm)
+data(tank_plot_attr)
+tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
+# for quick results we specify a low number of permutations 
+# and bootstrap samples these should be increased in real 
+# analyses. 
+tank_stats <- get_mob_stats(tank_mob, 'group',
+                            index = c('N', 'S', 'S_n', 'S_PIE', 'S_C'),
+                            n_perm = 19, ci_n_boot = 20)
+p <- plot(tank_stats, 'group')
+# plot of S
+p$S
+# change the order of the groups on the plot
+p <- plot(tank_stats, 'group', group_order = c('low', 'high'))
+p$S
 }

@@ -51,6 +51,8 @@ library(dplyr)
 data(tank_comm)
 data(tank_plot_attr)
 indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
+# the grouping variable must be called group in the 
+# tank_div data.frame
 tank_div <- tibble(tank_comm) |> 
   group_by(group = tank_plot_attr$group) |> 
   group_modify(~ calc_comm_div(.x, index = indices, effort = 5,

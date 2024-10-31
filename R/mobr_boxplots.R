@@ -479,7 +479,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
         sample_size <- nrow(abund_mat)
         if ('alpha' %in% scales) {
             if (avg_alpha) 
-                alpha <- mean(alpha)
+                alpha <- mean(alpha, na.rm = TRUE)
             out[[i]]$alpha = data.frame(scale = 'alpha', index = index[i],
                                         sample_size = ifelse(avg_alpha, sample_size, 1),
                                         effort = effort_out,
@@ -634,9 +634,10 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
             sample_size = mean(.data$sample_size),
             effort = mean(effort),
             gamma_coverage = mean(.data$gamma_coverage),
-            lo_value = quantile(.data$value, ci[1]),
-            hi_value = quantile(.data$value, ci[2]), 
-            value = ifelse(cent_stat == 'avg', mean(.data$value), median(.data$value)),
+            lo_value = quantile(.data$value, ci[1], na.rm = TRUE),
+            hi_value = quantile(.data$value, ci[2], na.rm = TRUE), 
+            value = ifelse(cent_stat == 'avg', mean(.data$value, na.rm = TRUE),
+                           median(.data$value, na.rm = TRUE)),
             .groups = 'keep')
 
     return(data.frame(sample_qts))
@@ -661,10 +662,6 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #' @param group_var String that specifies which variable in \code{mob_in$env} the
 #'   data should be grouped by.
 #' 
-#' @param ref_level String that defines the reference level of \code{group_var}
-#'   to which all other groups are compared with, defaults to \code{NULL}.
-#'   If \code{NULL} then the default contrasts of \code{group_var} are used. 
-#' 
 #' @param effort_samples An integer that specifies the standardized number of
 #'   individuals used for the calculation of rarefied species richness at the
 #'   alpha-scale. It must be a single integer. The default value of \code{NULL}
@@ -684,7 +681,7 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #'   specifies the measure of central tendency. Defaults to 'median'.
 #'
 #' @param ci_algo can be either 'boot' or 'loo' for bootstrap or leave-one-out
-#'   methods respectively. Default value is 'loo'.
+#'   methods respectively. Default value is 'boot'.
 #'
 #' @details
 #' 
@@ -723,10 +720,10 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #' data(tank_comm)
 #' data(tank_plot_attr)
 #' tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
-#' tank_stats <- get_mob_stats(tank_mob, 'group', 'low', index = c('S', 'S_PIE', 'S_C'),
+#' tank_stats <- get_mob_stats(tank_mob, 'group', index = c('S', 'S_PIE', 'S_C'),
 #'                             n_perm = 19)
-#' tank_stats          
-get_mob_stats <- function(mob_in, group_var, ref_level = NULL, 
+#' tank_stats    
+get_mob_stats <- function(mob_in, group_var, 
                           index = c("N", "S", "S_n", "S_PIE"),
                           effort_samples = NULL, effort_min = 5,
                           extrapolate = TRUE, return_NA = FALSE, 
@@ -734,7 +731,8 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
                           scales = c('alpha', 'gamma', 'beta'),
                           PIE_replace = FALSE, C_target_gamma = NA,
                           n_perm = 199, cl = NULL, 
-                          ci = TRUE, ci_cent_stat = 'median', ci_algo = 'loo', ...) {
+                          ci = TRUE, ci_cent_stat = 'median', ci_algo = 'boot',
+                          ci_n_boot = 1000, ...) {
   EPS <- sqrt(.Machine$double.eps)
   if (n_perm < 1) 
     stop('Set n_perm to a value greater than 1') 
@@ -746,20 +744,7 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
   
   groups <- factor(mob_in$env[ , group_var])
   group_levels <- levels(groups) 
-  # ensure that proper contrasts in groups specify the reference level as 
-  # first group so downstream graphics have reference level in
-  # leftmost boxplot panel
-  if (!is.null(ref_level)) { 
-    if (ref_level %in% group_levels) {
-      if (group_levels[1] != ref_level) {
-        groups <- factor(groups, levels = c(ref_level, group_levels[group_levels != ref_level]))
-        group_levels <- levels(groups)
-      }
-    } else
-      stop(paste(ref_level, "is not in", group_var))
-  }
-  
-  
+
   # Get rarefaction level
   samples_N <- rowSums(mob_in$comm) 
   samples_per_group <- table(groups)
@@ -786,10 +771,11 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
     cat('\nComputing confidence intervals\n')
     sample_list <- data.frame(groups, mob_in$comm) |> 
       group_by(groups) |> 
-      group_map(~ get_samples(.x))
+      group_map(~ get_samples(.x, algo = ci_algo, 
+                              n_boot = ci_n_boot))
     names(sample_list) <- group_levels
-    if (is.null(C_target_gamma)) {
-      # compute C_target_gamma across two groups
+    if (is.na(C_target_gamma) & "S_C" %in% index) {
+      # compute C_target_gamma across groups
       C_target_gamma <- min(sapply(sample_list, function(x)
                             sapply(x, calc_C_target)))
     }
@@ -800,7 +786,7 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
                       PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...)
     dat_div <- bind_rows(dat_div, .id = group_var)
   } else {
-    if (is.null(C_target_gamma)) {
+    if (is.na(C_target_gamma) & "S_C" %in% index) {
       # compute C_target_gamma across two groups
       grpC <- data.frame(groups, mob_in$comm) |>  
                 group_by(groups) |> 
@@ -874,14 +860,13 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
                                      "S_PIE", "beta_S_PIE"))
   perm_tests <- perm_tests[order(perm_tests$index), ]
   perm_tests$index <- factor(perm_tests$index)
-  
-  
+
   # create output
   out <- list(comm_div = dat_div,
               group_tests = perm_tests)
   if ("pct_rare" %in% index)
-    out$rare_thres = rare_thres
-  class(out) = 'mob_stats'
+    out$rare_thres <- rare_thres
+  class(out) <- 'mob_stats'
   return(out)
 }
 
@@ -892,43 +877,86 @@ get_mob_stats <- function(mob_in, group_var, ref_level = NULL,
 #' function \code{\link{get_mob_stats}}. The p-value for each statistic
 #' is displayed in the plot title if applicable.
 #' 
-#' The user may specify which results to plot or simply to plot 
-#' all the results. 
+#' @param mob_stats a \code{mob_stats} object produced by the function
+#'   \code{\link{get_mob_stats}}
+#'   
+#' @param group_var a character string which specifies which variable provides
+#'   the groups that the diversity indices are compared across. 
 #' 
-#' @param x a \code{mob_stats} object that has the samples and 
-#' treatment level statistics
-#' 
-#' @param index The biodiversity statistics that should be plotted.
-#' See \code{\link{get_mob_stats}} for information on the indices. By default there
-#' is one figure for each index, with panels for alpha- and gamma-scale results
-#' as well as for beta-diversity when applicable. 
-#' 
-#' @param multi_panel A logical variable. If \code{multi_panel = TRUE} then a 
-#' multipanel plot is produced, which shows observed, rarefied, and asymptotic 
-#' species richness and S_PIE at the alpha- and gamma-scale.
-#' This set of variables conveys a comprehensive picture of the underlying 
-#' biodiversity changes. 
-#' 
-#' @param col a vector of colors for the groups, set to NA if no color is
-#' preferred
-#' 
-#' @param cex.axis The magnification to be used for axis annotation relative to
-#' the current setting of cex. Defaults to 1.2. 
-#' 
-#' @param ... additional arguments to provide to \code{boxplot}, \code{points},
-#'   and confidence interval functions
-#' 
-#' @author Felix May, Xiao Xiao, and Dan McGlinn 
+#' @param group_order Optional vector of group levels the order of 
+#' which defines the order in which the groups are plotted from left-to-right. 
+#' Note that the default in R is to order groups alphabetically.
 #' 
 #' @importFrom rlang .data
 #' 
 #' @export
-plot.mob_stats = function(x, index = NULL, multi_panel = FALSE, 
-                          col = c("#FFB3B5", "#78D3EC", "#6BDABD", "#C5C0FE",
-                                  "#E2C288", "#F7B0E6", "#AAD28C"), 
-                          cex.axis=1.2, ...) {
-  stop('This function is obsolete and no longer supported. Now use "plot_comm_div"
-       to plot the output of "calc_comm_div"')
+#' @examples
+#' data(tank_comm)
+#' data(tank_plot_attr)
+#' tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
+#' # for quick results we specify a low number of permutations 
+#' # and bootstrap samples these should be increased in real 
+#' # analyses. 
+#' tank_stats <- get_mob_stats(tank_mob, 'group',
+#'                             index = c('N', 'S', 'S_n', 'S_PIE', 'S_C'),
+#'                             n_perm = 19, ci_n_boot = 20)
+#' p <- plot(tank_stats, 'group')
+#' # plot of S
+#' p$S
+#' # change the order of the groups on the plot
+#' p <- plot(tank_stats, 'group', group_order = c('low', 'high'))
+#' p$S
+plot.mob_stats <- function(mob_stats, group_var, group_order = NULL) {
+  all_stats <- dplyr::left_join(mob_stats$comm_div, mob_stats$group_tests,
+                                by=c('scale', 'index'))
+  
+  # if users would like groups to be plotted in a different
+  # order then accommodate that. 
+  if (is.null(group_order)) { 
+    all_stats[[group_var]] <- factor(all_stats[[group_var]])
+  } else {
+    all_stats[[group_var]] <- factor(all_stats[[group_var]],
+                                   levels = group_order)
+  }
+  indices <- sub("beta_", "", all_stats$index)
+  uni_index <- unique(indices)
+  p <- vector('list', length = length(uni_index))
+  names(p) <- uni_index
+  
+  for (i in seq_along(uni_index)) {
+    tmp <- subset(all_stats, indices == uni_index[i])
+    group <- tmp[[group_var]]
+    # setup y-axis label
+    y_label <- switch(uni_index[i],
+                      "N" = expression("Abundance (" * italic(N) * ")"),
+                      "S" = expression('Richness (' * italic(S) * ')'),
+                      "S_C" = expression('Richness (' * italic(S)[C] *')'),
+                      "S_n" = expression('Richness (' * italic(S)[n]*')'), 
+                      "S_asymp" = expression('Asympotic richness (' *
+                                               italic(S[asymp]) * ')'),
+                      "pct_rare" = paste("% of species in lower",
+                                         ifelse(is.character(mob_stats$rare_thres),
+                                                mob_stats$rare_thres,
+                                                mob_stats$rare_thres * 100),
+                                         "% of abundance"),
+                      "f_0" = expression('Undetected richness (' * italic(f)[0] * ')'),
+                      "S_PIE" = expression('ENS of PIE (' * italic(S)[PIE] * ')'))
+    labs <- with(tmp, paste(scale, "\nDbar = ", round(D_bar, 1),
+                            ", p = ", round(p_val, 3), sep=""))
+    names(labs) <- tmp$scale
+    p[[i]] <- ggplot(tmp) +
+      geom_point(aes(group, value)) + 
+      geom_errorbar(aes(group, value,
+                        ymin = lo_value, ymax = hi_value),
+                     width = 0.2) +
+      ylab(y_label) + 
+      facet_wrap(vars(scale), scales = 'free', 
+                 labeller = as_labeller(labs)) + 
+      xlab(group_var) + 
+      theme_classic()
+
+  }
+  return(p)
 }
 
 #' Panel function for alpha-scale results
@@ -1033,6 +1061,8 @@ groups_panel2 = function(group_dat, col, ylab = "",
 #' data(tank_comm)
 #' data(tank_plot_attr)
 #' indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
+#' # the grouping variable must be called group in the 
+#' # tank_div data.frame
 #' tank_div <- tibble(tank_comm) |> 
 #'   group_by(group = tank_plot_attr$group) |> 
 #'   group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
