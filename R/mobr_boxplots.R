@@ -479,7 +479,7 @@ calc_comm_div = function(abund_mat, index, effort = NA,
         sample_size <- nrow(abund_mat)
         if ('alpha' %in% scales) {
             if (avg_alpha) 
-                alpha <- mean(alpha)
+                alpha <- mean(alpha, na.rm = TRUE)
             out[[i]]$alpha = data.frame(scale = 'alpha', index = index[i],
                                         sample_size = ifelse(avg_alpha, sample_size, 1),
                                         effort = effort_out,
@@ -634,9 +634,10 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
             sample_size = mean(.data$sample_size),
             effort = mean(effort),
             gamma_coverage = mean(.data$gamma_coverage),
-            lo_value = quantile(.data$value, ci[1]),
-            hi_value = quantile(.data$value, ci[2]), 
-            value = ifelse(cent_stat == 'avg', mean(.data$value), median(.data$value)),
+            lo_value = quantile(.data$value, ci[1], na.rm = TRUE),
+            hi_value = quantile(.data$value, ci[2], na.rm = TRUE), 
+            value = ifelse(cent_stat == 'avg', mean(.data$value, na.rm = TRUE),
+                           median(.data$value, na.rm = TRUE)),
             .groups = 'keep')
 
     return(data.frame(sample_qts))

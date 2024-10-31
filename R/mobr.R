@@ -1352,10 +1352,10 @@ get_delta_stats = function(mob_in, env_var, group_var=NULL, ref_level = NULL,
 #' inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, coord_names = c('x', 'y'))
 #' plot_abu(inv_mob_in, 'group', 'uninvaded', type='sad', log='x')
 #' plot_abu(inv_mob_in, 'group', 'uninvaded', type='rad', scale = 'alpha', log='x')
-plot_abu = function(mob_in, group_var, ref_level = NULL, type = 'sad',
+plot_abu <- function(mob_in, group_var, ref_level = NULL, type = 'sad',
                     scale = 'gamma', col=NULL, lwd=3, log='',
                     leg_loc = 'topleft') {
-    groups  = factor(mob_in$env[ , group_var])
+    groups = factor(mob_in$env[ , group_var])
     group_levels = levels(groups) 
     # issue warning if all groups do not have equal replication
     if (length(unique(table(groups))) > 1)
@@ -1402,9 +1402,10 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type = 'sad',
                 }
             }
         }
+      mtext(type, side=3)
     } 
     if ('rad' == type) {
-        plot(1:10, 1:10, type = 'n', xlab = 'rank', ylab = 'abundance',
+        plot(1, type = 'n', xlab = 'rank', ylab = 'abundance',
              log = log, xlim = c(1, ncol(mob_in$comm)), 
              ylim = range(0.01, 1), cex.lab = 1.5, cex.axis = 1.5,
              main = title)
@@ -1420,13 +1421,15 @@ plot_abu = function(mob_in, group_var, ref_level = NULL, type = 'sad',
              } 
              if (scale == 'alpha') {
                  for (j in 1:nrow(comm_grp)) {
-                     sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0]), decreasing = TRUE)
+                     sad_sort = sort(as.numeric(comm_grp[j, comm_grp[j, ] != 0]),
+                                     decreasing = TRUE)
                      lines(1:length(sad_sort), sad_sort / sum(sad_sort),
                            col = scales::alpha(col_grp, 0.5),
                            lwd = lwd, type = "l")
                  }     
              }
         }
+      mtext(type, side=3)
     }
     if (!is.na(leg_loc))
         legend(leg_loc, legend = group_levels, col = col, lwd = lwd, bty = 'n')
@@ -1502,7 +1505,8 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                             scales = c('alpha', 'gamma', 'study'),  
                             raw = TRUE, smooth = FALSE, avg = FALSE, 
                             col = NULL, lwd = 3, log = '',
-                            leg_loc = 'topleft', one_panel = FALSE, ...) {
+                            leg_loc = 'topleft', one_panel = FALSE,
+                            method_label = TRUE, ...) {
     if ('alpha' %in% scales & method != 'IBR') {
         warning('Sample based rarefaction methods do not make sense at alpha scale, dropping alpha scale curves')
         scales <- scales[scales != 'alpha']
@@ -1625,6 +1629,8 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
                      type = 'l')
           }
         }
+        if (method_label)
+           mtext(method, side = 3)
     }    
     if ('gamma' %in% scales) {
       if (!one_panel) {
@@ -1658,6 +1664,8 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
           lines(n, Savg, lwd = lwd, lty=2, 
                 col=mean_col(col[1:length(group_levels)]))
         }
+        if (method_label)
+          mtext(method, side = 3)
       }
     }
     if ('study' %in% scales & !('gamma' %in% scales)) {
@@ -1683,6 +1691,8 @@ plot_rarefaction = function(mob_in, group_var, ref_level = NULL,
           lines(1:nmax, Savg[1:nmax], lwd = lwd, lty=2, 
                 col=mean_col(col[1:length(group_levels)]))
       }
+      if (method_label)
+        mtext(method, side = 3)
       
     }
 
