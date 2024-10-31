@@ -14,9 +14,8 @@ the source code here [mobr on GitHub](https://github.com/MoBiodiv/mobr)
 The easiest option is to install the package directly from GitHub using the package `devtools`. If you do not already have `devtools` installed then need to install it.
 
 ```{r install package, eval = F}
-install.packages('devtools')
-library(devtools)
-install_github('MoBiodiv/mobr')
+install.packages('remotes')
+remotes::install_github('MoBiodiv/mobr')
 ```
 
 If you receive an error we would love to receive your bug report 
@@ -84,15 +83,31 @@ First let's look at the spatial, sample-based rarefaction (sSBR) in which sample
 added depending on their spatial proximity. 
 
 ```{r, fig.width = 5, fig.height = 5}
-plot_rarefaction(inv_mob_in, 'group', ref_level = 'uninvaded', 'sSBR', lwd = 4)
+plot_rarefaction(inv_mob_in, 'group', ref_level = 'uninvaded', 'sSBR', lwd = 4,
+                 scale = c('gamma', 'study'))
 ```
 
-We can see that invasion decreases richness and that the magnitude of the effect
-depends on scale. Let's dig in further to see if we can better understand
-exactly what components of the community are changing due to invasion.
+In this spatial, sample-based rarefaction curve we are focusing on the gamma
+scale for each group (pink and blue group specific lines) and the study scale
+(black combined group line). The alpha scale is visible on this plot as the 
+average richness when the number of samples equals 1. 
 
-First we look at the individual rarefaction curves for each treatment which
-only reflect the shape of the SAD (i.e., no individual density or aggregation effects):
+We can see that invasion decreases richness and that the magnitude of the effect
+depends on scale. Also notice that the rarefaction curve for both groups combined
+largely overlaps the uninvaded curve whereas the invaded curve falls well below it. 
+This pattern indicates that the invaded sites are largely a nested subset of
+species that are found in the uninvaded group. In other words, there is a difference
+in species composition between the two groups but it is one that is primarily 
+driven by nestedness. 
+
+Let's dig in further to see if we can better understand exactly what components
+of the community are changing due to invasion.
+
+First, we look at the individual rarefaction curves (IBRs) for each treatment
+which only reflect the shape of the SAD (i.e., no individual density or
+aggregation effects). We can examine these curves within each sample (i.e.,
+alpha scale), within a groups (i.e., gamma scale), and between groups (i.e.,
+study scale).
 
 ```{r, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)       
@@ -101,26 +116,85 @@ plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR',
                  leg_loc = 'bottomright')
 par(oldpar)
 ```
+On plots of an IBR the x-axis (number of samples) now indicates the number of
+individuals sampled (not the number of quadrats as in the sSBR). Note that the
+panel on the left is visually truncated to show only the range of individuals
+that both treatments have in common. You can see in the panel on the right that
+the uninvaded sites has many more individuals than the invaded sites (pink curve
+is a lot longer than blue curve).
 
-Visually you can see there are some big differences in total numbers individuals
-(i.e., how far on the x-axis the curves go). We can also see that for small 
-numbers of individuals the invaded sites are actually more diverse! This is 
-a bit surprising and it implies that the invaded sites have greater evenness. 
-We can directly examine the species abundance distribution (SAD):
+Above in the panel on the left ("Within Groups") we see small transparent curves
+these are computed for each sample (quadrats in this case), and a thicker solid
+line of the same color these are computed by pooling across all the samples in
+the same group. 
 
+The solid lines in the "Within Groups" panel are the same colored lines on the 
+"Between Groups" panel just now displayed across the full range of number of
+individuals. 
+
+We can learn a lot from these plots if we know how to read them. First, it is
+clear that the invaded site actually appear to be more diverse for a given
+number of individuals! This is surprising because it is the opposite of what
+we observed in the sSBR. That indicates that when we ignore spatial aggregation
+and differences in total abundance the invaded site appears to be more diverse
+- in other words it likely has higher evenness. 
+
+The panel on the right indicates like the sSBR that the univaded site has more
+species overall (at the gamma scale). **Is this overall difference in diversity
+primarily driven by the fact that the invaded sites have so many fewer
+individuals?** We can come back to this question later in the analysis. We can
+further examine for differences in evenness by also examining plots of the
+species abundance distribution (SAD) - see below.
+
+We can also learn about beta-diversity from these plots both within and between
+groups. The closer the sample specific and group specific curves are the lower
+the beta diversity because that indicates that all the samples have pretty much
+the same species - pooling them together should result in a faster rate of
+species gain if each sample has different species composition.
+
+It is not super clear from the graphics if beta-diversity is higher in the 
+invaded or the uninvaded site. At the study scale as indicated by the sSBR it
+does appear that the invaded and uninvaded sites have different species
+composition but this is 
+
+Ok let's examine those SADs now to look for visual differences in evenness. 
+```{r, fig.width = 7, fig.height=4}
+oldpar <- par(no.readonly = TRUE)
+par(mfrow = c(1, 2))
+plot_abu(inv_mob_in, 'group', type = 'sad', scale = 'alpha',
+         leg_loc = NA)
+plot_abu(inv_mob_in, 'group', type = 'sad', scale = 'gamma' ,
+         leg_loc = 'bottomright')
+par(oldpar)
+```
+In these SAD plots communities lines that are more linear indicate that 
+with each added species you see a similar increase in abundance (high evenness)
+while concave down plots indicate that a common species dominate most of the 
+abundance (low evenness ).
+
+The SADs suggest that the invaded site does have greater evenness (the curves are
+closer to a linear pattern particularly at the alpha scale) as expected
+from the IBR rarefaction curve comparison. 
+
+We can also inspect these curves as ranked-abundance curves if those are preferred: 
 
 ```{r, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)
 par(mfrow = c(1, 2))
-plot_abu(inv_mob_in, 'group', type = 'rad', scale = 'alpha', log = 'x')
+plot_abu(inv_mob_in, 'group', type = 'rad', scale = 'alpha', log = 'x',
+         leg_loc = NA)
 plot_abu(inv_mob_in, 'group', type = 'rad', scale = 'gamma' , log = 'x')
 par(oldpar)
 ```
+In these ranked plots the flatter the curve the higher then evenness. 
+These again are indicating that uninvaded sites have most of their abundance
+tied up in a few species (i.e., low evenness). 
 
-The SADs suggest that the invaded site has greater evenness in its common
-species (i.e., flatter left hand-side of rank curve).
+Now that we have visually examined the community patterns let's calculate some
+key biodiversity statistics and compare them with permutation tests and
+bootstrapped confidence intervals.
 
-# Two-scale analysis
+# MoB Multi-metric Analysis
 
 There are a myriad of biodiversity indices. We have attempted to chose a subset
 of metrics that can all be derived from the individual rarefaction curve which
@@ -155,7 +229,7 @@ which makes that calculation difficult for this example (see below for examples
 in which *S_C* is computed).
 
 ```{r compute diversity indices, eval = TRUE}
-indices <- c('N', 'S', 'S_n', 'S_PIE')
+indices <- c('N', 'S', 'S_n', 'S_C', 'S_PIE')
 inv_div <- tibble(inv_comm) %>% 
   group_by(group = inv_plot_attr$group) %>% 
   group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
