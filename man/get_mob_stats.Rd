@@ -22,6 +22,7 @@ get_mob_stats(
   ci_cent_stat = "median",
   ci_algo = "boot",
   ci_n_boot = 1000,
+  quiet_mode = TRUE,
   ...
 )
 }
@@ -112,6 +113,11 @@ specifies the measure of central tendency. Defaults to 'median'.}
 \item{ci_algo}{can be either 'boot' or 'loo' for bootstrap or leave-one-out
 methods respectively. Default value is 'boot'.}
 
+\item{quiet_mode}{boolean, defaults to TRUE in which case warnings from 
+the diversity calculations are not returned. These are typically generated
+when calculating the metric SPIE which is undefined when all species are
+singletons.}
+
 \item{...}{additional arguments that can be passed to \code{\link{calc_div}}}
 }
 \value{
@@ -154,7 +160,7 @@ data(tank_comm)
 data(tank_plot_attr)
 tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
 tank_stats <- get_mob_stats(tank_mob, 'group', index = c('S', 'S_PIE', 'S_C'),
-                            n_perm = 19)
+                            n_perm = 5, ci_n_boot = 5)
 tank_stats    
 }
 \references{

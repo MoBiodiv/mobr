@@ -4,7 +4,7 @@
 \alias{plot.mob_stats}
 \title{Plot statistics for a MoB analysis}
 \usage{
-\method{plot}{mob_stats}(mob_stats, group_var, group_order = NULL)
+\method{plot}{mob_stats}(mob_stats, group_var, group_order = NULL, index = NULL)
 }
 \arguments{
 \item{mob_stats}{a \code{mob_stats} object produced by the function
@@ -16,6 +16,9 @@ the groups that the diversity indices are compared across.}
 \item{group_order}{Optional vector of group levels the order of 
 which defines the order in which the groups are plotted from left-to-right. 
 Note that the default in R is to order groups alphabetically.}
+
+\item{index}{optional string of indices that are to be plotted. If
+left to the default NULL value then all indices are plotted.}
 }
 \description{
 Plots a \code{mob_stats} object which is produced by the 

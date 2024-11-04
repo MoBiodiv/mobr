@@ -229,11 +229,10 @@ which makes that calculation difficult for this example (see below for examples
 in which *S_C* is computed).
 
 ```{r compute diversity indices, eval = TRUE}
-indices <- c('N', 'S', 'S_n', 'S_C', 'S_PIE')
-inv_div <- tibble(inv_comm) %>% 
-  group_by(group = inv_plot_attr$group) %>% 
-  group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
-                               extrapolate = TRUE))
+indices <- c('N', 'S', 'S_n', 'S_PIE')
+inv_div <- tibble(inv_comm) |>
+  group_by(group = inv_plot_attr$group) |> 
+  group_modify(~ calc_comm_div(.x, index = indices, effort = 5))
 ```
 
 ```{r, echo = FALSE}
@@ -246,11 +245,28 @@ We can examine the `inv_div` object
 head(inv_div)
 ```
 
+The column `value` has the value of the metric. If we want to get an estimate
+of uncertainty on our metrics at each scale we can use a bootstrapping procedure
+using the functions `get_samples` to generate bootstrap samples
+and `calc_comm_div_ci` to summarize the diversity indices across those samples. 
+To simplify this procedure we can use the function `get_mob_stats` which can 
+compute CI's for each group and carry out a permutation test to test if the 
+groups differ in their diversity. 
+
+```{r, eval = FALSE}
+inv_stats <- get_mob_stats(inv_mob_in, 'group', indices, n_perm = 199,
+                               ci_n_boot = 199)
+
+```
+```{r, echo = FALSE}
+load('../vignettes/inv_stats.Rdata')
+```
+
 There are also functions for plotting the indices at the sample and group levels.
 First let's examine species richness:
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot_comm_div(inv_div, 'S')
+plot(inv_stats, 'group', index = 'S')
 ```
 
 Invasion appears to decrease local sample diversity but not gamma diversity.
@@ -271,7 +287,7 @@ that the invaded sites appeared to have fewer individuals, let's examine the
 test of that:
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot_comm_div(inv_div, 'N')
+plot(inv_stats, 'group', index = 'N')
 ```
 
 Clearly our intuition was correct there is a very strong negative effect of 
@@ -279,11 +295,11 @@ invasion on N. So it appears that the changes we observed in S may be due to
 the negative effect of invasion on N. Let's examine `S_n` to test this:
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot_comm_div(inv_div, 'S_n')
+plot(inv_stats, 'group', index = 'S_n')
 ```
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot_comm_div(inv_div, 'S_PIE')
+plot(inv_stats, 'group', index = 'S_PIE')
 ```
 
 We can also plot `f_0` but for this dataset this metric
@@ -291,7 +307,7 @@ does not show strong patterns so we'll stop here for now. If you
 want to plot all the biodiversity metrics at once you can simply use:
 
 ```{r, eval=FALSE}
-plot_comm_div(inv_div)
+plot(inv_stats, "group")
 ```
 
 # Multi-scale analysis
@@ -397,18 +413,19 @@ Let's use the two-scale analysis to continue this exploration of the data and to
 test some hypotheses regarding which components are driving this decrease in S
 in the burned sites. 
 
-```{r}
+```{r, eval = FALSE}
 indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
-fire_div <- tibble(fire_comm) %>% 
-  group_by(group = fire_plot_attr$group) %>% 
-  group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
-                               extrapolate = TRUE))
+fire_stats <- get_mob_stats(fire_mob_in, 'group', indices, 
+                            n_perm = 199, ci_n_boot = 199)
+```
+```{r, echo = FALSE}
+load('../vignettes/fire_stats.Rdata')
 ```
 
 Let's graphically examine the metrics: 
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot_comm_div(fire_div)
+plot(fire_stats, "group")
 ```
 
 It is clear that the fire decreased abundance of woody plants - that is likely
@@ -493,18 +510,19 @@ The SAD plots indicate only a modest shift in the evenness component of the SAD
 although clearly from the sSBR we know that the size of the species pool is larger
 in the high community. 
 
-```{r}
+```{r, eval = FALSE}
 indices <- c('N', 'S', 'S_C', 'S_n', 'S_PIE')
-tank_div <- tibble(tank_comm) %>% 
-  group_by(group = tank_plot_attr$group) %>% 
-  group_modify(~ calc_comm_div(.x, index = indices, effort = 5,
-                               extrapolate = TRUE))
+tank_stats <- get_mob_stats(tank_mob_in, 'group', indices, 
+                            n_perm = 199, ci_n_boot = 199)
+```
+```{r, echo = FALSE}
+load('../vignettes/tank_stats.Rdata')
 ```
 
 Let's graphically examine the metrics: 
 
 ```{r, fig.width = 7, fig.height = 3.5}
-plot_comm_div(tank_div)
+plot(tank_stats, 'group')
 ```
 
 The two-scale analysis indicates that enrichment does not affect *N* but that it
