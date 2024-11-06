@@ -947,6 +947,12 @@ get_mob_stats <- function(mob_in, group_var,
 plot.mob_stats <- function(mob_stats, group_var, group_order = NULL, index = NULL) {
   all_stats <- dplyr::left_join(mob_stats$comm_div, mob_stats$group_tests,
                                 by=c('scale', 'index'))
+  if (group_var != "group") {
+    # rename the group_var column to group
+    # to avoid ggplot issues when plotting N 
+    name_i <- which(names(all_stats) == group_var)
+    names(all_stats)[name_i] <- "group"
+  }
   if (!is.null(index)) {
     indices_to_plot <- index
     if ('beta' %in% all_stats$scale)
@@ -956,10 +962,9 @@ plot.mob_stats <- function(mob_stats, group_var, group_order = NULL, index = NUL
   # if users would like groups to be plotted in a different
   # order then accommodate that. 
   if (is.null(group_order)) { 
-    all_stats[[group_var]] <- factor(all_stats[[group_var]])
+    all_stats$group <- factor(all_stats$group)
   } else {
-    all_stats[[group_var]] <- factor(all_stats[[group_var]],
-                                   levels = group_order)
+    all_stats$group <- factor(all_stats$group, levels = group_order)
   }
   indices <- sub("beta_", "", all_stats$index)
   uni_index <- unique(indices)
@@ -968,7 +973,6 @@ plot.mob_stats <- function(mob_stats, group_var, group_order = NULL, index = NUL
   
   for (i in seq_along(uni_index)) {
     tmp <- subset(all_stats, indices == uni_index[i])
-    group <- tmp[[group_var]]
     # setup y-axis label
     y_label <- switch(uni_index[i],
                       "N" = expression("Abundance (" * italic(N) * ")"),
@@ -987,17 +991,16 @@ plot.mob_stats <- function(mob_stats, group_var, group_order = NULL, index = NUL
     labs <- with(tmp, paste(scale, "\nDbar = ", round(D_bar, 1),
                             ", p = ", round(p_val, 3), sep=""))
     names(labs) <- tmp$scale
-    p[[i]] <- ggplot(tmp) +
-      geom_point(aes(group, value)) + 
-      geom_errorbar(aes(group, value,
-                        ymin = lo_value, ymax = hi_value),
-                     width = 0.2) +
+    p[[i]] <- ggplot(tmp, aes(x = group, y = value)) +
+      geom_point() + 
+      geom_errorbar(aes(ymin = lo_value, ymax = hi_value),
+                    width = 0.2) +
       ylab(y_label) + 
-      facet_wrap(vars(scale), scales = 'free', 
+      facet_wrap(~ scale, scales = 'free', 
                  labeller = as_labeller(labs)) + 
       xlab(group_var) + 
       theme_classic()
-
+    
   }
   return(p)
 }
