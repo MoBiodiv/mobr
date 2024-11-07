@@ -52,7 +52,6 @@ This data set is included in `mobr`and available after loading the library
 ```{r load pkg and data, message=FALSE}
 library(mobr)
 library(dplyr)
-library(ggplot2)
 data(inv_comm)      # Community matrix
 data(inv_plot_attr) # Plot attributes data.frame
 ```
@@ -82,7 +81,7 @@ The package `mobr` offers functions for exploratory data analysis and visualizat
 First let's look at the spatial, sample-based rarefaction (sSBR) in which samples are
 added depending on their spatial proximity. 
 
-```{r, fig.width = 5, fig.height = 5}
+```{r inv sSBR, fig.width = 5, fig.height = 5}
 plot_rarefaction(inv_mob_in, 'group', ref_level = 'uninvaded', 'sSBR', lwd = 4,
                  scale = c('gamma', 'study'))
 ```
@@ -109,7 +108,7 @@ aggregation effects). We can examine these curves within each sample (i.e.,
 alpha scale), within a groups (i.e., gamma scale), and between groups (i.e.,
 study scale).
 
-```{r, fig.width = 7, fig.height=4}
+```{r inv IBR, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)       
 par(mfrow = c(1, 2))
 plot_rarefaction(inv_mob_in, 'group', 'uninvaded', 'IBR', 
@@ -158,7 +157,7 @@ does appear that the invaded and uninvaded sites have different species
 composition but this is 
 
 Ok let's examine those SADs now to look for visual differences in evenness. 
-```{r, fig.width = 7, fig.height=4}
+```{r inv SAD, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)
 par(mfrow = c(1, 2))
 plot_abu(inv_mob_in, 'group', type = 'sad', scale = 'alpha',
@@ -178,7 +177,7 @@ from the IBR rarefaction curve comparison.
 
 We can also inspect these curves as ranked-abundance curves if those are preferred: 
 
-```{r, fig.width = 7, fig.height=4}
+```{r inv RAD, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE)
 par(mfrow = c(1, 2))
 plot_abu(inv_mob_in, 'group', type = 'rad', scale = 'alpha', log = 'x',
@@ -228,15 +227,11 @@ based richness (*S_C*) because some of the samples in this dataset are empty
 which makes that calculation difficult for this example (see below for examples
 in which *S_C* is computed).
 
-```{r compute diversity indices, eval = TRUE}
+```{r compute diversity indices}
 indices <- c('N', 'S', 'S_n', 'S_PIE')
 inv_div <- tibble(inv_comm) |>
   group_by(group = inv_plot_attr$group) |> 
   group_modify(~ calc_comm_div(.x, index = indices, effort = 5))
-```
-
-```{r, echo = FALSE}
-#load('../vignettes/inv_stats.Rdata')
 ```
 
 We can examine the `inv_div` object 
@@ -245,32 +240,7 @@ We can examine the `inv_div` object
 head(inv_div)
 ```
 
-The column `value` has the value of the metric. If we want to get an estimate
-of uncertainty on our metrics at each scale we can use a bootstrapping procedure
-using the functions `get_samples` to generate bootstrap samples
-and `calc_comm_div_ci` to summarize the diversity indices across those samples. 
-To simplify this procedure we can use the function `get_mob_stats` which can 
-compute CI's for each group and carry out a permutation test to test if the 
-groups differ in their diversity. 
-
-```{r, eval = FALSE}
-inv_stats <- get_mob_stats(inv_mob_in, 'group', indices, n_perm = 199,
-                               ci_n_boot = 199)
-
-```
-```{r, echo = FALSE}
-load('../vignettes/inv_stats.Rdata')
-```
-
-There are also functions for plotting the indices at the sample and group levels.
-First let's examine species richness:
-
-```{r, fig.width = 7, fig.height = 3.5}
-plot(inv_stats, 'group', index = 'S')
-```
-
-Invasion appears to decrease local sample diversity but not gamma diversity.
-Somewhat surprisingly it appears to increase \(\beta\)diversity. 
+The column `value` has the value of the metric. 
 
 It is possible to compute beta diversity directly rather than using the 
 `calc_comm_div` function by using the `calc_beta_div` function. Here is a quick
@@ -278,15 +248,42 @@ demonstration. We can calculate the beta diversity for raw richness (`S`),
 rarefied richness at 5 individuals (`S_n`), and the richness transformed version
 of the probability of interspecific encounter (`S_PIE`). 
 
-```{r, beta demo}
+```{r inv beta calc, beta demo}
 calc_beta_div(inv_comm, c('S', 'S_n', 'S_PIE'), effort = 5)
 ```
+
+If we want to get an estimate of uncertainty on our metrics at each scale we can
+use a bootstrapping procedure using the functions `get_samples` to generate
+bootstrap samples and `calc_comm_div_ci` to summarize the diversity indices
+across those samples. To simplify this procedure we can use the function
+`get_mob_stats` which can compute CI's for each group and carry out a
+permutation test to test if the groups differ in their diversity.
+
+
+```{r calc inv stats, eval = FALSE}
+inv_stats <- get_mob_stats(inv_mob_in, 'group', indices, n_perm = 199,
+                               ci_n_boot = 199)
+
+```
+```{r load inv stats, echo = FALSE}
+load('../vignettes/inv_stats.Rdata')
+```
+
+There are also functions for plotting the indices at the sample and group levels.
+First let's examine species richness:
+
+```{r plot inv S, fig.width = 7, fig.height = 3.5}
+plot(inv_stats, 'group', index = 'S')
+```
+
+Invasion appears to decrease local sample diversity but not gamma diversity.
+Somewhat surprisingly it appears to increase \(\beta\)diversity. 
 
 One of the major effects we observed in the individual rarefaction curve was 
 that the invaded sites appeared to have fewer individuals, let's examine the 
 test of that:
 
-```{r, fig.width = 7, fig.height = 3.5}
+```{r plot inv N, fig.width = 7, fig.height = 3.5}
 plot(inv_stats, 'group', index = 'N')
 ```
 
@@ -294,11 +291,11 @@ Clearly our intuition was correct there is a very strong negative effect of
 invasion on N. So it appears that the changes we observed in S may be due to 
 the negative effect of invasion on N. Let's examine `S_n` to test this:
 
-```{r, fig.width = 7, fig.height = 3.5}
+```{r plot inv Sn, fig.width = 7, fig.height = 3.5}
 plot(inv_stats, 'group', index = 'S_n')
 ```
 
-```{r, fig.width = 7, fig.height = 3.5}
+```{r plot inv SPIE, fig.width = 7, fig.height = 3.5}
 plot(inv_stats, 'group', index = 'S_PIE')
 ```
 
@@ -306,7 +303,7 @@ We can also plot `f_0` but for this dataset this metric
 does not show strong patterns so we'll stop here for now. If you 
 want to plot all the biodiversity metrics at once you can simply use:
 
-```{r, eval=FALSE}
+```{r plot inv stats, eval=FALSE}
 plot(inv_stats, "group")
 ```
 
@@ -335,27 +332,27 @@ We can carry out this analysis in `mobr` using the function `get_delta_stats`.
 For the sake of speed we'll run the analysis with just 20 permutations but 
 at least 200 are recommended for actual applications. 
 
-```{r multi-scale analysis, eval=FALSE}
+```{r inv multi-scale analysis, eval=FALSE}
 inv_mob_in <- make_mob_in(inv_comm, inv_plot_attr, 
                           coord_names = c('x', 'y'))
 inv_deltaS <- get_delta_stats(inv_mob_in, 'group', ref_level='uninvaded',
                              type='discrete', log_scale=TRUE, n_perm = 199)
 ```
 
-```{r, echo=FALSE}
+```{r load inv multi-scale, echo=FALSE}
 load('../vignettes/inv_deltaS.Rdata')
 ```
 
 The best way to examine the contents of this object is to plot it. 
 First let's examine the three rarefaction curves:
 
-```{r, fig.width=7, fig.height=3.5}
+```{r plot inv multi-scale S, fig.width=7, fig.height=3.5}
 plot(inv_deltaS, stat = 'b1', scale_by = 'indiv', display='S ~ effort')
 ```
 
 Now let's consider the effect sizes as a function of scale
 
-```{r, fig.width=7, fig.height=3.5}
+```{r plot inv multi-scale beta, fig.width=7, fig.height=3.5}
 plot(inv_deltaS, stat = 'b1', scale_by = 'indiv', display='stat ~ effort')
 ```
 
@@ -382,7 +379,7 @@ visualizing the patterns in the dataset. It is always important to graph any
 dataset before attempting to analyze its patterns. We will start our exploration
 with the sSBR.
 
-```{r}
+```{r fire IBR, fig.width = 7, fig.height=4}
 par(mfrow=c(1,3))
 plot_rarefaction(fire_mob_in, 'group', ref_level = 'unburned', 'IBR', 
                  leg_loc = NA)
@@ -396,7 +393,7 @@ accumulation at certain scales. Let's examine the species-abundance distribution
 to see if they may have shifted and may be partially responsible for this 
 observed shift in S.
 
-```{r}
+```{r fire sad, fig.width = 7, fig.height=4}
 oldpar <- par(no.readonly = TRUE) 
 par(mfrow = c(1, 2))
 plot_abu(fire_mob_in, 'group', ref_level = 'unburned', 'rad', leg_loc = 'topright',)
@@ -492,13 +489,14 @@ tank_mob_in <- make_mob_in(tank_comm, tank_plot_attr,
 The data is loaded let's examine the sSBR. 
 
 ```{r, fig.width = 5, fig.height = 5}
-plot_rarefaction(tank_mob_in, 'group', ref_level = 'low', 'sSBR')
+plot_rarefaction(tank_mob_in, 'group', ref_level = 'low', 'sSBR', 
+                 leg_loc = 'bottomright')
 ```
 
 Clearly enrichment had a big effect on species richness as it is larger in the "high" productivity (i.e., enriched) community compared to the "low" community
 at all scales. It is rare to see such a strong asymptote on a rarefaction curve but it does appear that no new species were being encountered in the low community.
 
-```{r, fig.width = 7, fig.height=4}
+```{r, fig.width = 7, fig.height=5}
 oldpar <- par(no.readonly = TRUE) 
 par(mfrow = c(1, 2))
 plot_abu(tank_mob_in, 'group', ref_level = 'low', 'rad')
