@@ -20,6 +20,7 @@ plot_rarefaction(
   log = "",
   leg_loc = "topleft",
   one_panel = FALSE,
+  method_label = TRUE,
   ...
 )
 }

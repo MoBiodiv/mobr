@@ -17,7 +17,7 @@ abundance, and spatial aggregation.
 
 The concepts and methods behind this R package are described in three publications.
 
-McGlinn, D.J., S.A. Blowes, M. Dornelas, T. Engel, I.S. Martins, H. Shimadzu,  N.J. Gotelli,  A. Magurran,  B.J. McGill,  and J.M. Chase. accepted. Disentangling non-random structure from random placement when estimating β-diversity through space or time. Ecosphere. https://doi.org/10.1101/2023.09.19.558467 
+McGlinn, D.J., S.A. Blowes, M. Dornelas, T. Engel, I.S. Martins, H. Shimadzu,  N.J. Gotelli,  A. Magurran,  B.J. McGill,  and J.M. Chase. 2025. Disentangling non-random structure from random placement when estimating β-diversity through space or time. Ecosphere. e70061. https://doi.org/10.1002/ecs2.7006114
 
 
 McGlinn, D.J. X. Xiao, F. May, N.J Gotelli, T. Engel, S.A Blowes, T.M. Knight, O. Purschke, J.M Chase, and B.J. McGill. 2019. MoB (Measurement of Biodiversity): a method to separate the scale-dependent effects of species abundance distribution, density, and aggregation on diversity change. Methods in Ecology and Evolution. 10:258–269. https://doi.org/10.1111/2041-210X.13102

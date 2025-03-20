@@ -682,6 +682,11 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #'
 #' @param ci_algo can be either 'boot' or 'loo' for bootstrap or leave-one-out
 #'   methods respectively. Default value is 'boot'.
+#'  
+#' @param quiet_mode boolean, defaults to TRUE in which case warnings from 
+#'  the diversity calculations are not returned. These are typically generated
+#'  when calculating the metric SPIE which is undefined when all species are
+#'  singletons. 
 #'
 #' @details
 #' 
@@ -721,7 +726,7 @@ calc_comm_div_ci <- function(samples, cent_stat = 'median', ci = c(0.025, 0.975)
 #' data(tank_plot_attr)
 #' tank_mob <- make_mob_in(tank_comm, tank_plot_attr)
 #' tank_stats <- get_mob_stats(tank_mob, 'group', index = c('S', 'S_PIE', 'S_C'),
-#'                             n_perm = 19)
+#'                             n_perm = 5, ci_n_boot = 5)
 #' tank_stats    
 get_mob_stats <- function(mob_in, group_var, 
                           index = c("N", "S", "S_n", "S_PIE"),
@@ -732,7 +737,7 @@ get_mob_stats <- function(mob_in, group_var,
                           PIE_replace = FALSE, C_target_gamma = NA,
                           n_perm = 199, cl = NULL, 
                           ci = TRUE, ci_cent_stat = 'median', ci_algo = 'boot',
-                          ci_n_boot = 1000, ...) {
+                          ci_n_boot = 1000, quiet_mode = TRUE, ...) {
   EPS <- sqrt(.Machine$double.eps)
   if (n_perm < 1) 
     stop('Set n_perm to a value greater than 1') 
@@ -779,11 +784,18 @@ get_mob_stats <- function(mob_in, group_var,
       C_target_gamma <- min(sapply(sample_list, function(x)
                             sapply(x, calc_C_target)))
     }
-    dat_div <- lapply(sample_list, calc_comm_div_ci, ci_cent_stat,
-                      index = index, effort = effort_samples,
-                      extrapolate = extrapolate, return_NA = return_NA,
-                      rare_thres = rare_thres, scales = scales, 
-                      PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...)
+    if (quiet_mode)
+      dat_div <- suppressWarnings(lapply(sample_list, calc_comm_div_ci, ci_cent_stat,
+                        index = index, effort = effort_samples,
+                        extrapolate = extrapolate, return_NA = return_NA,
+                        rare_thres = rare_thres, scales = scales, 
+                        PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...))
+    else
+      dat_div <- lapply(sample_list, calc_comm_div_ci, ci_cent_stat,
+                        index = index, effort = effort_samples,
+                        extrapolate = extrapolate, return_NA = return_NA,
+                        rare_thres = rare_thres, scales = scales, 
+                        PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...)
     dat_div <- bind_rows(dat_div, .id = group_var)
   } else {
     if (is.na(C_target_gamma) & "S_C" %in% index) {
@@ -793,12 +805,20 @@ get_mob_stats <- function(mob_in, group_var,
                 group_map(~ calc_C_target(.x))
       C_target_gamma <- min(unlist(grpC))
     }
-    dat_div <- data.frame(groups, mob_in$comm) |>  
-      group_by(groups) |> 
-      group_map(~ calc_comm_div(.x, index = index, effort = effort_samples,
-                                extrapolate = extrapolate, return_NA = return_NA,
-                                rare_thres = rare_thres, scales = scales, avg_alpha = TRUE, 
-                                PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...))
+    if (quiet_mode)
+      dat_div <- suppressWarnings(data.frame(groups, mob_in$comm) |>  
+        group_by(groups) |> 
+        group_map(~ calc_comm_div(.x, index = index, effort = effort_samples,
+                                  extrapolate = extrapolate, return_NA = return_NA,
+                                  rare_thres = rare_thres, scales = scales, avg_alpha = TRUE, 
+                                  PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...)))
+    else
+      dat_div <- data.frame(groups, mob_in$comm) |>  
+        group_by(groups) |> 
+        group_map(~ calc_comm_div(.x, index = index, effort = effort_samples,
+                                  extrapolate = extrapolate, return_NA = return_NA,
+                                  rare_thres = rare_thres, scales = scales, avg_alpha = TRUE, 
+                                  PIE_replace = FALSE, C_target_gamma = C_target_gamma, ...))
     names(dat_div) <- group_levels
     dat_div <- bind_rows(dat_div, .id = group_var)
   }
@@ -812,7 +832,8 @@ get_mob_stats <- function(mob_in, group_var,
   D_obs <- D_bar
   # Significance tests -------------------------------------------------------
   cat('\nComputing permutation tests\n')
-  D_rand <- bind_rows(pbreplicate(n_perm,
+  if (quiet_mode)
+    D_rand <- suppressWarnings(bind_rows(pbreplicate(n_perm,
                                   data.frame(groups = sample(groups), mob_in$comm) |> 
                                     group_by(groups) |> 
                                     group_map(~ calc_comm_div(.x, index = index,
@@ -824,7 +845,21 @@ get_mob_stats <- function(mob_in, group_var,
                                     bind_rows(.id = 'id') |>
                                     summarise(D_bar = mean(stats::dist(.data$value)),
                                               .by = c(scale, index)),
-                                  simplify = FALSE, cl = cl)) 
+                                  simplify = FALSE, cl = cl)))
+  else
+    D_rand <- bind_rows(pbreplicate(n_perm,
+                                    data.frame(groups = sample(groups), mob_in$comm) |> 
+                                      group_by(groups) |> 
+                                      group_map(~ calc_comm_div(.x, index = index,
+                                                                effort = effort_samples, extrapolate = extrapolate,
+                                                                return_NA = return_NA, rare_thres = rare_thres,
+                                                                scales = scales, avg_alpha = TRUE, 
+                                                                PIE_replace = FALSE,
+                                                                C_target_gamma = C_target_gamma, ...)) |>
+                                      bind_rows(.id = 'id') |>
+                                      summarise(D_bar = mean(stats::dist(.data$value)),
+                                                .by = c(scale, index)),
+                                    simplify = FALSE, cl = cl)) 
   D_tmp <- D_obs |> mutate(D_bar_obs = .data$D_bar, D_bar = NULL)
   D_rand <- left_join(D_rand, D_tmp, by = c("scale", "index"))
   
@@ -884,8 +919,11 @@ get_mob_stats <- function(mob_in, group_var,
 #'   the groups that the diversity indices are compared across. 
 #' 
 #' @param group_order Optional vector of group levels the order of 
-#' which defines the order in which the groups are plotted from left-to-right. 
-#' Note that the default in R is to order groups alphabetically.
+#'   which defines the order in which the groups are plotted from left-to-right. 
+#'   Note that the default in R is to order groups alphabetically.
+#' 
+#' @param index optional string of indices that are to be plotted. If
+#'   left to the default NULL value then all indices are plotted. 
 #' 
 #' @importFrom rlang .data
 #' 
@@ -906,17 +944,27 @@ get_mob_stats <- function(mob_in, group_var,
 #' # change the order of the groups on the plot
 #' p <- plot(tank_stats, 'group', group_order = c('low', 'high'))
 #' p$S
-plot.mob_stats <- function(mob_stats, group_var, group_order = NULL) {
+plot.mob_stats <- function(mob_stats, group_var, group_order = NULL, index = NULL) {
   all_stats <- dplyr::left_join(mob_stats$comm_div, mob_stats$group_tests,
                                 by=c('scale', 'index'))
-  
+  if (group_var != "group") {
+    # rename the group_var column to group
+    # to avoid ggplot issues when plotting N 
+    name_i <- which(names(all_stats) == group_var)
+    names(all_stats)[name_i] <- "group"
+  }
+  if (!is.null(index)) {
+    indices_to_plot <- index
+    if ('beta' %in% all_stats$scale)
+      indices_to_plot <- c(index, paste('beta_', index, sep=''))
+    all_stats <- subset(all_stats, index %in% indices_to_plot)
+  }
   # if users would like groups to be plotted in a different
   # order then accommodate that. 
   if (is.null(group_order)) { 
-    all_stats[[group_var]] <- factor(all_stats[[group_var]])
+    all_stats$group <- factor(all_stats$group)
   } else {
-    all_stats[[group_var]] <- factor(all_stats[[group_var]],
-                                   levels = group_order)
+    all_stats$group <- factor(all_stats$group, levels = group_order)
   }
   indices <- sub("beta_", "", all_stats$index)
   uni_index <- unique(indices)
@@ -925,7 +973,6 @@ plot.mob_stats <- function(mob_stats, group_var, group_order = NULL) {
   
   for (i in seq_along(uni_index)) {
     tmp <- subset(all_stats, indices == uni_index[i])
-    group <- tmp[[group_var]]
     # setup y-axis label
     y_label <- switch(uni_index[i],
                       "N" = expression("Abundance (" * italic(N) * ")"),
@@ -944,17 +991,16 @@ plot.mob_stats <- function(mob_stats, group_var, group_order = NULL) {
     labs <- with(tmp, paste(scale, "\nDbar = ", round(D_bar, 1),
                             ", p = ", round(p_val, 3), sep=""))
     names(labs) <- tmp$scale
-    p[[i]] <- ggplot(tmp) +
-      geom_point(aes(group, value)) + 
-      geom_errorbar(aes(group, value,
-                        ymin = lo_value, ymax = hi_value),
-                     width = 0.2) +
+    p[[i]] <- ggplot(tmp, aes(x = group, y = value)) +
+      geom_point() + 
+      geom_errorbar(aes(ymin = lo_value, ymax = hi_value),
+                    width = 0.2) +
       ylab(y_label) + 
-      facet_wrap(vars(scale), scales = 'free', 
+      facet_wrap(~ scale, scales = 'free', 
                  labeller = as_labeller(labs)) + 
       xlab(group_var) + 
       theme_classic()
-
+    
   }
   return(p)
 }
