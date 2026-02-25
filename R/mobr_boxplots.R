@@ -1042,7 +1042,7 @@ groups_panel1 = function(group_dat, col, ylab = "",
           col = col, cex.axis = cex.axis, cex.main = 1.5, frame.plot = TRUE,
           ...)
   groups = levels(group_dat$group)
-  points(value ~ group, data = group_dat, pch = 8, cex = 1.5, lwd = 2,
+  points(value ~ as.factor(group), data = group_dat, pch = 8, cex = 1.5, lwd = 2,
          col = col, ...)
   #mtext(label, side = 3, line = 0)
 }
@@ -1243,7 +1243,7 @@ plot_comm_div = function(comm_div, index = NULL, multi_panel = FALSE,
       beta_var = paste("beta", var, sep = "_")
       dat_samples = filter(comm_div, index == beta_var & scale == 'beta')
       #dat_tests = filter(comm_div$samples_tests, index == beta_var)
-      samples_panel1(dat_samples, ylab =  "",
+      groups_panel1(dat_samples, ylab =  "",
                      main = expression(beta * "-diversity (=" *
                                          gamma / alpha * ")"),
                      col = col, cex.axis = cex.axis, ...)
@@ -1311,7 +1311,7 @@ plot_comm_div = function(comm_div, index = NULL, multi_panel = FALSE,
         fig_title = substitute(paste(beta, "-diversity (=", gamma / alpha,
                                      "), n = ", n), 
                                list(n = effort_samples[i]))
-        samples_panel1(dat_samples, main = '',
+        groups_panel1(dat_samples, main = '',
                        ylab = "", col = col, cex.axis = cex.axis, ...)
         
         par(new = TRUE)

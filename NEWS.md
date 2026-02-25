@@ -1,3 +1,11 @@
+## version 3.0.3
+---
+Minor update
+- minor bug fix for plot_comm_div which improves beta and gamma plots.
+- add dply fix for globally defining id variable due to update in how
+dplyr works. 
+
+
 ## version 3.0.2
 ---
 Minor update
