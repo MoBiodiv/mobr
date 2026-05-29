@@ -37,17 +37,11 @@ citation(package = "mobr")
 install.packages('mobr')
 ```
 
-Or, install development version
+Or, install the development version from GitHub:
 
 ```r
-install.packages('devtools')
-library(devtools)
-```
-
-Now that `devtools` is installed you can install `mobr using the following R code:
-
-```r
-install_github('MoBiodiv/mobr')
+# install.packages("pak")
+pak::pkg_install("MoBiodiv/mobr")
 ```
 
 ## Examples
